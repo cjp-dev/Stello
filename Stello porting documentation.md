@@ -474,7 +474,7 @@ Notable features and quirks:
 | Danish UI text | Changed | English. |
 | Print, toolbar, WinHelp, MDI window menu | Not ported | Out of scope. |
 | Settings persistence (`rev.cfg`) | Done in phase 6 | JSON in `%AppData%`. |
-| Book learning menu items | Open | Phase 7. |
+| Book learning menu items | Done in phase 7 | Book menu. |
 
 ---
 
@@ -525,3 +525,102 @@ Notable features and quirks:
 | Board orientation, "border", multiple moves (`notadef`, `borderdef`, `hvmudef`) | Not ported | Only used by the old `Interfa.c` UI. |
 | File locations | Changed | `%AppData%\Stello` and the application folder instead of the current directory. |
 | User book before shipped book | New | Prepares book learning (phase 7) without changing the shipped file. |
+
+---
+
+## Phase 7 – Book learning
+
+### C++ (`BRAIN/Book.cpp`, `MainFrm.cpp`)
+
+- **Node values:** a node's value is the value of its move for the player who makes it. A list of replies is "worth" the maximum of its values for the player to move. Flags (`Book.h`):
+  - `CALCULATED`: the leaf's value comes from a search;
+  - `EXACT`/`INEXACT`: that search solved the position exactly, or for win/loss/draw.
+  - They are stored in the file, so a long learning run can be continued later.
+- **Flet spil (`OnSpilFletspil` → `convert_game` + `mmgame`):** asks "Spil i database ?" and "Var det sort der vandt ?".
+  - `convert_game` normalises the game to d3 (`convop`, with the c3-c4-c5 special case) and replays it.
+  - `mmgame(1, ±32665)` walks the tree along the game and appends missing moves as new nodes. The value is +32665 for the winner's moves and −32665 for the loser's; it alternates by depth, so a pass is stored as move 0 and keeps the alternation.
+  - At every depth, `getlibpos` first checks whether the position is already in the book (also through a transposition) and continues there. Existing nodes keep their values. It stops at depth 56.
+- **Minmaxlib (`OnMinmaxlib`):** `calc_lib` (= `minmaxlib`), then 10 × `minmax_lib`, then `sort_lib`, then `Put_book`. The menu sets level 3, but `calc_lib` overrides it with level 11 (`LIBLEVEL`), that is 2 minutes per searched position.
+  - **`minmaxlib`:** walks the whole tree. It removes nodes with illegal moves. For each leaf that is not `CALCULATED`:
+    - if the book has a reply for the resulting position (a transposition, via `getlib`), it takes that reply's value;
+    - otherwise it searches the position (`getvalue` = `getcomputer` with the book off and the hash table cleared) and sets `CALCULATED`/`EXACT`/`INEXACT`.
+  - **"Dropout expansion":** in a list of replies where no node is `CALCULATED` yet, it searches the best move *not* in the book (`remove_oldmov` + `getvalue`) and appends it as a new node. This is how the book grows.
+  - The book is saved every 10 searched positions.
+  - `getvalue` turns solved results into ±(32600 + discs), and a solved draw into −32600.
+  - Interior nodes get `flag &= !CALCULATED`, which clears all flags (`!` instead of `~`).
+  - **`mmlib` (`minmax_lib`):** backs the values up the tree (negamax). Leaves that transpose into the book take the book's value. Called 10 times, so values also travel through transpositions.
+  - **`sort_lib`:** sorts every list of replies by value, best first (stable insertion sort, `sort_nodes`). Lookup takes the first legal reply, so this decides what the computer plays from the book.
+- **Lær spil (`OnSelfplay` → `selfplay`):**
+  - First `calc_lib` twice, minimax, sort and save.
+  - Then repeatedly:
+    - `splay` plays a game engine against engine, with the book on, until the endgame is solved (`bcalc`) or the game ends;
+    - `convert_game` + `mmgame` add it; the result comes from the global `value`, which is the last *midgame* value even when the endgame was solved;
+    - "played game N" is appended to `selfplay` in the current directory;
+    - then `calc_lib` twice, minimax, sort and save again.
+  - The loop ends only at `book_timeout()`, which always returns false. So it runs forever on the UI thread, and the program has to be killed.
+- **`extend_lib`:** a deeper expansion driver (`extendlib`), not reachable from the Windows menus.
+
+### C# (`Stello.Engine`)
+
+- **`BookFlags` (`[Flags]` enum):** `Calculated`, `Exact`, `Inexact`, stored as the same 16-bit values.
+- **`OpeningBook`:**
+  - `CreateEmpty()` for learning from nothing.
+  - `Rebuild()` recomputes the node count and the position index after changes.
+  - `TryFindReplies(board, player)` returns a position's replies and the symmetry that maps the board to the book's frame.
+  - `FirstMoveSymmetry` and `Transform` are now internal helpers.
+- **`SearchEngine.Search(…, onlyMoves)`:** searches only the given moves, even a single one (C++ `remove_oldmov` + `calclib`).
+- **`BookLearner`:**
+  - **`AddGame(moves, result)`:** walks the game from the start position.
+    - At every ply it first looks the resulting position up in the position index (with symmetries). If found, it continues from that position's replies; otherwise it finds or adds the move in the current list, mapped into the book's frame with the current symmetry.
+    - Values are ±32665 for the winner's/loser's moves, or 0 for a draw. Passes are move 0. It stops at depth 56, and the moves are checked for legality.
+  - **`EvaluatePositions`:** a port of `minmaxlib`: illegal nodes are removed, leaves are searched or taken from transpositions, and the dropout expansion adds the best move not in the book. Solved results are stored as ±(32600 + discs). A checkpoint callback saves the book every 10 searched positions. Progress is reported, and cancellation stops within one search.
+  - **`Minimax`:** a port of `mmlib` (10 rounds) plus `sort_lib` (stable, best first).
+  - **`PlayGame`:** engine against engine through `ComputerPlayer` (book on), until the endgame is solved exactly or the game is over. The result comes from the exact score of the mover, or from the final board.
+  - **`SelfPlay`:** the `selfplay` loop until cancelled. It calls back after each game (the app writes the log).
+- **Tests (`BookLearnerTests`, 16 tests):**
+  - a line stored normalised to d3, and the book suggesting it for all symmetric move orders;
+  - known, repeated and symmetric games add no nodes (also into the master book);
+  - draw values, pass nodes, and an illegal game;
+  - `EvaluatePositions`: the searched leaf plus two dropout moves; a second run searches nothing new; illegal moves are removed;
+  - `Minimax` values and order;
+  - `PlayGame` gives a legal game, and `SelfPlay` runs until cancelled and saves checkpoints;
+  - flags survive save/load;
+  - `onlyMoves`.
+
+### C# (`Stello.Net`)
+
+- **Book menu:** Add Game to Book…, Evaluate Book…, Self-play…, Stop Learning.
+- **`MainViewModel`:**
+  - **`AddGameToBook`:** needs at least two moves and a confirmation. A finished game uses its result; otherwise it asks "Did Black win the game?" (Yes/No/Cancel). The computer's search is stopped first, and the book is saved.
+  - **`EvaluateBook`** (evaluate + minimax) and **`SelfPlay`:** after a confirmation, `LearnAsync` stops the game search and sets `IsLearning`, then runs the learner with `Task.Run`.
+    - While learning, moves on the board beep, and New, Open, Switch Sides, Back, Forward, Settings and the Book commands are disabled.
+    - Progress is shown in the status bar. Stop Learning cancels.
+    - At the end the book is always saved, the book tracker is reset, a summary is shown (positions searched, games played, book size), and the game continues.
+  - **Search time per learned position:** fixed depth if that mode is selected, otherwise the "time per move" setting (1–60 s).
+  - Closing the window also cancels learning.
+- **`Services/IBookStore`, `FileBookStore`:** saves the book to `%AppData%\Stello\OPENING` (temporary file + rename, never the shipped book) and appends "played game N: moves" to `%AppData%\Stello\SELFPLAY`.
+- **`App`:** if no book is found, it starts with an empty book, so learning also works without the shipped file.
+- **Tests (7 new app tests, 58 in total):**
+  - adding a finished game, or an unfinished game with the answer from the dialog;
+  - cancelling at either question, and a game that is too short;
+  - Evaluate Book saves and finishes;
+  - self-play disables the game commands, beeps on moves, and stops on Stop Learning.
+
+### Assessment
+
+| Part | Port | Notes |
+|---|---|---|
+| Node values, flags, file layout | 1:1 | |
+| `mmgame` (add a game) | 1:1 idea | The walk uses the position index with symmetries instead of `convop`/`getlibpos`, so any transposition is found, also the c3-c4-c5 case. |
+| `convert_game` rewriting the shown game | Not ported | Only needed because C++ stored the normalised game globally. |
+| `minmaxlib` (search leaves, dropout expansion) | 1:1 | Including illegal-node removal and saving every 10 positions. |
+| `flag &= !CALCULATED` | Kept in effect | Written as `Flag = None`, which is what the C++ code does. |
+| Solved draw stored as −32600 | Bug fixed | Stored as 0. |
+| Hash table cleared before every learning search | Changed | Not needed; the C# hash table cannot give false hits. |
+| `mmlib` × 10, `sort_lib` | 1:1 | |
+| Self-play result from the global `value` | Bug fixed | Uses the exact endgame score, or the final board. |
+| Endless self-play on the UI thread | Changed | Background task with progress and Stop Learning. |
+| 2 minutes per learned position (level 11) | Changed | The user's setting (fixed depth or time per move), so learning is usable interactively. |
+| Files in the current directory (`opening`, `selfplay`) | Changed | `%AppData%\Stello`; the shipped book is never overwritten. |
+| `extend_lib`/`extendlib` | Not ported | Not reachable from the Windows UI. |
+| `Mergelib.cpp` (merge black/white libraries) | Not ported | Not in the build; out of scope. |

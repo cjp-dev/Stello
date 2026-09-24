@@ -17,6 +17,8 @@ public sealed class MainViewModelTests : IDisposable
     private static readonly GameSettings SlowSettings = new(TimeControlMode.FixedDepth, 20, 5, 5);
 
     private readonly FakeDialogService _dialogs = new();
+    private readonly FakeBookStore _bookStore = new();
+    private readonly OpeningBook _book = OpeningBook.CreateEmpty();
     private readonly string _file = Path.Combine(Path.GetTempPath(), $"stello-{Guid.NewGuid():N}.stello");
 
     public void Dispose() => File.Delete(_file);
@@ -339,9 +341,117 @@ public sealed class MainViewModelTests : IDisposable
         Assert.StartsWith("The settings could not be saved.", vm.Status);
     }
 
+    [Fact]
+    public async Task AddGameToBook_FinishedGameUsesItsResult()
+    {
+        File.WriteAllText(_file, WhiteWipedOut);
+        _dialogs.OpenPath = _file;
+        MainViewModel vm = Create();
+        await vm.OpenCommand.ExecuteAsync(null);
+        await vm.Idle;
+
+        await vm.AddGameToBookCommand.ExecuteAsync(null);
+        await vm.Idle;
+
+        Assert.Equal(8, _book.NodeCount);
+        Assert.Equal(1, _bookStore.Saves);
+        Assert.StartsWith("The game was added to the opening book (8 positions).", vm.Status);
+    }
+
+    [Fact]
+    public async Task AddGameToBook_AsksWhoWonAnUnfinishedGame()
+    {
+        MainViewModel vm = Create();
+        Play(vm, "f5");
+        await vm.Idle;
+        _dialogs.GameResultAnswer = GameResult.BlackWins;
+
+        await vm.AddGameToBookCommand.ExecuteAsync(null);
+        await vm.Idle;
+
+        Assert.Equal(1, _book.NodeCount);
+        Assert.True(_book.TryGetMove(TestBoard("f5"), Player.White, new Random(0), out BookMove move));
+        Assert.Equal(vm.Game.Moves[1].Square, move.Square);
+    }
+
+    [Theory]
+    [InlineData(false, GameResult.BlackWins)]
+    [InlineData(true, null)]
+    public async Task AddGameToBook_CancelAddsNothing(bool confirm, GameResult? result)
+    {
+        MainViewModel vm = Create();
+        Play(vm, "f5");
+        await vm.Idle;
+        _dialogs.ConfirmAnswer = confirm;
+        _dialogs.GameResultAnswer = result;
+
+        await vm.AddGameToBookCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, _book.NodeCount);
+        Assert.Equal(0, _bookStore.Saves);
+    }
+
+    [Fact]
+    public async Task AddGameToBook_NeedsTwoMoves()
+    {
+        MainViewModel vm = Create();
+
+        await vm.AddGameToBookCommand.ExecuteAsync(null);
+
+        Assert.Single(_dialogs.Errors);
+        Assert.Equal(0, _dialogs.Confirmations);
+    }
+
+    [Fact]
+    public async Task EvaluateBook_SearchesTheBookAndSavesIt()
+    {
+        MainViewModel vm = Create();
+        Play(vm, "f5");
+        await vm.Idle;
+        _dialogs.GameResultAnswer = GameResult.WhiteWins;
+        await vm.AddGameToBookCommand.ExecuteAsync(null);
+        await vm.Idle;
+
+        await WaitAsync(vm.EvaluateBookCommand.ExecuteAsync(null));
+        await vm.Idle;
+
+        Assert.False(vm.IsLearning);
+        Assert.True(_book.NodeCount > 1);
+        Assert.True(_bookStore.Saves >= 2);
+        Assert.StartsWith("Book learning finished.", vm.Status);
+    }
+
+    [Fact]
+    public async Task SelfPlay_RunsUntilStopped()
+    {
+        MainViewModel vm = Create();
+
+        Task selfPlay = vm.SelfPlayCommand.ExecuteAsync(null);
+        Assert.True(vm.IsLearning);
+        Assert.False(vm.NewGameCommand.CanExecute(null));
+        Assert.False(vm.EditSettingsCommand.CanExecute(null));
+        Assert.True(vm.StopLearningCommand.CanExecute(null));
+        Play(vm, "f5");
+        Assert.Equal(1, _dialogs.Beeps);
+
+        await Task.Delay(300);
+        vm.StopLearningCommand.Execute(null);
+        await WaitAsync(selfPlay);
+        await vm.Idle;
+
+        Assert.False(vm.IsLearning);
+        Assert.True(vm.NewGameCommand.CanExecute(null));
+        Assert.StartsWith("Book learning stopped.", vm.Status);
+        Assert.True(_bookStore.Saves >= 1);
+    }
+
+    private static Board TestBoard(string moves) => GameRecordFormat.Parse(moves).Board;
+
     private MainViewModel Create(GameSettings? settings = null, string? notice = null, FakeSettingsStore? store = null) =>
         new(
-            new ComputerPlayer(new SearchEngine(hashBits: 12), book: null, new Random(0)),
+            new ComputerPlayer(new SearchEngine(hashBits: 12), _book, new Random(0)),
+            _book,
+            _bookStore,
             _dialogs,
             store ?? new FakeSettingsStore(new AppSettings(settings ?? QuickSettings, ShowAnalysis: true, Window: null)),
             notice);

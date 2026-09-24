@@ -68,13 +68,17 @@ public sealed class SearchEngine
     /// <summary>Finds the best move for <paramref name="player"/> (C++: getcomputer).</summary>
     /// <param name="cancellationToken">Stops the search and throws <see cref="OperationCanceledException"/>.</param>
     /// <param name="moveNowToken">Stops the search and returns the best move found so far.</param>
+    /// <param name="onlyMoves">
+    /// Search only these moves, even if just one is left (C++ calclib: the best move not yet in the book).
+    /// </param>
     public SearchResult Search(
         Board board,
         Player player,
         SearchLimits limits,
         IProgress<SearchInfo>? progress = null,
         CancellationToken cancellationToken = default,
-        CancellationToken moveNowToken = default)
+        CancellationToken moveNowToken = default,
+        ulong? onlyMoves = null)
     {
         ArgumentNullException.ThrowIfNull(limits);
         cancellationToken.ThrowIfCancellationRequested();
@@ -87,12 +91,21 @@ public sealed class SearchEngine
         _progress = progress;
 
         ulong moves = board.LegalMoves(player);
+        if (onlyMoves is { } allowed)
+        {
+            moves &= allowed;
+            if (moves == 0)
+            {
+                throw new ArgumentException("None of the moves to search is legal.", nameof(onlyMoves));
+            }
+        }
+
         if (moves == 0)
         {
             return Result(new Best(-1, 0, ScoreKind.None, 0));
         }
 
-        if (BitOperations.PopCount(moves) == 1 && limits.Mode != TimeControlMode.Solve)
+        if (BitOperations.PopCount(moves) == 1 && limits.Mode != TimeControlMode.Solve && onlyMoves is null)
         {
             return Result(new Best(BitOperations.TrailingZeroCount(moves), 0, ScoreKind.None, 0));
         }

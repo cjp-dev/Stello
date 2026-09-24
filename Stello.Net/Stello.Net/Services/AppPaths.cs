@@ -13,6 +13,9 @@ public static class AppPaths
     /// <summary>The user's own copy of the book, written when the book is changed (book learning).</summary>
     public static string UserBookFile => Path.Combine(DataDirectory, "OPENING");
 
+    /// <summary>One line per self-play game (C++: "selfplay" in the current directory).</summary>
+    public static string SelfPlayLogFile => Path.Combine(DataDirectory, "SELFPLAY");
+
     /// <summary>The book shipped with the app.</summary>
     public static string DefaultBookFile => Path.Combine(AppContext.BaseDirectory, "Data", "OPENING");
 

@@ -2,6 +2,7 @@ using System.IO;
 using System.Media;
 using System.Windows;
 using Microsoft.Win32;
+using Stello.Engine;
 using Stello.Net.Models;
 using Stello.Net.ViewModels;
 using Stello.Net.Views;
@@ -14,6 +15,19 @@ internal sealed class DialogService : IDialogService
     private const string GameFilter = "Stello games (*.stello)|*.stello|Text files (*.txt)|*.txt|All files (*.*)|*.*";
 
     private static Window? Owner => Application.Current?.MainWindow;
+
+    public bool Confirm(string message) =>
+        Ask(message, MessageBoxButton.YesNo) == MessageBoxResult.Yes;
+
+    // C++: "Var det sort der vandt ?"
+    public GameResult? AskGameResult() => Ask(
+            "Did Black win the game?\n\nYes: Black won.\nNo: White won.\nCancel: do not add the game.",
+            MessageBoxButton.YesNoCancel) switch
+        {
+            MessageBoxResult.Yes => GameResult.BlackWins,
+            MessageBoxResult.No => GameResult.WhiteWins,
+            _ => null,
+        };
 
     public string? ShowOpenDialog()
     {
@@ -60,4 +74,8 @@ internal sealed class DialogService : IDialogService
             MessageBox.Show(message, caption, MessageBoxButton.OK, image);
         }
     }
+
+    private static MessageBoxResult Ask(string message, MessageBoxButton buttons) => Owner is { } owner
+        ? MessageBox.Show(owner, message, Caption, buttons, MessageBoxImage.Question)
+        : MessageBox.Show(message, Caption, buttons, MessageBoxImage.Question);
 }

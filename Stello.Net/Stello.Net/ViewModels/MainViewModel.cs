@@ -15,6 +15,8 @@ namespace Stello.Net.ViewModels;
 public sealed partial class MainViewModel : ObservableObject
 {
     private readonly ComputerPlayer _computer;
+    private readonly OpeningBook _book;
+    private readonly IBookStore _bookStore;
     private readonly IDialogService _dialogs;
     private readonly ISettingsStore _settingsStore;
     private readonly bool _settingsLoaded;
@@ -28,6 +30,7 @@ public sealed partial class MainViewModel : ObservableObject
     private TimeSpan _computerTimeLeft;
     private CancellationTokenSource? _cancel;
     private CancellationTokenSource? _moveNow;
+    private CancellationTokenSource? _learningCancel;
     private int _searchId;
 
     [ObservableProperty]
@@ -53,14 +56,29 @@ public sealed partial class MainViewModel : ObservableObject
     private bool _isThinking;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(
+        nameof(NewGameCommand), nameof(OpenCommand), nameof(SwitchSidesCommand), nameof(UndoCommand), nameof(RedoCommand),
+        nameof(EditSettingsCommand), nameof(AddGameToBookCommand), nameof(EvaluateBookCommand), nameof(SelfPlayCommand),
+        nameof(StopLearningCommand))]
+    private bool _isLearning;
+
+    [ObservableProperty]
     private bool _isAnalysisVisible = true;
 
     [ObservableProperty]
     private GameSettings _settings = GameSettings.Default;
 
-    public MainViewModel(ComputerPlayer computer, IDialogService dialogs, ISettingsStore settingsStore, string? startupNotice = null)
+    public MainViewModel(
+        ComputerPlayer computer,
+        OpeningBook book,
+        IBookStore bookStore,
+        IDialogService dialogs,
+        ISettingsStore settingsStore,
+        string? startupNotice = null)
     {
         _computer = computer;
+        _book = book;
+        _bookStore = bookStore;
         _dialogs = dialogs;
         _settingsStore = settingsStore;
 
@@ -86,10 +104,17 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>Completes when the computer has moved and it is the human's turn or the game is over.</summary>
     internal Task Idle { get; private set; } = Task.CompletedTask;
 
+    /// <summary>Completes when book learning has stopped.</summary>
+    internal Task Learning { get; private set; } = Task.CompletedTask;
+
     internal Game Game => _game;
 
-    /// <summary>Stops the computer without waiting, e.g. when the window closes.</summary>
-    public void Stop() => _cancel?.Cancel();
+    /// <summary>Stops the computer and book learning without waiting, e.g. when the window closes.</summary>
+    public void Stop()
+    {
+        _cancel?.Cancel();
+        _learningCancel?.Cancel();
+    }
 
     public void SaveWindowPlacement(WindowPlacement placement)
     {
@@ -110,7 +135,7 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void Play(SquareViewModel square)
     {
-        if (IsThinking || _game.IsGameOver || !_game.IsHumanToMove || !_game.Board.IsLegal(_game.ToMove, square.Square))
+        if (IsThinking || IsLearning || _game.IsGameOver || !_game.IsHumanToMove || !_game.Board.IsLegal(_game.ToMove, square.Square))
         {
             _dialogs.Beep();
             return;
@@ -120,7 +145,7 @@ public sealed partial class MainViewModel : ObservableObject
         Start();
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanChangeGame))]
     private async Task NewGame()
     {
         await StopAsync();
@@ -132,7 +157,7 @@ public sealed partial class MainViewModel : ObservableObject
         Start();
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanChangeGame))]
     private async Task Open()
     {
         string? path = _dialogs.ShowOpenDialog();
@@ -192,7 +217,7 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     // C++: OnSkiftSide; the computer moves at once.
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanChangeGame))]
     private async Task SwitchSides()
     {
         await StopAsync();
@@ -234,7 +259,7 @@ public sealed partial class MainViewModel : ObservableObject
         Start();
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanChangeGame))]
     private void EditSettings()
     {
         GameSettings? settings = _dialogs.EditSettings(Settings);
@@ -260,9 +285,144 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void About() => _dialogs.ShowAbout();
 
-    private bool CanUndo() => _game.CanUndo;
+    // C++: Flet spil ("Spil i database ?", "Var det sort der vandt ?").
+    [RelayCommand(CanExecute = nameof(CanChangeGame))]
+    private async Task AddGameToBook()
+    {
+        if (_game.Ply < 2)
+        {
+            _dialogs.ShowError("Play at least two moves before adding the game to the opening book.");
+            return;
+        }
 
-    private bool CanRedo() => _game.CanRedo;
+        if (!_dialogs.Confirm("Add this game to the opening book?"))
+        {
+            return;
+        }
+
+        GameResult? result = _game.IsGameOver
+            ? _game.Winner switch
+            {
+                Player.Black => GameResult.BlackWins,
+                Player.White => GameResult.WhiteWins,
+                _ => GameResult.Draw,
+            }
+            : _dialogs.AskGameResult();
+        if (result is null)
+        {
+            return;
+        }
+
+        await StopAsync();
+        CreateLearner(hashBits: 10).AddGame(_game.PlayedMoves.ToList(), result.Value);
+        _notice = _bookStore.Save(_book)
+            ? $"The game was added to the opening book ({_book.NodeCount:N0} positions)."
+            : "The opening book could not be saved.";
+        Start();
+    }
+
+    // C++: Minmaxlib (calc_lib, minmax_lib, sort_lib).
+    [RelayCommand(CanExecute = nameof(CanChangeGame))]
+    private async Task EvaluateBook()
+    {
+        if (_dialogs.Confirm(
+            "Search every new position in the opening book and add the best moves that are not in it?\n\n" +
+            "This can take a long time. You can stop at any time with Book > Stop Learning."))
+        {
+            await LearnAsync((learner, progress, token) =>
+            {
+                learner.EvaluatePositions(progress, token);
+                learner.Minimax();
+            });
+        }
+    }
+
+    // C++: Lær spil (selfplay).
+    [RelayCommand(CanExecute = nameof(CanChangeGame))]
+    private async Task SelfPlay()
+    {
+        if (_dialogs.Confirm(
+            "Let the computer play against itself and learn the games into the opening book?\n\n" +
+            "This runs until you stop it with Book > Stop Learning."))
+        {
+            await LearnAsync((learner, progress, token) => learner.SelfPlay(
+                progress,
+                token,
+                (number, moves) => _bookStore.AppendSelfPlayLog($"played game {number}: {string.Join(' ', moves)}")));
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(IsLearning))]
+    private void StopLearning() => _learningCancel?.Cancel();
+
+    private bool CanChangeGame() => !IsLearning;
+
+    private bool CanUndo() => _game.CanUndo && !IsLearning;
+
+    private bool CanRedo() => _game.CanRedo && !IsLearning;
+
+    // Runs book learning in the background; the game waits until it has stopped.
+    private async Task LearnAsync(Action<BookLearner, IProgress<BookLearningProgress>, CancellationToken> learn)
+    {
+        await StopAsync();
+        using var cancel = new CancellationTokenSource();
+        _learningCancel = cancel;
+        IsLearning = true;
+        Status = "Book learning…";
+
+        var progress = new Progress<BookLearningProgress>(p =>
+        {
+            if (IsLearning)
+            {
+                Status = Describe(p);
+            }
+        });
+
+        BookLearner learner = CreateLearner();
+        string summary;
+        try
+        {
+            Learning = Task.Run(() => learn(learner, progress, cancel.Token), CancellationToken.None);
+            await Learning;
+            summary = "Book learning finished.";
+        }
+        catch (OperationCanceledException)
+        {
+            summary = "Book learning stopped.";
+        }
+        catch (Exception exception)
+        {
+            summary = "Book learning failed.";
+            _dialogs.ShowError($"Book learning failed.\n\n{exception.Message}");
+        }
+        finally
+        {
+            _learningCancel = null;
+            IsLearning = false;
+        }
+
+        bool saved = _bookStore.Save(_book);
+        _computer.BookTracker.Reset();
+        _notice = $"{summary} {learner.PositionsEvaluated:N0} positions searched, {learner.GamesPlayed:N0} games played, " +
+            $"{_book.NodeCount:N0} positions in the book.{(saved ? "" : " The opening book could not be saved.")}";
+        Start();
+    }
+
+    // Book learning searches as the current settings allow, but at most the time per move (C++: 2 minutes each).
+    private BookLearner CreateLearner(int hashBits = 19) => new(
+        _book,
+        new SearchEngine(hashBits),
+        Settings.Mode == TimeControlMode.FixedDepth
+            ? SearchLimits.FixedDepth(Settings.Depth)
+            : SearchLimits.TimePerMove(TimeSpan.FromSeconds(Settings.SecondsPerMove)),
+        new Random(),
+        book => _bookStore.Save(book));
+
+    private static string Describe(BookLearningProgress progress) => progress.Stage switch
+    {
+        BookLearningStage.PlayingGame => $"Book learning: playing game {progress.GamesPlayed + 1:N0}…",
+        _ => $"Book learning: {progress.PositionsEvaluated:N0} positions searched, {progress.NodeCount:N0} positions in the book…",
+    };
 
     private void Start() => Idle = RunAsync();
 

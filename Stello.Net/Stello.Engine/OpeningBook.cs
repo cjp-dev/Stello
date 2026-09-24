@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Stello.Engine;
 
 /// <summary>A book move and its value from the book.</summary>
@@ -31,14 +33,25 @@ public sealed class OpeningBook
     {
         Root = root;
         _headerNodeCount = headerNodeCount;
-        NodeCount = CountNodes(root);
-        Index(root, Board.Initial.Play(Player.Black, NormalisedFirstMove), Player.White);
+        Rebuild();
+    }
+
+    // The symmetries that keep the start position (C++: convop).
+    internal enum Symmetry
+    {
+        Identity,
+        MainDiagonal,
+        AntiDiagonal,
+        HalfTurn,
     }
 
     /// <summary>White's replies to d3.</summary>
     internal List<BookNode> Root { get; }
 
-    public int NodeCount { get; }
+    public int NodeCount { get; private set; }
+
+    /// <summary>A book without any lines, to be filled by book learning.</summary>
+    public static OpeningBook CreateEmpty() => new([], 0);
 
     /// <exception cref="InvalidDataException">The data is not a valid opening book.</exception>
     public static OpeningBook Load(Stream stream)
@@ -91,8 +104,7 @@ public sealed class OpeningBook
 
         foreach (Symmetry symmetry in Enum.GetValues<Symmetry>())
         {
-            Board transformed = Transform(board, symmetry);
-            if (!_positions.TryGetValue((transformed.Black, transformed.White, player), out List<BookNode>? replies))
+            if (!TryFindReplies(board, player, symmetry, out List<BookNode>? replies))
             {
                 continue;
             }
@@ -118,6 +130,52 @@ public sealed class OpeningBook
         return false;
     }
 
+    /// <summary>Recomputes the node count and the position index after the tree was changed.</summary>
+    internal void Rebuild()
+    {
+        NodeCount = CountNodes(Root);
+        _positions.Clear();
+        Index(Root, Board.Initial.Play(Player.Black, NormalisedFirstMove), Player.White);
+    }
+
+    /// <summary>The book's replies in the position, and the symmetry that maps the board to the book's frame.</summary>
+    internal bool TryFindReplies(Board board, Player player, out List<BookNode> replies, out Symmetry symmetry)
+    {
+        foreach (Symmetry candidate in Enum.GetValues<Symmetry>())
+        {
+            if (TryFindReplies(board, player, candidate, out List<BookNode>? found))
+            {
+                replies = found;
+                symmetry = candidate;
+                return true;
+            }
+        }
+
+        replies = [];
+        symmetry = Symmetry.Identity;
+        return false;
+    }
+
+    /// <summary>The symmetry that maps one of Black's first moves to d3 (C++: convop).</summary>
+    internal static Symmetry FirstMoveSymmetry(Square firstMove) =>
+        Enum.GetValues<Symmetry>().First(s => Transform(firstMove, s) == NormalisedFirstMove);
+
+    internal static bool IsSquare(short legacy) => legacy is >= 11 and <= 88 && legacy % 10 is >= 1 and <= 8;
+
+    internal static Square Transform(Square square, Symmetry symmetry) => symmetry switch
+    {
+        Symmetry.MainDiagonal => Square.At(square.Row, square.Column),
+        Symmetry.AntiDiagonal => Square.At(7 - square.Row, 7 - square.Column),
+        Symmetry.HalfTurn => Square.At(7 - square.Column, 7 - square.Row),
+        _ => square,
+    };
+
+    private bool TryFindReplies(Board board, Player player, Symmetry symmetry, [NotNullWhen(true)] out List<BookNode>? replies)
+    {
+        Board transformed = Transform(board, symmetry);
+        return _positions.TryGetValue((transformed.Black, transformed.White, player), out replies);
+    }
+
     private static List<BookNode> ReadChain(BinaryReader reader, int depth)
     {
         short count = reader.ReadInt16();
@@ -129,7 +187,7 @@ public sealed class OpeningBook
         var chain = new List<BookNode>(count);
         for (int i = 0; i < count; i++)
         {
-            var node = new BookNode(reader.ReadInt16(), reader.ReadInt16(), reader.ReadInt16());
+            var node = new BookNode(reader.ReadInt16(), reader.ReadInt16(), (BookFlags)reader.ReadInt16());
             node.Children.AddRange(ReadChain(reader, depth + 1));
             chain.Add(node);
         }
@@ -145,7 +203,7 @@ public sealed class OpeningBook
             BookNode node = chain[i];
             writer.Write(node.Move);
             writer.Write(i == 0 && node.Value == ClearedValue ? (short)0 : node.Value);
-            writer.Write(node.Flag);
+            writer.Write((short)node.Flag);
             WriteChain(writer, node.Children);
         }
     }
@@ -184,26 +242,7 @@ public sealed class OpeningBook
         }
     }
 
-    private static bool IsSquare(short legacy) => legacy is >= 11 and <= 88 && legacy % 10 is >= 1 and <= 8;
-
-    // The symmetries that keep the start position (C++: convop).
-    private enum Symmetry
-    {
-        Identity,
-        MainDiagonal,
-        AntiDiagonal,
-        HalfTurn,
-    }
-
-    private static Square Transform(Square square, Symmetry symmetry) => symmetry switch
-    {
-        Symmetry.MainDiagonal => Square.At(square.Row, square.Column),
-        Symmetry.AntiDiagonal => Square.At(7 - square.Row, 7 - square.Column),
-        Symmetry.HalfTurn => Square.At(7 - square.Column, 7 - square.Row),
-        _ => square,
-    };
-
-    private static Board Transform(Board board, Symmetry symmetry) => symmetry == Symmetry.Identity
+    internal static Board Transform(Board board, Symmetry symmetry) => symmetry == Symmetry.Identity
         ? board
         : new Board(Transform(board.Black, symmetry), Transform(board.White, symmetry));
 

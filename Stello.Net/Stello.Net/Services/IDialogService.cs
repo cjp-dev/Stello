@@ -1,9 +1,15 @@
+using Stello.Engine;
 using Stello.Net.Models;
 
 namespace Stello.Net.Services;
 
 public interface IDialogService
 {
+    bool Confirm(string message);
+
+    /// <returns>Who won the game, or null if the user cancelled.</returns>
+    GameResult? AskGameResult();
+
     /// <returns>The chosen file, or null if the user cancelled.</returns>
     string? ShowOpenDialog();
 

@@ -55,6 +55,13 @@
             <MenuItem Header="_View">
                 <MenuItem Header="_Analysis" InputGestureText="Ctrl+A" IsCheckable="True" IsChecked="{Binding IsAnalysisVisible}" />
             </MenuItem>
+            <MenuItem Header="_Book">
+                <MenuItem Header="_Add Game to Book..." Command="{Binding AddGameToBookCommand}" />
+                <MenuItem Header="_Evaluate Book..." Command="{Binding EvaluateBookCommand}" />
+                <MenuItem Header="_Self-play..." Command="{Binding SelfPlayCommand}" />
+                <Separator />
+                <MenuItem Header="S_top Learning" Command="{Binding StopLearningCommand}" />
+            </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="_About Stello..." Command="{Binding AboutCommand}" />
             </MenuItem>

@@ -4,14 +4,14 @@
     "C:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Net\\Stello.Net.csproj": {}
   },
   "projects": {
-    "C:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Engine\\Stello.Engine.csproj": {
+    "c:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Engine\\Stello.Engine.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Engine\\Stello.Engine.csproj",
+        "projectUniqueName": "c:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Engine\\Stello.Engine.csproj",
         "projectName": "Stello.Engine",
-        "projectPath": "C:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Engine\\Stello.Engine.csproj",
+        "projectPath": "c:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Engine\\Stello.Engine.csproj",
         "packagesPath": "C:\\Users\\Z6CJP\\.nuget\\packages\\",
-        "outputPath": "C:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Engine\\obj\\",
+        "outputPath": "c:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Engine\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",
@@ -378,8 +378,8 @@
             "framework": "net10.0-windows7.0",
             "targetAlias": "net10.0-windows",
             "projectReferences": {
-              "C:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Engine\\Stello.Engine.csproj": {
-                "projectPath": "C:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Engine\\Stello.Engine.csproj"
+              "c:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Engine\\Stello.Engine.csproj": {
+                "projectPath": "c:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Engine\\Stello.Engine.csproj"
               }
             }
           }

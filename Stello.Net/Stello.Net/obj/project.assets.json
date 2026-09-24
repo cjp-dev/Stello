@@ -119,8 +119,8 @@
           "framework": "net10.0-windows7.0",
           "targetAlias": "net10.0-windows",
           "projectReferences": {
-            "C:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Engine\\Stello.Engine.csproj": {
-              "projectPath": "C:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Engine\\Stello.Engine.csproj"
+            "c:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Engine\\Stello.Engine.csproj": {
+              "projectPath": "c:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Engine\\Stello.Engine.csproj"
             }
           }
         }

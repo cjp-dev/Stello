@@ -1,3 +1,4 @@
+using Stello.Engine;
 using Stello.Net.Models;
 using Stello.Net.Services;
 
@@ -5,6 +6,12 @@ namespace Stello.Net.Tests;
 
 internal sealed class FakeDialogService : IDialogService
 {
+    public bool ConfirmAnswer { get; set; } = true;
+
+    public GameResult? GameResultAnswer { get; set; }
+
+    public int Confirmations { get; private set; }
+
     public string? OpenPath { get; set; }
 
     public string? SavePath { get; set; }
@@ -28,4 +35,12 @@ internal sealed class FakeDialogService : IDialogService
     public void ShowAbout() => AboutShown++;
 
     public void Beep() => Beeps++;
+
+    public bool Confirm(string message)
+    {
+        Confirmations++;
+        return ConfirmAnswer;
+    }
+
+    public GameResult? AskGameResult() => GameResultAnswer;
 }
