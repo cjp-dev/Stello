@@ -22,4 +22,8 @@
     <ProjectReference Include="..\Stello.Engine\Stello.Engine.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\Stello C++\OPENING" Link="Data\OPENING" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
