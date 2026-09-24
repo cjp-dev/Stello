@@ -129,6 +129,22 @@ The C++ version cannot save games (`Serialize()` is empty). Games are saved as a
 5. WPF UI: board, menus/commands, settings dialog, and analysis panel.
 6. Settings persistence and polish.
 7. Book learning (later): Flet spil (Add Game to Book), Minmaxlib (Minimax Book), and Lær spil (Self-play).
+8. Performance tuning (final step), see below.
+
+### Phase 8 – Performance tuning
+
+Status after phase 3: FFO #40–#44 are solved correctly, but take about 30 s in a Release build and about 80 s in a Debug build (Zebra: about 3 s each). The engine searches about 15–20 million nodes per second but visits 2–10 times more nodes than Zebra; #43 is the slowest.
+
+Candidates, measured one at a time with an FFO #40–#44 benchmark (nodes and time per position):
+
+- Better move ordering in the endgame solver far from the end (e.g. shallow midgame search, or evaluation combined with mobility).
+- Enhanced transposition cutoffs and stability cutoffs in the endgame solver.
+- A faster exact pass after the win/loss/draw pass (aspiration or null-window steps instead of one wide window).
+- Incremental hashing and fewer repeated flip calculations.
+- Midgame: iterative-deepening move ordering and hash-table use at the root.
+- Build the engine with optimisations in Debug, or move the slow FFO tests to a separate test category, so the normal test run stays short.
+
+Acceptance: the same test results as before, and FFO #40–#44 in less than 10 s in total in a Release build.
 
 ## Decisions
 

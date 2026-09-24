@@ -6,13 +6,6 @@ namespace Stello.Engine;
 /// <summary>Immutable Othello position stored as one bitboard per player (bit n = <see cref="Square.Index"/> n).</summary>
 public readonly record struct Board
 {
-    private const ulong NotColumnA = 0xFEFE_FEFE_FEFE_FEFEUL;
-    private const ulong NotColumnH = 0x7F7F_7F7F_7F7F_7F7FUL;
-
-    // E, W, N, S, NE, NW, SE, SW; the mask removes discs that wrapped to the other edge.
-    private static readonly int[] Shifts = [1, -1, 8, -8, 9, 7, -7, -9];
-    private static readonly ulong[] ShiftMasks = [NotColumnA, NotColumnH, ulong.MaxValue, ulong.MaxValue, NotColumnA, NotColumnH, NotColumnA, NotColumnH];
-
     public Board(ulong black, ulong white)
     {
         if ((black & white) != 0)
@@ -46,26 +39,7 @@ public readonly record struct Board
 
     public int Count(Player player) => BitOperations.PopCount(Discs(player));
 
-    public ulong LegalMoves(Player player)
-    {
-        ulong own = Discs(player);
-        ulong opponent = Discs(player.Opponent());
-        ulong empty = Empty;
-        ulong moves = 0;
-
-        for (int d = 0; d < Shifts.Length; d++)
-        {
-            ulong run = Shift(own, d) & opponent;
-            for (int i = 0; i < 5; i++)
-            {
-                run |= Shift(run, d) & opponent;
-            }
-
-            moves |= Shift(run, d) & empty;
-        }
-
-        return moves;
-    }
+    public ulong LegalMoves(Player player) => Bitboards.LegalMoves(Discs(player), Discs(player.Opponent()));
 
     public bool HasLegalMove(Player player) => LegalMoves(player) != 0;
 
@@ -76,32 +50,9 @@ public readonly record struct Board
     /// <summary>Discs that would be flipped if <paramref name="player"/> plays on <paramref name="square"/>; 0 if the move is illegal.</summary>
     public ulong Flips(Player player, Square square)
     {
-        if ((Empty & square.Bit) == 0)
-        {
-            return 0;
-        }
-
-        ulong own = Discs(player);
-        ulong opponent = Discs(player.Opponent());
-        ulong flips = 0;
-
-        for (int d = 0; d < Shifts.Length; d++)
-        {
-            ulong line = 0;
-            ulong next = Shift(square.Bit, d);
-            while ((next & opponent) != 0)
-            {
-                line |= next;
-                next = Shift(next, d);
-            }
-
-            if ((next & own) != 0)
-            {
-                flips |= line;
-            }
-        }
-
-        return flips;
+        return (Empty & square.Bit) == 0
+            ? 0
+            : Bitboards.Flips(Discs(player), Discs(player.Opponent()), square.Index);
     }
 
     public Board Play(Player player, Square square)
@@ -185,12 +136,5 @@ public readonly record struct Board
         }
 
         return text.ToString();
-    }
-
-    private static ulong Shift(ulong bits, int direction)
-    {
-        int shift = Shifts[direction];
-        ulong shifted = shift > 0 ? bits << shift : bits >> -shift;
-        return shifted & ShiftMasks[direction];
     }
 }
