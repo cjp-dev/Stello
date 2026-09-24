@@ -105,9 +105,15 @@ The C++ version cannot save games (`Serialize()` is empty). Games are saved as a
   - `Stello.Engine` – a class library (`net10.0`) with no WPF dependency.
   - `Stello.Net` – the WPF app, using MVVM with `CommunityToolkit.Mvvm` (view models and commands; no game logic in code-behind).
   - `Stello.Engine.Tests` – xUnit tests, see "Testing and acceptance criteria".
+  - `Stello.Net.Tests` – xUnit tests for the WPF view models.
 - **Language:** The UI text is in English. Code identifiers are in English; keep the original Danish name in a comment where it helps to trace the code back to the C++ source (e.g. `// C++: sikker`).
 - **Settings:** A JSON file in `%AppData%\Stello\settings.json`: time mode (fixed depth, time per move, or time per game) and its value.
 - **Code quality:** No compiler warnings with nullable reference types enabled.
+- **Porting documentation:** Every phase updates [Stello porting documentation.md](Stello%20porting%20documentation.md) before it is done. For each phase it describes:
+  - the algorithms, data structures and notable features of the C++ code (with file and function names);
+  - how they are implemented in C#/.NET/WPF (types, files);
+  - for each part, whether it is a 1:1 port or was changed (improved algorithm or data structure, bug fixed, C++ quirk kept on purpose), and why;
+  - known differences in behaviour and open points.
 
 ## Testing and acceptance criteria
 
@@ -120,6 +126,8 @@ The C++ version cannot save games (`Serialize()` is empty). Games are saved as a
 7. The UI stays responsive while the computer is thinking, and "Træk nu" makes the computer move within ~100 ms.
 
 ## Phases
+
+Each phase ends with its section in the porting documentation (see "Non-functional requirements").
 
 0. Setup: solution structure, projects, packages, and the book file in the output.
 1. Board and rules, with tests.

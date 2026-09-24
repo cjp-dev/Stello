@@ -3,10 +3,118 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Stello.Net"
+        xmlns:views="clr-namespace:Stello.Net.Views"
+        xmlns:vm="clr-namespace:Stello.Net.ViewModels"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+        Title="{Binding Title}" Width="860" Height="640" MinWidth="520" MinHeight="420"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
+        <Style x:Key="Label" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,2,12,2" />
+            <Setter Property="Foreground" Value="#555" />
+        </Style>
+        <Style x:Key="Field" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,2,0,2" />
+        </Style>
+    </Window.Resources>
 
-    </Grid>
+    <Window.InputBindings>
+        <KeyBinding Modifiers="Control" Key="N" Command="{Binding NewGameCommand}" />
+        <KeyBinding Modifiers="Control" Key="O" Command="{Binding OpenCommand}" />
+        <KeyBinding Modifiers="Control" Key="S" Command="{Binding SaveCommand}" />
+        <KeyBinding Modifiers="Control" Key="M" Command="{Binding MoveNowCommand}" />
+        <KeyBinding Modifiers="Control" Key="Z" Command="{Binding UndoCommand}" />
+        <KeyBinding Modifiers="Control" Key="T" Command="{Binding UndoCommand}" />
+        <KeyBinding Modifiers="Control" Key="Y" Command="{Binding RedoCommand}" />
+        <KeyBinding Modifiers="Control" Key="F" Command="{Binding RedoCommand}" />
+        <KeyBinding Modifiers="Control" Key="A" Command="{Binding ToggleAnalysisCommand}" />
+    </Window.InputBindings>
+
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New Game" InputGestureText="Ctrl+N" Command="{Binding NewGameCommand}" />
+                <MenuItem Header="_Open..." InputGestureText="Ctrl+O" Command="{Binding OpenCommand}" />
+                <MenuItem Header="_Save" InputGestureText="Ctrl+S" Command="{Binding SaveCommand}" />
+                <MenuItem Header="Save _As..." Command="{Binding SaveAsCommand}" />
+                <Separator />
+                <MenuItem Header="E_xit" Click="OnExit" />
+            </MenuItem>
+            <MenuItem Header="_Game">
+                <MenuItem Header="_Switch Sides" Command="{Binding SwitchSidesCommand}" />
+                <MenuItem Header="_Move Now" InputGestureText="Ctrl+M" Command="{Binding MoveNowCommand}" />
+                <Separator />
+                <MenuItem Header="S_ettings..." Command="{Binding EditSettingsCommand}" />
+            </MenuItem>
+            <MenuItem Header="_Moves">
+                <MenuItem Header="_Back" InputGestureText="Ctrl+Z" Command="{Binding UndoCommand}" />
+                <MenuItem Header="_Forward" InputGestureText="Ctrl+Y" Command="{Binding RedoCommand}" />
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="_Analysis" InputGestureText="Ctrl+A" IsCheckable="True" IsChecked="{Binding IsAnalysisVisible}" />
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_About Stello..." Command="{Binding AboutCommand}" />
+            </MenuItem>
+        </Menu>
+
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <TextBlock Text="{Binding Status}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock>
+                    <Run Text="Black" /> <Run Text="{Binding BlackCount, Mode=OneWay}" />
+                    <Run Text="– White" /> <Run Text="{Binding WhiteCount, Mode=OneWay}" />
+                </TextBlock>
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="{Binding SidesText}" />
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right">
+                <TextBlock Text="{Binding ClockText}" />
+            </StatusBarItem>
+        </StatusBar>
+
+        <GroupBox DockPanel.Dock="Right" Width="240" Margin="0,12,12,12" Header="Analysis"
+                  Visibility="{Binding IsAnalysisVisible, Converter={StaticResource BooleanToVisibility}}"
+                  DataContext="{Binding Analysis}">
+            <Grid Margin="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Style="{StaticResource Label}" Text="Move:" />
+                <TextBlock Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Move}" />
+                <TextBlock Grid.Row="1" Style="{StaticResource Label}" Text="Depth:" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Depth}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="2" Style="{StaticResource Label}" Text="Value:" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Value}" />
+                <TextBlock Grid.Row="3" Style="{StaticResource Label}" Text="Best move:" />
+                <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding BestMove}" />
+                <TextBlock Grid.Row="4" Style="{StaticResource Label}" Text="Nodes:" />
+                <TextBlock Grid.Row="4" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Nodes}" />
+                <TextBlock Grid.Row="5" Style="{StaticResource Label}" Text="Evaluations:" />
+                <TextBlock Grid.Row="5" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Evaluations}" />
+                <TextBlock Grid.Row="6" Style="{StaticResource Label}" Text="Time:" />
+                <TextBlock Grid.Row="6" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Time}" />
+            </Grid>
+        </GroupBox>
+
+        <views:BoardView Margin="12" />
+    </DockPanel>
 </Window>

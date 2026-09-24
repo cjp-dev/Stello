@@ -13,6 +13,9 @@ public enum ScoreKind
 
     /// <summary>Final disc difference with perfect play.</summary>
     Exact,
+
+    /// <summary>The move comes from the opening book; the score is the book value.</summary>
+    Book,
 }
 
 /// <summary>Progress from a running search (C++: make_try/make_res).</summary>

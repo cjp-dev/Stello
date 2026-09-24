@@ -20,4 +20,8 @@
     <None Include="..\..\Stello C++\OPENING" Link="Data\OPENING" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Stello.Net.Tests" />
+  </ItemGroup>
+
 </Project>

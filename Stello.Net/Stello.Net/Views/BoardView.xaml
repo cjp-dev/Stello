@@ -1,0 +1,106 @@
+<UserControl x:Class="Stello.Net.Views.BoardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:engine="clr-namespace:Stello.Engine;assembly=Stello.Engine"
+             xmlns:vm="clr-namespace:Stello.Net.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+             d:DesignWidth="440" d:DesignHeight="440">
+    <UserControl.Resources>
+        <Style x:Key="Coordinate" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="#333" />
+        </Style>
+
+        <ControlTemplate x:Key="SquareTemplate" TargetType="Button">
+            <Border x:Name="Cell" Background="#1E7A3C" BorderBrush="#0B3D1C" BorderThickness="1">
+                <Grid>
+                    <Ellipse x:Name="Disc" Margin="5" Stroke="#222" StrokeThickness="1" Visibility="Collapsed" />
+                    <Ellipse x:Name="Hint" Width="12" Height="12" Fill="#55000000" Visibility="Collapsed" />
+                    <Ellipse x:Name="Last" Width="10" Height="10" Fill="#E03030" Visibility="Collapsed" />
+                </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+                <DataTrigger Binding="{Binding Disc}" Value="{x:Static engine:Player.Black}">
+                    <Setter TargetName="Disc" Property="Visibility" Value="Visible" />
+                    <Setter TargetName="Disc" Property="Fill" Value="Black" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Disc}" Value="{x:Static engine:Player.White}">
+                    <Setter TargetName="Disc" Property="Visibility" Value="Visible" />
+                    <Setter TargetName="Disc" Property="Fill" Value="White" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsLegalMove}" Value="True">
+                    <Setter TargetName="Hint" Property="Visibility" Value="Visible" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsLastMove}" Value="True">
+                    <Setter TargetName="Last" Property="Visibility" Value="Visible" />
+                </DataTrigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Cell" Property="Background" Value="#23893F" />
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter TargetName="Cell" Property="BorderBrush" Value="Yellow" />
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+    </UserControl.Resources>
+
+    <Viewbox>
+        <Grid Width="440" Height="440">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="20" />
+                <ColumnDefinition Width="400" />
+                <ColumnDefinition Width="20" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="20" />
+                <RowDefinition Height="400" />
+                <RowDefinition Height="20" />
+            </Grid.RowDefinitions>
+
+            <UniformGrid Grid.Column="1" Rows="1">
+                <TextBlock Style="{StaticResource Coordinate}" Text="a" />
+                <TextBlock Style="{StaticResource Coordinate}" Text="b" />
+                <TextBlock Style="{StaticResource Coordinate}" Text="c" />
+                <TextBlock Style="{StaticResource Coordinate}" Text="d" />
+                <TextBlock Style="{StaticResource Coordinate}" Text="e" />
+                <TextBlock Style="{StaticResource Coordinate}" Text="f" />
+                <TextBlock Style="{StaticResource Coordinate}" Text="g" />
+                <TextBlock Style="{StaticResource Coordinate}" Text="h" />
+            </UniformGrid>
+
+            <UniformGrid Grid.Row="1" Columns="1">
+                <TextBlock Style="{StaticResource Coordinate}" Text="1" />
+                <TextBlock Style="{StaticResource Coordinate}" Text="2" />
+                <TextBlock Style="{StaticResource Coordinate}" Text="3" />
+                <TextBlock Style="{StaticResource Coordinate}" Text="4" />
+                <TextBlock Style="{StaticResource Coordinate}" Text="5" />
+                <TextBlock Style="{StaticResource Coordinate}" Text="6" />
+                <TextBlock Style="{StaticResource Coordinate}" Text="7" />
+                <TextBlock Style="{StaticResource Coordinate}" Text="8" />
+            </UniformGrid>
+
+            <!-- Squares in index order: a1 top left, h8 bottom right. -->
+            <ItemsControl Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Squares}" Focusable="False">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Rows="8" Columns="8" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:SquareViewModel}">
+                        <Button Template="{StaticResource SquareTemplate}"
+                                Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"
+                                ToolTip="{Binding Name}"
+                                AutomationProperties.Name="{Binding Name}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Grid>
+    </Viewbox>
+</UserControl>
