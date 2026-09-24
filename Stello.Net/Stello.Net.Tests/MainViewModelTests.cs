@@ -278,8 +278,73 @@ public sealed class MainViewModelTests : IDisposable
         Assert.Equal(1, _dialogs.AboutShown);
     }
 
-    private MainViewModel Create(GameSettings? settings = null, string? notice = null) =>
-        new(new ComputerPlayer(new SearchEngine(hashBits: 12), book: null, new Random(0)), _dialogs, settings ?? QuickSettings, notice);
+    [Fact]
+    public void Start_UsesSavedSettings()
+    {
+        var placement = new WindowPlacement(10, 20, 900, 700, Maximized: false);
+        var store = new FakeSettingsStore(new AppSettings(SlowSettings, ShowAnalysis: false, placement));
+
+        MainViewModel vm = Create(store: store);
+
+        Assert.Equal(SlowSettings, vm.Settings);
+        Assert.False(vm.IsAnalysisVisible);
+        Assert.Equal(placement, vm.WindowPlacement);
+        Assert.Equal(0, store.Saves);
+    }
+
+    [Fact]
+    public void EditSettings_SavesTheSettings()
+    {
+        var store = new FakeSettingsStore(new AppSettings(QuickSettings, true, null));
+        MainViewModel vm = Create(store: store);
+        _dialogs.NewSettings = new GameSettings(TimeControlMode.TimePerMove, 8, 12, 5);
+
+        vm.EditSettingsCommand.Execute(null);
+
+        Assert.Equal(_dialogs.NewSettings, store.Settings.Game);
+    }
+
+    [Fact]
+    public void ToggleAnalysis_SavesTheSettings()
+    {
+        var store = new FakeSettingsStore(new AppSettings(QuickSettings, true, null));
+        MainViewModel vm = Create(store: store);
+
+        vm.ToggleAnalysisCommand.Execute(null);
+
+        Assert.False(store.Settings.ShowAnalysis);
+    }
+
+    [Fact]
+    public void SaveWindowPlacement_SavesTheSettings()
+    {
+        var store = new FakeSettingsStore(new AppSettings(QuickSettings, true, null));
+        MainViewModel vm = Create(store: store);
+        var placement = new WindowPlacement(1, 2, 800, 600, Maximized: true);
+
+        vm.SaveWindowPlacement(placement);
+
+        Assert.Equal(placement, store.Settings.Window);
+        Assert.Equal(placement, vm.WindowPlacement);
+    }
+
+    [Fact]
+    public void SaveSettings_FailureIsShownInTheStatus()
+    {
+        var store = new FakeSettingsStore(new AppSettings(QuickSettings, true, null)) { CanSave = false };
+        MainViewModel vm = Create(store: store);
+
+        vm.ToggleAnalysisCommand.Execute(null);
+
+        Assert.StartsWith("The settings could not be saved.", vm.Status);
+    }
+
+    private MainViewModel Create(GameSettings? settings = null, string? notice = null, FakeSettingsStore? store = null) =>
+        new(
+            new ComputerPlayer(new SearchEngine(hashBits: 12), book: null, new Random(0)),
+            _dialogs,
+            store ?? new FakeSettingsStore(new AppSettings(settings ?? QuickSettings, ShowAnalysis: true, Window: null)),
+            notice);
 
     private static void Play(MainViewModel vm, string square) =>
         vm.PlayCommand.Execute(vm.Squares.Single(s => s.Name == square));

@@ -52,11 +52,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         set => SelectMode(value, TimeControlMode.TimePerGame);
     }
 
-    public GameSettings ToSettings() => new(
-        Mode,
-        Math.Clamp(Depth, 1, GameSettings.MaxDepth),
-        Math.Clamp(SecondsPerMove, 1, GameSettings.MaxSecondsPerMove),
-        Math.Clamp(MinutesPerGame, 1, GameSettings.MaxMinutesPerGame));
+    public GameSettings ToSettings() => new GameSettings(Mode, Depth, SecondsPerMove, MinutesPerGame).Normalize();
 
     private void SelectMode(bool selected, TimeControlMode mode)
     {

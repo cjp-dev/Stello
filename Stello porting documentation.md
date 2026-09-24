@@ -473,5 +473,55 @@ Notable features and quirks:
 | Open/Save | New | Text move lists. |
 | Danish UI text | Changed | English. |
 | Print, toolbar, WinHelp, MDI window menu | Not ported | Out of scope. |
-| Settings persistence (`rev.cfg`) | Open | Phase 6 (JSON in `%AppData%`). |
+| Settings persistence (`rev.cfg`) | Done in phase 6 | JSON in `%AppData%`. |
 | Book learning menu items | Open | Phase 7. |
+
+---
+
+## Phase 6 – Settings and file locations
+
+### C++ (`Stello.cpp`, `Stello.h`, `BRAIN/Interfa.c`, `BRAIN/Book.cpp`)
+
+- **`rev.cfg`:** a binary dump (`fread(&revdef, sizeof(revdef), 1, fd)`) of the `config` struct, read at startup from the **current directory**. The struct is `short` fields:
+  - `timedef` (time mode), `leveldyb` (depth level), `leveltid` (time level);
+  - `borderdef`, `hvmudef`, `notadef` (board orientation), `anadef`/`gamdef` (whether the analysis and game windows are open);
+  - plus the saved window size and state.
+- **The Windows version ignores it:** in `CStelloApp::opset` all the code that uses `revdef` is commented out. The defaults are always used: `tid_kontrol = spil_tid`, `GameTid = 5` minutes, `lookahead = 8`, no pondering, no analysis window. The older UI in `Interfa.c` still applied the file.
+- **No saving:** the Windows version never writes `rev.cfg`. A time set with "Tid for et spil" is lost when the program closes. The window layout is the MFC default.
+- **Other files are also read and written in the current directory:** `opening` (book), `selfplay`, `expanding`, `moves` (debug).
+
+### C# (`Stello.Net`)
+
+- **`Models/AppSettings`:** everything saved between sessions: `GameSettings` (mode, depth, seconds per move, minutes per game), `ShowAnalysis`, and `WindowPlacement` (position, restored size, maximised).
+  - `Normalize()` clamps every value to its range and falls back to the default mode for an unknown mode (for example `Solve`).
+  - An empty window size means "use the default position".
+- **`Services/ISettingsStore`, `JsonSettingsStore`:** JSON in `%AppData%\Stello\settings.json` (`System.Text.Json`, enums as text, indented).
+  - A missing, damaged or unreadable file gives the defaults.
+  - Saving writes a temporary file and then renames it, so a crash cannot leave half a file. It returns false instead of throwing.
+- **`MainViewModel`:**
+  - Loads the settings at startup (depth/time mode, whether the analysis panel is shown, window position).
+  - Saves them when the settings dialog is confirmed, when the analysis panel is toggled, and when the window closes.
+  - A failed save is shown in the status bar.
+- **`MainWindow`:** restores the saved position and size, and maximises if it was maximised. It is only restored if the window would still be on a screen (a monitor may have been removed). When closing, it saves the restored size, also when maximised.
+- **`Services/AppPaths`:** all file locations are fixed and independent of the current directory:
+  - the settings file;
+  - the user's book `%AppData%\Stello\OPENING` (phase 7 writes to it);
+  - the shipped book `<app folder>\Data\OPENING`.
+- **`Services/BookLoader`:** tries the user's book first, then the shipped book; missing files are skipped. If a file cannot be read, a notice is shown and the next file is tried. If no book is found, the app plays without one.
+- **Tests (`Stello.Net.Tests`, 51 tests in total):**
+  - the store: defaults without a file, round trip, readable JSON without computed properties, damaged file, values out of range, missing sections, a write failure;
+  - the book loader: missing user book, damaged user book, no book;
+  - the view model: the saved settings are used at startup, and they are saved after the settings dialog, the analysis toggle and the window placement; a save failure is shown.
+
+### Assessment
+
+| Part | Port | Notes |
+|---|---|---|
+| Settings file | Changed | JSON instead of a binary struct dump; readable, versionable, and robust against damaged files. |
+| Settings actually used and saved | New | The Windows C++ version read `rev.cfg` but ignored it, and never saved. |
+| Defaults (5 minutes per game, depth 8) | 1:1 | As `opset`. |
+| Window position and analysis panel | 1:1 idea | `anadef` and the window fields in `config`, now actually saved. |
+| Import of an old `rev.cfg` | Not ported | Optional in the specification; the Windows version never wrote one, and it ignored the values anyway. |
+| Board orientation, "border", multiple moves (`notadef`, `borderdef`, `hvmudef`) | Not ported | Only used by the old `Interfa.c` UI. |
+| File locations | Changed | `%AppData%\Stello` and the application folder instead of the current directory. |
+| User book before shipped book | New | Prepares book learning (phase 7) without changing the shipped file. |

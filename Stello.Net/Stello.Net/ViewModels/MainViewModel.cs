@@ -16,6 +16,8 @@ public sealed partial class MainViewModel : ObservableObject
 {
     private readonly ComputerPlayer _computer;
     private readonly IDialogService _dialogs;
+    private readonly ISettingsStore _settingsStore;
+    private readonly bool _settingsLoaded;
 
     // Computer clock before its move at each ply, so taking back moves also gives the time back (C++: timesleft).
     private readonly Dictionary<int, TimeSpan> _timeLeftAtPly = [];
@@ -56,12 +58,19 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private GameSettings _settings = GameSettings.Default;
 
-    public MainViewModel(ComputerPlayer computer, IDialogService dialogs, GameSettings settings, string? startupNotice = null)
+    public MainViewModel(ComputerPlayer computer, IDialogService dialogs, ISettingsStore settingsStore, string? startupNotice = null)
     {
         _computer = computer;
         _dialogs = dialogs;
-        Settings = settings;
-        _computerTimeLeft = settings.GameTime;
+        _settingsStore = settingsStore;
+
+        AppSettings saved = settingsStore.Load();
+        Settings = saved.Game;
+        IsAnalysisVisible = saved.ShowAnalysis;
+        WindowPlacement = saved.Window;
+        _settingsLoaded = true;
+
+        _computerTimeLeft = Settings.GameTime;
         _notice = startupNotice;
         Squares = Enumerable.Range(0, 64).Select(i => new SquareViewModel(new Square(i))).ToArray();
         Start();
@@ -71,6 +80,9 @@ public sealed partial class MainViewModel : ObservableObject
 
     public AnalysisViewModel Analysis { get; } = new();
 
+    /// <summary>The saved window position, or null for the default position.</summary>
+    public WindowPlacement? WindowPlacement { get; private set; }
+
     /// <summary>Completes when the computer has moved and it is the human's turn or the game is over.</summary>
     internal Task Idle { get; private set; } = Task.CompletedTask;
 
@@ -78,6 +90,22 @@ public sealed partial class MainViewModel : ObservableObject
 
     /// <summary>Stops the computer without waiting, e.g. when the window closes.</summary>
     public void Stop() => _cancel?.Cancel();
+
+    public void SaveWindowPlacement(WindowPlacement placement)
+    {
+        WindowPlacement = placement;
+        SaveSettings();
+    }
+
+    partial void OnIsAnalysisVisibleChanged(bool value) => SaveSettings();
+
+    private void SaveSettings()
+    {
+        if (_settingsLoaded && !_settingsStore.Save(new AppSettings(Settings, IsAnalysisVisible, WindowPlacement)))
+        {
+            Status = $"The settings could not be saved. {Status}";
+        }
+    }
 
     [RelayCommand]
     private void Play(SquareViewModel square)
@@ -217,6 +245,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         bool clockChanged = settings.Mode != Settings.Mode || settings.MinutesPerGame != Settings.MinutesPerGame;
         Settings = settings;
+        SaveSettings();
         if (clockChanged)
         {
             ResetClock();
