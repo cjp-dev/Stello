@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Stello.Net")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+aafb41412d2b8df71c9e746a01d47ff625c751c9")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+58f0b48d3efc43edbeb92e582d792cd87bb77159")]
 [assembly: System.Reflection.AssemblyProductAttribute("Stello.Net")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Stello.Net")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
