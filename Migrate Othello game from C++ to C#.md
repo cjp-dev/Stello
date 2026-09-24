@@ -71,12 +71,13 @@ Each C++ command should map to a WPF command. Proposed mapping:
 - Handle a pass automatically when a player has no legal move, and show a message when it happens.
 - Detect game over and show the result (final disc count and winner).
 - Show whose turn it is, and show the computer's last move.
-- By default the human plays black (DARK) and moves first. **Confirm this against the C++ code.**
+- By default the human plays black (DARK) and moves first (confirmed: `init_game()` in `Treak.cpp`, `curcl = DARK`).
+- Only human vs. computer. Human vs. human and computer vs. computer are out of scope.
 
 ## Engine requirements
 
-- Port the engine faithfully. For the same position, search depth and settings, the C# engine should pick the same move and return the same evaluation as the C++ engine. Deterministic behaviour is required for the tests (see "Testing and acceptance criteria").
-- Keep the board representation (10×10 with border squares, square index = row × 10 + column) during the first port so the tables (`scores[100]`, `sikker[6561]`, hash keys) can be reused unchanged. Optimisations such as bitboards may come later but are out of scope for now.
+- Port the engine's algorithms (evaluation, alpha-beta search, endgame solver, hash table, time control, opening book). It does not have to give exactly the same moves and values as the C++ engine, and the code may be modernised. For a given position, depth and settings the C# engine must always return the same result.
+- The board may use bitboards. The old square index (row × 10 + column, a1 = 11, h8 = 88) is still used for the book file and the ported tables (`scores[100]`, `sikker[6561]`).
 - Replace global variables (`mainboard`, `game`, `playnm`, `human`, `computer`, `calc`, `libon`, …) with instance state in engine classes, for example `Board`, `Game`, `SearchEngine`, `OpeningBook`, `TimeControl`.
 - Integer widths: C++ `short int` is 16 bits, `int`/`long` are 32 bits (MSVC). Use `short`/`int` in C# where overflow or packing matters, such as book file values and scores like `±32665`.
 - Replace the fixed node pool (`init_nodes(ANTAL_KNUDER)`) with normal C# objects, but keep any limit on book size.
@@ -86,7 +87,7 @@ Each C++ command should map to a WPF command. Proposed mapping:
 
 | File | Format | Handling in C# |
 |---|---|---|
-| `OPENING` (in the working directory; copies in `BRAIN/`, `BOOKTEST/`, `OldBook/`) | Binary; written by `Put_book()` in `Book.cpp` (count header followed by the recursively written tree) | Must read and write the existing format byte for byte. Document the exact layout (field sizes, endianness, structure padding) in code comments. Which copy is the master file? **To be decided** |
+| `OPENING` (in the working directory; copies in `BRAIN/`, `BOOKTEST/`, `OldBook/`) | Binary; written by `Put_book()` in `Book.cpp` (count header followed by the recursively written tree) | Must read and write the existing format byte for byte. Document the exact layout (field sizes, endianness, structure padding) in code comments. Master copy: `Stello C++/OPENING`, shipped as `Data/OPENING` |
 | `rev.cfg` | Binary dump of the `revdef` struct (settings) | Replace with a JSON settings file (e.g. in `%AppData%\Stello`). Importing the old `rev.cfg` is optional |
 | `SELFPLAY` | Text log ("played game N") | Keep as a text log |
 | `OldBook/UOpening` | Old book | Out of scope |
@@ -95,40 +96,48 @@ Each C++ command should map to a WPF command. Proposed mapping:
 
 ### Game file format
 
-The C++ version cannot save games (`Serialize()` is empty). Proposal: save the move list as a text file, e.g. `.stello` or plain `f5 d6 c3 …` notation, so games can be loaded, replayed with Frem/Tilbage and merged into the book.
+The C++ version cannot save games (`Serialize()` is empty). Games are saved as a text move list (`f5 d6 c3 … pass …`) so they can be loaded, replayed with Back/Forward and merged into the book.
 
 ## Non-functional requirements
 
 - **Responsive UI:** The C++ version searches on the UI thread (`BeginWaitCursor`). In C#, the search, Minmaxlib and self-play must run on a background thread (`Task`), use `CancellationToken` for "Træk nu", new game and undo, and report progress to the analysis panel.
-- **Architecture:** Two projects in `Stello.Net.slnx`:
-  - `Stello.Engine` – a class library with no WPF dependency.
-  - `Stello.Net` – the WPF app, using MVVM (view models and commands; no game logic in code-behind).
-- **Tests:** An `Stello.Engine.Tests` project (xUnit or MSTest) – see "Testing and acceptance criteria".
-- **Language:** UI text: **to be decided** – keep Danish, change to English, or use resource files for both. Code identifiers are in English; keep the original Danish name in a comment where it helps to trace the code back to the C++ source (e.g. `// C++: sikker`).
+- **Architecture:** Projects in `Stello.Net.slnx`:
+  - `Stello.Engine` – a class library (`net10.0`) with no WPF dependency.
+  - `Stello.Net` – the WPF app, using MVVM with `CommunityToolkit.Mvvm` (view models and commands; no game logic in code-behind).
+  - `Stello.Engine.Tests` – xUnit tests, see "Testing and acceptance criteria".
+- **Language:** The UI text is in English. Code identifiers are in English; keep the original Danish name in a comment where it helps to trace the code back to the C++ source (e.g. `// C++: sikker`).
+- **Settings:** A JSON file in `%AppData%\Stello\settings.json`: time mode (fixed depth, time per move, or time per game) and its value.
 - **Code quality:** No compiler warnings with nullable reference types enabled.
 
 ## Testing and acceptance criteria
 
 1. Unit tests for move generation: start position, passes, full-board and wipe-out positions, and flips in all 8 directions.
 2. Perft-style node counts from the start position for depth 1–8 match known values (1: 4, 2: 12, 3: 56, 4: 244, 5: 1396, 6: 8200, 7: 55092, 8: 390216).
-3. For a set of test positions, evaluation and best move at a fixed depth match the C++ engine. The reference values have to be produced by building and running the C++ version or by an instrumented port.
-4. Loading `OPENING` and saving it again without changes gives a byte-identical file.
-5. A full game can be played human vs. computer through the UI, including pass, undo/redo, switch side and game over.
-6. The UI stays responsive while the computer is thinking, and "Træk nu" makes the computer move within ~100 ms.
+3. The endgame solver finds the known exact scores for the FFO test positions #40–#44.
+4. At a fixed depth the search always gives the same result. At depth 4 the engine beats a greedy player and a random player in at least 95% of 50 games each. There are no comparison tests against the C++ engine.
+5. Loading `OPENING` and saving it again without changes gives a byte-identical file.
+6. A full game can be played human vs. computer through the UI, including pass, undo/redo, switch side and game over.
+7. The UI stays responsive while the computer is thinking, and "Træk nu" makes the computer move within ~100 ms.
 
-## Suggested phases
+## Phases
 
-1. Engine core: board, move generation, making moves, and tests.
-2. Evaluation, search, hash table and time control, with comparison tests.
-3. Opening book: load/save, lookup during play, Flet spil, Minmaxlib, and self-play.
-4. WPF UI: board, menus/commands, time dialog, and analysis panel.
-5. Settings, saving/loading games, and polish.
+0. Setup: solution structure, projects, packages, and the book file in the output.
+1. Board and rules, with tests.
+2. Game record: history, undo/redo, and text save/load.
+3. Evaluation, search, hash table, endgame solver, and time control.
+4. Opening book: read/write and lookup during play (read-only).
+5. WPF UI: board, menus/commands, settings dialog, and analysis panel.
+6. Settings persistence and polish.
+7. Book learning (later): Flet spil (Add Game to Book), Minmaxlib (Minimax Book), and Lær spil (Self-play).
 
-## Open questions
+## Decisions
 
-- Should the UI be in Danish, English or both?
-- Which `OPENING` file is the master copy, and may the book file format be changed later?
-- Is saving/loading games (a new feature) wanted, and in which format?
-- Should human vs. human and computer vs. computer modes be added? They are not in the C++ version.
-- Which difficulty or time settings from `rev.cfg`/`Kontrol.cpp` should be shown in the UI?
-- Can the C++ project still be built (VC6), so reference values can be produced for the comparison tests?
+- UI in English only.
+- The engine uses the same algorithms but may be modernised; bitboards are allowed.
+- Book learning comes in a later phase, after the game is playable.
+- Games are saved as a text move list.
+- Only human vs. computer.
+- Time settings: fixed depth, time per move, and time per game.
+- No comparison tests against the C++ engine.
+- Tests use xUnit.
+- The master opening book is `Stello C++/OPENING`.

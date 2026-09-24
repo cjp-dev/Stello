@@ -1,3 +1,5 @@
 <Solution>
+  <Project Path="Stello.Engine.Tests/Stello.Engine.Tests.csproj" />
+  <Project Path="Stello.Engine/Stello.Engine.csproj" />
   <Project Path="Stello.Net/Stello.Net.csproj" />
 </Solution>

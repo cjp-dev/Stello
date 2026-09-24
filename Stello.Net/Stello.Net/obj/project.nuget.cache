@@ -1,8 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "rXHEokKLRJw=",
+  "dgSpecHash": "DmqjBFW6HZM=",
   "success": true,
   "projectFilePath": "C:\\Udvikling\\Privat\\Stello\\Stello.Net\\Stello.Net\\Stello.Net.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "C:\\Users\\Z6CJP\\.nuget\\packages\\communitytoolkit.mvvm\\8.4.2\\communitytoolkit.mvvm.8.4.2.nupkg.sha512"
+  ],
   "logs": []
 }
