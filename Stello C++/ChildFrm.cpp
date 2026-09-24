@@ -1,0 +1,73 @@
+// ChildFrm.cpp : implementation of the CChildFrame class
+//
+
+#include "stdafx.h"
+#include "Stello.h"
+
+#include "ChildFrm.h"
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+// CChildFrame
+
+IMPLEMENT_DYNCREATE(CChildFrame, CMDIChildWnd)
+
+BEGIN_MESSAGE_MAP(CChildFrame, CMDIChildWnd)
+	//{{AFX_MSG_MAP(CChildFrame)
+	ON_WM_CLOSE()
+	//}}AFX_MSG_MAP
+END_MESSAGE_MAP()
+
+/////////////////////////////////////////////////////////////////////////////
+// CChildFrame construction/destruction
+
+CChildFrame::CChildFrame()
+{
+	// TODO: add member initialization code here
+	
+}
+
+CChildFrame::~CChildFrame()
+{
+}
+
+BOOL CChildFrame::PreCreateWindow(CREATESTRUCT& cs)
+{
+
+	// Create a window without min/max buttons or sizable border 
+    cs.style = WS_OVERLAPPED |WS_CAPTION|WS_CHILD | WS_VISIBLE ;
+  
+
+	return CMDIChildWnd::PreCreateWindow(cs);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// CChildFrame diagnostics
+
+#ifdef _DEBUG
+void CChildFrame::AssertValid() const
+{
+	CMDIChildWnd::AssertValid();
+}
+
+void CChildFrame::Dump(CDumpContext& dc) const
+{
+	CMDIChildWnd::Dump(dc);
+}
+
+#endif //_DEBUG
+
+/////////////////////////////////////////////////////////////////////////////
+// CChildFrame message handlers
+
+void CChildFrame::OnClose() 
+{
+	// TODO: Add your message handler code here and/or call default
+	
+	// CMDIChildWnd::OnClose();
+}

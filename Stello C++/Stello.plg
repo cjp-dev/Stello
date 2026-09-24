@@ -1,0 +1,115 @@
+--------------------Configuration: Stello - Win32 Debug--------------------
+Begining build with project "E:\C++ Projekter\Stello\Stello.dsp", at root.
+Active configuration is Win32 (x86) Application (based on Win32 (x86) Application)
+
+Project's tools are:
+			"32-bit C/C++ Compiler for 80x86" with flags "/nologo /MTd /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "FASTSLUT" /D "FAST" /Fp"Debug/Stello.pch" /Yu"stdafx.h" /Fo"Debug/" /Fd"Debug/" /FD /c "
+			"OLE Type Library Maker" with flags "/nologo /D "_DEBUG" /mktyplib203 /o NUL /win32 "
+			"Win32 Resource Compiler" with flags "/l 0x406 /fo"Debug/Stello.res" /d "_DEBUG" "
+			"Browser Database Maker" with flags "/nologo /o"Debug/Stello.bsc" "
+			"COFF Linker for 80x86" with flags "winmm.lib /nologo /subsystem:windows /incremental:yes /pdb:"Debug/Stello.pdb" /debug /machine:I386 /out:"Debug/Stello.exe" /pdbtype:sept "
+			"Custom Build" with flags ""
+			"<Component 0xa>" with flags ""
+
+Creating temp file "E:\TEMP\RSP118.bat" with contents <@echo off
+call ".\makehelp.bat"
+>
+Creating command line "E:\TEMP\RSP118.bat" 
+Creating command line "rc.exe /l 0x406 /fo"Debug/Stello.res" /d "_DEBUG" "E:\C++ Projekter\Stello\Stello.rc"" 
+Making help file...
+Building Win32 Help files
+
+        1 fil(er) kopieret.
+        1 fil(er) kopieret.
+        1 fil(er) kopieret.
+        1 fil(er) kopieret.
+
+
+Creating temp file "E:\TEMP\RSP119.tmp" with contents </nologo /MTd /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "FASTSLUT" /D "FAST" /Fp"Debug/Stello.pch" /Yu"stdafx.h" /Fo"Debug/" /Fd"Debug/" /FD /c 
+"E:\C++ Projekter\Stello\brain\Kanter.cpp"
+"E:\C++ Projekter\Stello\SpilTidFrame.cpp"
+"E:\C++ Projekter\Stello\Analyse.cpp"
+"E:\C++ Projekter\Stello\AnalyseFrame.cpp"
+"E:\C++ Projekter\Stello\brain\Book.cpp"
+"E:\C++ Projekter\Stello\ChildFrm.cpp"
+"E:\C++ Projekter\Stello\brain\Eval.cpp"
+"E:\C++ Projekter\Stello\brain\Kontrol.cpp"
+"E:\C++ Projekter\Stello\MainFrm.cpp"
+"E:\C++ Projekter\Stello\brain\Minmax.cpp"
+"E:\C++ Projekter\Stello\brain\Sort.cpp"
+"E:\C++ Projekter\Stello\Spiltid.cpp"
+"E:\C++ Projekter\Stello\Stello.cpp"
+"E:\C++ Projekter\Stello\StelloDoc.cpp"
+"E:\C++ Projekter\Stello\StelloView.cpp"
+"E:\C++ Projekter\Stello\brain\Treak.cpp"
+"E:\C++ Projekter\Stello\brain\Tree.cpp"
+>
+Creating command line "cl.exe @E:\TEMP\RSP119.tmp" 
+Creating temp file "E:\TEMP\RSP11A.tmp" with contents </nologo /MTd /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "FASTSLUT" /D "FAST" /Fp"Debug/Stello.pch" /Yc"stdafx.h" /Fo"Debug/" /Fd"Debug/" /FD /c 
+"E:\C++ Projekter\Stello\StdAfx.cpp"
+>
+Creating command line "cl.exe @E:\TEMP\RSP11A.tmp" 
+Creating temp file "E:\TEMP\RSP11B.tmp" with contents <winmm.lib /nologo /subsystem:windows /incremental:yes /pdb:"Debug/Stello.pdb" /debug /machine:I386 /out:"Debug/Stello.exe" /pdbtype:sept 
+".\Debug\Analyse.obj"
+".\Debug\AnalyseFrame.obj"
+".\Debug\Book.obj"
+".\Debug\ChildFrm.obj"
+".\Debug\Eval.obj"
+".\Debug\Kanter.obj"
+".\Debug\Kontrol.obj"
+".\Debug\MainFrm.obj"
+".\Debug\Minmax.obj"
+".\Debug\Sort.obj"
+".\Debug\Spiltid.obj"
+".\Debug\SpilTidFrame.obj"
+".\Debug\StdAfx.obj"
+".\Debug\Stello.obj"
+".\Debug\StelloDoc.obj"
+".\Debug\StelloView.obj"
+".\Debug\Treak.obj"
+".\Debug\Tree.obj"
+".\Debug\Stello.res">
+Creating command line "link.exe @E:\TEMP\RSP11B.tmp" 
+Compiling resources...
+Compiling...
+StdAfx.cpp
+Compiling...
+Kanter.cpp
+SpilTidFrame.cpp
+Analyse.cpp
+AnalyseFrame.cpp
+Book.cpp
+ChildFrm.cpp
+Eval.cpp
+E:\C++ Projekter\Stello\brain\Eval.cpp(38) : warning C4005: 'min' : macro redefinition
+E:\C++ Projekter\Stello\brain\Eval.cpp(39) : warning C4005: 'max' : macro redefinition
+E:\C++ Projekter\Stello\brain\Eval.cpp(1008) : warning C4244: '=' : conversion from 'long' to 'short', possible loss of data
+E:\C++ Projekter\Stello\brain\Eval.cpp(1098) : warning C4244: '=' : conversion from 'long' to 'short', possible loss of data
+E:\C++ Projekter\Stello\brain\Eval.cpp(1380) : warning C4101: 'comdis' : unreferenced local variable
+E:\C++ Projekter\Stello\brain\Eval.cpp(1380) : warning C4101: 'dissco' : unreferenced local variable
+E:\C++ Projekter\Stello\brain\Eval.cpp(1380) : warning C4101: 'humdis' : unreferenced local variable
+Kontrol.cpp
+E:\C++ Projekter\Stello\brain\Kontrol.cpp(813) : warning C4244: 'argument' : conversion from 'short' to 'char', possible loss of data
+E:\C++ Projekter\Stello\brain\Kontrol.cpp(813) : warning C4244: 'argument' : conversion from 'short' to 'char', possible loss of data
+E:\C++ Projekter\Stello\brain\Kontrol.cpp(817) : warning C4244: 'argument' : conversion from 'short' to 'char', possible loss of data
+E:\C++ Projekter\Stello\brain\Kontrol.cpp(817) : warning C4244: 'argument' : conversion from 'short' to 'char', possible loss of data
+E:\C++ Projekter\Stello\brain\Kontrol.cpp(820) : warning C4244: 'argument' : conversion from 'short' to 'char', possible loss of data
+E:\C++ Projekter\Stello\brain\Kontrol.cpp(820) : warning C4244: 'argument' : conversion from 'short' to 'char', possible loss of data
+MainFrm.cpp
+E:\C++ Projekter\Stello\MainFrm.cpp(273) : warning C4101: 'str' : unreferenced local variable
+E:\C++ Projekter\Stello\MainFrm.cpp(273) : warning C4101: 'mess' : unreferenced local variable
+E:\C++ Projekter\Stello\MainFrm.cpp(486) : warning C4101: 'y' : unreferenced local variable
+Minmax.cpp
+Sort.cpp
+Spiltid.cpp
+Stello.cpp
+StelloDoc.cpp
+StelloView.cpp
+Treak.cpp
+Tree.cpp
+Generating Code...
+Linking...
+
+
+
+Stello.exe - 0 error(s), 16 warning(s)

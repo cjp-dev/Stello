@@ -1,0 +1,27 @@
+// MAKEHELP.BAT generated Help Map file.  Used by STELLO.HPJ. 
+ 
+// Commands (ID_* and IDM_*) 
+HID_NYT_SPIL                            0x18003
+HID_ANALYSE                             0x18004
+HID_SKIFT_SIDE                          0x18005
+HID_SPIL_TID                            0x18006
+HID_FREM                                0x18007
+HID_TILBAGE                             0x18008
+HID_TRAK_NU                             0x18009
+HID_SPIL_FLETSPIL                       0x1800A
+HID_MINMAXLIB                           0x1800B
+HID_SELFPLAY                            0x1800C
+ 
+// Prompts (IDP_*) 
+HIDP_SOCKETS_INIT_FAILED                0x30068
+ 
+// Resources (IDR_*) 
+HIDR_MAINFRAME                          0x20080
+HIDR_STELLOTYPE                         0x20081
+ 
+// Dialogs (IDD_*) 
+HIDD_ABOUTBOX                           0x20064
+HIDD_ANALYSE                            0x20065
+HIDD_GAMETID                            0x20082
+ 
+// Frame Controls (IDW_*) 
