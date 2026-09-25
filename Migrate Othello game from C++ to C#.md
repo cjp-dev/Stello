@@ -153,7 +153,7 @@ Measurement method: a throwaway console benchmark (outside the repository) that 
 | Enhanced transposition cutoff (look up the children in the hash table before searching, from 10 empties) | About 10 % fewer nodes (32.5 s → 31.8 s with the old table). |
 | Flips computed once per move and sorted with the moves (not computed again when the move is played) | Neutral for speed; simpler code. |
 
-With these, FFO #40–#44 take **19.1 s (328 M nodes)** in Release and the full test run takes about 55 s in Debug. The target (under 10 s) is **not reached yet**.
+With these, FFO #40–#44 take **19.1 s (328 M nodes)** in Release. The engine test run takes about 30 s in Release and about 55–75 s in Debug. The target (under 10 s) is **not reached yet**.
 
 #### Round 1 results – tested and rejected (reverted; do not repeat as they were)
 
@@ -174,7 +174,7 @@ With these, FFO #40–#44 take **19.1 s (328 M nodes)** in Release and the full 
 - Better ordering in the middle of the endgame (10–18 empties), for example a shallow *endgame* search or a proper weighted-mobility formula, to get the node counts closer to Zebra.
 - MTD(f) or an aspiration window only with a good first guess (see above).
 - Midgame: iterative-deepening move ordering and hash-table use at the root.
-- Build the engine with optimisations in Debug, or move the slow FFO tests to a separate test category, so the normal test run stays short (now about 55 s).
+- Build the engine with optimisations in Debug, or move the slow FFO tests to a separate test category, so the normal test run stays short (now about 55–75 s in Debug).
 
 Acceptance: the same test results as before, and FFO #40–#44 in less than 10 s in total in a Release build.
 

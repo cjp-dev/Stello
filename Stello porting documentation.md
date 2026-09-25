@@ -649,7 +649,8 @@ This phase has no C++ counterpart: it improves the C# endgame solver (section 3.
 | After phase 8 round 1 | 19.1 s | 328 M | 10.1 s, 168 M |
 
 - All scores and best moves are unchanged.
-- All 153 engine tests and 58 app tests pass. The engine test run in Debug dropped from about 87 s to about 55 s.
+- `TranspositionTableTests` (5 tests) cover the two-entry slots: store/find, other position or tag, the deeper result is kept, a deep entry survives many colliding shallow ones, clear.
+- All 158 engine tests and 58 app tests pass (Debug and Release). The engine test run takes about 30 s in Release and about 55–75 s in Debug, against about 87 s before.
 - The target of under 10 s is not reached yet.
 
 ### Tested and rejected
