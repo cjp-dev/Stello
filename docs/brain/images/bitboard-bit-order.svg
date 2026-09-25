@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 440" width="800" height="440" font-family="sans-serif">
+<title>Bitboard bit order and direction shifts</title>
+<desc>A 64-bit number where bit 0 is a1 and bit 63 is h8, grouped by rows. Below, the eight neighbours of d4 with the shift that reaches each one, and the masks that stop wrap-around at columns a and h.</desc>
+<rect x="0" y="0" width="800" height="440" fill="#FFFFFF"/>
+<text x="20" y="28" font-size="18" font-weight="bold" fill="#000000">One ulong per colour: bit n is square n</text>
+<rect x="20" y="60" width="11" height="22" fill="#C8E6C9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="31" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="42" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="53" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="64" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="75" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="86" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="97" y="60" width="11" height="22" fill="#C8E6C9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="114" y="60" width="11" height="22" fill="#C8E6C9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="125" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="136" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="147" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="158" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="169" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="180" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="191" y="60" width="11" height="22" fill="#C8E6C9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="208" y="60" width="11" height="22" fill="#C8E6C9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="219" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="230" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="241" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="252" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="263" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="274" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="285" y="60" width="11" height="22" fill="#C8E6C9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="302" y="60" width="11" height="22" fill="#C8E6C9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="313" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="324" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="335" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="346" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="357" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="368" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="379" y="60" width="11" height="22" fill="#C8E6C9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="396" y="60" width="11" height="22" fill="#C8E6C9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="407" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="418" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="429" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="440" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="451" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="462" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="473" y="60" width="11" height="22" fill="#C8E6C9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="490" y="60" width="11" height="22" fill="#C8E6C9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="501" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="512" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="523" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="534" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="545" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="556" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="567" y="60" width="11" height="22" fill="#C8E6C9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="584" y="60" width="11" height="22" fill="#C8E6C9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="595" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="606" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="617" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="628" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="639" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="650" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="661" y="60" width="11" height="22" fill="#C8E6C9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="678" y="60" width="11" height="22" fill="#C8E6C9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="689" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="700" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="711" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="722" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="733" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="744" y="60" width="11" height="22" fill="#DCEFD9" stroke="#0B4D22" stroke-width="0.6"/>
+<rect x="755" y="60" width="11" height="22" fill="#C8E6C9" stroke="#0B4D22" stroke-width="0.6"/>
+<text x="64" y="52" font-size="13" text-anchor="middle" fill="#000000">row 8</text>
+<text x="64" y="100" font-size="12" text-anchor="middle" fill="#333333">h8 … a8</text>
+<text x="158" y="52" font-size="13" text-anchor="middle" fill="#000000">row 7</text>
+<text x="158" y="100" font-size="12" text-anchor="middle" fill="#333333">h7 … a7</text>
+<text x="252" y="52" font-size="13" text-anchor="middle" fill="#000000">row 6</text>
+<text x="252" y="100" font-size="12" text-anchor="middle" fill="#333333">h6 … a6</text>
+<text x="346" y="52" font-size="13" text-anchor="middle" fill="#000000">row 5</text>
+<text x="346" y="100" font-size="12" text-anchor="middle" fill="#333333">h5 … a5</text>
+<text x="440" y="52" font-size="13" text-anchor="middle" fill="#000000">row 4</text>
+<text x="440" y="100" font-size="12" text-anchor="middle" fill="#333333">h4 … a4</text>
+<text x="534" y="52" font-size="13" text-anchor="middle" fill="#000000">row 3</text>
+<text x="534" y="100" font-size="12" text-anchor="middle" fill="#333333">h3 … a3</text>
+<text x="628" y="52" font-size="13" text-anchor="middle" fill="#000000">row 2</text>
+<text x="628" y="100" font-size="12" text-anchor="middle" fill="#333333">h2 … a2</text>
+<text x="722" y="52" font-size="13" text-anchor="middle" fill="#000000">row 1</text>
+<text x="722" y="100" font-size="12" text-anchor="middle" fill="#333333">h1 … a1</text>
+<text x="20" y="120" font-size="13" fill="#333333">bit 63 = h8</text>
+<text x="766" y="120" font-size="13" text-anchor="end" fill="#333333">bit 0 = a1</text>
+<text x="20" y="152" font-size="13" font-family="monospace" fill="#000000">Start position:  Black = 0x0000_0008_1000_0000 (e4, d5)   White = 0x0000_0010_0800_0000 (d4, e5)</text>
+<text x="20" y="192" font-size="16" font-weight="bold" fill="#000000">Neighbours of d4 (index 27) and the shift that reaches them</text>
+<rect x="30" y="210" width="70" height="70" fill="#DCEFD9" stroke="#0B4D22" stroke-width="1.5"/>
+<text x="65" y="232" font-size="14" text-anchor="middle" font-family="monospace" fill="#000000">c3 = 18</text>
+<text x="65" y="252" font-size="14" text-anchor="middle" font-family="monospace" fill="#000000">&gt;&gt; 9</text>
+<text x="65" y="270" font-size="12" text-anchor="middle" fill="#555555">up-left</text>
+<rect x="100" y="210" width="70" height="70" fill="#DCEFD9" stroke="#0B4D22" stroke-width="1.5"/>
+<text x="135" y="232" font-size="14" text-anchor="middle" font-family="monospace" fill="#000000">d3 = 19</text>
+<text x="135" y="252" font-size="14" text-anchor="middle" font-family="monospace" fill="#000000">&gt;&gt; 8</text>
+<text x="135" y="270" font-size="12" text-anchor="middle" fill="#555555">up</text>
+<rect x="170" y="210" width="70" height="70" fill="#DCEFD9" stroke="#0B4D22" stroke-width="1.5"/>
+<text x="205" y="232" font-size="14" text-anchor="middle" font-family="monospace" fill="#000000">e3 = 20</text>
+<text x="205" y="252" font-size="14" text-anchor="middle" font-family="monospace" fill="#000000">&gt;&gt; 7</text>
+<text x="205" y="270" font-size="12" text-anchor="middle" fill="#555555">up-right</text>
+<rect x="30" y="280" width="70" height="70" fill="#DCEFD9" stroke="#0B4D22" stroke-width="1.5"/>
+<text x="65" y="302" font-size="14" text-anchor="middle" font-family="monospace" fill="#000000">c4 = 26</text>
+<text x="65" y="322" font-size="14" text-anchor="middle" font-family="monospace" fill="#000000">&gt;&gt; 1</text>
+<text x="65" y="340" font-size="12" text-anchor="middle" fill="#555555">left</text>
+<rect x="100" y="280" width="70" height="70" fill="#C8E6C9" stroke="#0B4D22" stroke-width="1.5"/>
+<text x="135" y="302" font-size="14" text-anchor="middle" font-family="monospace" fill="#000000">d4 = 27</text>
+<text x="135" y="326" font-size="13" text-anchor="middle" fill="#555555">start</text>
+<rect x="170" y="280" width="70" height="70" fill="#DCEFD9" stroke="#0B4D22" stroke-width="1.5"/>
+<text x="205" y="302" font-size="14" text-anchor="middle" font-family="monospace" fill="#000000">e4 = 28</text>
+<text x="205" y="322" font-size="14" text-anchor="middle" font-family="monospace" fill="#000000">&lt;&lt; 1</text>
+<text x="205" y="340" font-size="12" text-anchor="middle" fill="#555555">right</text>
+<rect x="30" y="350" width="70" height="70" fill="#DCEFD9" stroke="#0B4D22" stroke-width="1.5"/>
+<text x="65" y="372" font-size="14" text-anchor="middle" font-family="monospace" fill="#000000">c5 = 34</text>
+<text x="65" y="392" font-size="14" text-anchor="middle" font-family="monospace" fill="#000000">&lt;&lt; 7</text>
+<text x="65" y="410" font-size="12" text-anchor="middle" fill="#555555">down-left</text>
+<rect x="100" y="350" width="70" height="70" fill="#DCEFD9" stroke="#0B4D22" stroke-width="1.5"/>
+<text x="135" y="372" font-size="14" text-anchor="middle" font-family="monospace" fill="#000000">d5 = 35</text>
+<text x="135" y="392" font-size="14" text-anchor="middle" font-family="monospace" fill="#000000">&lt;&lt; 8</text>
+<text x="135" y="410" font-size="12" text-anchor="middle" fill="#555555">down</text>
+<rect x="170" y="350" width="70" height="70" fill="#DCEFD9" stroke="#0B4D22" stroke-width="1.5"/>
+<text x="205" y="372" font-size="14" text-anchor="middle" font-family="monospace" fill="#000000">e5 = 36</text>
+<text x="205" y="392" font-size="14" text-anchor="middle" font-family="monospace" fill="#000000">&lt;&lt; 9</text>
+<text x="205" y="410" font-size="12" text-anchor="middle" fill="#555555">down-right</text>
+<text x="280" y="226" font-size="15" font-weight="bold" fill="#000000">Wrap-around masks after a shift:</text>
+<text x="280" y="252" font-size="13" fill="#000000">moves to the right (&lt;&lt; 1, &lt;&lt; 9, &gt;&gt; 7): clear column a (NotColumnA)</text>
+<text x="280" y="276" font-size="13" fill="#000000">moves to the left (&gt;&gt; 1, &gt;&gt; 9, &lt;&lt; 7): clear column h (NotColumnH)</text>
+<text x="280" y="300" font-size="13" fill="#000000">up and down (&lt;&lt; 8, &gt;&gt; 8): no mask; bits fall off the ends</text>
+<text x="280" y="336" font-size="13" fill="#555555">Example: h4 is bit 31, and 31 + 1 = 32 is a5.</text>
+<text x="280" y="356" font-size="13" fill="#555555">Without the mask, "one to the right" of h4 would wrap to a5.</text>
+<text x="280" y="392" font-size="13" fill="#555555">&lt;&lt; n moves towards h8 (higher bits), &gt;&gt; n towards a1.</text>
+</svg>

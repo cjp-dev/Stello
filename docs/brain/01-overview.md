@@ -237,4 +237,4 @@ Two tokens control a running search:
 
 ---
 
-Previous: [Index](README.md) · Next: 02 Board and squares (to be written)
+Previous: [Index](README.md) · Next: [02 Board and squares](02-board-and-squares.md)

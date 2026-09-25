@@ -40,9 +40,9 @@ The time limit can stop the search at any point; the best move found so far is t
 | # | Chapter | Content |
 |---|---|---|
 | 01 | [Overview](01-overview.md) | Projects, main types, the life of one computer move, design principles |
-| 02 | Board and squares | Bitboards, square numbering, the start position |
-| 03 | Rules and move generation | Legal moves with shift-and-mask, flips, pass, game over, perft |
-| 04 | Game record | Move history, undo/redo, the text file format |
+| 02 | [Board and squares](02-board-and-squares.md) | Bitboards, square numbering, the start position |
+| 03 | [Rules and move generation](03-rules-and-move-generation.md) | Legal moves with shift-and-mask, flips, pass, game over, perft |
+| 04 | [Game record](04-game-record.md) | Move history, undo/redo, the text file format |
 | 05 | Evaluation | Edge tables, corners, stability, mobility |
 | 06 | Move ordering | Square values, the response table, the hash move |
 | 07 | Midgame search | Negamax alpha-beta, iterative deepening, PVS, selective search |
@@ -57,6 +57,18 @@ The time limit can stop the search at any point; the best move found so far is t
 
 <!-- Chapters without a link are written in later documentation phases (see the specification). -->
 
+## Pictures
+
+| Picture | Chapter | Shows |
+|---|---|---|
+| [board-square-index.svg](images/board-square-index.svg) | 02 | The C# square index 0–63 |
+| [bitboard-bit-order.svg](images/bitboard-bit-order.svg) | 02 | The bit order of a bitboard and the eight direction shifts |
+| [board-legacy-numbers.svg](images/board-legacy-numbers.svg) | 02 | The legacy 10 × 10 numbers with the border ring |
+| [start-position.svg](images/start-position.svg) | 02 | The start position and black's legal moves |
+| [shift-and-mask.svg](images/shift-and-mask.svg) | 03 | Legal-move generation in one direction, step by step |
+| [flips-example.svg](images/flips-example.svg) | 03 | A move that flips in three directions |
+
+
 ## Reading paths
 
 - **Everything:** read the chapters in order.
@@ -69,4 +81,4 @@ The time limit can stop the search at any point; the best move found so far is t
 - **On GitHub:** diagrams and formulas are shown directly.
 - **In VS Code:** open the Markdown preview (Ctrl+Shift+V). Formulas are shown by the built-in preview. The diagrams need the extension *Markdown Preview Mermaid Support* (`bierner.markdown-mermaid`).
 
-The diagrams are written in [Mermaid](https://mermaid.js.org/), the formulas in LaTeX math, and the pictures are SVG files in the `images` folder.
+The diagrams are written in [Mermaid](https://mermaid.js.org/), the formulas in LaTeX math, and the pictures are SVG files in the [images](images) folder.

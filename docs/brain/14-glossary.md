@@ -10,7 +10,7 @@ The terms used in these documents. The last column gives the chapter that explai
 |---|---|---|
 | Alpha | The score the side to move is already sure to get; worse moves need not be searched exactly. | 07 |
 | Beta | The score the opponent will allow at most; a move that reaches beta is good enough to stop (a cutoff). | 07 |
-| Bitboard | A 64-bit number with one bit per square, for example "all black discs". | 02 |
+| Bitboard | A 64-bit number with one bit per square, for example "all black discs". | [02](02-board-and-squares.md) |
 | Book value | The value stored with a move in the opening book, from the point of view of the player who makes the move. | 11 |
 | Bound | A search result that is only a limit: a lower bound (the true score is at least this) or an upper bound (at most this). | 08 |
 | C-square | A square on the edge next to a corner: b1, a2, g1, h2, a7, b8, h7, g8. | 05 |
@@ -31,15 +31,15 @@ The terms used in these documents. The last column gives the chapter that explai
 | Hash move | The best move stored in the hash table for a position; it is searched first. | 06 |
 | Hash table | See transposition table. | 08 |
 | Iterative deepening | Searching to depth 1, then 2, then 3, …, until the time is used; each search orders the next. | 07 |
-| Legacy square number | The C++ square number 10 × row + column, both counted from 1 (a1 = 11, h8 = 88). Used by the book file and the edge tables. | 02 |
+| Legacy square number | The C++ square number 10 × row + column, both counted from 1 (a1 = 11, h8 = 88). Used by the book file and the edge tables. | [02](02-board-and-squares.md#legacy-square-numbers) |
 | `look` | The remaining search depth after the current move (the C++ convention). A search with `look` = n looks n + 1 plies ahead. | 07 |
 | Mobility | The number of legal moves a player has. | 05 |
 | Negamax | A way to write minimax where the score is always from the point of view of the side to move; a child's score is negated. | 07 |
 | Normalisation | Turning a position into the form stored in the book, where black's first move is d3, by one of four symmetries. | 11 |
 | Null window | A window with beta = alpha + 1. The search only tells whether the score is above or below alpha, which is fast. | 07 |
 | Parity | Endgame move ordering: prefer the regions of the board with an odd number of empty squares. | 09 |
-| Pass | A turn without a move, when the player has no legal move. It is stored in the game record like a move. | 03 |
-| Perft | Counting all positions reachable in n plies; used to test move generation. | 03 |
+| Pass | A turn without a move, when the player has no legal move. It is stored in the game record like a move. | [03](03-rules-and-move-generation.md#pass-and-game-over) |
+| Perft | Counting all positions reachable in n plies; used to test move generation. | [03](03-rules-and-move-generation.md#worked-example-perft) |
 | Ply | One move by one side. | 07 |
 | Potential mobility | The number of (empty square, direction) pairs next to an opponent disc: places where moves may appear later. | 05 |
 | Principal variation | The line of best moves for both sides found by the search. | 07 |

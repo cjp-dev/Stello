@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 460" width="800" height="460" font-family="sans-serif">
+<title>Flips in several directions</title>
+<desc>Left: a position where Black plays d6. Red arrows show the three closed lines (up to d3, up-right to f4, right to f6); a dashed grey arrow shows the open line to the up-left. Right: the board after the move, with the four flipped discs d4, d5, e5 and e6 outlined in red.</desc>
+<rect x="0" y="0" width="800" height="460" fill="#FFFFFF"/>
+<defs><marker id="head-D32F2F" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#D32F2F"/></marker></defs>
+<defs><marker id="head-555555" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#555555"/></marker></defs>
+<text x="60" y="44" font-size="14" text-anchor="middle" fill="#000000">a</text>
+<text x="34" y="74.66666666666667" font-size="14" text-anchor="end" fill="#000000">1</text>
+<text x="100" y="44" font-size="14" text-anchor="middle" fill="#000000">b</text>
+<text x="34" y="114.66666666666667" font-size="14" text-anchor="end" fill="#000000">2</text>
+<text x="140" y="44" font-size="14" text-anchor="middle" fill="#000000">c</text>
+<text x="34" y="154.66666666666666" font-size="14" text-anchor="end" fill="#000000">3</text>
+<text x="180" y="44" font-size="14" text-anchor="middle" fill="#000000">d</text>
+<text x="34" y="194.66666666666666" font-size="14" text-anchor="end" fill="#000000">4</text>
+<text x="220" y="44" font-size="14" text-anchor="middle" fill="#000000">e</text>
+<text x="34" y="234.66666666666666" font-size="14" text-anchor="end" fill="#000000">5</text>
+<text x="260" y="44" font-size="14" text-anchor="middle" fill="#000000">f</text>
+<text x="34" y="274.6666666666667" font-size="14" text-anchor="end" fill="#000000">6</text>
+<text x="300" y="44" font-size="14" text-anchor="middle" fill="#000000">g</text>
+<text x="34" y="314.6666666666667" font-size="14" text-anchor="end" fill="#000000">7</text>
+<text x="340" y="44" font-size="14" text-anchor="middle" fill="#000000">h</text>
+<text x="34" y="354.6666666666667" font-size="14" text-anchor="end" fill="#000000">8</text>
+<rect x="40" y="50" width="320" height="320" fill="#1B7F3B" stroke="#0B4D22" stroke-width="2"/>
+<line x1="80" y1="50" x2="80" y2="370" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="90" x2="360" y2="90" stroke="#0B4D22" stroke-width="1"/>
+<line x1="120" y1="50" x2="120" y2="370" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="130" x2="360" y2="130" stroke="#0B4D22" stroke-width="1"/>
+<line x1="160" y1="50" x2="160" y2="370" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="170" x2="360" y2="170" stroke="#0B4D22" stroke-width="1"/>
+<line x1="200" y1="50" x2="200" y2="370" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="210" x2="360" y2="210" stroke="#0B4D22" stroke-width="1"/>
+<line x1="240" y1="50" x2="240" y2="370" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="250" x2="360" y2="250" stroke="#0B4D22" stroke-width="1"/>
+<line x1="280" y1="50" x2="280" y2="370" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="290" x2="360" y2="290" stroke="#0B4D22" stroke-width="1"/>
+<line x1="320" y1="50" x2="320" y2="370" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="330" x2="360" y2="330" stroke="#0B4D22" stroke-width="1"/>
+<circle cx="180" cy="110" r="16" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="180" cy="150" r="16" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="220" cy="150" r="16" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="260" cy="150" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1.5"/>
+<circle cx="180" cy="190" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1.5"/>
+<circle cx="220" cy="190" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1.5"/>
+<circle cx="260" cy="190" r="16" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="140" cy="230" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1.5"/>
+<circle cx="180" cy="230" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1.5"/>
+<circle cx="220" cy="230" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1.5"/>
+<circle cx="220" cy="270" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1.5"/>
+<circle cx="260" cy="270" r="16" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="180" cy="270" r="5.6000000000000005" fill="#FFC107" stroke="#7A5C00" stroke-width="1"/>
+<rect x="162" y="172" width="36" height="36" fill="none" stroke="#D32F2F" stroke-width="3"/>
+<rect x="162" y="212" width="36" height="36" fill="none" stroke="#D32F2F" stroke-width="3"/>
+<rect x="202" y="212" width="36" height="36" fill="none" stroke="#D32F2F" stroke-width="3"/>
+<rect x="202" y="252" width="36" height="36" fill="none" stroke="#D32F2F" stroke-width="3"/>
+<line x1="180" y1="260" x2="180" y2="168" stroke="#D32F2F" stroke-width="3" marker-end="url(#head-D32F2F)"/>
+<line x1="188" y1="262" x2="247" y2="203" stroke="#D32F2F" stroke-width="3" marker-end="url(#head-D32F2F)"/>
+<line x1="190" y1="270" x2="242" y2="270" stroke="#D32F2F" stroke-width="3" marker-end="url(#head-D32F2F)"/>
+<line x1="172" y1="262" x2="106" y2="196" stroke="#555555" stroke-width="3" stroke-dasharray="6 4" marker-end="url(#head-555555)"/>
+<text x="200" y="24" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">Before: Black plays d6</text>
+<text x="450" y="44" font-size="14" text-anchor="middle" fill="#000000">a</text>
+<text x="424" y="74.66666666666667" font-size="14" text-anchor="end" fill="#000000">1</text>
+<text x="490" y="44" font-size="14" text-anchor="middle" fill="#000000">b</text>
+<text x="424" y="114.66666666666667" font-size="14" text-anchor="end" fill="#000000">2</text>
+<text x="530" y="44" font-size="14" text-anchor="middle" fill="#000000">c</text>
+<text x="424" y="154.66666666666666" font-size="14" text-anchor="end" fill="#000000">3</text>
+<text x="570" y="44" font-size="14" text-anchor="middle" fill="#000000">d</text>
+<text x="424" y="194.66666666666666" font-size="14" text-anchor="end" fill="#000000">4</text>
+<text x="610" y="44" font-size="14" text-anchor="middle" fill="#000000">e</text>
+<text x="424" y="234.66666666666666" font-size="14" text-anchor="end" fill="#000000">5</text>
+<text x="650" y="44" font-size="14" text-anchor="middle" fill="#000000">f</text>
+<text x="424" y="274.6666666666667" font-size="14" text-anchor="end" fill="#000000">6</text>
+<text x="690" y="44" font-size="14" text-anchor="middle" fill="#000000">g</text>
+<text x="424" y="314.6666666666667" font-size="14" text-anchor="end" fill="#000000">7</text>
+<text x="730" y="44" font-size="14" text-anchor="middle" fill="#000000">h</text>
+<text x="424" y="354.6666666666667" font-size="14" text-anchor="end" fill="#000000">8</text>
+<rect x="430" y="50" width="320" height="320" fill="#1B7F3B" stroke="#0B4D22" stroke-width="2"/>
+<line x1="470" y1="50" x2="470" y2="370" stroke="#0B4D22" stroke-width="1"/>
+<line x1="430" y1="90" x2="750" y2="90" stroke="#0B4D22" stroke-width="1"/>
+<line x1="510" y1="50" x2="510" y2="370" stroke="#0B4D22" stroke-width="1"/>
+<line x1="430" y1="130" x2="750" y2="130" stroke="#0B4D22" stroke-width="1"/>
+<line x1="550" y1="50" x2="550" y2="370" stroke="#0B4D22" stroke-width="1"/>
+<line x1="430" y1="170" x2="750" y2="170" stroke="#0B4D22" stroke-width="1"/>
+<line x1="590" y1="50" x2="590" y2="370" stroke="#0B4D22" stroke-width="1"/>
+<line x1="430" y1="210" x2="750" y2="210" stroke="#0B4D22" stroke-width="1"/>
+<line x1="630" y1="50" x2="630" y2="370" stroke="#0B4D22" stroke-width="1"/>
+<line x1="430" y1="250" x2="750" y2="250" stroke="#0B4D22" stroke-width="1"/>
+<line x1="670" y1="50" x2="670" y2="370" stroke="#0B4D22" stroke-width="1"/>
+<line x1="430" y1="290" x2="750" y2="290" stroke="#0B4D22" stroke-width="1"/>
+<line x1="710" y1="50" x2="710" y2="370" stroke="#0B4D22" stroke-width="1"/>
+<line x1="430" y1="330" x2="750" y2="330" stroke="#0B4D22" stroke-width="1"/>
+<circle cx="570" cy="110" r="16" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="570" cy="150" r="16" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="610" cy="150" r="16" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="650" cy="150" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1.5"/>
+<circle cx="570" cy="190" r="16" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="610" cy="190" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1.5"/>
+<circle cx="650" cy="190" r="16" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="530" cy="230" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1.5"/>
+<circle cx="570" cy="230" r="16" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="610" cy="230" r="16" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="610" cy="270" r="16" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="650" cy="270" r="16" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="570" cy="270" r="16" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<rect x="552" y="172" width="36" height="36" fill="none" stroke="#D32F2F" stroke-width="3"/>
+<rect x="552" y="212" width="36" height="36" fill="none" stroke="#D32F2F" stroke-width="3"/>
+<rect x="592" y="212" width="36" height="36" fill="none" stroke="#D32F2F" stroke-width="3"/>
+<rect x="592" y="252" width="36" height="36" fill="none" stroke="#D32F2F" stroke-width="3"/>
+<text x="590" y="24" font-size="15" text-anchor="middle" font-weight="bold" fill="#000000">After: 4 discs flipped</text>
+<text x="20" y="400" font-size="13" fill="#000000">Up: d5 and d4 are white and d3 is black, so both are flipped. Up-right: e5, closed by f4. Right: e6, closed by f6.</text>
+<text x="20" y="420" font-size="13" fill="#000000">Up-left (dashed): c5 is white, but b4 is empty, so the line is not closed and c5 is not flipped.</text>
+<text x="20" y="440" font-size="13" fill="#555555">Position after d3 e3 f6 e6 f4 c5 d2 f3. Red outline = flipped discs.</text>
+</svg>
