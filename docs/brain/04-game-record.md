@@ -139,4 +139,4 @@ Reading this text back with `Parse` gives the same game: the "pass" is accepted 
 
 ---
 
-Previous: [03 Rules and move generation](03-rules-and-move-generation.md) · Next: 05 Evaluation (to be written)
+Previous: [03 Rules and move generation](03-rules-and-move-generation.md) · Next: [05 Evaluation](05-evaluation.md)

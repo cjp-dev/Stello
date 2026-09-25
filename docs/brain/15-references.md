@@ -29,6 +29,21 @@ Articles, papers and source code on the internet that explain the techniques use
 | [Bitboards – Chess Programming Wiki](https://www.chessprogramming.org/Bitboards) | What bitboards are and the basic operations on them. |
 | [Perft for Reversi – Aart Bik](http://www.aartbik.com/MISC/reversi.html) | Perft numbers for Othello from the start position; Stello's perft test uses the same numbers up to depth 8. |
 
+## 05 Evaluation
+
+| Link | What you find there |
+|---|---|
+| [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Position evaluation": disk-square tables, mobility-based evaluation (like Stello's) and pattern-based evaluation. |
+| [Computer Othello – Wikipedia](https://en.wikipedia.org/wiki/Computer_Othello) | Evaluation techniques, including mobility and potential mobility. |
+| [Othello – Chess Programming Wiki](https://www.chessprogramming.org/Othello) | The "Evaluation" section, with references to IAGO (edge stability, mobility, potential mobility). |
+
+## 06 Move ordering
+
+| Link | What you find there |
+|---|---|
+| [Alpha-Beta – Chess Programming Wiki](https://www.chessprogramming.org/Alpha-Beta) | "Savings": why searching the best move first gives the most cutoffs. |
+| [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Move ordering": killer responses in Othello. |
+
 ## 07 Midgame search
 
 | Link | What you find there |

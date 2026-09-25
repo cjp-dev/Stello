@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 712 432" width="712" height="432" font-family="sans-serif">
+<title>Corner stability</title>
+<desc>A board where Black owns a1 with black discs on b1, c1, d1 and a2, a3, a4 along the edges (outlined blue) and b2, c2, b3 inside (outlined red). The three red discs are counted as stable: 3 times 60 is 180 points for Black.</desc>
+<rect x="0" y="0" width="712" height="432" fill="#FFFFFF"/>
+<text x="62" y="44" font-size="15" text-anchor="middle" fill="#000000">a</text>
+<text x="34" y="77" font-size="15" text-anchor="end" fill="#000000">1</text>
+<text x="106" y="44" font-size="15" text-anchor="middle" fill="#000000">b</text>
+<text x="34" y="121" font-size="15" text-anchor="end" fill="#000000">2</text>
+<text x="150" y="44" font-size="15" text-anchor="middle" fill="#000000">c</text>
+<text x="34" y="165" font-size="15" text-anchor="end" fill="#000000">3</text>
+<text x="194" y="44" font-size="15" text-anchor="middle" fill="#000000">d</text>
+<text x="34" y="209" font-size="15" text-anchor="end" fill="#000000">4</text>
+<text x="238" y="44" font-size="15" text-anchor="middle" fill="#000000">e</text>
+<text x="34" y="253" font-size="15" text-anchor="end" fill="#000000">5</text>
+<text x="282" y="44" font-size="15" text-anchor="middle" fill="#000000">f</text>
+<text x="34" y="297" font-size="15" text-anchor="end" fill="#000000">6</text>
+<text x="326" y="44" font-size="15" text-anchor="middle" fill="#000000">g</text>
+<text x="34" y="341" font-size="15" text-anchor="end" fill="#000000">7</text>
+<text x="370" y="44" font-size="15" text-anchor="middle" fill="#000000">h</text>
+<text x="34" y="385" font-size="15" text-anchor="end" fill="#000000">8</text>
+<rect x="40" y="50" width="352" height="352" fill="#1B7F3B" stroke="#0B4D22" stroke-width="2"/>
+<line x1="84" y1="50" x2="84" y2="402" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="94" x2="392" y2="94" stroke="#0B4D22" stroke-width="1"/>
+<line x1="128" y1="50" x2="128" y2="402" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="138" x2="392" y2="138" stroke="#0B4D22" stroke-width="1"/>
+<line x1="172" y1="50" x2="172" y2="402" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="182" x2="392" y2="182" stroke="#0B4D22" stroke-width="1"/>
+<line x1="216" y1="50" x2="216" y2="402" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="226" x2="392" y2="226" stroke="#0B4D22" stroke-width="1"/>
+<line x1="260" y1="50" x2="260" y2="402" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="270" x2="392" y2="270" stroke="#0B4D22" stroke-width="1"/>
+<line x1="304" y1="50" x2="304" y2="402" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="314" x2="392" y2="314" stroke="#0B4D22" stroke-width="1"/>
+<line x1="348" y1="50" x2="348" y2="402" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="358" x2="392" y2="358" stroke="#0B4D22" stroke-width="1"/>
+<circle cx="62" cy="72" r="17.6" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="106" cy="72" r="17.6" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="150" cy="72" r="17.6" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="194" cy="72" r="17.6" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="62" cy="116" r="17.6" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="106" cy="116" r="17.6" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="150" cy="116" r="17.6" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="62" cy="160" r="17.6" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="106" cy="160" r="17.6" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="62" cy="204" r="17.6" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="238" cy="292" r="17.6" fill="#F5F5F5" stroke="#333333" stroke-width="1.5"/>
+<circle cx="194" cy="336" r="17.6" fill="#F5F5F5" stroke="#333333" stroke-width="1.5"/>
+<circle cx="238" cy="336" r="17.6" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<rect x="86" y="96" width="40" height="40" fill="none" stroke="#D32F2F" stroke-width="3"/>
+<rect x="130" y="96" width="40" height="40" fill="none" stroke="#D32F2F" stroke-width="3"/>
+<rect x="86" y="140" width="40" height="40" fill="none" stroke="#D32F2F" stroke-width="3"/>
+<rect x="86" y="52" width="40" height="40" fill="none" stroke="#1565C0" stroke-width="3"/>
+<rect x="130" y="52" width="40" height="40" fill="none" stroke="#1565C0" stroke-width="3"/>
+<rect x="174" y="52" width="40" height="40" fill="none" stroke="#1565C0" stroke-width="3"/>
+<rect x="42" y="96" width="40" height="40" fill="none" stroke="#1565C0" stroke-width="3"/>
+<rect x="42" y="140" width="40" height="40" fill="none" stroke="#1565C0" stroke-width="3"/>
+<rect x="42" y="184" width="40" height="40" fill="none" stroke="#1565C0" stroke-width="3"/>
+<text x="422" y="70" font-size="16" font-weight="bold" fill="#000000">Corner stability from a1 (Black)</text>
+<text x="422" y="100" font-size="13" fill="#1565C0">Blue: the edge runs from the corner,</text>
+<text x="422" y="120" font-size="13" fill="#1565C0">b1–d1 (x = 3) and a2–a4 (y = 3).</text>
+<text x="422" y="140" font-size="13" fill="#1565C0">They are scored by the edge tables,</text>
+<text x="422" y="160" font-size="13" fill="#1565C0">not counted here.</text>
+<text x="422" y="180" font-size="13" fill="#000"></text>
+<text x="422" y="200" font-size="13" fill="#D32F2F">Red: the stable discs counted.</text>
+<text x="422" y="220" font-size="13" fill="#D32F2F">Step to the diagonal square b2 (1),</text>
+<text x="422" y="240" font-size="13" fill="#D32F2F">then up to x − 2 = 1 along the row (c2)</text>
+<text x="422" y="260" font-size="13" fill="#D32F2F">and y − 2 = 1 along the column (b3).</text>
+<text x="422" y="280" font-size="13" fill="#D32F2F">Now x = y = 1, so the walk stops.</text>
+<text x="422" y="300" font-size="13" fill="#000"></text>
+<text x="422" y="320" font-size="13" fill="#000000">3 stable discs × 60 = 180 points</text>
+<text x="422" y="340" font-size="13" fill="#000000">for Black (−180 for White).</text>
+</svg>

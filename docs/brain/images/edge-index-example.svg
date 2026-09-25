@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 334" width="560" height="334" font-family="sans-serif">
+<title>Computing an edge index</title>
+<desc>Row 1 with white discs on a1, b1 and c1, a black disc on d1 and empty squares e1 to h1. Each square gives a base-3 digit (white 0, black 1, empty 2) multiplied by a power of 3; the sum is the edge index 161. The stability table gives 592 for this edge.</desc>
+<rect x="0" y="0" width="560" height="334" fill="#FFFFFF"/>
+<text x="20" y="28" font-size="18" font-weight="bold" fill="#000000">Edge index of row 1 = O O O X - - - - (a1 to h1)</text>
+<rect x="30" y="70" width="64" height="64" fill="#1B7F3B" stroke="#0B4D22" stroke-width="1.5"/>
+<circle cx="62" cy="102" r="24.32" fill="#F5F5F5" stroke="#333333" stroke-width="1.5"/>
+<text x="62" y="62" font-size="14" text-anchor="middle" fill="#000000">a1</text>
+<text x="62" y="158" font-size="14" text-anchor="middle" fill="#000000">digit 0</text>
+<text x="62" y="178" font-size="14" text-anchor="middle" font-family="monospace" fill="#333333">× 3^7</text>
+<text x="62" y="198" font-size="14" text-anchor="middle" font-family="monospace" fill="#333333">= 0</text>
+<rect x="94" y="70" width="64" height="64" fill="#1B7F3B" stroke="#0B4D22" stroke-width="1.5"/>
+<circle cx="126" cy="102" r="24.32" fill="#F5F5F5" stroke="#333333" stroke-width="1.5"/>
+<text x="126" y="62" font-size="14" text-anchor="middle" fill="#000000">b1</text>
+<text x="126" y="158" font-size="14" text-anchor="middle" fill="#000000">digit 0</text>
+<text x="126" y="178" font-size="14" text-anchor="middle" font-family="monospace" fill="#333333">× 3^6</text>
+<text x="126" y="198" font-size="14" text-anchor="middle" font-family="monospace" fill="#333333">= 0</text>
+<rect x="158" y="70" width="64" height="64" fill="#1B7F3B" stroke="#0B4D22" stroke-width="1.5"/>
+<circle cx="190" cy="102" r="24.32" fill="#F5F5F5" stroke="#333333" stroke-width="1.5"/>
+<text x="190" y="62" font-size="14" text-anchor="middle" fill="#000000">c1</text>
+<text x="190" y="158" font-size="14" text-anchor="middle" fill="#000000">digit 0</text>
+<text x="190" y="178" font-size="14" text-anchor="middle" font-family="monospace" fill="#333333">× 3^5</text>
+<text x="190" y="198" font-size="14" text-anchor="middle" font-family="monospace" fill="#333333">= 0</text>
+<rect x="222" y="70" width="64" height="64" fill="#1B7F3B" stroke="#0B4D22" stroke-width="1.5"/>
+<circle cx="254" cy="102" r="24.32" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<text x="254" y="62" font-size="14" text-anchor="middle" fill="#000000">d1</text>
+<text x="254" y="158" font-size="14" text-anchor="middle" fill="#000000">digit 1</text>
+<text x="254" y="178" font-size="14" text-anchor="middle" font-family="monospace" fill="#333333">× 3^4</text>
+<text x="254" y="198" font-size="14" text-anchor="middle" font-family="monospace" fill="#333333">= 81</text>
+<rect x="286" y="70" width="64" height="64" fill="#1B7F3B" stroke="#0B4D22" stroke-width="1.5"/>
+<text x="318" y="62" font-size="14" text-anchor="middle" fill="#000000">e1</text>
+<text x="318" y="158" font-size="14" text-anchor="middle" fill="#000000">digit 2</text>
+<text x="318" y="178" font-size="14" text-anchor="middle" font-family="monospace" fill="#333333">× 3^3</text>
+<text x="318" y="198" font-size="14" text-anchor="middle" font-family="monospace" fill="#333333">= 54</text>
+<rect x="350" y="70" width="64" height="64" fill="#1B7F3B" stroke="#0B4D22" stroke-width="1.5"/>
+<text x="382" y="62" font-size="14" text-anchor="middle" fill="#000000">f1</text>
+<text x="382" y="158" font-size="14" text-anchor="middle" fill="#000000">digit 2</text>
+<text x="382" y="178" font-size="14" text-anchor="middle" font-family="monospace" fill="#333333">× 3^2</text>
+<text x="382" y="198" font-size="14" text-anchor="middle" font-family="monospace" fill="#333333">= 18</text>
+<rect x="414" y="70" width="64" height="64" fill="#1B7F3B" stroke="#0B4D22" stroke-width="1.5"/>
+<text x="446" y="62" font-size="14" text-anchor="middle" fill="#000000">g1</text>
+<text x="446" y="158" font-size="14" text-anchor="middle" fill="#000000">digit 2</text>
+<text x="446" y="178" font-size="14" text-anchor="middle" font-family="monospace" fill="#333333">× 3^1</text>
+<text x="446" y="198" font-size="14" text-anchor="middle" font-family="monospace" fill="#333333">= 6</text>
+<rect x="478" y="70" width="64" height="64" fill="#1B7F3B" stroke="#0B4D22" stroke-width="1.5"/>
+<text x="510" y="62" font-size="14" text-anchor="middle" fill="#000000">h1</text>
+<text x="510" y="158" font-size="14" text-anchor="middle" fill="#000000">digit 2</text>
+<text x="510" y="178" font-size="14" text-anchor="middle" font-family="monospace" fill="#333333">× 3^0</text>
+<text x="510" y="198" font-size="14" text-anchor="middle" font-family="monospace" fill="#333333">= 2</text>
+<text x="20" y="238" font-size="14" fill="#000000">digits: white = 0, black = 1, empty = 2; the first square is the most significant digit</text>
+<text x="20" y="264" font-size="16" font-family="monospace" fill="#000000">index = 81 + 54 + 18 + 6 + 2 = 161</text>
+<text x="20" y="290" font-size="14" fill="#000000">EdgeTables.Stability[161] = 592 (from White's point of view; for Black the sign is turned: −592)</text>
+<text x="20" y="314" font-size="14" fill="#000000">EdgeTables.CornerFlags[161] = 0x1000: White has a good middle move on this edge</text>
+</svg>

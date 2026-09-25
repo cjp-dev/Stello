@@ -43,8 +43,8 @@ The time limit can stop the search at any point; the best move found so far is t
 | 02 | [Board and squares](02-board-and-squares.md) | Bitboards, square numbering, the start position |
 | 03 | [Rules and move generation](03-rules-and-move-generation.md) | Legal moves with shift-and-mask, flips, pass, game over, perft |
 | 04 | [Game record](04-game-record.md) | Move history, undo/redo, the text file format |
-| 05 | Evaluation | Edge tables, corners, stability, mobility |
-| 06 | Move ordering | Square values, the response table, the hash move |
+| 05 | [Evaluation](05-evaluation.md) | Edge tables, corners, stability, mobility |
+| 06 | [Move ordering](06-move-ordering.md) | Square values, the response table, the hash move |
 | 07 | Midgame search | Negamax alpha-beta, iterative deepening, PVS, selective search |
 | 08 | Transposition table | Two-entry slots, bounds, replacement |
 | 09 | Endgame solver | Win/loss/draw and exact passes, fastest-first, parity, enhanced transposition cutoff |
@@ -67,6 +67,11 @@ The time limit can stop the search at any point; the best move found so far is t
 | [start-position.svg](images/start-position.svg) | 02 | The start position and black's legal moves |
 | [shift-and-mask.svg](images/shift-and-mask.svg) | 03 | Legal-move generation in one direction, step by step |
 | [flips-example.svg](images/flips-example.svg) | 03 | A move that flips in three directions |
+| [edges-and-corners.svg](images/edges-and-corners.svg) | 05 | The four edges and their square order, corners, X- and C-squares |
+| [edge-index-example.svg](images/edge-index-example.svg) | 05 | Computing the base-3 index of an edge |
+| [corner-diagonal.svg](images/corner-diagonal.svg) | 05 | A corner reached along the diagonal, and a possible corner |
+| [corner-stability.svg](images/corner-stability.svg) | 05 | Stable discs counted from a corner |
+| [square-values.svg](images/square-values.svg) | 06 | Static square values, and the values next to the corners |
 
 
 ## Reading paths
