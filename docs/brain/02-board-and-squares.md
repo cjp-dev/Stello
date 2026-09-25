@@ -85,7 +85,7 @@ $$\text{row} = \left\lfloor \frac{\text{legacy}}{10} \right\rfloor - 1, \qquad \
 
 `Square.FromLegacy` rejects the border numbers (for example 10, 19 or 90).
 
-## The text form of a board
+### The text form of a board
 
 `Board.ToString` writes eight lines, row 1 first, with `X` for black, `O` for white and `-` for an empty square. `Board.Parse` reads the same format (it also accepts lower case and `.`, and ignores whitespace), so a position can be written directly in a test. The FFO endgame test positions (chapter 09) use the same 64-character layout on one line.
 

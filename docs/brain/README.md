@@ -51,11 +51,9 @@ The time limit can stop the search at any point; the best move found so far is t
 | 10 | [Time control](10-time-control.md) | Time modes, time per move, "Move Now" |
 | 11 | [Opening book](11-opening-book.md) | The file format, symmetries, the position index, `BookTracker` |
 | 12 | [Book learning](12-book-learning.md) | Adding games, dropout expansion, minimax, self-play |
-| 13 | App integration | The game loop, threading, settings, book files |
+| 13 | [App integration](13-app-integration.md) | The game loop, threading, settings, book files |
 | 14 | [Glossary](14-glossary.md) | The terms used in these documents |
 | 15 | [References](15-references.md) | Articles, papers and source code on the internet |
-
-<!-- Chapters without a link are written in later documentation phases (see the specification). -->
 
 ## Pictures
 
@@ -79,13 +77,13 @@ The time limit can stop the search at any point; the best move found so far is t
 | [book-symmetries.svg](images/book-symmetries.svg) | 11 | The four first moves, their symmetries to d3 and the book's replies |
 | [book-minimax-example.svg](images/book-minimax-example.svg) | 12 | A small book after adding a game, evaluating and minimax |
 
-
 ## Reading paths
 
 - **Everything:** read the chapters in order.
 - **Just the search:** 01, 02, 05, 06, 07, 08, 09.
 - **Just the opening book:** 01, 02 (square numbers), 11, 12.
 - **Tuning the engine:** 05, 06, 07, 08, 09, 10, and phase 8 in [the specification](../../Migrate%20Othello%20game%20from%20C++%20to%20C%23.md) for what has already been tried.
+- **Changing the app:** 01, 10, 13.
 
 ## How to view these documents
 

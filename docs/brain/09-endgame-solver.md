@@ -38,6 +38,8 @@ This is the standard tournament rule, and it is how the FFO test values are coun
 
 ### Two passes
 
+The solver first finds out whether the side to move wins, and then, if there is time, by how much:
+
 ```mermaid
 flowchart TD
     Start["Endgame (from the search loop, or Solve)"] --> WLD["Pass 1: SolveRoot with the window (−1, 1)"]
@@ -58,6 +60,8 @@ flowchart TD
 - `SolveRoot` does principal variation search at the root, reports progress after each root move, stops as soon as a move reaches β (in pass 1: the first winning move), and moves each new best move to the front of the root list. Pass 2 therefore starts with the winning move.
 
 ### Which routine at how many empty squares
+
+The number of empty squares decides which routine searches a position and which tricks it uses:
 
 ```mermaid
 flowchart TD

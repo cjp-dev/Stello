@@ -87,6 +87,8 @@ The index is what lets the book handle **transpositions**: a position is found n
 
 ### Looking up a move: `TryGetMove`
 
+This is how the book finds a move for a position, trying each symmetry in turn:
+
 ```mermaid
 flowchart TD
     Start["TryGetMove(board, player, random)"] --> Initial{"Start position,<br/>Black to move?"}
@@ -123,6 +125,8 @@ stateDiagram-v2
 After a miss the game may still transpose back into the book, so the book is asked a few more times before it is given up.
 
 ### Choosing the computer's move: `ComputerPlayer`
+
+`ComputerPlayer` asks the book first and searches only when the book has no move:
 
 ```mermaid
 flowchart TD

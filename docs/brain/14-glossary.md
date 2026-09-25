@@ -4,16 +4,16 @@
 
 The terms used in these documents. The last column gives the chapter that explains the term in detail.
 
-<!-- Chapter numbers become links when the chapters are written. -->
-
 | Term | Meaning | Chapter |
 |---|---|---|
 | Alpha | The score the side to move is already sure to get; worse moves need not be searched exactly. | [07](07-midgame-search.md#negamax-with-alpha-beta) |
 | Beta | The score the opponent will allow at most; a move that reaches beta is good enough to stop (a cutoff). | [07](07-midgame-search.md#negamax-with-alpha-beta) |
 | Bitboard | A 64-bit number with one bit per square, for example "all black discs". | [02](02-board-and-squares.md) |
+| Book tracker | `BookTracker`: stops asking the book after three misses in a row, until it is reset (new game, Open, Back, after learning). | [11](11-opening-book.md#when-to-ask-the-book-booktracker) |
 | Book value | The value stored with a move in the opening book, from the point of view of the player who makes the move. | [11](11-opening-book.md#booknode) |
 | Bound | A search result that is only a limit: a lower bound (the true score is at least this) or an upper bound (at most this). | [08](08-transposition-table.md#data-structures) |
 | C-square | A square on the edge next to a corner: b1, a2, g1, h2, a7, b8, h7, g8. | [05](05-evaluation.md#the-four-edges) |
+| Calculated | The book flag of a leaf whose value comes from a search; book learning does not search it again. | [12](12-book-learning.md#values-and-flags) |
 | Cutoff | Stopping the search of a position because one move already reaches beta. | [07](07-midgame-search.md#negamax-with-alpha-beta) |
 | Dangerous corner move | A corner move that the edge tables mark as risky; the search looks one ply deeper instead of evaluating it. | [05](05-evaluation.md#dangerous-corner-moves) |
 | Dropout expansion | Book learning step: the best move that is not yet in the book is searched and added to it. | [12](12-book-learning.md#evaluating-the-book-evaluatepositions) |
@@ -28,12 +28,16 @@ The terms used in these documents. The last column gives the chapter that explai
 | Fail-soft | A search that may return a score outside the (alpha, beta) window, which gives a tighter bound. | [07](07-midgame-search.md#negamax-with-alpha-beta) |
 | Fastest-first | Endgame move ordering: try first the moves that leave the opponent the fewest replies. | [09](09-endgame-solver.md#solve-7-or-more-empty-squares) |
 | FFO test suite | A standard set of endgame test positions (#40–#59) from the French Othello Federation. | [09](09-endgame-solver.md#worked-example-the-ffo-positions) |
+| Game loop | The app's `RunAsync`: plays passes and computer moves until the human is to move or the game is over. | [13](13-app-integration.md#the-game-loop) |
+| Hard limit | The time after which the search is stopped in the middle and the best move so far is played. | [10](10-time-control.md#how-the-search-uses-the-limits) |
 | Hash move | The best move stored in the hash table for a position; it is searched first. | [06](06-move-ordering.md#ordering-the-moves-of-one-position) |
 | Hash table | See transposition table. | [08](08-transposition-table.md) |
 | Iterative deepening | Searching to depth 1, then 2, then 3, …, until the time is used; each search orders the next. | [07](07-midgame-search.md#iterative-deepening) |
 | Legacy square number | The C++ square number 10 × row + column, both counted from 1 (a1 = 11, h8 = 88). Used by the book file and the edge tables. | [02](02-board-and-squares.md#legacy-square-numbers) |
 | `look` | The remaining search depth after the current move (the C++ convention). A search with `look` = n looks n + 1 plies ahead. | [07](07-midgame-search.md#data-structures) |
+| Master book | The opening book shipped with the app (`Data/OPENING`), learned by the C++ program. | [11](11-opening-book.md#the-master-book) |
 | Mobility | The number of legal moves a player has. | [05](05-evaluation.md#mobility-m-and-potential-mobility-p) |
+| Move Now | The command that stops the search at once and plays the best move found so far. | [10](10-time-control.md#move-now) |
 | Negamax | A way to write minimax where the score is always from the point of view of the side to move; a child's score is negated. | [07](07-midgame-search.md#negamax-with-alpha-beta) |
 | Normalisation | Turning a position into the form stored in the book, where black's first move is d3, by one of four symmetries. | [11](11-opening-book.md#normalisation-by-symmetry) |
 | Null window | A window with beta = alpha + 1. The search only tells whether the score is above or below alpha, which is fast. | [07](07-midgame-search.md#the-root-principal-variation-search) |
@@ -46,6 +50,8 @@ The terms used in these documents. The last column gives the chapter that explai
 | Principal variation search (PVS) | Searching the first move with the full window and the others with a null window, re-searching only if one turns out better. | [07](07-midgame-search.md#the-root-principal-variation-search) |
 | Response table | Move ordering data: for each opponent move, a score for each reply that worked well against it before. | [06](06-move-ordering.md#the-response-table) |
 | Selective search | Stello's ProbCut-like pruning: at some depths a shallow search decides whether a position is clearly outside the window and can be cut. | [07](07-midgame-search.md#selective-search) |
+| Self-play | Book learning where the engine plays games against itself with the book and adds them to it. | [12](12-book-learning.md#self-play-playgame-and-selfplay) |
+| Soft limit | The time after which no new iteration of the search is started. | [10](10-time-control.md#how-the-search-uses-the-limits) |
 | Stable disc | A disc that can never be flipped again. | [05](05-evaluation.md#corner-stability-t) |
 | Transposition | The same position reached by different move orders. | [08](08-transposition-table.md#a-transposition) |
 | Transposition table | A table that remembers search results for positions, so a transposition is not searched twice. | [08](08-transposition-table.md) |
@@ -55,4 +61,4 @@ The terms used in these documents. The last column gives the chapter that explai
 
 ---
 
-Previous: 13 App integration (to be written) · Next: [15 References](15-references.md)
+Previous: [13 App integration](13-app-integration.md) · Next: [15 References](15-references.md)

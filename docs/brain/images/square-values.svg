@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 834 508" width="834" height="508" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 834 508" width="800" height="487" font-family="sans-serif">
 <title>Square values for move ordering</title>
 <desc>Two heat maps of the 64 square values. Left: the static values, 127 on the corners, -64 on the X-squares, -32 on the C-squares and small values inside. Right: the values after the squares next to each corner are recomputed for a position where Black owns a1 and White owns h8 and f8.</desc>
 <rect x="0" y="0" width="834" height="508" fill="#FFFFFF"/>

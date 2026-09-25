@@ -94,6 +94,15 @@ Articles, papers and source code on the internet that explain the techniques use
 |---|---|
 | [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Opening knowledge": adding the best move that no game has played to every book position, then minimaxing the book. The same idea as Stello's dropout expansion. |
 
+## 13 App integration
+
+| Link | What you find there |
+|---|---|
+| [Introduction to the MVVM Toolkit – Microsoft Learn](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/) | The library behind `ObservableObject`, `[ObservableProperty]` and the commands. |
+| [RelayCommand attribute – Microsoft Learn](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/generators/relaycommand) | Generated commands, `CanExecute`, `NotifyCanExecuteChangedFor`, and why an async command is disabled while it runs. |
+| [Progress&lt;T&gt; class – Microsoft Learn](https://learn.microsoft.com/dotnet/api/system.progress-1) | Callbacks run on the `SynchronizationContext` captured when the object is created. |
+| [Cancellation in managed threads – Microsoft Learn](https://learn.microsoft.com/dotnet/standard/threading/cancellation-in-managed-threads) | Cooperative cancellation with `CancellationTokenSource` and `OperationCanceledException`. |
+
 ## Writing these documents
 
 | Link | What you find there |

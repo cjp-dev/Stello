@@ -42,6 +42,11 @@ The flags are saved in the file, so a long learning run can be stopped and conti
 | `SelfPlay(progress, token, gamePlayed)` | The self-play loop |
 | `PositionsEvaluated`, `GamesPlayed` | Counters, also reported in `BookLearningProgress` |
 
+Two small public types go with it:
+
+- `GameResult`: `BlackWins`, `WhiteWins` or `Draw`, the result given to `AddGame` and returned by `PlayGame`.
+- `BookLearningProgress(Stage, PositionsEvaluated, GamesPlayed, NodeCount)`: reported after every search and before every self-play game; `Stage` is a `BookLearningStage`, `EvaluatingPositions` or `PlayingGame`.
+
 | Constant | Value | Meaning |
 |---|---|---|
 | `WinValue` | 32 665 | The value of a move in an added game |
@@ -52,6 +57,8 @@ The flags are saved in the file, so a long learning run can be stopped and conti
 ## Algorithm
 
 ### Adding a game: `AddGame`
+
+`AddGame` walks through the game move by move and adds only the moves the book does not know yet:
 
 ```mermaid
 flowchart TD
@@ -100,6 +107,8 @@ Because `TryGetMove` plays the first legal reply (chapter 11), the sorted book p
 
 ### Self-play: `PlayGame` and `SelfPlay`
 
+Self-play alternates between learning and playing, until it is stopped:
+
 ```mermaid
 flowchart TD
     S["SelfPlay"] --> L1["Learn: EvaluatePositions twice,<br/>Minimax, save"]
@@ -113,21 +122,9 @@ flowchart TD
 - `PlayGame` uses a `ComputerPlayer` with the book, so each game follows the book as far as it goes and then searches. It stops as soon as a search returns an exact endgame score; the result is taken from that score (for the side that moved), otherwise from the final board.
 - The loop runs until the token is cancelled; `SelfPlay` then throws `OperationCanceledException`.
 
-## Worked example: learning on an empty book
+### In the app
 
-Starting from `OpeningBook.CreateEmpty()`, with `SearchLimits.FixedDepth(4)`: the tiger line d3 c5 f6 f5 e6 (in the book's d3 frame) is added as a win for Black, then the book is evaluated and minimaxed.
-
-![Three trees. After AddGame the four moves have values ±32665. After EvaluatePositions the leaf e6 and four dropout moves (e3 at the root, e6 after c5, e3 after f6, d6 after f5) are searched and the values are backed up, c5 −100 and e3 17 at the root. After minimax and sorting, e3 comes first at the root and e6 before f6 after c5.](images/book-minimax-example.svg)
-
-- **AddGame** creates 4 nodes with ±32 665.
-- **EvaluatePositions** searches 5 positions: the leaf e6, and one dropout move in each of the four lists (e3 as White's reply to d3, e6 after c5, e3 after f6, d6 after f5). The book now has 8 nodes, and the values are backed up: the game move c5 is worth −100 for White, the new move e3 +17.
-- **Minimax** sorts the lists: the book now answers d3 with e3, and after d3 c5 it plays e6 (100) instead of the game move f6 (−54).
-
-Adding the same game in another frame afterwards, `f5 d6 c3 d3 c4` (the tiger after f5), adds no nodes: the book still has 8.
-
-## In the app
-
-The Book menu has four commands (chapter 13):
+The Book menu has four commands ([chapter 13](13-app-integration.md#threading)):
 
 | Command | Does |
 |---|---|
@@ -140,6 +137,18 @@ The Book menu has four commands (chapter 13):
 - Learning runs on a background task with its own `SearchEngine`; the game's commands are disabled meanwhile.
 - The book is saved to `%AppData%\Stello\OPENING` (a temporary file first, then renamed), never over the shipped `Data/OPENING`. On the next start the user's book is loaded first.
 - Evaluate Book and Self-play ask for a confirmation first. At the end the book is saved, the book tracker is reset, and a summary (positions searched, games played, positions in the book) is shown.
+
+## Worked example: learning on an empty book
+
+Starting from `OpeningBook.CreateEmpty()`, with `SearchLimits.FixedDepth(4)`: the tiger line d3 c5 f6 f5 e6 (in the book's d3 frame) is added as a win for Black, then the book is evaluated and minimaxed.
+
+![Three trees. After AddGame the four moves have values ±32665. After EvaluatePositions the leaf e6 and four dropout moves (e3 at the root, e6 after c5, e3 after f6, d6 after f5) are searched and the values are backed up, c5 −100 and e3 17 at the root. After minimax and sorting, e3 comes first at the root and e6 before f6 after c5.](images/book-minimax-example.svg)
+
+- **AddGame** creates 4 nodes with ±32 665.
+- **EvaluatePositions** searches 5 positions: the leaf e6, and one dropout move in each of the four lists (e3 as White's reply to d3, e6 after c5, e3 after f6, d6 after f5). The book now has 8 nodes, and the values are backed up: the game move c5 is worth −100 for White, the new move e3 +17.
+- **Minimax** sorts the lists: the book now answers d3 with e3, and after d3 c5 it plays e6 (100) instead of the game move f6 (−54).
+
+Adding the same game in another frame afterwards, `f5 d6 c3 d3 c4` (the tiger after f5), adds no nodes: the book still has 8.
 
 ## Design notes
 
@@ -183,4 +192,4 @@ See [Stello porting documentation.md](../../Stello%20porting%20documentation.md)
 
 ---
 
-Previous: [11 Opening book](11-opening-book.md) · Next: 13 App integration (to be written)
+Previous: [11 Opening book](11-opening-book.md) · Next: [13 App integration](13-app-integration.md)
