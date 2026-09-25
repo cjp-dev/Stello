@@ -28,6 +28,9 @@ public sealed class SearchEngine
     private const int FastestFirstMinEmpties = 7;
     private const int EvaluationOrderMinEmpties = 18;
 
+    // Enhanced transposition cutoff: from this many empty squares the children are looked up first.
+    private const int TranspositionCutoffMinEmpties = 10;
+
     // With this few empty squares the solver tries the empty squares directly instead of generating moves.
     private const int ShallowEmpties = 6;
 
@@ -50,7 +53,7 @@ public sealed class SearchEngine
     private CancellationToken _moveNow;
     private IProgress<SearchInfo>? _progress;
 
-    /// <param name="hashBits">Each of the two hash tables gets 2^hashBits entries (C++: HASHSIZE 19).</param>
+    /// <param name="hashBits">Each of the two hash tables gets 2^hashBits slots of two entries (C++: HASHSIZE 19, one entry).</param>
     public SearchEngine(int hashBits = 19)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(hashBits, 10);
@@ -444,13 +447,34 @@ public sealed class SearchEngine
         int alphaOriginal = alpha;
         int count = BitOperations.PopCount(moves);
         Span<int> list = stackalloc int[count];
+        Span<ulong> flipList = stackalloc ulong[count];
         Fill(list, moves);
+        for (int i = 0; i < count; i++)
+        {
+            flipList[i] = Bitboards.Flips(own, opponent, list[i]);
+        }
+
+        if (empties >= TranspositionCutoffMinEmpties)
+        {
+            // A child whose hash entry already proves a cutoff makes searching unnecessary.
+            for (int i = 0; i < count; i++)
+            {
+                ulong f = flipList[i];
+                if (_endgameTable.TryGet(opponent & ~f, own | f | (1UL << list[i]), 0, out TranspositionTable.Entry child)
+                    && child.Bound is Bound.Exact or Bound.Upper && -child.Value >= beta)
+                {
+                    return -child.Value;
+                }
+            }
+        }
+
         if (count > 1)
         {
             Span<int> keys = stackalloc int[count];
             for (int i = 0; i < count; i++)
             {
                 int square = list[i];
+                ulong flips = flipList[i];
                 if (square == hashMove)
                 {
                     keys[i] = int.MaxValue;
@@ -458,15 +482,15 @@ public sealed class SearchEngine
                 else if (empties >= EvaluationOrderMinEmpties)
                 {
                     // Far from the end the evaluation orders better; colours do not matter for the solver.
-                    ulong flips = Bitboards.Flips(own, opponent, square);
                     var child = new Board(opponent & ~flips, own | flips | (1UL << square));
                     keys[i] = -Evaluator.Evaluate(child, Player.Black, -Infinity, Infinity, count);
                 }
                 else if (empties >= FastestFirstMinEmpties)
                 {
                     // Fastest first: few replies for the opponent (corners count double), then the square value.
-                    ulong flips = Bitboards.Flips(own, opponent, square);
-                    ulong replies = Bitboards.LegalMoves(opponent & ~flips, own | flips | (1UL << square));
+                    ulong childOwn = opponent & ~flips;
+                    ulong childOpponent = own | flips | (1UL << square);
+                    ulong replies = Bitboards.LegalMoves(childOwn, childOpponent);
                     int mobility = BitOperations.PopCount(replies) + BitOperations.PopCount(replies & Corners);
                     keys[i] = -mobility * 256 + MoveOrdering.BaseScore(square);
                 }
@@ -476,14 +500,15 @@ public sealed class SearchEngine
                 }
             }
 
-            MoveOrdering.SortDescending(list, keys);
+            SortDescending(list, flipList, keys);
         }
 
         int best = -Infinity;
         int bestMove = -1;
-        foreach (int move in list)
+        for (int i = 0; i < count; i++)
         {
-            ulong flips = Bitboards.Flips(own, opponent, move);
+            int move = list[i];
+            ulong flips = flipList[i];
             ulong childOwn = opponent & ~flips;
             ulong childOpponent = own | flips | (1UL << move);
             int score;
@@ -683,6 +708,29 @@ public sealed class SearchEngine
         for (int i = 0; moves != 0; i++, moves &= moves - 1)
         {
             list[i] = BitOperations.TrailingZeroCount(moves);
+        }
+    }
+
+    // Stable insertion sort, highest key first; the flips follow their moves.
+    private static void SortDescending(Span<int> moves, Span<ulong> flips, Span<int> keys)
+    {
+        for (int i = 1; i < moves.Length; i++)
+        {
+            int move = moves[i];
+            ulong flip = flips[i];
+            int key = keys[i];
+            int j = i - 1;
+            while (j >= 0 && keys[j] < key)
+            {
+                moves[j + 1] = moves[j];
+                flips[j + 1] = flips[j];
+                keys[j + 1] = keys[j];
+                j--;
+            }
+
+            moves[j + 1] = move;
+            flips[j + 1] = flip;
+            keys[j + 1] = key;
         }
     }
 

@@ -141,16 +141,40 @@ Each phase ends with its section in the porting documentation (see "Non-function
 
 ### Phase 8 – Performance tuning
 
-Status after phase 3: FFO #40–#44 are solved correctly, but take about 30 s in a Release build and about 80 s in a Debug build (Zebra: about 3 s each). The engine searches about 15–20 million nodes per second but visits 2–10 times more nodes than Zebra; #43 is the slowest.
+**Status: paused (first round done 2026-09-25).** After phase 3, FFO #40–#44 were solved correctly but took about 31.6 s in a Release build (522 M nodes) and about 80 s in a Debug build. Zebra takes about 3 s per position. The engine searches about 15–20 million nodes per second but visits 2–10 times more nodes than Zebra; #43 is the slowest.
 
-Candidates, measured one at a time with an FFO #40–#44 benchmark (nodes and time per position):
+Measurement method: a throwaway console benchmark (outside the repository) that solves FFO #40–#44 with `SearchLimits.Solve` in a Release build. For each position it prints the score, nodes, time, nodes per second, and when the win/loss/draw pass finished. Timings vary by about ±1 s between runs.
 
-- Better move ordering in the endgame solver far from the end (e.g. shallow midgame search, or evaluation combined with mobility).
-- Enhanced transposition cutoffs and stability cutoffs in the endgame solver.
-- A faster exact pass after the win/loss/draw pass (aspiration or null-window steps instead of one wide window).
-- Incremental hashing and fewer repeated flip calculations.
+#### Round 1 results – kept (in the code)
+
+| Change | Result |
+|---|---|
+| Hash table with two entries per slot (one keeps the deepest result, one is always replaced) instead of one entry | The biggest gain. Total about 17–19 s; #43 dropped from 292 M to about 117–168 M nodes. A single-entry table of 2²³ entries gave a similar result, so the problem was entries being overwritten. |
+| Enhanced transposition cutoff (look up the children in the hash table before searching, from 10 empties) | About 10 % fewer nodes (32.5 s → 31.8 s with the old table). |
+| Flips computed once per move and sorted with the moves (not computed again when the move is played) | Neutral for speed; simpler code. |
+
+With these, FFO #40–#44 take **19.1 s (328 M nodes)** in Release and the full test run takes about 55 s in Debug. The target (under 10 s) is **not reached yet**.
+
+#### Round 1 results – tested and rejected (reverted; do not repeat as they were)
+
+| Tried | Result |
+|---|---|
+| MTD(f) for the exact pass (null-window steps from the win/loss/draw bound) | Worse: 31.6 s → 38.0 s total; #43 went from 292 M to 428 M nodes (five steps from −2 to −12). Measured with the old single-entry hash table; the re-test with the two-entry table was not finished. Only worth trying again with a good first guess, not the win/loss/draw bound. |
+| Exact search with one wide window (−65, 65) and no win/loss/draw pass | No gain: 32.8 s against 31.6 s. |
+| Ordering by a shallow midgame search (0 or 1 ply with the Stello evaluation) from 12, 14 or 16 empties | Much worse: 51–101 s. The Stello evaluation is a poor move orderer for the endgame; fastest-first is better. (The existing evaluation-based ordering from 18 empties was kept; with it at 14 empties #43 got worse.) |
+| Potential mobility added to the fastest-first key | Within the noise: about 5 % fewer nodes, but no measurable time gain (16.9 s against 17.1 s). |
+| Stability cutoff (stable discs from full lines, edges and stable neighbours) | No gain: node count almost unchanged, time slightly worse (17.7 s against 17.1 s). |
+| Other thresholds: shallow solver from 5, 6 or 7 empties; endgame hash table from 6, 7 or 8 empties | All within the noise (17.1–18.1 s). The current 6 and 7 were kept. |
+| Larger hash table (2²¹–2²³ slots) with the two-entry slots | No further gain (17.4–17.9 s against 17.0 s at 2¹⁹). |
+
+#### Remaining candidates for the next round
+
+- Faster move generation and flips (for example lookup-table based flips), since nodes per second are only about 15–20 M.
+- Special code for the last 2–4 empty squares.
+- Better ordering in the middle of the endgame (10–18 empties), for example a shallow *endgame* search or a proper weighted-mobility formula, to get the node counts closer to Zebra.
+- MTD(f) or an aspiration window only with a good first guess (see above).
 - Midgame: iterative-deepening move ordering and hash-table use at the root.
-- Build the engine with optimisations in Debug, or move the slow FFO tests to a separate test category, so the normal test run stays short.
+- Build the engine with optimisations in Debug, or move the slow FFO tests to a separate test category, so the normal test run stays short (now about 55 s).
 
 Acceptance: the same test results as before, and FFO #40–#44 in less than 10 s in total in a Release build.
 

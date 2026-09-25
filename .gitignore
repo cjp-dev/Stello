@@ -361,7 +361,3 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-Nexuspartner toolbox/Configuration/Configuration.json
-Postman collection/Kursus.postman_collection.json
-docs/
-.github/

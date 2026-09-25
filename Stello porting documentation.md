@@ -219,11 +219,11 @@ Notable features and quirks:
 **C#:** `Search/TranspositionTable.cs`
 
 - The entry stores the **whole position** (both bitboards) plus a tag (side to move), so there are no false hits. The slot is chosen with a multiply-rotate hash, so there is no Zobrist key table.
-- Same flags (`Bound.Exact`/`Lower`/`Upper`), same replacement rule, same get/put heights in the midgame.
+- Same flags (`Bound.Exact`/`Lower`/`Upper`) and the same get/put heights in the midgame. Since phase 8, each slot has two entries (see phase 8); the C++ rule "keep the deeper entry for the same position" is kept for the first entry.
 - **Two tables**, one for the midgame and one for the endgame.
 - In the endgame, bounds from the table also narrow alpha/beta (new).
 
-**Assessment:** Changed (correctness: no false hits, no mixing of midgame and endgame values). The replacement policy is 1:1.
+**Assessment:** Changed (correctness: no false hits, no mixing of midgame and endgame values; phase 8: two entries per slot).
 
 ### 3.6 Midgame search (`findmax`, `findmax1`, `findmax2`, `zero_findmax` in `Minmax.cpp`)
 
@@ -295,7 +295,7 @@ Notable features and quirks:
 | Move ordering in the solver | Changed (improved) | Fastest-first, parity and evaluation ordering replace `simsort` (killer + square value). This was needed to solve the FFO positions in reasonable time. |
 | Final score | Changed | Empty squares go to the winner (standard rule). |
 | Tree reuse after a full solve | Dropped | The endgame hash table usually answers the next move quickly. |
-| Speed | Open point | FFO #40–#44 take about 30 s in Release (phase 8). |
+| Speed | Open point | FFO #40–#44 took about 30 s in Release after phase 3; 19 s after phase 8 round 1. |
 
 ### 3.8 Iterative deepening and time control (`getcomputer`, `Kontrol.cpp`)
 
@@ -624,3 +624,42 @@ Notable features and quirks:
 | Files in the current directory (`opening`, `selfplay`) | Changed | `%AppData%\Stello`; the shipped book is never overwritten. |
 | `extend_lib`/`extendlib` | Not ported | Not reachable from the Windows UI. |
 | `Mergelib.cpp` (merge black/white libraries) | Not ported | Not in the build; out of scope. |
+
+---
+
+## Phase 8 – Performance tuning (round 1; paused)
+
+This phase has no C++ counterpart: it improves the C# endgame solver (section 3.7) and hash table (section 3.5). The full list of what was tried, with measurements, and the remaining candidates is in the specification (Phase 8), so the rejected ideas do not have to be tested again.
+
+### What changed in C#
+
+- **Hash table (`Search/TranspositionTable.cs`), two entries per slot:**
+  - The first entry keeps the deepest result for the slot (C++ rule: a deeper entry for the same position is kept). The second entry is always replaced.
+  - A new entry that is at least as deep as the first moves the old first entry to the second place.
+  - `TryGet` checks both entries. `bits` now means 2^bits slots (twice as many entries as before), so the default uses about 24 MB per table.
+  - C++ had one entry per slot. Deep endgame results were overwritten by shallow ones, which cost many nodes in long searches (FFO #43).
+- **Enhanced transposition cutoff (`SearchEngine.Solve`):** from 10 empty squares, the children are looked up in the endgame hash table before they are sorted or searched. If one of them has an exact value or an upper bound that proves a cutoff for us, it is returned at once. New; not in C++.
+- **Flips computed once (`SearchEngine.Solve`):** the flips of each move are computed once, used for ordering, sorted together with the moves (`SortDescending` with three spans), and reused when the move is played. Before, they were computed twice.
+
+### Results (FFO #40–#44, Release)
+
+| | Total time | Nodes | #43 |
+|---|---|---|---|
+| After phase 3 | 31.6 s | 522 M | 18.8 s, 292 M |
+| After phase 8 round 1 | 19.1 s | 328 M | 10.1 s, 168 M |
+
+- All scores and best moves are unchanged.
+- All 153 engine tests and 58 app tests pass. The engine test run in Debug dropped from about 87 s to about 55 s.
+- The target of under 10 s is not reached yet.
+
+### Tested and rejected
+
+Reverted, with the measurements in the specification: MTD(f) for the exact pass, one wide exact window without the win/loss/draw pass, ordering by a shallow midgame search, potential mobility in the ordering key, a stability cutoff, other solver thresholds, and larger hash tables.
+
+### Assessment
+
+| Part | Port | Notes |
+|---|---|---|
+| Two entries per hash slot | Changed (improved) | The C++ replacement rule is kept for the first entry. |
+| Enhanced transposition cutoff | New | Endgame solver only. |
+| Flips computed once | Changed (optimisation) | Same results. |
