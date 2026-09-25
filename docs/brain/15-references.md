@@ -52,12 +52,19 @@ Articles, papers and source code on the internet that explain the techniques use
 | [Principal Variation Search – Chess Programming Wiki](https://www.chessprogramming.org/Principal_Variation_Search) | PVS: null-window searches after the first move, and re-searches. |
 | [ProbCut – Chess Programming Wiki](https://www.chessprogramming.org/ProbCut) | ProbCut and Multi-ProbCut, the statistical forms of the selective search idea. |
 | [Buro (1995): ProbCut: An Effective Selective Extension of the Alpha-Beta Algorithm (pdf)](https://skatgame.net/mburo/ps/probcut.pdf) | The original ProbCut paper. |
+| [Negamax – Wikipedia](https://en.wikipedia.org/wiki/Negamax) | Negamax with alpha-beta and with a transposition table, in pseudocode. |
+| [Fail-Soft – Chess Programming Wiki](https://www.chessprogramming.org/Fail-Soft) | Scores outside the window, and why they help. |
+| [Null Window – Chess Programming Wiki](https://www.chessprogramming.org/Null_Window) | Null-window (zero-window) searches as a yes/no test. |
+| [Iterative Deepening – Chess Programming Wiki](https://www.chessprogramming.org/Iterative_Deepening) | Iterative deepening for time control and move ordering. |
+| [Odd-Even Effect – Chess Programming Wiki](https://www.chessprogramming.org/Odd-Even_Effect) | Why node counts and scores differ between odd and even depths. |
+| [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Searching": alpha-beta, move ordering and selective search in Othello. |
 
 ## 08 Transposition table
 
 | Link | What you find there |
 |---|---|
 | [Transposition Table – Chess Programming Wiki](https://www.chessprogramming.org/Transposition_Table) | What is stored, bounds, collisions, and replacement schemes, including the two-tier system Stello uses. |
+| [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Transposition tables", with the tiger-opening example. |
 
 ## 09 Endgame solver
 
@@ -65,6 +72,14 @@ Articles, papers and source code on the internet that explain the techniques use
 |---|---|
 | [Enhanced Transposition Cutoff – Chess Programming Wiki](https://www.chessprogramming.org/Enhanced_Transposition_Cutoff) | Looking up the children in the hash table before searching them. |
 | [The FFO endgame test suite – radagast.se](http://radagast.se/othello/ffotest.html) | The test positions #40–#59, their correct scores and moves, and Zebra's times. |
+| [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Endgame": why ordering decides everything, and fastest-first. |
+| [Edax on GitHub](https://github.com/abulmo/edax-reversi) | A much faster open-source bitboard endgame solver. |
+
+## 10 Time control
+
+| Link | What you find there |
+|---|---|
+| [Iterative Deepening – Chess Programming Wiki](https://www.chessprogramming.org/Iterative_Deepening) | Iterative deepening as the basis of time management. |
 
 ## Writing these documents
 

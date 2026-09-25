@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 410" width="680" height="410" font-family="sans-serif">
+<title>Parity in the last six empty squares</title>
+<desc>A position with six empty squares. Red lines divide the board into four quadrants. The empty squares in quadrants with an odd number of empties (a1; a6, b6, b8) are yellow and tried first; those in the quadrant with two empties (g1, h1) are blue and tried after.</desc>
+<rect x="0" y="0" width="680" height="410" fill="#FFFFFF"/>
+<text x="20" y="26" font-size="16" font-weight="bold" fill="#000000">Parity: empty squares in quadrants with an odd count are tried first</text>
+<text x="60" y="55" font-size="20" text-anchor="middle" fill="#000000">a</text>
+<text x="35" y="86.66666666666667" font-size="20" text-anchor="end" fill="#000000">1</text>
+<text x="100" y="55" font-size="20" text-anchor="middle" fill="#000000">b</text>
+<text x="35" y="126.66666666666667" font-size="20" text-anchor="end" fill="#000000">2</text>
+<text x="140" y="55" font-size="20" text-anchor="middle" fill="#000000">c</text>
+<text x="35" y="166.66666666666666" font-size="20" text-anchor="end" fill="#000000">3</text>
+<text x="180" y="55" font-size="20" text-anchor="middle" fill="#000000">d</text>
+<text x="35" y="206.66666666666666" font-size="20" text-anchor="end" fill="#000000">4</text>
+<text x="220" y="55" font-size="20" text-anchor="middle" fill="#000000">e</text>
+<text x="35" y="246.66666666666666" font-size="20" text-anchor="end" fill="#000000">5</text>
+<text x="260" y="55" font-size="20" text-anchor="middle" fill="#000000">f</text>
+<text x="35" y="286.6666666666667" font-size="20" text-anchor="end" fill="#000000">6</text>
+<text x="300" y="55" font-size="20" text-anchor="middle" fill="#000000">g</text>
+<text x="35" y="326.6666666666667" font-size="20" text-anchor="end" fill="#000000">7</text>
+<text x="340" y="55" font-size="20" text-anchor="middle" fill="#000000">h</text>
+<text x="35" y="366.6666666666667" font-size="20" text-anchor="end" fill="#000000">8</text>
+<rect x="40" y="60" width="320" height="320" fill="#1B7F3B" stroke="#0B4D22" stroke-width="2"/>
+<rect x="40" y="60" width="40" height="40" fill="#FFE082" stroke="none" stroke-width="0"/>
+<rect x="280" y="60" width="40" height="40" fill="#B3E5FC" stroke="none" stroke-width="0"/>
+<rect x="320" y="60" width="40" height="40" fill="#B3E5FC" stroke="none" stroke-width="0"/>
+<rect x="40" y="260" width="40" height="40" fill="#FFE082" stroke="none" stroke-width="0"/>
+<rect x="80" y="260" width="40" height="40" fill="#FFE082" stroke="none" stroke-width="0"/>
+<rect x="80" y="340" width="40" height="40" fill="#FFE082" stroke="none" stroke-width="0"/>
+<line x1="80" y1="60" x2="80" y2="380" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="100" x2="360" y2="100" stroke="#0B4D22" stroke-width="1"/>
+<line x1="120" y1="60" x2="120" y2="380" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="140" x2="360" y2="140" stroke="#0B4D22" stroke-width="1"/>
+<line x1="160" y1="60" x2="160" y2="380" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="180" x2="360" y2="180" stroke="#0B4D22" stroke-width="1"/>
+<line x1="200" y1="60" x2="200" y2="380" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="220" x2="360" y2="220" stroke="#0B4D22" stroke-width="1"/>
+<line x1="240" y1="60" x2="240" y2="380" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="260" x2="360" y2="260" stroke="#0B4D22" stroke-width="1"/>
+<line x1="280" y1="60" x2="280" y2="380" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="300" x2="360" y2="300" stroke="#0B4D22" stroke-width="1"/>
+<line x1="320" y1="60" x2="320" y2="380" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="340" x2="360" y2="340" stroke="#0B4D22" stroke-width="1"/>
+<circle cx="100" cy="80" r="16" fill="#111111" stroke="#111111" stroke-width="1"/>
+<circle cx="140" cy="80" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="180" cy="80" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="220" cy="80" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="260" cy="80" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="60" cy="120" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="100" cy="120" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="140" cy="120" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="180" cy="120" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="220" cy="120" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="260" cy="120" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="300" cy="120" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="340" cy="120" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="60" cy="160" r="16" fill="#111111" stroke="#111111" stroke-width="1"/>
+<circle cx="100" cy="160" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="140" cy="160" r="16" fill="#111111" stroke="#111111" stroke-width="1"/>
+<circle cx="180" cy="160" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="220" cy="160" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="260" cy="160" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="300" cy="160" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="340" cy="160" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="60" cy="200" r="16" fill="#111111" stroke="#111111" stroke-width="1"/>
+<circle cx="100" cy="200" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="140" cy="200" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="180" cy="200" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="220" cy="200" r="16" fill="#111111" stroke="#111111" stroke-width="1"/>
+<circle cx="260" cy="200" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="300" cy="200" r="16" fill="#111111" stroke="#111111" stroke-width="1"/>
+<circle cx="340" cy="200" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="60" cy="240" r="16" fill="#111111" stroke="#111111" stroke-width="1"/>
+<circle cx="100" cy="240" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="140" cy="240" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="180" cy="240" r="16" fill="#111111" stroke="#111111" stroke-width="1"/>
+<circle cx="220" cy="240" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="260" cy="240" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="300" cy="240" r="16" fill="#111111" stroke="#111111" stroke-width="1"/>
+<circle cx="340" cy="240" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="140" cy="280" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="180" cy="280" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="220" cy="280" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="260" cy="280" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="300" cy="280" r="16" fill="#111111" stroke="#111111" stroke-width="1"/>
+<circle cx="340" cy="280" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="60" cy="320" r="16" fill="#111111" stroke="#111111" stroke-width="1"/>
+<circle cx="100" cy="320" r="16" fill="#111111" stroke="#111111" stroke-width="1"/>
+<circle cx="140" cy="320" r="16" fill="#111111" stroke="#111111" stroke-width="1"/>
+<circle cx="180" cy="320" r="16" fill="#111111" stroke="#111111" stroke-width="1"/>
+<circle cx="220" cy="320" r="16" fill="#111111" stroke="#111111" stroke-width="1"/>
+<circle cx="260" cy="320" r="16" fill="#111111" stroke="#111111" stroke-width="1"/>
+<circle cx="300" cy="320" r="16" fill="#111111" stroke="#111111" stroke-width="1"/>
+<circle cx="340" cy="320" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="60" cy="360" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="140" cy="360" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="180" cy="360" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="220" cy="360" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="260" cy="360" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="300" cy="360" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="340" cy="360" r="16" fill="#F5F5F5" stroke="#333333" stroke-width="1"/>
+<circle cx="60" cy="80" r="6" fill="#FFC107" stroke="#7A5C00" stroke-width="1"/>
+<circle cx="300" cy="80" r="6" fill="#FFC107" stroke="#7A5C00" stroke-width="1"/>
+<circle cx="340" cy="80" r="6" fill="#FFC107" stroke="#7A5C00" stroke-width="1"/>
+<circle cx="100" cy="280" r="6" fill="#FFC107" stroke="#7A5C00" stroke-width="1"/>
+<line x1="200" y1="60" x2="200" y2="380" stroke="#D32F2F" stroke-width="4"/>
+<line x1="40" y1="220" x2="360" y2="220" stroke="#D32F2F" stroke-width="4"/>
+<text x="390" y="76" font-size="13" fill="#000000">Black to move, 6 empty squares.</text>
+<text x="390" y="120" font-size="13" fill="#8D6E00">a1–d4: 1 empty (a1)  → odd</text>
+<text x="390" y="142" font-size="13" fill="#01579B">e1–h4: 2 empty (g1, h1)  → even</text>
+<text x="390" y="164" font-size="13" fill="#8D6E00">a5–d8: 3 empty (a6, b6, b8)  → odd</text>
+<text x="390" y="186" font-size="13" fill="#555555">e5–h8: 0 empty</text>
+<text x="390" y="230" font-size="13" fill="#000000">Order tried: a1, a6, b6, b8 (odd),</text>
+<text x="390" y="252" font-size="13" fill="#000000">then g1, h1 (even).</text>
+<text x="390" y="274" font-size="13" fill="#000000">Illegal squares are skipped: a6 and b8.</text>
+<text x="390" y="318" font-size="13" fill="#000000">Yellow dots: the legal moves a1, g1, h1, b6.</text>
+<text x="390" y="340" font-size="13" fill="#000000">Best move a1; Black loses by 8 discs.</text>
+</svg>

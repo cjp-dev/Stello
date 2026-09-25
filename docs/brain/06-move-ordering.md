@@ -106,4 +106,4 @@ There is no unit test of `MoveOrdering` on its own. The ordering only affects sp
 
 ---
 
-Previous: [05 Evaluation](05-evaluation.md) · Next: 07 Midgame search (to be written)
+Previous: [05 Evaluation](05-evaluation.md) · Next: [07 Midgame search](07-midgame-search.md)

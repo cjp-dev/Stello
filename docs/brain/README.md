@@ -45,10 +45,10 @@ The time limit can stop the search at any point; the best move found so far is t
 | 04 | [Game record](04-game-record.md) | Move history, undo/redo, the text file format |
 | 05 | [Evaluation](05-evaluation.md) | Edge tables, corners, stability, mobility |
 | 06 | [Move ordering](06-move-ordering.md) | Square values, the response table, the hash move |
-| 07 | Midgame search | Negamax alpha-beta, iterative deepening, PVS, selective search |
-| 08 | Transposition table | Two-entry slots, bounds, replacement |
-| 09 | Endgame solver | Win/loss/draw and exact passes, fastest-first, parity, enhanced transposition cutoff |
-| 10 | Time control | Time modes, time per move, "Move Now" |
+| 07 | [Midgame search](07-midgame-search.md) | Negamax alpha-beta, iterative deepening, PVS, selective search |
+| 08 | [Transposition table](08-transposition-table.md) | Two-entry slots, bounds, replacement |
+| 09 | [Endgame solver](09-endgame-solver.md) | Win/loss/draw and exact passes, fastest-first, parity, enhanced transposition cutoff |
+| 10 | [Time control](10-time-control.md) | Time modes, time per move, "Move Now" |
 | 11 | Opening book | The file format, symmetries, the position index, `BookTracker` |
 | 12 | Book learning | Adding games, dropout expansion, minimax, self-play |
 | 13 | App integration | The game loop, threading, settings, book files |
@@ -72,6 +72,9 @@ The time limit can stop the search at any point; the best move found so far is t
 | [corner-diagonal.svg](images/corner-diagonal.svg) | 05 | A corner reached along the diagonal, and a possible corner |
 | [corner-stability.svg](images/corner-stability.svg) | 05 | Stable discs counted from a corner |
 | [square-values.svg](images/square-values.svg) | 06 | Static square values, and the values next to the corners |
+| [alpha-beta-tree.svg](images/alpha-beta-tree.svg) | 07 | Alpha-beta cutoffs in a real two-ply search |
+| [tt-layout.svg](images/tt-layout.svg) | 08 | Hash table slots, the entry fields and the slot hash |
+| [parity-quadrants.svg](images/parity-quadrants.svg) | 09 | Quadrants and parity with six empty squares |
 
 
 ## Reading paths

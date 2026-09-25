@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 494" width="800" height="494" font-family="sans-serif">
+<title>Transposition table layout</title>
+<desc>Left: the table as an array of slots, each with two entries, the first keeping the deepest result and the second always replaced. Right: the fields of one 24-byte entry (own and opponent bitboards, value, depth, bound, move, tag) and the hash function that chooses the slot from the top bits.</desc>
+<rect x="0" y="0" width="800" height="494" fill="#FFFFFF"/>
+<text x="20" y="26" font-size="17" font-weight="bold" fill="#000000">The transposition table: 2^bits slots, two entries per slot</text>
+<text x="30" y="91" font-size="13" fill="#000000">slot 0</text>
+<rect x="140" y="60" width="150" height="26" fill="#DCEFD9" stroke="#0B4D22" stroke-width="1"/>
+<text x="215" y="78" font-size="12" text-anchor="middle" fill="#000000">entry 1: deepest</text>
+<rect x="140" y="86" width="150" height="26" fill="#DCEFD9" stroke="#0B4D22" stroke-width="1"/>
+<text x="215" y="104" font-size="12" text-anchor="middle" fill="#000000">entry 2: always replaced</text>
+<text x="30" y="153" font-size="13" fill="#000000">slot 1</text>
+<rect x="140" y="122" width="150" height="26" fill="#DCEFD9" stroke="#0B4D22" stroke-width="1"/>
+<text x="215" y="140" font-size="12" text-anchor="middle" fill="#000000">entry 1: deepest</text>
+<rect x="140" y="148" width="150" height="26" fill="#DCEFD9" stroke="#0B4D22" stroke-width="1"/>
+<text x="215" y="166" font-size="12" text-anchor="middle" fill="#000000">entry 2: always replaced</text>
+<text x="30" y="215" font-size="13" fill="#000000">slot 2</text>
+<rect x="140" y="184" width="150" height="26" fill="#DCEFD9" stroke="#0B4D22" stroke-width="1"/>
+<text x="215" y="202" font-size="12" text-anchor="middle" fill="#000000">entry 1: deepest</text>
+<rect x="140" y="210" width="150" height="26" fill="#DCEFD9" stroke="#0B4D22" stroke-width="1"/>
+<text x="215" y="228" font-size="12" text-anchor="middle" fill="#000000">entry 2: always replaced</text>
+<text x="30" y="277" font-size="13" fill="#000000">…</text>
+<text x="30" y="339" font-size="13" fill="#000000">slot s</text>
+<rect x="140" y="308" width="150" height="26" fill="#E3F2FD" stroke="#1565C0" stroke-width="2"/>
+<text x="215" y="326" font-size="12" text-anchor="middle" fill="#000000">entry 1: deepest</text>
+<rect x="140" y="334" width="150" height="26" fill="#FFF3E0" stroke="#EF6C00" stroke-width="2"/>
+<text x="215" y="352" font-size="12" text-anchor="middle" fill="#000000">entry 2: always replaced</text>
+<text x="30" y="401" font-size="13" fill="#000000">…</text>
+<text x="30" y="463" font-size="13" fill="#000000">slot 2^bits − 1</text>
+<rect x="140" y="432" width="150" height="26" fill="#DCEFD9" stroke="#0B4D22" stroke-width="1"/>
+<text x="215" y="450" font-size="12" text-anchor="middle" fill="#000000">entry 1: deepest</text>
+<rect x="140" y="458" width="150" height="26" fill="#DCEFD9" stroke="#0B4D22" stroke-width="1"/>
+<text x="215" y="476" font-size="12" text-anchor="middle" fill="#000000">entry 2: always replaced</text>
+<text x="330" y="58" font-size="15" font-weight="bold" fill="#000000">One entry (24 bytes)</text>
+<rect x="330" y="70" width="110" height="46" fill="#FFFFFF" stroke="#757575" stroke-width="1"/>
+<text x="385" y="98" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">Own (8)</text>
+<text x="452" y="98" font-size="12" fill="#333333">discs of the side to move</text>
+<rect x="330" y="116" width="110" height="46" fill="#FFFFFF" stroke="#757575" stroke-width="1"/>
+<text x="385" y="144" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">Opponent (8)</text>
+<text x="452" y="144" font-size="12" fill="#333333">discs of the other side</text>
+<rect x="330" y="162" width="110" height="22" fill="#FFFFFF" stroke="#757575" stroke-width="1"/>
+<text x="385" y="178" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">Value (2)</text>
+<text x="452" y="178" font-size="12" fill="#333333">score (short)</text>
+<rect x="330" y="184" width="110" height="18" fill="#FFFFFF" stroke="#757575" stroke-width="1"/>
+<text x="385" y="198" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">Depth (1)</text>
+<text x="452" y="198" font-size="12" fill="#333333">look, or empties in the endgame</text>
+<rect x="330" y="202" width="110" height="18" fill="#FFFFFF" stroke="#757575" stroke-width="1"/>
+<text x="385" y="216" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">Bound (1)</text>
+<text x="452" y="216" font-size="12" fill="#333333">None, Exact, Lower or Upper</text>
+<rect x="330" y="220" width="110" height="18" fill="#FFFFFF" stroke="#757575" stroke-width="1"/>
+<text x="385" y="234" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">Move (1)</text>
+<text x="452" y="234" font-size="12" fill="#333333">best move (square index)</text>
+<rect x="330" y="238" width="110" height="18" fill="#FFFFFF" stroke="#757575" stroke-width="1"/>
+<text x="385" y="252" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">Tag (1)</text>
+<text x="452" y="252" font-size="12" fill="#333333">side to move (midgame) or 0</text>
+<rect x="330" y="256" width="110" height="22" fill="#EEEEEE" stroke="#757575" stroke-width="1"/>
+<text x="385" y="272" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">padding (2)</text>
+<text x="330" y="312" font-size="14" font-weight="bold" fill="#000000">Slot of a position:</text>
+<text x="330" y="334" font-size="12" font-family="monospace" fill="#000000">h = own × 0x9E3779B97F4A7C15</text>
+<text x="330" y="354" font-size="12" font-family="monospace" fill="#000000">h ^= rotl(opponent × 0xC2B2AE3D27D4EB4F, 31) + tag</text>
+<text x="330" y="374" font-size="12" font-family="monospace" fill="#000000">h ×= 0xD6E8FEB86659FD93</text>
+<text x="330" y="394" font-size="12" font-family="monospace" fill="#000000">s = h &gt;&gt; (64 − bits)      (the top bits)</text>
+<text x="330" y="424" font-size="12" fill="#000000">A hit needs Own, Opponent and Tag to match exactly: no false hits.</text>
+</svg>
