@@ -41,7 +41,7 @@ The terms used in these documents. The last column gives the chapter that explai
 | Negamax | A way to write minimax where the score is always from the point of view of the side to move; a child's score is negated. | [07](07-midgame-search.md#negamax-with-alpha-beta) |
 | Normalisation | Turning a position into the form stored in the book, where black's first move is d3, by one of four symmetries. | [11](11-opening-book.md#normalisation-by-symmetry) |
 | Null window | A window with beta = alpha + 1. The search only tells whether the score is above or below alpha, which is fast. | [07](07-midgame-search.md#the-root-principal-variation-search) |
-| Parity | Endgame move ordering: prefer the regions of the board with an odd number of empty squares. | [09](09-endgame-solver.md#solveshallow-2-to-6-empty-squares) |
+| Parity | Endgame move ordering: prefer the regions of the board with an odd number of empty squares. | [09](09-endgame-solver.md#solveshallow-3-to-6-empty-squares) |
 | Pass | A turn without a move, when the player has no legal move. It is stored in the game record like a move. | [03](03-rules-and-move-generation.md#pass-and-game-over) |
 | Perft | Counting all positions reachable in n plies; used to test move generation. | [03](03-rules-and-move-generation.md#worked-example-perft) |
 | Ply | One move by one side. | [07](07-midgame-search.md#data-structures) |

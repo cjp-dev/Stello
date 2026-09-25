@@ -565,6 +565,11 @@ public sealed class SearchEngine
             return SolveLast(own, opponent, empty);
         }
 
+        if (empties == 2)
+        {
+            return SolveLast2(own, opponent, alpha, beta, empty, passed);
+        }
+
         ulong odd = 0;
         foreach (ulong quadrant in Quadrants)
         {
@@ -614,6 +619,50 @@ public sealed class SearchEngine
         }
 
         return -SolveShallow(opponent, own, -beta, -alpha, empties, passed: true);
+    }
+
+    // Two empty squares, without the parity loop; the node itself is counted by the caller.
+    private int SolveLast2(ulong own, ulong opponent, int alpha, int beta, ulong empty, bool passed)
+    {
+        int first = BitOperations.TrailingZeroCount(empty);
+        int second = BitOperations.TrailingZeroCount(empty & (empty - 1));
+        int best = -Infinity;
+
+        ulong flips = Bitboards.Flips(own, opponent, first);
+        if (flips != 0)
+        {
+            _nodes++;
+            best = -SolveLast(opponent & ~flips, own | flips | (1UL << first), 1UL << second);
+            if (best >= beta)
+            {
+                return best;
+            }
+        }
+
+        flips = Bitboards.Flips(own, opponent, second);
+        if (flips != 0)
+        {
+            _nodes++;
+            best = Math.Max(best, -SolveLast(opponent & ~flips, own | flips | (1UL << second), 1UL << first));
+        }
+
+        if (best > -Infinity)
+        {
+            return best;
+        }
+
+        if (passed)
+        {
+            _evaluations++;
+            return FinalScore(own, opponent);
+        }
+
+        if ((++_nodes & 1023) == 0)
+        {
+            CheckAbort();
+        }
+
+        return -SolveLast2(opponent, own, -beta, -alpha, empty, passed: true);
     }
 
     private int SolveLast(ulong own, ulong opponent, ulong empty)

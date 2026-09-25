@@ -141,7 +141,7 @@ Each phase ends with its section in the porting documentation (see "Non-function
 
 ### Phase 8 – Performance tuning
 
-**Status: paused (first round done 2026-09-25).** After phase 3, FFO #40–#44 were solved correctly but took about 31.6 s in a Release build (522 M nodes) and about 80 s in a Debug build. Zebra takes about 3 s per position. The engine searches about 15–20 million nodes per second but visits 2–10 times more nodes than Zebra; #43 is the slowest.
+**Status: paused (rounds 1 and 2 done 2026-09-25).** After phase 3, FFO #40–#44 were solved correctly but took about 31.6 s in a Release build (522 M nodes) and about 80 s in a Debug build. Zebra takes about 3 s per position. The engine searches about 15–20 million nodes per second but visits 2–10 times more nodes than Zebra; #43 is the slowest.
 
 Measurement method: a throwaway console benchmark (outside the repository) that solves FFO #40–#44 with `SearchLimits.Solve` in a Release build. For each position it prints the score, nodes, time, nodes per second, and when the win/loss/draw pass finished. Timings vary by about ±1 s between runs.
 
@@ -167,10 +167,35 @@ With these, FFO #40–#44 take **19.1 s (328 M nodes)** in Release. The engine t
 | Other thresholds: shallow solver from 5, 6 or 7 empties; endgame hash table from 6, 7 or 8 empties | All within the noise (17.1–18.1 s). The current 6 and 7 were kept. |
 | Larger hash table (2²¹–2²³ slots) with the two-entry slots | No further gain (17.4–17.9 s against 17.0 s at 2¹⁹). |
 
+#### Round 2 – ideas from endgame.c (2026-09-25)
+
+Source: the endgame solver by Warren D. Smith and Jean-Christophe Weill, improved by Gunnar Andersson ([endgame.c](http://radagast.se/othello/endgame.c)). Stello already had its fastest-first ordering and a quadrant form of its parity ordering. Four ideas for the last few empty squares were new; each was added alone, measured and kept only if faster.
+
+Measurement method:
+
+- A throwaway console benchmark outside the repository, Release build.
+- **Suite:** the 112 endgame.c test positions, 100 of them with 12 empty squares, solved 30 times. It uses `SearchLimits.Solve` and a 2¹⁶-slot hash table, cleared between positions. Timings vary by about ±2 %.
+- **FFO #40–#44** with the default engine. Timings vary by about ±0.5 s.
+- Where the difference was small, the baseline and the variant builds were run alternately.
+- All variants gave the same scores (checksum of all suite scores) and the same FFO scores and moves.
+
+Baseline: suite 2.38 s (39.1 M nodes), FFO 19.5 s (328 M nodes).
+
+| Tried | Result |
+|---|---|
+| **Kept:** special code for the last two empty squares (`SolveLast2`): both squares tried directly, without the parity loop | Same nodes; suite 2.38 → 2.32 s (−2.5 %), FFO 19.5 → 18.9 s (−3.5 %), better in 5 of 6 and 6 of 6 alternating runs. |
+| Fixed square order of preference in `SolveShallow` (Weill's order: corners, c1, c3, d1, d3, d2, c2, C-squares, X-squares), as 9 groups | 3 % fewer nodes, but slower: 2.64 s. |
+| The same order as 3 groups (corners, others, C- and X-squares) or 2 groups (C- and X-squares last) | 1–2 % fewer nodes; 2.54 s and 2.43 s, no gain. |
+| The empty squares in a list prepared once when `SolveShallow` takes over (as the linked list in endgame.c), in the old order | Same nodes, 25 % slower (2.98 s). |
+| Parity by the connected empty regions (computed once per shallow search) instead of the four quadrants | 0.3 % fewer nodes, slower (2.53 s). |
+| No parity below 5, 4 or 3 empty squares (endgame.c found 4 best) | 7 %, 4 % and 0 % more nodes; 2.46, 2.49 and 2.42 s, no gain. |
+
+Conclusion: with bitboards the shallow solver is limited by the cost per node, not by the ordering. The ordering ideas save 0–3 % nodes but cost more per node than they save. The endgame.c test positions are now test data: `Stello.Engine.Tests/Data/endgame-c-positions.txt` with `EndgameTests.Solve_MatchesTheEndgameCSuite`.
+
 #### Remaining candidates for the next round
 
 - Faster move generation and flips (for example lookup-table based flips), since nodes per second are only about 15–20 M.
-- Special code for the last 2–4 empty squares.
+- Special code for the last 3–4 empty squares (the last 2 are done, see round 2).
 - Better ordering in the middle of the endgame (10–18 empties), for example a shallow *endgame* search or a proper weighted-mobility formula, to get the node counts closer to Zebra.
 - MTD(f) or an aspiration window only with a good first guess (see above).
 - Midgame: iterative-deepening move ordering and hash-table use at the root.

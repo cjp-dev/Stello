@@ -74,7 +74,9 @@ flowchart TD
     Ord -- "yes" --> Eval["Order by the evaluation"]
     Ord -- "no" --> Fast["Order fastest-first"]
     Big -- "no" --> One{"e = 1?"}
-    One -- "no" --> Shallow["SolveShallow: no move list, no hash table,<br/>odd quadrants first (parity)"]
+    One -- "no" --> Two{"e = 2?"}
+    Two -- "no" --> Shallow["SolveShallow: no move list, no hash table,<br/>odd quadrants first (parity)"]
+    Two -- "yes" --> Last2["SolveLast2: try both squares directly"]
     One -- "yes" --> Last["SolveLast: play the last square"]
 ```
 
@@ -96,7 +98,7 @@ flowchart TD
 
 **Why fastest-first?** Most positions in the tree are reached by a bad move somewhere above, and the solver only needs *one* refutation, not the best one. A move that leaves the opponent few replies gives a small subtree, so a refutation is found quickly.
 
-### `SolveShallow` (2 to 6 empty squares)
+### `SolveShallow` (3 to 6 empty squares)
 
 With so few empty squares, generating and sorting a move list costs more than it saves. `SolveShallow` tries the empty squares directly (a square is skipped if it flips nothing) in two groups: first the squares in quadrants with an **odd** number of empty squares, then the others. It does plain alpha-beta without a hash table. A pass is handled with a `passed` flag: if both sides must pass, the game is over.
 
@@ -105,6 +107,10 @@ With so few empty squares, generating and sorting a move list costs more than it
 ![A position with six empty squares, Black to move. The board is divided into four quadrants: a1–d4 has one empty square (a1), e1–h4 two (g1, h1), a5–d8 three (a6, b6, b8) and e5–h8 none. The squares in the odd quadrants are tried first: a1, a6, b6, b8, then g1 and h1.](images/parity-quadrants.svg)
 
 In this position the solver tries a1, (a6), b6, (b8), g1 and h1; a6 and b8 are skipped because they flip nothing. The best move is a1, and Black loses by 8 discs.
+
+### `SolveLast2` (2 empty squares)
+
+With two empty squares, parity no longer changes the order, so `SolveLast2` tries the two squares directly: each one that flips something is played and the last square is finished with `SolveLast`. If the side to move can play neither, it passes; if the opponent cannot play either, the game is over. This saves the loop and the quadrant count of `SolveShallow` at the most frequent nodes. It visits the same nodes and made the solver about 3 % faster (phase 8, round 2). The idea comes from the solver endgame.c (see Further reading).
 
 ### `SolveLast` (1 empty square)
 
@@ -132,7 +138,9 @@ The tests solve five positions from the FFO endgame test suite. Measured with `S
 
 - **Two passes, as in C++.** The C++ solver also found win/loss/draw first and then the exact score, if there was time. After a win, C++ removed the root moves before the winning move; C# instead moves the winning move to the front.
 - **Better ordering than C++.** C++ ordered the endgame moves by two killer moves and the square values (`simsort`). Fastest-first, parity and the evaluation-based ordering were needed to solve the FFO positions in reasonable time. See [Stello porting documentation.md](../../Stello%20porting%20documentation.md), section 3.7.
-- **Phase 8.** Two entries per hash slot, the enhanced transposition cutoff and computing the flips only once brought FFO #40–#44 from 31.6 s to about 19–21 s. The target of under 10 s is not reached yet. MTD(f), a single wide window without pass 1, ordering by a shallow search, potential mobility in the fastest-first key, a stability cutoff, other thresholds and larger hash tables were tried and rejected; the measurements are in phase 8 of [the specification](../../Migrate%20Othello%20game%20from%20C++%20to%20C%23.md).
+- **Phase 8.** Two entries per hash slot, the enhanced transposition cutoff and computing the flips only once brought FFO #40–#44 from 31.6 s to about 19–21 s. In round 2, `SolveLast2` saved about 3 % more. The target of under 10 s is not reached yet. These ideas were tried and rejected, with the measurements in phase 8 of [the specification](../../Migrate%20Othello%20game%20from%20C++%20to%20C%23.md):
+  - round 1: MTD(f), a single wide window without pass 1, ordering by a shallow search, potential mobility in the fastest-first key, a stability cutoff, other thresholds and larger hash tables;
+  - round 2: the ideas from endgame.c that cost more per node than they saved: a fixed square order, parity by connected regions, and no parity at the last few squares.
 - **Stopping.** The solver checks the time like the midgame search. If it is stopped during pass 1, the midgame move is played; if it is stopped during pass 2, the result of pass 1 is used.
 - **No tree reuse.** C++ could play the next moves from the tree of a full solve. C# searches again, but the endgame hash table usually answers at once.
 
@@ -140,7 +148,7 @@ The tests solve five positions from the FFO endgame test suite. Measured with `S
 
 | File | Main members |
 |---|---|
-| [SearchEngine.cs](../../Stello.Net/Stello.Engine/SearchEngine.cs) | The endgame part of `Search`, `SolveRoot`, `Solve`, `SolveShallow`, `SolveLast`, `FinalScore`, `SortDescending` (with flips) |
+| [SearchEngine.cs](../../Stello.Net/Stello.Engine/SearchEngine.cs) | The endgame part of `Search`, `SolveRoot`, `Solve`, `SolveShallow`, `SolveLast2`, `SolveLast`, `FinalScore`, `SortDescending` (with flips) |
 | C++: [Minmax.cpp](../../Stello%20C++/BRAIN/Minmax.cpp) | `slutmax`, `slutmax1`, `slutmax2`, `slutmax3`, `zero_slutmax` |
 
 ## Tests
@@ -148,7 +156,9 @@ The tests solve five positions from the FFO endgame test suite. Measured with `S
 [EndgameTests.cs](../../Stello.Net/Stello.Engine.Tests/EndgameTests.cs):
 
 - FFO #40–#44: exact score and one of the correct best moves;
+- the 112 test positions from endgame.c ([Data/endgame-c-positions.txt](../../Stello.Net/Stello.Engine.Tests/Data/endgame-c-positions.txt), 100 of them with 12 empty squares): the exact scores, checked once with a plain alpha-beta search;
 - 40 random endgames after 52 random plies (about 8 empty squares): the solver's score and move agree with a plain negamax search to the end;
+- 300 random positions with 1–4 empty squares: the same check, for `SolveShallow`, `SolveLast2` and `SolveLast`;
 - a fixed-depth search near the end switches to the solver and returns the exact score.
 
 ## Further reading
@@ -156,6 +166,7 @@ The tests solve five positions from the FFO endgame test suite. Measured with `S
 - [The FFO endgame test suite – radagast.se](http://radagast.se/othello/ffotest.html): all 20 positions, their correct scores and moves, and Zebra's results.
 - [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html): the "Endgame" section explains why move ordering decides everything and describes fastest-first.
 - [Enhanced Transposition Cutoff – Chess Programming Wiki](https://www.chessprogramming.org/Enhanced_Transposition_Cutoff).
+- [endgame.c – radagast.se](http://radagast.se/othello/endgame.c): a small solver for up to about 12 empty squares by Warren D. Smith and Jean-Christophe Weill, improved by Gunnar Andersson, with parity by regions, a fixed square order, fastest-first and 112 test positions.
 - [Edax on GitHub](https://github.com/abulmo/edax-reversi): a much faster open-source bitboard solver, for comparison.
 
 ---

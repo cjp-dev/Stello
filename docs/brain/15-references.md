@@ -71,6 +71,7 @@ Articles, papers and source code on the internet that explain the techniques use
 | Link | What you find there |
 |---|---|
 | [Enhanced Transposition Cutoff – Chess Programming Wiki](https://www.chessprogramming.org/Enhanced_Transposition_Cutoff) | Looking up the children in the hash table before searching them. |
+| [endgame.c – radagast.se](http://radagast.se/othello/endgame.c) | A small endgame solver (Smith, Weill, Andersson) with region parity, a fixed square order, special code for the last squares and 112 test positions. |
 | [The FFO endgame test suite – radagast.se](http://radagast.se/othello/ffotest.html) | The test positions #40–#59, their correct scores and moves, and Zebra's times. |
 | [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Endgame": why ordering decides everything, and fastest-first. |
 | [Edax on GitHub](https://github.com/abulmo/edax-reversi) | A much faster open-source bitboard endgame solver. |

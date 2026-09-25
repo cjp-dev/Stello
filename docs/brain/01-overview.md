@@ -233,7 +233,7 @@ Two tokens control a running search:
 | Edge tables | 8 tables of $3^8 = 6561$ values |
 | Hash tables | 2 tables (midgame, endgame), each $2^{19}$ slots of 2 entries of 24 bytes, so 24 MiB each |
 | Master opening book | 23 389 nodes |
-| Engine tests / app tests | 158 / 58 |
+| Engine tests / app tests | 160 / 58 |
 
 ---
 

@@ -627,7 +627,7 @@ Notable features and quirks:
 
 ---
 
-## Phase 8 – Performance tuning (round 1; paused)
+## Phase 8 – Performance tuning (rounds 1 and 2; paused)
 
 This phase has no C++ counterpart: it improves the C# endgame solver (section 3.7) and hash table (section 3.5). The full list of what was tried, with measurements, and the remaining candidates is in the specification (Phase 8), so the rejected ideas do not have to be tested again.
 
@@ -640,6 +640,7 @@ This phase has no C++ counterpart: it improves the C# endgame solver (section 3.
   - C++ had one entry per slot. Deep endgame results were overwritten by shallow ones, which cost many nodes in long searches (FFO #43).
 - **Enhanced transposition cutoff (`SearchEngine.Solve`):** from 10 empty squares, the children are looked up in the endgame hash table before they are sorted or searched. If one of them has an exact value or an upper bound that proves a cutoff for us, it is returned at once. New; not in C++.
 - **Flips computed once (`SearchEngine.Solve`):** the flips of each move are computed once, used for ordering, sorted together with the moves (`SortDescending` with three spans), and reused when the move is played. Before, they were computed twice.
+- **Round 2, the last two empty squares (`SearchEngine.SolveLast2`):** with two empty squares, both are tried directly instead of through the parity loop of `SolveShallow`, including the pass and game-over cases. The idea is from the endgame solver endgame.c by Warren D. Smith and Jean-Christophe Weill, improved by Gunnar Andersson. Same nodes, about 3 % faster. New; not in C++.
 
 ### Results (FFO #40–#44, Release)
 
@@ -647,15 +648,17 @@ This phase has no C++ counterpart: it improves the C# endgame solver (section 3.
 |---|---|---|---|
 | After phase 3 | 31.6 s | 522 M | 18.8 s, 292 M |
 | After phase 8 round 1 | 19.1 s | 328 M | 10.1 s, 168 M |
+| After phase 8 round 2 | 18.7 s | 328 M | 10.0 s, 168 M |
 
 - All scores and best moves are unchanged.
 - `TranspositionTableTests` (5 tests) cover the two-entry slots: store/find, other position or tag, the deeper result is kept, a deep entry survives many colliding shallow ones, clear.
-- All 158 engine tests and 58 app tests pass (Debug and Release). The engine test run takes about 30 s in Release and about 55–75 s in Debug, against about 87 s before.
+- Round 2 added two endgame tests: the 112 endgame.c test positions (`Data/endgame-c-positions.txt`) and a comparison with plain negamax on random positions with 1–4 empty squares.
+- All 160 engine tests and 58 app tests pass (Debug and Release). The engine test run takes about 30 s in Release and about 55–75 s in Debug, against about 87 s before.
 - The target of under 10 s is not reached yet.
 
 ### Tested and rejected
 
-Reverted, with the measurements in the specification: MTD(f) for the exact pass, one wide exact window without the win/loss/draw pass, ordering by a shallow midgame search, potential mobility in the ordering key, a stability cutoff, other solver thresholds, and larger hash tables.
+Reverted, with the measurements in the specification: MTD(f) for the exact pass, one wide exact window without the win/loss/draw pass, ordering by a shallow midgame search, potential mobility in the ordering key, a stability cutoff, other solver thresholds, and larger hash tables. Round 2 (endgame.c): a fixed square order, a prepared list of empty squares, parity by connected regions, and no parity at the last few squares.
 
 ### Assessment
 

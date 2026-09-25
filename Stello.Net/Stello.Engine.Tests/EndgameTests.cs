@@ -40,6 +40,47 @@ public class EndgameTests
     }
 
     [Fact]
+    public void Solve_MatchesMinimaxOnTheLastFewSquares()
+    {
+        var engine = new SearchEngine(hashBits: 10);
+
+        for (int plies = 57; plies <= 60; plies++)
+        {
+            foreach ((Board board, Player player) in TestPositions.RandomPositions(seed: plies, count: 75, plies: plies))
+            {
+                SearchResult result = engine.Search(board, player, SearchLimits.Solve);
+
+                Assert.Equal(Minimax(board, player), result.Score);
+            }
+        }
+    }
+
+    [Fact]
+    public void Solve_MatchesTheEndgameCSuite()
+    {
+        var engine = new SearchEngine(hashBits: 16);
+        string[] lines = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Data", "endgame-c-positions.txt"))
+            .Where(line => !line.StartsWith('#'))
+            .ToArray();
+
+        Assert.Equal(112, lines.Length);
+        foreach (string line in lines)
+        {
+            string[] parts = line.Split(' ');
+            Board board = Board.Parse(parts[0]);
+            int expected = int.Parse(parts[1]);
+
+            // White is to move; if White must pass, Black moves and the score is negated.
+            Player player = board.HasLegalMove(Player.White) ? Player.White : Player.Black;
+            int score = board.HasLegalMove(player)
+                ? engine.Search(board, player, SearchLimits.Solve).Score
+                : Minimax(board, player);
+
+            Assert.True(expected == (player == Player.White ? score : -score), line);
+        }
+    }
+
+    [Fact]
     public void FixedDepth_SolvesTheEndgameWhenItIsNear()
     {
         (Board board, Player player) = TestPositions.RandomPositions(seed: 3, count: 1, plies: 50).Single();
