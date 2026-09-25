@@ -153,4 +153,4 @@ In the app tests, [MainViewModelTests.cs](../../Stello.Net/Stello.Net.Tests/Main
 
 ---
 
-Previous: [09 Endgame solver](09-endgame-solver.md) · Next: 11 Opening book (to be written)
+Previous: [09 Endgame solver](09-endgame-solver.md) · Next: [11 Opening book](11-opening-book.md)

@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 424" width="800" height="424" font-family="sans-serif">
+<title>Book learning in three steps</title>
+<desc>Three trees. After AddGame the tiger line has values of plus or minus 32665. After EvaluatePositions the leaf and four new dropout moves are searched and the values are backed up: c5 -100, e3 17. After minimax and sorting, e3 comes first at the root and e6 before f6 after c5.</desc>
+<rect x="0" y="0" width="800" height="424" fill="#FFFFFF"/>
+<text x="20" y="26" font-size="16" font-weight="bold" fill="#000000">Book learning on an empty book: the tiger line d3 c5 f6 f5 e6, searched at depth 4</text>
+<text x="20" y="54" font-size="14" font-weight="bold" fill="#000000">1. AddGame (Black won)</text>
+<text x="20" y="72" font-size="12" fill="#555555">d3 (Black, the root)</text>
+<line x1="24" y1="76" x2="24" y2="94" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="24" y1="94" x2="30" y2="94" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="30" y="82" width="150" height="24" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
+<text x="38" y="99" font-size="12" fill="#000000">c5 (White)</text>
+<text x="172" y="99" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">−32665</text>
+<line x1="38" y1="106" x2="38" y2="128" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="38" y1="128" x2="52" y2="128" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="52" y="116" width="128" height="24" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
+<text x="60" y="133" font-size="12" fill="#000000">f6 (Black)</text>
+<text x="172" y="133" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">32665</text>
+<line x1="60" y1="140" x2="60" y2="162" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="60" y1="162" x2="74" y2="162" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="74" y="150" width="106" height="24" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
+<text x="82" y="167" font-size="12" fill="#000000">f5 (White)</text>
+<text x="172" y="167" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">−32665</text>
+<line x1="82" y1="174" x2="82" y2="196" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="82" y1="196" x2="96" y2="196" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="96" y="184" width="84" height="24" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
+<text x="104" y="201" font-size="12" fill="#000000">e6 (Black)</text>
+<text x="172" y="201" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">32665</text>
+<text x="276" y="54" font-size="14" font-weight="bold" fill="#000000">2. EvaluatePositions</text>
+<text x="276" y="72" font-size="12" fill="#555555">d3 (Black, the root)</text>
+<line x1="280" y1="76" x2="280" y2="94" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="280" y1="94" x2="286" y2="94" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="286" y="82" width="150" height="24" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
+<text x="294" y="99" font-size="12" fill="#000000">c5 (White)</text>
+<text x="428" y="99" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">−100</text>
+<line x1="294" y1="106" x2="294" y2="128" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="294" y1="128" x2="308" y2="128" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="308" y="116" width="128" height="24" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
+<text x="316" y="133" font-size="12" fill="#000000">f6 (Black)</text>
+<text x="428" y="133" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">−54</text>
+<line x1="316" y1="140" x2="316" y2="162" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="316" y1="162" x2="330" y2="162" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="330" y="150" width="106" height="24" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
+<text x="338" y="167" font-size="12" fill="#000000">f5 (White)</text>
+<text x="428" y="167" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">−9</text>
+<line x1="338" y1="174" x2="338" y2="196" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="338" y1="196" x2="352" y2="196" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="352" y="184" width="84" height="24" fill="#FFFFFF" stroke="#1565C0" stroke-width="2" rx="4"/>
+<text x="360" y="201" font-size="12" fill="#000000">e6 (Black)</text>
+<text x="428" y="201" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">9</text>
+<line x1="338" y1="174" x2="338" y2="230" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="338" y1="230" x2="352" y2="230" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="352" y="218" width="84" height="24" fill="#E8F5E9" stroke="#1565C0" stroke-width="2" rx="4"/>
+<text x="360" y="235" font-size="12" fill="#000000">d6 (Black)</text>
+<text x="428" y="235" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">−10</text>
+<line x1="316" y1="140" x2="316" y2="264" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="316" y1="264" x2="330" y2="264" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="330" y="252" width="106" height="24" fill="#E8F5E9" stroke="#1565C0" stroke-width="2" rx="4"/>
+<text x="338" y="269" font-size="12" fill="#000000">e3 (White)</text>
+<text x="428" y="269" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">54</text>
+<line x1="294" y1="106" x2="294" y2="298" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="294" y1="298" x2="308" y2="298" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="308" y="286" width="128" height="24" fill="#E8F5E9" stroke="#1565C0" stroke-width="2" rx="4"/>
+<text x="316" y="303" font-size="12" fill="#000000">e6 (Black)</text>
+<text x="428" y="303" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">100</text>
+<line x1="280" y1="76" x2="280" y2="332" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="280" y1="332" x2="286" y2="332" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="286" y="320" width="150" height="24" fill="#E8F5E9" stroke="#1565C0" stroke-width="2" rx="4"/>
+<text x="294" y="337" font-size="12" fill="#000000">e3 (White)</text>
+<text x="428" y="337" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">17</text>
+<text x="532" y="54" font-size="14" font-weight="bold" fill="#000000">3. Minimax and sort</text>
+<text x="532" y="72" font-size="12" fill="#555555">d3 (Black, the root)</text>
+<line x1="536" y1="76" x2="536" y2="94" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="536" y1="94" x2="542" y2="94" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="542" y="82" width="150" height="24" fill="#FFFFFF" stroke="#1565C0" stroke-width="2" rx="4"/>
+<text x="550" y="99" font-size="12" fill="#000000">e3 (White)</text>
+<text x="684" y="99" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">17</text>
+<line x1="536" y1="76" x2="536" y2="128" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="536" y1="128" x2="542" y2="128" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="542" y="116" width="150" height="24" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
+<text x="550" y="133" font-size="12" fill="#000000">c5 (White)</text>
+<text x="684" y="133" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">−100</text>
+<line x1="550" y1="140" x2="550" y2="162" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="550" y1="162" x2="564" y2="162" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="564" y="150" width="128" height="24" fill="#FFFFFF" stroke="#1565C0" stroke-width="2" rx="4"/>
+<text x="572" y="167" font-size="12" fill="#000000">e6 (Black)</text>
+<text x="684" y="167" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">100</text>
+<line x1="550" y1="140" x2="550" y2="196" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="550" y1="196" x2="564" y2="196" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="564" y="184" width="128" height="24" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
+<text x="572" y="201" font-size="12" fill="#000000">f6 (Black)</text>
+<text x="684" y="201" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">−54</text>
+<line x1="572" y1="208" x2="572" y2="230" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="572" y1="230" x2="586" y2="230" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="586" y="218" width="106" height="24" fill="#FFFFFF" stroke="#1565C0" stroke-width="2" rx="4"/>
+<text x="594" y="235" font-size="12" fill="#000000">e3 (White)</text>
+<text x="684" y="235" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">54</text>
+<line x1="572" y1="208" x2="572" y2="264" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="572" y1="264" x2="586" y2="264" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="586" y="252" width="106" height="24" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
+<text x="594" y="269" font-size="12" fill="#000000">f5 (White)</text>
+<text x="684" y="269" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">−9</text>
+<line x1="594" y1="276" x2="594" y2="298" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="594" y1="298" x2="608" y2="298" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="608" y="286" width="84" height="24" fill="#FFFFFF" stroke="#1565C0" stroke-width="2" rx="4"/>
+<text x="616" y="303" font-size="12" fill="#000000">e6 (Black)</text>
+<text x="684" y="303" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">9</text>
+<line x1="594" y1="276" x2="594" y2="332" stroke="#9E9E9E" stroke-width="1"/>
+<line x1="594" y1="332" x2="608" y2="332" stroke="#9E9E9E" stroke-width="1"/>
+<rect x="608" y="320" width="84" height="24" fill="#FFFFFF" stroke="#1565C0" stroke-width="2" rx="4"/>
+<text x="616" y="337" font-size="12" fill="#000000">d6 (Black)</text>
+<text x="684" y="337" font-size="12" text-anchor="end" font-family="monospace" fill="#000000">−10</text>
+<text x="20" y="370" font-size="12" fill="#000000">Values are for the player who makes the move. Blue outline: a searched leaf (flag Calculated). Green: a move added by dropout expansion.</text>
+<text x="20" y="388" font-size="12" fill="#000000">Step 2 searches 5 positions (the leaf e6 and four best moves not in the book) and backs the values up; step 3 sorts every list best first,</text>
+<text x="20" y="406" font-size="12" fill="#000000">so the book now answers d3 with e3 (17), and after d3 c5 it plays e6 (100) instead of the game move f6 (−54).</text>
+</svg>

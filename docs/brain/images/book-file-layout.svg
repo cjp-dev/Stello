@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 518" width="800" height="518" font-family="sans-serif">
+<title>Opening book file layout</title>
+<desc>The file starts with a 32-bit header, then the root chain: a 16-bit count followed by the nodes, each with a 16-bit move, value and flag and then its own reply chain. Below, the first 36 bytes of the master book with their meaning: header 23530, 3 root nodes, c5 with value -39 and 4 replies, f6 with value 39 and 4 replies, f5, e6.</desc>
+<rect x="0" y="0" width="800" height="518" fill="#FFFFFF"/>
+<text x="20" y="26" font-size="17" font-weight="bold" fill="#000000">The opening book file (little-endian)</text>
+<rect x="20" y="50" width="110" height="30" fill="#FFF3E0" stroke="#EF6C00" stroke-width="1.5"/>
+<text x="75" y="70" font-size="13" text-anchor="middle" fill="#000000">int32 header</text>
+<text x="140" y="70" font-size="12" fill="#333333">C++ allocation counter (23 530 in the master file; 23 389 real nodes)</text>
+<rect x="20" y="94" width="110" height="26" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5"/>
+<text x="75" y="112" font-size="12" text-anchor="middle" fill="#000000">int16 count = n</text>
+<text x="140" y="112" font-size="12" fill="#333333">the root chain: White's replies to d3</text>
+<text x="40" y="147" font-size="12" fill="#000000">node 1:</text>
+<rect x="90" y="130" width="90" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1"/>
+<text x="135" y="148" font-size="12" text-anchor="middle" fill="#000000">int16 move</text>
+<rect x="180" y="130" width="90" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1"/>
+<text x="225" y="148" font-size="12" text-anchor="middle" fill="#000000">int16 value</text>
+<rect x="270" y="130" width="90" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1"/>
+<text x="315" y="148" font-size="12" text-anchor="middle" fill="#000000">int16 flag</text>
+<rect x="90" y="162" width="110" height="26" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5"/>
+<text x="145" y="180" font-size="12" text-anchor="middle" fill="#000000">int16 count</text>
+<text x="210" y="180" font-size="12" fill="#333333">node 1's reply chain, written the same way (recursively)</text>
+<text x="110" y="208" font-size="12" fill="#555555">… its nodes, each followed by its own reply chain …</text>
+<text x="40" y="237" font-size="12" fill="#000000">node 2:</text>
+<rect x="90" y="220" width="90" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1"/>
+<text x="135" y="238" font-size="12" text-anchor="middle" fill="#000000">int16 move</text>
+<rect x="180" y="220" width="90" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1"/>
+<text x="225" y="238" font-size="12" text-anchor="middle" fill="#000000">int16 value</text>
+<rect x="270" y="220" width="90" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1"/>
+<text x="315" y="238" font-size="12" text-anchor="middle" fill="#000000">int16 flag</text>
+<rect x="90" y="252" width="110" height="26" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5"/>
+<text x="145" y="270" font-size="12" text-anchor="middle" fill="#000000">int16 count</text>
+<text x="210" y="270" font-size="12" fill="#333333">node 2's reply chain</text>
+<text x="40" y="296" font-size="12" fill="#555555">… up to node n</text>
+<text x="20" y="326" font-size="15" font-weight="bold" fill="#000000">The first 36 bytes of Data/OPENING</text>
+<rect x="20" y="340" width="92" height="26" fill="#FFF3E0" stroke="#EF6C00" stroke-width="1.2"/>
+<text x="66" y="358" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">EA 5B 00 00</text>
+<text x="66" y="384" font-size="11" text-anchor="middle" fill="#333333">23530</text>
+<rect x="116" y="340" width="46" height="26" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.2"/>
+<text x="139" y="358" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">03 00</text>
+<text x="139" y="384" font-size="11" text-anchor="middle" fill="#333333">3 nodes</text>
+<rect x="166" y="340" width="46" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1.2"/>
+<text x="189" y="358" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">35 00</text>
+<text x="189" y="384" font-size="11" text-anchor="middle" fill="#333333">c5 (53)</text>
+<rect x="216" y="340" width="46" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1.2"/>
+<text x="239" y="358" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">D9 FF</text>
+<text x="239" y="384" font-size="11" text-anchor="middle" fill="#333333">−39</text>
+<rect x="266" y="340" width="46" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1.2"/>
+<text x="289" y="358" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">00 00</text>
+<text x="289" y="384" font-size="11" text-anchor="middle" fill="#333333">flag 0</text>
+<rect x="316" y="340" width="46" height="26" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.2"/>
+<text x="339" y="358" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">04 00</text>
+<text x="339" y="384" font-size="11" text-anchor="middle" fill="#333333">4 replies</text>
+<rect x="366" y="340" width="46" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1.2"/>
+<text x="389" y="358" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">42 00</text>
+<text x="389" y="384" font-size="11" text-anchor="middle" fill="#333333">f6 (66)</text>
+<rect x="416" y="340" width="46" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1.2"/>
+<text x="439" y="358" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">27 00</text>
+<text x="439" y="384" font-size="11" text-anchor="middle" fill="#333333">39</text>
+<rect x="466" y="340" width="46" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1.2"/>
+<text x="489" y="358" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">00 00</text>
+<text x="489" y="384" font-size="11" text-anchor="middle" fill="#333333">flag 0</text>
+<rect x="516" y="340" width="46" height="26" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.2"/>
+<text x="539" y="358" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">04 00</text>
+<text x="539" y="384" font-size="11" text-anchor="middle" fill="#333333">4 replies</text>
+<rect x="566" y="340" width="46" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1.2"/>
+<text x="589" y="358" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">38 00</text>
+<text x="589" y="384" font-size="11" text-anchor="middle" fill="#333333">f5 (56)</text>
+<rect x="616" y="340" width="46" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1.2"/>
+<text x="639" y="358" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">D9 FF</text>
+<text x="639" y="384" font-size="11" text-anchor="middle" fill="#333333">−39</text>
+<rect x="666" y="340" width="46" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1.2"/>
+<text x="689" y="358" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">00 00</text>
+<text x="689" y="384" font-size="11" text-anchor="middle" fill="#333333">flag 0</text>
+<rect x="716" y="340" width="46" height="26" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.2"/>
+<text x="739" y="358" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">02 00</text>
+<text x="739" y="384" font-size="11" text-anchor="middle" fill="#333333">2 replies</text>
+<rect x="20" y="406" width="46" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1.2"/>
+<text x="43" y="424" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">41 00</text>
+<text x="43" y="450" font-size="11" text-anchor="middle" fill="#333333">e6 (65)</text>
+<rect x="70" y="406" width="46" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1.2"/>
+<text x="93" y="424" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">27 00</text>
+<text x="93" y="450" font-size="11" text-anchor="middle" fill="#333333">39</text>
+<rect x="120" y="406" width="46" height="26" fill="#FFFFFF" stroke="#555555" stroke-width="1.2"/>
+<text x="143" y="424" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">00 00</text>
+<text x="143" y="450" font-size="11" text-anchor="middle" fill="#333333">flag 0</text>
+<rect x="170" y="406" width="46" height="26" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.2"/>
+<text x="193" y="424" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">05 00</text>
+<text x="193" y="450" font-size="11" text-anchor="middle" fill="#333333">5 replies</text>
+<text x="20" y="482" font-size="12" fill="#000000">Read depth-first: d3, then c5, its first reply f6, its first reply f5, its first reply e6, … (the book's main line).</text>
+<text x="20" y="500" font-size="12" fill="#000000">Moves are legacy square numbers (0 = pass). File size = 4 + 2 + 8 × nodes = 187 118 bytes.</text>
+</svg>

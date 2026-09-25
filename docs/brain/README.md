@@ -49,8 +49,8 @@ The time limit can stop the search at any point; the best move found so far is t
 | 08 | [Transposition table](08-transposition-table.md) | Two-entry slots, bounds, replacement |
 | 09 | [Endgame solver](09-endgame-solver.md) | Win/loss/draw and exact passes, fastest-first, parity, enhanced transposition cutoff |
 | 10 | [Time control](10-time-control.md) | Time modes, time per move, "Move Now" |
-| 11 | Opening book | The file format, symmetries, the position index, `BookTracker` |
-| 12 | Book learning | Adding games, dropout expansion, minimax, self-play |
+| 11 | [Opening book](11-opening-book.md) | The file format, symmetries, the position index, `BookTracker` |
+| 12 | [Book learning](12-book-learning.md) | Adding games, dropout expansion, minimax, self-play |
 | 13 | App integration | The game loop, threading, settings, book files |
 | 14 | [Glossary](14-glossary.md) | The terms used in these documents |
 | 15 | [References](15-references.md) | Articles, papers and source code on the internet |
@@ -75,6 +75,9 @@ The time limit can stop the search at any point; the best move found so far is t
 | [alpha-beta-tree.svg](images/alpha-beta-tree.svg) | 07 | Alpha-beta cutoffs in a real two-ply search |
 | [tt-layout.svg](images/tt-layout.svg) | 08 | Hash table slots, the entry fields and the slot hash |
 | [parity-quadrants.svg](images/parity-quadrants.svg) | 09 | Quadrants and parity with six empty squares |
+| [book-file-layout.svg](images/book-file-layout.svg) | 11 | The book file layout and the first bytes of the master book |
+| [book-symmetries.svg](images/book-symmetries.svg) | 11 | The four first moves, their symmetries to d3 and the book's replies |
+| [book-minimax-example.svg](images/book-minimax-example.svg) | 12 | A small book after adding a game, evaluating and minimax |
 
 
 ## Reading paths

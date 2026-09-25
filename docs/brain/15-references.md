@@ -81,6 +81,19 @@ Articles, papers and source code on the internet that explain the techniques use
 |---|---|
 | [Iterative Deepening – Chess Programming Wiki](https://www.chessprogramming.org/Iterative_Deepening) | Iterative deepening as the basis of time management. |
 
+## 11 Opening book
+
+| Link | What you find there |
+|---|---|
+| [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Opening knowledge": why an opening book pays off, and how it can be built. |
+| [Computer Othello – Wikipedia](https://en.wikipedia.org/wiki/Computer_Othello) | "Opening book": how Othello programs use opening books. |
+
+## 12 Book learning
+
+| Link | What you find there |
+|---|---|
+| [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Opening knowledge": adding the best move that no game has played to every book position, then minimaxing the book. The same idea as Stello's dropout expansion. |
+
 ## Writing these documents
 
 | Link | What you find there |
