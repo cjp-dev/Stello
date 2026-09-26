@@ -132,7 +132,7 @@ See [Stello porting documentation.md](../../Stello%20porting%20documentation.md)
 | [Search/TimeControl.cs](../../Stello.Net/Stello.Engine/Search/TimeControl.cs) | `TimeBudget`, `ForMidgame`, `ForEndgame`, `ForGame`, `FastEndgameEmpties` |
 | [SearchEngine.cs](../../Stello.Net/Stello.Engine/SearchEngine.cs) | `StopIterating`, `CheckAbort`, `Report`, `Result`, `SearchAbortedException` |
 | [SearchResult.cs](../../Stello.Net/Stello.Engine/SearchResult.cs) | `ScoreKind`, `SearchInfo`, `SearchResult` |
-| [GameSettings.cs](../../Stello.Net/Stello.Net/Models/GameSettings.cs), [AnalysisViewModel.cs](../../Stello.Net/Stello.Net/ViewModels/AnalysisViewModel.cs) | The app's settings and how scores are shown |
+| [GameSettings.cs](../../Stello.Net/Stello.App/Models/GameSettings.cs), [AnalysisViewModel.cs](../../Stello.Net/Stello.App/ViewModels/AnalysisViewModel.cs) | The app's settings and how scores are shown |
 | C++: [Kontrol.cpp](../../Stello%20C++/BRAIN/Kontrol.cpp) | `calc_time`, `calc_end_time`, `getcomputer` |
 
 ## Tests

@@ -6,7 +6,14 @@ This document describes, phase by phase, how the C++ program Stello (`Stello C++
 - how they are implemented in C#;
 - whether each part is a **1:1 port**, **changed** (improved algorithm or data structure, or a bug fixed), or a **C++ quirk kept** on purpose, and why.
 
-The requirements are in [Migrate Othello game from C++ to C#.md](Migrate%20Othello%20game%20from%20C++%20to%20C%23.md).
+The main requirements for the port were:
+
+- Port the engine's algorithms (evaluation, alpha-beta search, endgame solver, hash table, time control, opening book and book learning). The moves and values do not have to be the same as in C++, but for a given position, depth and settings the C# engine must always give the same result. Bitboards and modernised code are allowed.
+- Read and write the existing binary `OPENING` file byte for byte.
+- A WPF user interface in English with MVVM (`CommunityToolkit.Mvvm`) and no game logic in code-behind; the search and the book learning run in the background and can be stopped.
+- Human against computer only; three time modes (fixed depth, time per move, time per game); games saved as a text move list.
+- xUnit tests: move generation, perft 1–8, FFO #40–#44, a byte-identical book round trip, and play against greedy and random players. No comparison tests against the C++ engine.
+- Out of scope: printing, the MDI window layout and the WinHelp file.
 
 ## Overview
 
@@ -524,7 +531,7 @@ Notable features and quirks:
 | Settings actually used and saved | New | The Windows C++ version read `rev.cfg` but ignored it, and never saved. |
 | Defaults (5 minutes per game, depth 8) | 1:1 | As `opset`. |
 | Window position and analysis panel | 1:1 idea | `anadef` and the window fields in `config`, now actually saved. |
-| Import of an old `rev.cfg` | Not ported | Optional in the specification; the Windows version never wrote one, and it ignored the values anyway. |
+| Import of an old `rev.cfg` | Not ported | Optional in the requirements; the Windows version never wrote one, and it ignored the values anyway. |
 | Board orientation, "border", multiple moves (`notadef`, `borderdef`, `hvmudef`) | Not ported | Only used by the old `Interfa.c` UI. |
 | File locations | Changed | `%AppData%\Stello` and the application folder instead of the current directory. |
 | User book before shipped book | New | Prepares book learning (phase 7) without changing the shipped file. |
@@ -632,7 +639,13 @@ Notable features and quirks:
 
 ## Phase 8 – Performance tuning (rounds 1 and 2; paused)
 
-This phase has no C++ counterpart: it improves the C# endgame solver (section 3.7) and hash table (section 3.5). The full list of what was tried, with measurements, and the remaining candidates is in the specification (Phase 8), so the rejected ideas do not have to be tested again.
+This phase has no C++ counterpart: it improves the C# endgame solver (section 3.7) and hash table (section 3.5). Everything that was tried is listed below with its measurements, together with the remaining ideas, so the rejected ideas do not have to be tested again. The target is FFO #40–#44 in under 10 s in total in a Release build, with the same test results.
+
+### Measurement method
+
+- **FFO #40–#44:** a throwaway console benchmark (outside the repository) solves the five positions with `SearchLimits.Solve` in a Release build, and prints the score, nodes, time, nodes per second and when the win/loss/draw pass finished. Timings vary by about ±1 s (±0.5 s in round 2).
+- **endgame.c suite (round 2):** the 112 test positions from endgame.c, 100 of them with 12 empty squares, solved 30 times with a 2¹⁶-slot hash table that is cleared between positions. Timings vary by about ±2 %.
+- Where the difference was small, the baseline and the variant were run alternately. All variants gave the same scores.
 
 ### What changed in C#
 
@@ -661,7 +674,38 @@ This phase has no C++ counterpart: it improves the C# endgame solver (section 3.
 
 ### Tested and rejected
 
-Reverted, with the measurements in the specification: MTD(f) for the exact pass, one wide exact window without the win/loss/draw pass, ordering by a shallow midgame search, potential mobility in the ordering key, a stability cutoff, other solver thresholds, and larger hash tables. Round 2 (endgame.c): a fixed square order, a prepared list of empty squares, parity by connected regions, and no parity at the last few squares.
+These were reverted. Round 1, FFO #40–#44 total time:
+
+| Tried | Result |
+|---|---|
+| MTD(f) for the exact pass (null-window steps from the win/loss/draw bound) | Worse: 38.0 s against 31.6 s; #43 went from 292 M to 428 M nodes (five steps from −2 to −12). Measured with the old single-entry hash table. Only worth trying again with a good first guess. |
+| One wide exact window (−65, 65) without the win/loss/draw pass | No gain: 32.8 s against 31.6 s. |
+| Ordering by a shallow midgame search (0 or 1 ply with the Stello evaluation) from 12, 14 or 16 empty squares | Much worse: 51–101 s. The evaluation is a poor move orderer for the endgame; fastest-first is better. The evaluation-based ordering from 18 empty squares was kept (at 14 empty squares #43 got worse). |
+| Potential mobility added to the fastest-first key | About 5 % fewer nodes, but no measurable time gain (16.9 s against 17.1 s). |
+| Stability cutoff (stable discs from full lines, edges and stable neighbours) | Almost the same nodes, slightly slower (17.7 s against 17.1 s). |
+| Other thresholds: shallow solver from 5, 6 or 7 empty squares; endgame hash table from 6, 7 or 8 | All within the noise (17.1–18.1 s). The current 6 and 7 were kept. |
+| Larger hash tables (2²¹–2²³ two-entry slots) | No further gain (17.4–17.9 s against 17.0 s at 2¹⁹). |
+
+Round 2, ideas from endgame.c for the last few empty squares, measured on the endgame.c suite (baseline 2.38 s, 39.1 M nodes; with `SolveLast2`, which was kept, 2.32 s):
+
+| Tried | Result |
+|---|---|
+| Fixed square order in `SolveShallow` (Weill's order: corners, c1, c3, d1, d3, d2, c2, C-squares, X-squares) as 9 groups | 3 % fewer nodes, but slower: 2.64 s. |
+| The same order as 3 groups, or 2 groups (C- and X-squares last) | 1–2 % fewer nodes; 2.54 s and 2.43 s. |
+| The empty squares in a list prepared once when `SolveShallow` takes over (as in endgame.c) | Same nodes, 25 % slower (2.98 s). |
+| Parity by the connected empty regions instead of the four quadrants | 0.3 % fewer nodes, slower (2.53 s). |
+| No parity below 5, 4 or 3 empty squares | 7 %, 4 % and 0 % more nodes; 2.46, 2.49 and 2.42 s. |
+
+With bitboards the shallow solver is limited by the cost per node, not by the ordering: these ideas save 0–3 % of the nodes but cost more per node than they save.
+
+### Remaining ideas
+
+- Faster move generation and flips (for example flips from lookup tables); the engine only does about 15–20 M nodes per second.
+- Special code for the last 3–4 empty squares (the last 2 are done).
+- Better ordering in the middle of the endgame (10–18 empty squares), for example a shallow *endgame* search or a weighted mobility formula, to get the node counts closer to Zebra.
+- MTD(f) or an aspiration window, but only with a good first guess.
+- Midgame: iterative-deepening move ordering and hash-table use at the root.
+- Keep the normal Debug test run short: build the engine with optimisations in Debug, or move the slow FFO tests to their own category.
 
 ### Assessment
 

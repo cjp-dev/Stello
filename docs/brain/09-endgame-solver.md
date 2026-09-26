@@ -138,9 +138,15 @@ The tests solve five positions from the FFO endgame test suite. Measured with `S
 
 - **Two passes, as in C++.** The C++ solver also found win/loss/draw first and then the exact score, if there was time. After a win, C++ removed the root moves before the winning move; C# instead moves the winning move to the front.
 - **Better ordering than C++.** C++ ordered the endgame moves by two killer moves and the square values (`simsort`). Fastest-first, parity and the evaluation-based ordering were needed to solve the FFO positions in reasonable time. See [Stello porting documentation.md](../../Stello%20porting%20documentation.md), section 3.7.
-- **Phase 8.** Two entries per hash slot, the enhanced transposition cutoff and computing the flips only once brought FFO #40–#44 from 31.6 s to about 19–21 s. In round 2, `SolveLast2` saved about 3 % more. The target of under 10 s is not reached yet. These ideas were tried and rejected, with the measurements in phase 8 of [the specification](../../Migrate%20Othello%20game%20from%20C++%20to%20C%23.md):
-  - round 1: MTD(f), a single wide window without pass 1, ordering by a shallow search, potential mobility in the fastest-first key, a stability cutoff, other thresholds and larger hash tables;
-  - round 2: the ideas from endgame.c that cost more per node than they saved: a fixed square order, parity by connected regions, and no parity at the last few squares.
+- **Phase 8.** Two entries per hash slot, the enhanced transposition cutoff and computing the flips only once brought FFO #40–#44 from 31.6 s to about 19–21 s. In round 2, `SolveLast2` saved about 3 % more. The target of under 10 s is not reached yet. These ideas were tried and rejected (the full tables are in [Tested and rejected](../../Stello%20porting%20documentation.md#tested-and-rejected) in the porting documentation):
+  - round 1, FFO #40–#44 total time:
+    - MTD(f) for pass 2, with null-window steps from the pass 1 bound: 38.0 s against 31.6 s, because #43 needed five steps from −2 to −12. Only worth another try with a good first guess;
+    - one wide window (−65, 65) without pass 1: 32.8 s against 31.6 s;
+    - ordering by a shallow midgame search from 12–16 empty squares: 51–101 s;
+    - potential mobility in the fastest-first key: 5 % fewer nodes, but no time gain;
+    - a stability cutoff: almost the same nodes, slightly slower;
+    - other thresholds for `SolveShallow` and the endgame hash table, and larger hash tables: within the noise;
+  - round 2, the ideas from endgame.c, measured on its 112 test positions: a fixed square order, a list of the empty squares prepared once, parity by connected regions, and no parity at the last few squares. They saved 0–3 % of the nodes but cost more per node than they saved (up to 25 % slower): with bitboards, the shallow solver is limited by the cost per node, not by the ordering.
 - **Stopping.** The solver checks the time like the midgame search. If it is stopped during pass 1, the midgame move is played; if it is stopped during pass 2, the result of pass 1 is used.
 - **No tree reuse.** C++ could play the next moves from the tree of a full solve. C# searches again, but the endgame hash table usually answers at once.
 

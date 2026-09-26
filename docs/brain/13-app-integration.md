@@ -197,10 +197,11 @@ After Back, the computer gets back the time of the moves that were taken back, w
 
 | File | Main members |
 |---|---|
-| [MainViewModel.cs](../../Stello.Net/Stello.Net/ViewModels/MainViewModel.cs) | `Start`, `RunAsync`, `ComputerMoveAsync`, `StopAsync`, `Stop`, `Play`, `NewGame`, `Open`, `Undo`, `Redo`, `SwitchSides`, `MoveNow`, `EditSettings`, `ResetClock`, `RestoreClock`, `LearnAsync`, `CreateLearner` |
-| [AnalysisViewModel.cs](../../Stello.Net/Stello.Net/ViewModels/AnalysisViewModel.cs) | `Update`, `FormatScore` |
-| [GameSettings.cs](../../Stello.Net/Stello.Net/Models/GameSettings.cs) | `Default`, `Normalize`, `ToLimits`, `GameTime` |
-| [AppSettings.cs](../../Stello.Net/Stello.Net/Models/AppSettings.cs) | `AppSettings`, `WindowPlacement` |
+| [MainViewModel.cs](../../Stello.Net/Stello.App/ViewModels/MainViewModel.cs) | `Start`, `RunAsync`, `ComputerMoveAsync`, `StopAsync`, `Stop`, `Play`, `NewGame`, `Open`, `Undo`, `Redo`, `SwitchSides`, `MoveNow`, `EditSettings`, `ResetClock`, `RestoreClock`, `LearnAsync` |
+| [LocalEngineHost.cs](../../Stello.Net/Stello.App/Services/LocalEngineHost.cs) | `ChooseMoveAsync`, `ResetBookTracker`, `AddGameToBookAsync`, `LearnAsync`, `CreateLearner` |
+| [AnalysisViewModel.cs](../../Stello.Net/Stello.App/ViewModels/AnalysisViewModel.cs) | `Update`, `FormatScore` |
+| [GameSettings.cs](../../Stello.Net/Stello.App/Models/GameSettings.cs) | `Default`, `Normalize`, `ToLimits`, `GameTime` |
+| [AppSettings.cs](../../Stello.Net/Stello.App/Models/AppSettings.cs) | `AppSettings`, `WindowPlacement` |
 | [BookLoader.cs](../../Stello.Net/Stello.Net/Services/BookLoader.cs) | `Load` |
 | [AppPaths.cs](../../Stello.Net/Stello.Net/Services/AppPaths.cs) | `DataDirectory`, `SettingsFile`, `UserBookFile`, `SelfPlayLogFile`, `DefaultBookFile`, `BookFiles` |
 | [FileBookStore.cs](../../Stello.Net/Stello.Net/Services/FileBookStore.cs) | `Save`, `AppendSelfPlayLog` |

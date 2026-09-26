@@ -82,7 +82,7 @@ The time limit can stop the search at any point; the best move found so far is t
 - **Everything:** read the chapters in order.
 - **Just the search:** 01, 02, 05, 06, 07, 08, 09.
 - **Just the opening book:** 01, 02 (square numbers), 11, 12.
-- **Tuning the engine:** 05, 06, 07, 08, 09, 10, and phase 8 in [the specification](../../Migrate%20Othello%20game%20from%20C++%20to%20C%23.md) for what has already been tried.
+- **Tuning the engine:** 05, 06, 07, 08, 09, 10, and phase 8 in [Stello porting documentation.md](../../Stello%20porting%20documentation.md#phase-8--performance-tuning-rounds-1-and-2-paused) for what has already been tried, with measurements, and the remaining ideas.
 - **Changing the app:** 01, 10, 13.
 
 ## How to view these documents

@@ -85,7 +85,11 @@ b8 is last: it is a C-square next to the empty corner a8.
 - **Bug fixed.** In C++, after sorting by response score, the code read the response of the wrong square (the −11 offset of the legacy numbering was missing). The C# version reads the right entry.
 - **One table per colour.** C++ had one table for the computer and one for the human. C# uses one per colour, which is the same while one side is the computer, and also correct when the engine searches for both sides (self-play, book learning).
 - **No global state.** The dynamic square values are computed into a local array instead of overwriting a global table, and the response table belongs to the `SearchEngine` instance.
-- **Tried and rejected.** For the endgame solver, ordering the moves by a shallow midgame search (with this evaluation) was tried in phase 8 and was much slower; adding potential mobility to the fastest-first key gave no measurable gain. See phase 8 in [the specification](../../Migrate%20Othello%20game%20from%20C++%20to%20C%23.md).
+- **Tried and rejected.** Two ideas for the endgame solver were tried in phase 8 and reverted (FFO #40–#44, Release):
+  - ordering by a shallow midgame search (0 or 1 ply with this evaluation) from 12, 14 or 16 empty squares took 51–101 s, against about 17 s. The evaluation is a poor move orderer near the end, and fastest-first is better; only the evaluation-based ordering from 18 empty squares was kept;
+  - adding potential mobility to the fastest-first key saved about 5 % of the nodes but no time (16.9 s against 17.1 s).
+
+  See [Tested and rejected](../../Stello%20porting%20documentation.md#tested-and-rejected) in the porting documentation.
 
 ## Where in the code
 

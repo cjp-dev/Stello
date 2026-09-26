@@ -167,7 +167,8 @@ See [Stello porting documentation.md](../../Stello%20porting%20documentation.md)
 |---|---|
 | [BookLearner.cs](../../Stello.Net/Stello.Engine/BookLearner.cs) | `AddGame`, `EvaluatePositions`, `EvaluateReplies`, `Minimax`, `BackUp`, `Sort`, `PlayGame`, `SelfPlay`, `Learn`, `SearchValue`, `Search`, `ValueFor` |
 | [OpeningBook.cs](../../Stello.Net/Stello.Engine/OpeningBook.cs) | `CreateEmpty`, `Rebuild`, `TryFindReplies` |
-| [MainViewModel.cs](../../Stello.Net/Stello.Net/ViewModels/MainViewModel.cs) | `AddGameToBook`, `EvaluateBook`, `SelfPlay`, `StopLearning`, `LearnAsync`, `CreateLearner` |
+| [MainViewModel.cs](../../Stello.Net/Stello.App/ViewModels/MainViewModel.cs) | `AddGameToBook`, `EvaluateBook`, `SelfPlay`, `StopLearning`, `LearnAsync` |
+| [LocalEngineHost.cs](../../Stello.Net/Stello.App/Services/LocalEngineHost.cs) | `AddGameToBookAsync`, `LearnAsync`, `CreateLearner` |
 | [FileBookStore.cs](../../Stello.Net/Stello.Net/Services/FileBookStore.cs) | `Save`, `AppendSelfPlayLog` |
 | C++: [Book.cpp](../../Stello%20C++/BRAIN/Book.cpp) | `convert_game`, `mmgame`, `calc_lib`, `minmaxlib`, `minmax_lib`, `mmlib`, `sort_lib`, `selfplay`, `splay` |
 | C++: [MainFrm.cpp](../../Stello%20C++/MainFrm.cpp) | `OnSpilFletspil`, `OnMinmaxlib`, `OnSelfplay` |

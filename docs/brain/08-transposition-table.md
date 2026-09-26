@@ -133,7 +133,7 @@ The deep result A survived two shallow stores (steps 2 and 3); only a deeper res
 
 - **Full positions instead of Zobrist keys.** C++ used 32-bit Zobrist-style keys from random numbers, and checked only 32 bits, so false hits were possible. Storing both bitboards costs 16 bytes per entry but makes every hit certain, and there is no random key table to maintain. See [Stello porting documentation.md](../../Stello%20porting%20documentation.md), section 3.5.
 - **Two tables** instead of one shared table: C++ mixed midgame and endgame values in the same table.
-- **Two entries per slot** (phase 8) was the biggest single gain of phase 8: the nodes for FFO #43 dropped from 292 M to about 117–168 M. A single-entry table of $2^{23}$ entries gave a similar result, so the problem had been deep entries being overwritten. Larger two-entry tables ($2^{21}$–$2^{23}$ slots) gave no further gain (see phase 8 in [the specification](../../Migrate%20Othello%20game%20from%20C++%20to%20C%23.md)).
+- **Two entries per slot** (phase 8) was the biggest single gain of phase 8: the nodes for FFO #43 dropped from 292 M to about 117–168 M. A single-entry table of $2^{23}$ entries gave a similar result, so the problem had been deep entries being overwritten. Larger two-entry tables ($2^{21}$–$2^{23}$ slots) gave no further gain: FFO #40–#44 took 17.4–17.9 s against 17.0 s with $2^{19}$ slots, so the default stayed at $2^{19}$ (see [Tested and rejected](../../Stello%20porting%20documentation.md#tested-and-rejected) in the porting documentation).
 - **Bounds narrow the endgame window.** In the endgame, a stored bound that does not end the search still narrows (α, β), which C++ did not do.
 
 ## Where in the code
