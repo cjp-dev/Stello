@@ -93,6 +93,7 @@
                 new("Open...", Vm.OpenCommand, "Ctrl+O"),
                 new("Save", Vm.SaveCommand, "Ctrl+S"),
                 new("Save As...", Vm.SaveAsCommand),
+                new("Add Game to Book...", Vm.AddGameToBookCommand, SeparatorBefore: true),
             ]),
             new("Game",
             [
@@ -114,7 +115,6 @@
                 new("3D Pieces", ChangeAppearance(a => a with { Pieces3D = !a.Pieces3D }), IsChecked: () => _appearance.Pieces3D, SeparatorBefore: true),
                 new("Animate Flips", ChangeAppearance(a => a with { AnimateFlips = !a.AnimateFlips }), IsChecked: () => _appearance.AnimateFlips),
             ]),
-            new("Book", [new("Add Game to Book...", Vm.AddGameToBookCommand)]),
             new("Brain", [new("How Stello Thinks", new RelayCommand(OpenDocs))]),
             new("Help", [new("About Stello...", Vm.AboutCommand)]),
         ];

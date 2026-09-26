@@ -697,7 +697,7 @@ This phase has no C++ counterpart. The same engine and view models also run in t
 - **Files (`BrowserGameFileService`, `wwwroot/js/stello.js`):** Open uses the browser's file picker (game files up to 1 MB). Save downloads the game as a file; Save As, and the first Save, ask for the name in the app's own dialog.
 - **Dialogs (`BrowserDialogService`, `Components/DialogHost`):** modal dialogs shown one at a time: confirmation, who won ("Black won"/"White won"/"Cancel"), settings (reusing `SettingsViewModel`), a text box for the file name, errors and About. The page behind is inert while a dialog is open.
 - **UI (`Pages/Home`, `Components/Board`):**
-  - The same menus as the desktop, except that the Book menu only has Add Game to Book, and File has no Exit.
+  - The same menus as the desktop, except that there is no Book menu (Add Game to Book is in the File menu, and Evaluate Book, Self-play and Stop Learning are desktop only), and File has no Exit.
   - The same keyboard shortcuts, except Ctrl+N, which the browser keeps.
   - The board is a CSS grid with the colours and markers of `BoardView`. Each square has a label for screen readers (for example "f5, legal move").
   - Blazor does not observe `INotifyPropertyChanged`, so the page subscribes to the view models' `PropertyChanged` and the commands' `CanExecuteChanged` and re-renders.
