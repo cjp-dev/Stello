@@ -1,0 +1,44 @@
+@* Squares in index order: a1 top left, h8 bottom right, as in the desktop BoardView. *@
+<div class="board" role="group" aria-label="Board">
+    <div></div>
+    @foreach (char file in "abcdefgh")
+    {
+        <div class="coordinate">@file</div>
+    }
+    @for (int row = 0; row < 8; row++)
+    {
+        <div class="coordinate">@(row + 1)</div>
+        @for (int column = 0; column < 8; column++)
+        {
+            SquareViewModel square = Squares[row * 8 + column];
+            <button class="square" title="@square.Name" aria-label="@Describe(square)" @onclick="() => OnPlay.InvokeAsync(square)">
+                @if (square.Disc is { } disc)
+                {
+                    <span class="disc @(disc == Player.Black ? "black" : "white")"></span>
+                }
+                @if (square.IsLegalMove)
+                {
+                    <span class="hint"></span>
+                }
+                @if (square.IsLastMove)
+                {
+                    <span class="last"></span>
+                }
+            </button>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<SquareViewModel> Squares { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<SquareViewModel> OnPlay { get; set; }
+
+    private static string Describe(SquareViewModel square) =>
+        square.Name +
+        (square.Disc is { } disc ? $", {disc}" : "") +
+        (square.IsLegalMove ? ", legal move" : "") +
+        (square.IsLastMove ? ", last move" : "");
+}

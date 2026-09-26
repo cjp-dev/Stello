@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Opening book copied from "Stello C++/OPENING" by the Stello.Web build
+Stello.Net/Stello.Web/wwwroot/data/

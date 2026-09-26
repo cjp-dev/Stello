@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.12" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.12" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Stello.App\Stello.App.csproj" />
+    <ProjectReference Include="..\Stello.Engine\Stello.Engine.csproj" />
+  </ItemGroup>
+
+  <!-- A linked file is not served by the dev server, so the shipped book is copied into wwwroot (git-ignored). -->
+  <Target Name="CopyOpeningBook" BeforeTargets="AssignTargetPaths">
+    <Copy SourceFiles="..\..\Stello C++\OPENING" DestinationFiles="wwwroot\data\OPENING.bin" SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <Content Remove="wwwroot\data\OPENING.bin" />
+      <Content Include="wwwroot\data\OPENING.bin" />
+    </ItemGroup>
+  </Target>
+
+</Project>
