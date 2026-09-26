@@ -1,5 +1,5 @@
 @* Squares in index order: a1 top left, h8 bottom right, as in the desktop BoardView. *@
-<div class="board" role="group" aria-label="Board">
+<div class="board @BoardClass @(Appearance.Pieces3D ? "pieces-3d" : null)" role="group" aria-label="Board">
     <div></div>
     @foreach (char file in "abcdefgh")
     {
@@ -10,11 +10,13 @@
         <div class="coordinate">@(row + 1)</div>
         @for (int column = 0; column < 8; column++)
         {
-            SquareViewModel square = Squares[row * 8 + column];
+            int index = row * 8 + column;
+            SquareViewModel square = Squares[index];
             <button class="square" title="@square.Name" aria-label="@Describe(square)" @onclick="() => OnPlay.InvokeAsync(square)">
                 @if (square.Disc is { } disc)
                 {
-                    <span class="disc @(disc == Player.Black ? "black" : "white")"></span>
+                    <span @key="_animations[index]" class="disc @(disc == Player.Black ? "black" : "white") @_animations[index].Class"
+                          style="@_animations[index].Style"></span>
                 }
                 @if (square.IsLegalMove)
                 {
@@ -30,15 +32,80 @@
 </div>
 
 @code {
+    // The flips start as the new disc lands (its animation is 250 ms), and each flipped disc starts a little
+    // later the further it is from the new disc, so the flips run outwards.
+    private const int PlacedDelayMs = 150;
+    private const int FlipDelayMs = 70;
+
+    private readonly Player?[] _shown = new Player?[64];
+    private readonly DiscAnimation[] _animations = Enumerable.Repeat(DiscAnimation.None, 64).ToArray();
+    private int _generation;
+
     [Parameter, EditorRequired]
     public IReadOnlyList<SquareViewModel> Squares { get; set; } = [];
 
+    [Parameter, EditorRequired]
+    public Appearance Appearance { get; set; } = Appearance.Default;
+
     [Parameter]
     public EventCallback<SquareViewModel> OnPlay { get; set; }
+
+    private string BoardClass => Appearance.Board switch
+    {
+        BoardStyle.GoldenOak => "wood golden-oak",
+        BoardStyle.ReddishWood => "wood reddish-wood",
+        _ => "green",
+    };
+
+    // Only a move (one new disc) is animated; New Game, Back, Forward and Open just redraw the board.
+    protected override void OnParametersSet()
+    {
+        int placed = -1;
+        int placedCount = 0;
+        for (int i = 0; i < 64; i++)
+        {
+            if (_shown[i] is null && Squares[i].Disc is not null)
+            {
+                placed = i;
+                placedCount++;
+            }
+        }
+
+        bool animate = Appearance.AnimateFlips && placedCount == 1;
+        if (animate)
+        {
+            _generation++;
+        }
+
+        for (int i = 0; i < 64; i++)
+        {
+            Player? now = Squares[i].Disc;
+            Player? before = _shown[i];
+            if (now == before)
+            {
+                continue;
+            }
+
+            _animations[i] = !animate || now is null
+                ? DiscAnimation.None
+                : before is null
+                    ? new DiscAnimation(_generation, "placed", null)
+                    : new DiscAnimation(_generation, now == Player.Black ? "flip-to-black" : "flip-to-white", $"animation-delay: {PlacedDelayMs + (Distance(i, placed) - 1) * FlipDelayMs}ms");
+            _shown[i] = now;
+        }
+    }
+
+    private static int Distance(int a, int b) => Math.Max(Math.Abs(a / 8 - b / 8), Math.Abs(a % 8 - b % 8));
 
     private static string Describe(SquareViewModel square) =>
         square.Name +
         (square.Disc is { } disc ? $", {disc}" : "") +
         (square.IsLegalMove ? ", legal move" : "") +
         (square.IsLastMove ? ", last move" : "");
+
+    // A new record (new generation) gives the disc element a new key, so the CSS animation starts again.
+    private sealed record DiscAnimation(int Generation, string? Class, string? Style)
+    {
+        public static DiscAnimation None { get; } = new(0, null, null);
+    }
 }

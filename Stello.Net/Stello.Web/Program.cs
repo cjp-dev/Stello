@@ -19,6 +19,7 @@ builder.Services.AddSingleton<ISettingsStore, LocalStorageSettingsStore>();
 builder.Services.AddSingleton<LocalStorageBookStore>();
 builder.Services.AddSingleton<StartupBook>();
 builder.Services.AddSingleton<BrainDocs>();
+builder.Services.AddSingleton<AppearanceStore>();
 builder.Services.AddSingleton<IEngineHost>(services => new WebEngineHost(
     services.GetRequiredService<IJSRuntime>(),
     services.GetRequiredService<LocalStorageBookStore>(),

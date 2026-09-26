@@ -5,6 +5,7 @@
 @implements IDisposable
 @inject MainViewModel Vm
 @inject BrowserDialogService Dialogs
+@inject AppearanceStore AppearanceStore
 @inject IJSRuntime JS
 
 <PageTitle>@Vm.Title</PageTitle>
@@ -22,9 +23,11 @@
                         @foreach (MenuEntry entry in menu.Entries)
                         {
                             bool? isChecked = entry.IsChecked?.Invoke();
-                            <button role="@(isChecked is null ? "menuitem" : "menuitemcheckbox")" aria-checked="@(isChecked is { } c ? (c ? "true" : "false") : null)"
+                            string role = isChecked is null ? "menuitem" : entry.Radio ? "menuitemradio" : "menuitemcheckbox";
+                            <button role="@role" aria-checked="@(isChecked is { } c ? (c ? "true" : "false") : null)"
+                                    class="@(entry.SeparatorBefore ? "separator-before" : null)"
                                     disabled="@(!entry.Command.CanExecute(null))" @onclick="() => RunAsync(entry.Command)">
-                                <span class="check">@(isChecked == true ? "✓" : "")</span>
+                                <span class="check">@(isChecked == true ? (entry.Radio ? "●" : "✓") : "")</span>
                                 <span>@entry.Text</span>
                                 <span class="shortcut">@entry.Shortcut</span>
                             </button>
@@ -41,7 +44,7 @@
 
     <main class="content @(Vm.IsAnalysisVisible ? null : "without-analysis")">
         <div class="board-area">
-            <Board Squares="Vm.Squares" OnPlay="Play" />
+            <Board Squares="Vm.Squares" Appearance="_appearance" OnPlay="Play" />
         </div>
 
         @if (Vm.IsAnalysisVisible)
@@ -74,9 +77,13 @@
     private ICommand[] _commands = [];
     private MenuDefinition? _openMenu;
     private DotNetObjectReference<Home>? _self;
+    private Appearance _appearance = Appearance.Default;
+    private bool _renderPending;
 
     protected override void OnInitialized()
     {
+        _appearance = AppearanceStore.Load();
+
         // Evaluate Book and Self-play are only in the desktop version.
         _menus =
         [
@@ -98,7 +105,15 @@
                 new("Back", Vm.UndoCommand, "Ctrl+Z"),
                 new("Forward", Vm.RedoCommand, "Ctrl+Y"),
             ]),
-            new("View", [new("Analysis", Vm.ToggleAnalysisCommand, "Ctrl+A", () => Vm.IsAnalysisVisible)]),
+            new("View",
+            [
+                new("Analysis", Vm.ToggleAnalysisCommand, "Ctrl+A", () => Vm.IsAnalysisVisible),
+                BoardEntry("Green Board", BoardStyle.Green, separatorBefore: true),
+                BoardEntry("Golden Oak Board", BoardStyle.GoldenOak),
+                BoardEntry("Reddish Wood Board", BoardStyle.ReddishWood),
+                new("3D Pieces", ChangeAppearance(a => a with { Pieces3D = !a.Pieces3D }), IsChecked: () => _appearance.Pieces3D, SeparatorBefore: true),
+                new("Animate Flips", ChangeAppearance(a => a with { AnimateFlips = !a.AnimateFlips }), IsChecked: () => _appearance.AnimateFlips),
+            ]),
             new("Book", [new("Add Game to Book...", Vm.AddGameToBookCommand)]),
             new("Brain", [new("How Stello Thinks", new RelayCommand(OpenDocs))]),
             new("Help", [new("About Stello...", Vm.AboutCommand)]),
@@ -162,7 +177,23 @@
         _ => Task.CompletedTask,
     };
 
-    private void OnChanged(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
+    // Outside UI events Blazor WebAssembly renders at once on StateHasChanged, so without this the board would
+    // be drawn for each square as the view model updates it, and see a move's new disc before its flips.
+    private void OnChanged(object? sender, EventArgs e)
+    {
+        if (_renderPending)
+        {
+            return;
+        }
+
+        _renderPending = true;
+        _ = InvokeAsync(async () =>
+        {
+            await Task.Yield();
+            _renderPending = false;
+            StateHasChanged();
+        });
+    }
 
     private void OnDialogChanged() => InvokeAsync(StateHasChanged);
 
@@ -170,6 +201,15 @@
 
     // A new tab, so the game stays open next to the documentation.
     private void OpenDocs() => ((IJSInProcessRuntime)JS).InvokeVoid("open", BrainDocs.PageRoute(""), "_blank", "noopener");
+
+    private MenuEntry BoardEntry(string text, BoardStyle board, bool separatorBefore = false) =>
+        new(text, ChangeAppearance(a => a with { Board = board }), IsChecked: () => _appearance.Board == board, Radio: true, SeparatorBefore: separatorBefore);
+
+    private RelayCommand ChangeAppearance(Func<Appearance, Appearance> change) => new(() =>
+    {
+        _appearance = change(_appearance);
+        AppearanceStore.Save(_appearance);
+    });
 
     private void ToggleMenu(MenuDefinition menu) => _openMenu = _openMenu == menu ? null : menu;
 
@@ -203,5 +243,11 @@
 
     private sealed record MenuDefinition(string Title, MenuEntry[] Entries);
 
-    private sealed record MenuEntry(string Text, ICommand Command, string? Shortcut = null, Func<bool>? IsChecked = null);
+    private sealed record MenuEntry(
+        string Text,
+        ICommand Command,
+        string? Shortcut = null,
+        Func<bool>? IsChecked = null,
+        bool Radio = false,
+        bool SeparatorBefore = false);
 }

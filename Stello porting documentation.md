@@ -714,6 +714,12 @@ This phase has no C++ counterpart. The same engine and view models also run in t
   - The README is the front page, and its links to the chapter files give the contents list with the chapters' names.
   - `Pages/Docs` shows the contents list, the page, and links to the previous and next chapter. `wwwroot/js/docs.js` renders the formulas with KaTeX and the diagrams with Mermaid. Both are pinned versions from jsDelivr, checked with Subresource Integrity, and only loaded when a page needs them.
   - A formula written as `$$ … $$` on its own line is shown as display math, as on GitHub.
+- **Board appearance (View menu, web only):** Green Board (the desktop look), Golden Oak Board or Reddish Wood Board, and 3D Pieces and Animate Flips. The default is golden oak with 3D pieces and animation. Choosing Green Board and turning the other two off gives the old look.
+  - `Services/AppearanceStore` keeps the choice in local storage (`stello.appearance`).
+  - The wood pictures are in `wwwroot/textures`, from Poly Haven textures (CC0), made warmer and brighter. On wood the coordinates sit in a frame, and the squares have dark grooves.
+  - 3D pieces are CSS gradients with a glossy highlight, a thin rim of the other colour, and a shadow.
+  - `Components/Board` compares each render with the previous one. It animates only when exactly one disc is new, which means a move: New Game, Back, Forward and Open just redraw the board. The new disc drops in. Each flipped disc then lifts, turns edge-on, and comes down showing the other colour. Discs further from the new disc start a little later, so the flips run outwards. A new `@key` per move restarts the CSS animations. The animations are off when the system asks for reduced motion.
+  - The page gathers the view models' change events into one render. Outside UI events, Blazor WebAssembly renders at once on each `StateHasChanged`. Without this, the board was drawn once for every square the view model updated, and it saw the computer's new disc before the flips.
 
 ### Build and deployment
 
