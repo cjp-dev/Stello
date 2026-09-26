@@ -4,12 +4,29 @@
 @if (Dialogs.Current is { } dialog)
 {
     <div class="dialog-backdrop">
-        <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" @onkeydown="e => OnKeyDown(dialog, e)">
+        <div class="dialog @(dialog.Picture is null ? null : "dialog-with-picture")" role="dialog" aria-modal="true" aria-labelledby="dialog-title" @onkeydown="e => OnKeyDown(dialog, e)">
             <h2 id="dialog-title">@dialog.Title</h2>
-            @if (dialog.Message is not null)
+            @if (dialog.Picture is not null)
             {
-                <p class="dialog-message">@dialog.Message</p>
+                <figure class="dialog-picture">
+                    <img src="@dialog.Picture" alt="@dialog.PictureCaption" />
+                    <figcaption>@dialog.PictureCaption</figcaption>
+                </figure>
             }
+            <div class="dialog-body">
+                @if (dialog.Heading is not null)
+                {
+                    <p class="dialog-heading">@dialog.Heading</p>
+                }
+                @if (dialog.Message is not null)
+                {
+                    <p class="dialog-message">@dialog.Message</p>
+                }
+                @foreach (string paragraph in dialog.Paragraphs)
+                {
+                    <p>@paragraph</p>
+                }
+            </div>
             @if (dialog.Text is not null)
             {
                 <input class="dialog-text" type="text" aria-label="@dialog.Message" @ref="_textInput"

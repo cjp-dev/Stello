@@ -91,26 +91,30 @@ button {
 .content {
     display: flex;
     flex: 1;
+    justify-content: center;
+    align-items: flex-start;
     gap: 12px;
     min-height: 0;
     padding: 12px;
+    overflow: auto;
+    container-type: size;
 }
 
+/* The board fills the height, or the width left beside the analysis panel (240px + 12px gap). */
 .board-area {
-    display: flex;
-    flex: 1;
-    align-items: center;
-    justify-content: center;
-    min-width: 0;
-    min-height: 0;
-    container-type: size;
+    flex: none;
+    width: min(100cqh, 100cqw - 252px);
+}
+
+.content.without-analysis .board-area {
+    width: min(100cqh, 100cqw);
 }
 
 .board {
     display: grid;
     grid-template-columns: 1.25rem repeat(8, 1fr);
     grid-template-rows: 1.25rem repeat(8, 1fr);
-    width: min(100cqw, 100cqh);
+    width: 100%;
     aspect-ratio: 1;
 }
 
@@ -176,8 +180,11 @@ button {
 }
 
 .analysis {
-    align-self: flex-start;
+    flex: none;
+    box-sizing: border-box;
     width: 240px;
+    /* Beside the board: level with the squares, below the a–h row (the board's first grid row). */
+    margin-top: 1.25rem;
     padding: 0.5rem 0.75rem;
     background: #fff;
     border: 1px solid #ccc;
@@ -220,11 +227,18 @@ button {
 @media (max-width: 700px) {
     .content {
         flex-direction: column;
+        justify-content: flex-start;
+        align-items: center;
+    }
+
+    .board-area, .content.without-analysis .board-area {
+        width: min(100cqw, 100cqh);
     }
 
     .analysis {
         align-self: stretch;
         width: auto;
+        margin-top: 0;
     }
 }
 
@@ -256,6 +270,68 @@ button {
 
 .dialog-message {
     white-space: pre-line;
+}
+
+.dialog-heading {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+    .dialog-heading + .dialog-message {
+        margin-top: 0.15rem;
+        color: #555;
+    }
+
+/* About box: the picture beside the text, the title and buttons across the top and bottom. */
+.dialog-with-picture {
+    display: grid;
+    grid-template-columns: 11rem minmax(0, 1fr);
+    column-gap: 1.25rem;
+    max-width: min(92vw, 40rem);
+}
+
+    .dialog-with-picture h2, .dialog-with-picture .dialog-buttons {
+        grid-column: 1 / -1;
+    }
+
+.dialog-picture {
+    margin: 0;
+}
+
+    .dialog-picture img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: cover;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+    }
+
+    .dialog-picture figcaption {
+        margin-top: 0.5rem;
+        font-size: 0.85rem;
+        color: #555;
+    }
+
+.dialog-body p {
+    margin: 0.6rem 0 0;
+    line-height: 1.45;
+}
+
+    .dialog-body p:first-child {
+        margin-top: 0;
+    }
+
+@media (max-width: 520px) {
+    .dialog-with-picture {
+        grid-template-columns: 1fr;
+    }
+
+    .dialog-picture {
+        width: 9rem;
+        margin-bottom: 0.75rem;
+    }
 }
 
 .dialog-text {

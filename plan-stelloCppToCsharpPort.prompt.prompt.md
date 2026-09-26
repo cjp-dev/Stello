@@ -49,7 +49,7 @@ Every phase ends by writing its section in [Stello porting documentation.md](Ste
     - Book: added in phase 7.
 21. Analysis panel: Nodes, Value, Time, Evaluations, current move and depth (as `IDD_ANALYSE`).
 22. Settings dialog: choose a mode and value – depth (1–20), seconds per move (1–60), or minutes per game (1–60, as `Spiltid`).
-23. About dialog: "Stello Version 2.0", with the original "Copyright (C) 1998 Futuresoft" credit.
+23. About dialog: "Stello Version 2.0", with the original "Copyright (C) 1992 Futuresoft" credit.
 
 **Phase 6 – Settings and polish** (*depends on 5*)
 24. Settings as JSON in `%AppData%\Stello\settings.json`: time mode and value, whether the analysis panel is shown, window position. The book is read from the application folder and written to `%AppData%\Stello\OPENING` the first time it is changed.

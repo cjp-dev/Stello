@@ -10,6 +10,7 @@ on:
       # "+" is special in path filters, so "Stello C++" is matched with a wildcard.
       - 'Stello C*/OPENING'
       - 'docs/brain/**'
+      - 'Stello.Net/Images/**'
       - '.github/workflows/azure-static-web-apps.yml'
   workflow_dispatch:
 

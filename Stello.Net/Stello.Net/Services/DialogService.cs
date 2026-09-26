@@ -36,10 +36,7 @@ internal sealed class DialogService : IDialogService
 
     public void ShowError(string message) => Show(message, Caption, MessageBoxImage.Error);
 
-    public void ShowAbout() => Show(
-        "Stello Version 2.0\n\nCopyright (C) 1998 Futuresoft\nC# and WPF version, 2026.",
-        "About Stello",
-        MessageBoxImage.Information);
+    public void ShowAbout() => new AboutWindow { Owner = Owner }.ShowDialog();
 
     public void Beep() => SystemSounds.Beep.Play();
 

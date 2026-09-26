@@ -45,4 +45,13 @@
     </ItemGroup>
   </Target>
 
+  <!-- The picture in the About box, shared with the WPF app (git-ignored copy). -->
+  <Target Name="CopyAboutPicture" BeforeTargets="AssignTargetPaths">
+    <Copy SourceFiles="..\Images\2026 Claus Pedersen.jpg" DestinationFiles="wwwroot\images\claus-pedersen.jpg" SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <Content Remove="wwwroot\images\claus-pedersen.jpg" />
+      <Content Include="wwwroot\images\claus-pedersen.jpg" />
+    </ItemGroup>
+  </Target>
+
 </Project>

@@ -41,8 +41,12 @@ public sealed class BrowserDialogService(IJSInProcessRuntime js) : IDialogServic
 
     public void ShowAbout() => _ = ShowAsync(new DialogRequest
     {
-        Title = "About Stello",
-        Message = "Stello Version 2.0\n\nCopyright (C) 1998 Futuresoft\nC# and Blazor WebAssembly version, 2026.",
+        Title = AboutInfo.Title,
+        Heading = AboutInfo.Version,
+        Message = AboutInfo.Copyright,
+        Paragraphs = AboutInfo.Paragraphs,
+        Picture = "images/claus-pedersen.jpg",
+        PictureCaption = AboutInfo.PictureCaption,
         Buttons = ["OK"],
     });
 
@@ -83,7 +87,16 @@ public sealed class DialogRequest
 
     public required string Title { get; init; }
 
+    public string? Heading { get; init; }
+
     public string? Message { get; init; }
+
+    public IReadOnlyList<string> Paragraphs { get; init; } = [];
+
+    /// <summary>A picture shown to the left of the text, with a caption below it.</summary>
+    public string? Picture { get; init; }
+
+    public string? PictureCaption { get; init; }
 
     public SettingsViewModel? Settings { get; init; }
 

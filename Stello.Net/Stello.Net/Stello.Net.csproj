@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <None Include="..\..\Stello C++\OPENING" Link="Data\OPENING" CopyToOutputDirectory="PreserveNewest" />
+    <Resource Include="..\Images\2026 Claus Pedersen.jpg" Link="Images\ClausPedersen.jpg" />
   </ItemGroup>
 
   <ItemGroup>

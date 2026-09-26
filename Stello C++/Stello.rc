@@ -219,7 +219,7 @@ FONT 8, "MS Sans Serif"
 BEGIN
     ICON            IDR_MAINFRAME,IDC_STATIC,11,17,21,20
     LTEXT           "Stello Version 1.0",IDC_STATIC,40,10,119,8,SS_NOPREFIX
-    LTEXT           "Copyright (C) 1998 Futuresoft",IDC_STATIC,40,25,119,8
+    LTEXT           "Copyright (C) 1992 Futuresoft",IDC_STATIC,40,25,119,8
     DEFPUSHBUTTON   "OK",IDOK,178,7,32,14,WS_GROUP
 END
 
@@ -277,7 +277,7 @@ BEGIN
             VALUE "FileDescription", "Stello MFC Application\0"
             VALUE "FileVersion", "1, 0, 0, 1\0"
             VALUE "InternalName", "Stello\0"
-            VALUE "LegalCopyright", "Copyright (C) 1998\0"
+            VALUE "LegalCopyright", "Copyright (C) 1992\0"
             VALUE "LegalTrademarks", "\0"
             VALUE "OriginalFilename", "Stello.EXE\0"
             VALUE "ProductName", "Stello Application\0"

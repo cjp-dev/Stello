@@ -39,7 +39,7 @@
         <div class="menu-backdrop" @onclick="() => _openMenu = null"></div>
     }
 
-    <main class="content">
+    <main class="content @(Vm.IsAnalysisVisible ? null : "without-analysis")">
         <div class="board-area">
             <Board Squares="Vm.Squares" OnPlay="Play" />
         </div>
@@ -100,7 +100,7 @@
             ]),
             new("View", [new("Analysis", Vm.ToggleAnalysisCommand, "Ctrl+A", () => Vm.IsAnalysisVisible)]),
             new("Book", [new("Add Game to Book...", Vm.AddGameToBookCommand)]),
-            new("Docs", [new("Brain Documentation", new RelayCommand(OpenDocs))]),
+            new("Brain", [new("How Stello Thinks", new RelayCommand(OpenDocs))]),
             new("Help", [new("About Stello...", Vm.AboutCommand)]),
         ];
         _commands = _menus.SelectMany(menu => menu.Entries).Select(entry => entry.Command).ToArray();
