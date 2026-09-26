@@ -8,7 +8,8 @@
 @inject AppearanceStore AppearanceStore
 @inject IJSRuntime JS
 
-<PageTitle>@Vm.Title</PageTitle>
+@* Not Vm.Title ("Stello – Untitled"): the tab title is also the bookmark name. *@
+<PageTitle>Stello. An Othello computer game.</PageTitle>
 
 <div class="app" inert="@(Dialogs.Current is not null)">
     <nav class="menubar" aria-label="Menu">
