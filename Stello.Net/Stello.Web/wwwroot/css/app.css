@@ -278,11 +278,6 @@ button {
     font-weight: 600;
 }
 
-    .dialog-heading + .dialog-message {
-        margin-top: 0.15rem;
-        color: #555;
-    }
-
 /* About box: the picture beside the text, the title and buttons across the top and bottom. */
 .dialog-with-picture {
     display: grid;

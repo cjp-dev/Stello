@@ -43,7 +43,6 @@ public sealed class BrowserDialogService(IJSInProcessRuntime js) : IDialogServic
     {
         Title = AboutInfo.Title,
         Heading = AboutInfo.Version,
-        Message = AboutInfo.Copyright,
         Paragraphs = AboutInfo.Paragraphs,
         Picture = "images/claus-pedersen.jpg",
         PictureCaption = AboutInfo.PictureCaption,

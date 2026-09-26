@@ -7,8 +7,6 @@ public static class AboutInfo
 
     public const string Version = "Stello Version 2.0";
 
-    public const string Copyright = "Copyright (C) 1992 Futuresoft";
-
     public const string PictureCaption = "Claus Pedersen – wrote Stello in C++ in 1992 and ported it to C# in 2026";
 
     public static IReadOnlyList<string> Paragraphs { get; } =

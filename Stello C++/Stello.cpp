@@ -95,7 +95,7 @@ BOOL CStelloApp::InitInstance()
 	// Change the registry key under which our settings are stored.
 	// You should modify this string to be something appropriate
 	// such as the name of your company or organization.
-	SetRegistryKey(_T("Futuresoft"));
+	SetRegistryKey(_T("ClausJPedersen"));
 
 	LoadStdProfileSettings();  // Load standard INI file options (including MRU)
 
