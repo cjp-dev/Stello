@@ -7,7 +7,8 @@ on:
       - 'Stello.Net/Stello.Web/**'
       - 'Stello.Net/Stello.App/**'
       - 'Stello.Net/Stello.Engine/**'
-      - 'Stello C++/OPENING'
+      # "+" is special in path filters, so "Stello C++" is matched with a wildcard.
+      - 'Stello C*/OPENING'
       - '.github/workflows/azure-static-web-apps.yml'
   workflow_dispatch:
 
