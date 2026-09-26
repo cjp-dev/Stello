@@ -1,7 +1,7 @@
 ﻿using System.Windows;
+using Stello.App.ViewModels;
 using Stello.Engine;
 using Stello.Net.Services;
-using Stello.Net.ViewModels;
 
 namespace Stello.Net;
 

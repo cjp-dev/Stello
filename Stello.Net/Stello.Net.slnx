@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="Stello.App/Stello.App.csproj" />
   <Project Path="Stello.Engine.Tests/Stello.Engine.Tests.csproj" />
   <Project Path="Stello.Engine/Stello.Engine.csproj" />
   <Project Path="Stello.Net.Tests/Stello.Net.Tests.csproj" />

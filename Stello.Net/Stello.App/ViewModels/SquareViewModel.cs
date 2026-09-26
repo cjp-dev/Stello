@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Stello.Engine;
 
-namespace Stello.Net.ViewModels;
+namespace Stello.App.ViewModels;
 
 public sealed partial class SquareViewModel(Square square) : ObservableObject
 {

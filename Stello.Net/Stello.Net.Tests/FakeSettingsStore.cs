@@ -1,5 +1,5 @@
-using Stello.Net.Models;
-using Stello.Net.Services;
+using Stello.App.Models;
+using Stello.App.Services;
 
 namespace Stello.Net.Tests;
 

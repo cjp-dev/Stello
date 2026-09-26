@@ -1,6 +1,6 @@
-using Stello.Net.Models;
+using Stello.App.Models;
 
-namespace Stello.Net.Services;
+namespace Stello.App.Services;
 
 public interface ISettingsStore
 {

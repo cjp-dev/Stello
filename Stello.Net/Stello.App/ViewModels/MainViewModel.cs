@@ -2,11 +2,11 @@ using System.Diagnostics;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Stello.App.Models;
+using Stello.App.Services;
 using Stello.Engine;
-using Stello.Net.Models;
-using Stello.Net.Services;
 
-namespace Stello.Net.ViewModels;
+namespace Stello.App.ViewModels;
 
 /// <summary>
 /// The game window: a human plays against the computer. The computer thinks on a background thread; commands

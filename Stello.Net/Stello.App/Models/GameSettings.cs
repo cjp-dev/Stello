@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using Stello.Engine;
 
-namespace Stello.Net.Models;
+namespace Stello.App.Models;
 
 /// <summary>How long the computer may think (C++: tid_kontrol with lookahead, tider[] and GameTid).</summary>
 public sealed record GameSettings(TimeControlMode Mode, int Depth, int SecondsPerMove, int MinutesPerGame)

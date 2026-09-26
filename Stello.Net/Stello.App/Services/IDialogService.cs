@@ -1,7 +1,7 @@
+using Stello.App.Models;
 using Stello.Engine;
-using Stello.Net.Models;
 
-namespace Stello.Net.Services;
+namespace Stello.App.Services;
 
 public interface IDialogService
 {

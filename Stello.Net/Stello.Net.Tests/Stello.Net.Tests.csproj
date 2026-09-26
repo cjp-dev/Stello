@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Stello.App\Stello.App.csproj" />
     <ProjectReference Include="..\Stello.Net\Stello.Net.csproj" />
     <ProjectReference Include="..\Stello.Engine\Stello.Engine.csproj" />
   </ItemGroup>

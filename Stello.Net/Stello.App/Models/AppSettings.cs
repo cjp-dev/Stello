@@ -1,4 +1,4 @@
-namespace Stello.Net.Models;
+namespace Stello.App.Models;
 
 /// <summary>Everything saved between sessions (C++: the revdef struct in rev.cfg).</summary>
 public sealed record AppSettings(GameSettings Game, bool ShowAnalysis, WindowPlacement? Window)

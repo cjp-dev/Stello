@@ -9,11 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Stello.App\Stello.App.csproj" />
     <ProjectReference Include="..\Stello.Engine\Stello.Engine.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
   </ItemGroup>
 
   <ItemGroup>

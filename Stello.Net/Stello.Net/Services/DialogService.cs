@@ -2,9 +2,10 @@ using System.IO;
 using System.Media;
 using System.Windows;
 using Microsoft.Win32;
+using Stello.App.Models;
+using Stello.App.Services;
+using Stello.App.ViewModels;
 using Stello.Engine;
-using Stello.Net.Models;
-using Stello.Net.ViewModels;
 using Stello.Net.Views;
 
 namespace Stello.Net.Services;

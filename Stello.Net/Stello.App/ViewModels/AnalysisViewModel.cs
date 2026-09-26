@@ -2,7 +2,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Stello.Engine;
 
-namespace Stello.Net.ViewModels;
+namespace Stello.App.ViewModels;
 
 /// <summary>The search shown while the computer thinks (C++: CAnalyse, IDD_ANALYSE).</summary>
 public sealed partial class AnalysisViewModel : ObservableObject

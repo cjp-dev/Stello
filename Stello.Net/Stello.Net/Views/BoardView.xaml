@@ -4,7 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:engine="clr-namespace:Stello.Engine;assembly=Stello.Engine"
-             xmlns:vm="clr-namespace:Stello.Net.ViewModels"
+             xmlns:vm="clr-namespace:Stello.App.ViewModels;assembly=Stello.App"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
              d:DesignWidth="440" d:DesignHeight="440">

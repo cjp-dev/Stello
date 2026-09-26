@@ -1,8 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using Stello.App.Models;
 using Stello.Engine;
-using Stello.Net.Models;
 
-namespace Stello.Net.ViewModels;
+namespace Stello.App.ViewModels;
 
 /// <summary>The settings dialog (C++: Spiltid, "Tid for et spil").</summary>
 public sealed partial class SettingsViewModel : ObservableObject

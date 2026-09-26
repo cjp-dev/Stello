@@ -1,6 +1,6 @@
 using Stello.Engine;
 
-namespace Stello.Net.Services;
+namespace Stello.App.Services;
 
 public interface IBookStore
 {

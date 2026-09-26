@@ -1,6 +1,6 @@
+using Stello.App.Models;
+using Stello.App.ViewModels;
 using Stello.Engine;
-using Stello.Net.Models;
-using Stello.Net.ViewModels;
 
 namespace Stello.Net.Tests;
 
