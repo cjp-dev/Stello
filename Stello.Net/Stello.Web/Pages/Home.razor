@@ -49,7 +49,7 @@
 
         @if (Vm.IsAnalysisVisible)
         {
-            <aside class="analysis" aria-label="Analysis">
+            <aside class="analysis @(_appearance.Board == BoardStyle.Green ? null : "beside-wood")" aria-label="Analysis">
                 <h2>Analysis</h2>
                 <dl>
                     <dt>Move:</dt><dd>@Vm.Analysis.Move</dd>
