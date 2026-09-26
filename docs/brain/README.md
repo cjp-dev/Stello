@@ -55,28 +55,6 @@ The time limit can stop the search at any point; the best move found so far is t
 | 14 | [Glossary](14-glossary.md) | The terms used in these documents |
 | 15 | [References](15-references.md) | Articles, papers and source code on the internet |
 
-## Pictures
-
-| Picture | Chapter | Shows |
-|---|---|---|
-| [board-square-index.svg](images/board-square-index.svg) | 02 | The C# square index 0–63 |
-| [bitboard-bit-order.svg](images/bitboard-bit-order.svg) | 02 | The bit order of a bitboard and the eight direction shifts |
-| [board-legacy-numbers.svg](images/board-legacy-numbers.svg) | 02 | The legacy 10 × 10 numbers with the border ring |
-| [start-position.svg](images/start-position.svg) | 02 | The start position and black's legal moves |
-| [shift-and-mask.svg](images/shift-and-mask.svg) | 03 | Legal-move generation in one direction, step by step |
-| [flips-example.svg](images/flips-example.svg) | 03 | A move that flips in three directions |
-| [edges-and-corners.svg](images/edges-and-corners.svg) | 05 | The four edges and their square order, corners, X- and C-squares |
-| [edge-index-example.svg](images/edge-index-example.svg) | 05 | Computing the base-3 index of an edge |
-| [corner-diagonal.svg](images/corner-diagonal.svg) | 05 | A corner reached along the diagonal, and a possible corner |
-| [corner-stability.svg](images/corner-stability.svg) | 05 | Stable discs counted from a corner |
-| [square-values.svg](images/square-values.svg) | 06 | Static square values, and the values next to the corners |
-| [alpha-beta-tree.svg](images/alpha-beta-tree.svg) | 07 | Alpha-beta cutoffs in a real two-ply search |
-| [tt-layout.svg](images/tt-layout.svg) | 08 | Hash table slots, the entry fields and the slot hash |
-| [parity-quadrants.svg](images/parity-quadrants.svg) | 09 | Quadrants and parity with six empty squares |
-| [book-file-layout.svg](images/book-file-layout.svg) | 11 | The book file layout and the first bytes of the master book |
-| [book-symmetries.svg](images/book-symmetries.svg) | 11 | The four first moves, their symmetries to d3 and the book's replies |
-| [book-minimax-example.svg](images/book-minimax-example.svg) | 12 | A small book after adding a game, evaluating and minimax |
-
 ## Reading paths
 
 - **Everything:** read the chapters in order.
@@ -90,4 +68,4 @@ The time limit can stop the search at any point; the best move found so far is t
 - **On GitHub:** diagrams and formulas are shown directly.
 - **In VS Code:** open the Markdown preview (Ctrl+Shift+V). Formulas are shown by the built-in preview. The diagrams need the extension *Markdown Preview Mermaid Support* (`bierner.markdown-mermaid`).
 
-The diagrams are written in [Mermaid](https://mermaid.js.org/), the formulas in LaTeX math, and the pictures are SVG files in the [images](images) folder.
+The diagrams are written in [Mermaid](https://mermaid.js.org/), the formulas in LaTeX math, and the pictures are SVG files in the `images` folder.
