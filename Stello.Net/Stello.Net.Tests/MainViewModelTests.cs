@@ -1,11 +1,11 @@
-using System.IO;
 using Stello.App.Models;
+using Stello.App.Services;
 using Stello.App.ViewModels;
 using Stello.Engine;
 
 namespace Stello.Net.Tests;
 
-public sealed class MainViewModelTests : IDisposable
+public sealed class MainViewModelTests
 {
     // After these moves Black has no legal move but White has.
     private const string BlackMustPass = "d3 c3 b3 b2 f5 a3 a1 c1";
@@ -13,15 +13,15 @@ public sealed class MainViewModelTests : IDisposable
     // Shortest possible game: White is wiped out, 13-0.
     private const string WhiteWipedOut = "d3 c3 b3 d2 e1 d6 d7 e3 f4";
 
+    private const string GameName = "game.stello";
+
     private static readonly GameSettings QuickSettings = new(TimeControlMode.FixedDepth, 2, 5, 5);
     private static readonly GameSettings SlowSettings = new(TimeControlMode.FixedDepth, 20, 5, 5);
 
     private readonly FakeDialogService _dialogs = new();
+    private readonly FakeGameFileService _files = new();
     private readonly FakeBookStore _bookStore = new();
     private readonly OpeningBook _book = OpeningBook.CreateEmpty();
-    private readonly string _file = Path.Combine(Path.GetTempPath(), $"stello-{Guid.NewGuid():N}.stello");
-
-    public void Dispose() => File.Delete(_file);
 
     [Fact]
     public void Start_HumanPlaysBlackAndIsToMove()
@@ -152,15 +152,15 @@ public sealed class MainViewModelTests : IDisposable
         MainViewModel vm = Create();
         Play(vm, "f5");
         await vm.Idle;
-        _dialogs.SavePath = _file;
+        _files.SaveName = GameName;
 
-        vm.SaveCommand.Execute(null);
+        await vm.SaveCommand.ExecuteAsync(null);
 
-        Assert.Equal(GameRecordFormat.Format(vm.Game), File.ReadAllText(_file).Trim());
-        Assert.Contains(Path.GetFileName(_file), vm.Title);
+        Assert.Equal(GameRecordFormat.Format(vm.Game), _files.Files[GameName].Trim());
+        Assert.Contains(GameName, vm.Title);
 
         MainViewModel other = Create();
-        _dialogs.OpenPath = _file;
+        _files.OpenName = GameName;
         await other.OpenCommand.ExecuteAsync(null);
         await other.Idle;
 
@@ -169,10 +169,26 @@ public sealed class MainViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Save_AsksForANameOnlyTheFirstTime()
+    {
+        MainViewModel vm = Create();
+        _files.SaveName = GameName;
+        await vm.SaveCommand.ExecuteAsync(null);
+        _files.SaveName = null;
+        Play(vm, "f5");
+        await vm.Idle;
+
+        await vm.SaveCommand.ExecuteAsync(null);
+        await vm.SaveAsCommand.ExecuteAsync(null);
+
+        Assert.Equal(GameRecordFormat.Format(vm.Game), _files.Files[GameName].Trim());
+        Assert.Single(_files.Files);
+    }
+
+    [Fact]
     public async Task Open_TheHumanContinuesWithTheSideToMove()
     {
-        File.WriteAllText(_file, "f5");
-        _dialogs.OpenPath = _file;
+        OpenFile("f5");
         MainViewModel vm = Create();
 
         await vm.OpenCommand.ExecuteAsync(null);
@@ -185,8 +201,7 @@ public sealed class MainViewModelTests : IDisposable
     [Fact]
     public async Task Open_InvalidFileShowsError()
     {
-        File.WriteAllText(_file, "f5 z9");
-        _dialogs.OpenPath = _file;
+        OpenFile("f5 z9");
         MainViewModel vm = Create();
 
         await vm.OpenCommand.ExecuteAsync(null);
@@ -196,10 +211,20 @@ public sealed class MainViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Open_UnreadableFileShowsError()
+    {
+        _files.OpenName = "missing.stello";
+        MainViewModel vm = Create();
+
+        await vm.OpenCommand.ExecuteAsync(null);
+
+        Assert.StartsWith("The game could not be opened.", Assert.Single(_dialogs.Errors));
+    }
+
+    [Fact]
     public async Task Open_HumanWithoutMovePassesAutomatically()
     {
-        File.WriteAllText(_file, BlackMustPass);
-        _dialogs.OpenPath = _file;
+        OpenFile(BlackMustPass);
         MainViewModel vm = Create();
 
         await vm.OpenCommand.ExecuteAsync(null);
@@ -212,8 +237,7 @@ public sealed class MainViewModelTests : IDisposable
     [Fact]
     public async Task Open_FinishedGameShowsResult()
     {
-        File.WriteAllText(_file, WhiteWipedOut);
-        _dialogs.OpenPath = _file;
+        OpenFile(WhiteWipedOut);
         MainViewModel vm = Create();
 
         await vm.OpenCommand.ExecuteAsync(null);
@@ -225,23 +249,23 @@ public sealed class MainViewModelTests : IDisposable
     }
 
     [Fact]
-    public void EditSettings_ChangesSettingsAndClock()
+    public async Task EditSettings_ChangesSettingsAndClock()
     {
         MainViewModel vm = Create();
         _dialogs.NewSettings = new GameSettings(TimeControlMode.TimePerGame, 8, 5, 10);
 
-        vm.EditSettingsCommand.Execute(null);
+        await vm.EditSettingsCommand.ExecuteAsync(null);
 
         Assert.Equal(_dialogs.NewSettings, vm.Settings);
         Assert.Equal("Computer time left: 10:00", vm.ClockText);
     }
 
     [Fact]
-    public void EditSettings_CancelKeepsSettings()
+    public async Task EditSettings_CancelKeepsSettings()
     {
         MainViewModel vm = Create();
 
-        vm.EditSettingsCommand.Execute(null);
+        await vm.EditSettingsCommand.ExecuteAsync(null);
 
         Assert.Equal(QuickSettings, vm.Settings);
         Assert.Equal("", vm.ClockText);
@@ -295,13 +319,13 @@ public sealed class MainViewModelTests : IDisposable
     }
 
     [Fact]
-    public void EditSettings_SavesTheSettings()
+    public async Task EditSettings_SavesTheSettings()
     {
         var store = new FakeSettingsStore(new AppSettings(QuickSettings, true, null));
         MainViewModel vm = Create(store: store);
         _dialogs.NewSettings = new GameSettings(TimeControlMode.TimePerMove, 8, 12, 5);
 
-        vm.EditSettingsCommand.Execute(null);
+        await vm.EditSettingsCommand.ExecuteAsync(null);
 
         Assert.Equal(_dialogs.NewSettings, store.Settings.Game);
     }
@@ -344,8 +368,7 @@ public sealed class MainViewModelTests : IDisposable
     [Fact]
     public async Task AddGameToBook_FinishedGameUsesItsResult()
     {
-        File.WriteAllText(_file, WhiteWipedOut);
-        _dialogs.OpenPath = _file;
+        OpenFile(WhiteWipedOut);
         MainViewModel vm = Create();
         await vm.OpenCommand.ExecuteAsync(null);
         await vm.Idle;
@@ -449,12 +472,17 @@ public sealed class MainViewModelTests : IDisposable
 
     private MainViewModel Create(GameSettings? settings = null, string? notice = null, FakeSettingsStore? store = null) =>
         new(
-            new ComputerPlayer(new SearchEngine(hashBits: 12), _book, new Random(0)),
-            _book,
-            _bookStore,
+            new LocalEngineHost(new ComputerPlayer(new SearchEngine(hashBits: 12), _book, new Random(0)), _book, _bookStore),
             _dialogs,
+            _files,
             store ?? new FakeSettingsStore(new AppSettings(settings ?? QuickSettings, ShowAnalysis: true, Window: null)),
             notice);
+
+    private void OpenFile(string text)
+    {
+        _files.Files[GameName] = text;
+        _files.OpenName = GameName;
+    }
 
     private static void Play(MainViewModel vm, string square) =>
         vm.PlayCommand.Execute(vm.Squares.Single(s => s.Name == square));

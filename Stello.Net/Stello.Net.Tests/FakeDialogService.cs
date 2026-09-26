@@ -12,10 +12,6 @@ internal sealed class FakeDialogService : IDialogService
 
     public int Confirmations { get; private set; }
 
-    public string? OpenPath { get; set; }
-
-    public string? SavePath { get; set; }
-
     public GameSettings? NewSettings { get; set; }
 
     public List<string> Errors { get; } = [];
@@ -24,11 +20,7 @@ internal sealed class FakeDialogService : IDialogService
 
     public int AboutShown { get; private set; }
 
-    public string? ShowOpenDialog() => OpenPath;
-
-    public string? ShowSaveDialog(string? currentPath) => SavePath;
-
-    public GameSettings? EditSettings(GameSettings current) => NewSettings;
+    public Task<GameSettings?> EditSettingsAsync(GameSettings current) => Task.FromResult(NewSettings);
 
     public void ShowError(string message) => Errors.Add(message);
 
@@ -36,11 +28,11 @@ internal sealed class FakeDialogService : IDialogService
 
     public void Beep() => Beeps++;
 
-    public bool Confirm(string message)
+    public Task<bool> ConfirmAsync(string message)
     {
         Confirmations++;
-        return ConfirmAnswer;
+        return Task.FromResult(ConfirmAnswer);
     }
 
-    public GameResult? AskGameResult() => GameResultAnswer;
+    public Task<GameResult?> AskGameResultAsync() => Task.FromResult(GameResultAnswer);
 }

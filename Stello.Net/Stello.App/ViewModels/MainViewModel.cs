@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Stello.App.Models;
@@ -9,15 +8,14 @@ using Stello.Engine;
 namespace Stello.App.ViewModels;
 
 /// <summary>
-/// The game window: a human plays against the computer. The computer thinks on a background thread; commands
+/// The game window: a human plays against the computer. The computer thinks in the background; commands
 /// that change the game stop it first (C++: CMainFrame and CStelloView).
 /// </summary>
 public sealed partial class MainViewModel : ObservableObject
 {
-    private readonly ComputerPlayer _computer;
-    private readonly OpeningBook _book;
-    private readonly IBookStore _bookStore;
+    private readonly IEngineHost _engine;
     private readonly IDialogService _dialogs;
+    private readonly IGameFileService _files;
     private readonly ISettingsStore _settingsStore;
     private readonly bool _settingsLoaded;
 
@@ -25,7 +23,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly Dictionary<int, TimeSpan> _timeLeftAtPly = [];
 
     private Game _game = new();
-    private string? _filePath;
+    private string? _fileName;
     private string? _notice;
     private TimeSpan _computerTimeLeft;
     private CancellationTokenSource? _cancel;
@@ -69,17 +67,15 @@ public sealed partial class MainViewModel : ObservableObject
     private GameSettings _settings = GameSettings.Default;
 
     public MainViewModel(
-        ComputerPlayer computer,
-        OpeningBook book,
-        IBookStore bookStore,
+        IEngineHost engine,
         IDialogService dialogs,
+        IGameFileService files,
         ISettingsStore settingsStore,
         string? startupNotice = null)
     {
-        _computer = computer;
-        _book = book;
-        _bookStore = bookStore;
+        _engine = engine;
         _dialogs = dialogs;
+        _files = files;
         _settingsStore = settingsStore;
 
         AppSettings saved = settingsStore.Load();
@@ -150,9 +146,9 @@ public sealed partial class MainViewModel : ObservableObject
     {
         await StopAsync();
         _game.NewGame();
-        _filePath = null;
+        _fileName = null;
         ResetClock();
-        _computer.BookTracker.Reset();
+        _engine.ResetBookTracker();
         Analysis.Clear();
         Start();
     }
@@ -160,16 +156,17 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanChangeGame))]
     private async Task Open()
     {
-        string? path = _dialogs.ShowOpenDialog();
-        if (path is null)
-        {
-            return;
-        }
-
+        GameFile? file;
         Game loaded;
         try
         {
-            loaded = GameRecordFormat.Parse(await File.ReadAllTextAsync(path));
+            file = await _files.OpenAsync();
+            if (file is null)
+            {
+                return;
+            }
+
+            loaded = GameRecordFormat.Parse(file.Text);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or FormatException)
         {
@@ -186,35 +183,18 @@ public sealed partial class MainViewModel : ObservableObject
         }
 
         _game = loaded;
-        _filePath = path;
+        _fileName = file.Name;
         ResetClock();
-        _computer.BookTracker.Reset();
+        _engine.ResetBookTracker();
         Analysis.Clear();
         Start();
     }
 
     [RelayCommand]
-    private void Save()
-    {
-        if (_filePath is null)
-        {
-            SaveAs();
-        }
-        else
-        {
-            Write(_filePath);
-        }
-    }
+    private Task Save() => WriteAsync(askForName: false);
 
     [RelayCommand]
-    private void SaveAs()
-    {
-        string? path = _dialogs.ShowSaveDialog(_filePath);
-        if (path is not null)
-        {
-            Write(path);
-        }
-    }
+    private Task SaveAs() => WriteAsync(askForName: true);
 
     // C++: OnSkiftSide; the computer moves at once.
     [RelayCommand(CanExecute = nameof(CanChangeGame))]
@@ -240,7 +220,7 @@ public sealed partial class MainViewModel : ObservableObject
         while (_game.CanUndo && !_game.IsHumanToMove);
 
         RestoreClock();
-        _computer.BookTracker.Reset();
+        _engine.ResetBookTracker();
         Start();
     }
 
@@ -260,9 +240,9 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand(CanExecute = nameof(CanChangeGame))]
-    private void EditSettings()
+    private async Task EditSettings()
     {
-        GameSettings? settings = _dialogs.EditSettings(Settings);
+        GameSettings? settings = await _dialogs.EditSettingsAsync(Settings);
         if (settings is null)
         {
             return;
@@ -295,7 +275,7 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         }
 
-        if (!_dialogs.Confirm("Add this game to the opening book?"))
+        if (!await _dialogs.ConfirmAsync("Add this game to the opening book?"))
         {
             return;
         }
@@ -307,48 +287,41 @@ public sealed partial class MainViewModel : ObservableObject
                 Player.White => GameResult.WhiteWins,
                 _ => GameResult.Draw,
             }
-            : _dialogs.AskGameResult();
+            : await _dialogs.AskGameResultAsync();
         if (result is null)
         {
             return;
         }
 
         await StopAsync();
-        CreateLearner(hashBits: 10).AddGame(_game.PlayedMoves.ToList(), result.Value);
-        _notice = _bookStore.Save(_book)
-            ? $"The game was added to the opening book ({_book.NodeCount:N0} positions)."
+        BookUpdate update = await _engine.AddGameToBookAsync(_game.PlayedMoves.ToList(), result.Value);
+        _notice = update.Saved
+            ? $"The game was added to the opening book ({update.NodeCount:N0} positions)."
             : "The opening book could not be saved.";
         Start();
     }
 
     // C++: Minmaxlib (calc_lib, minmax_lib, sort_lib).
-    [RelayCommand(CanExecute = nameof(CanChangeGame))]
+    [RelayCommand(CanExecute = nameof(CanLearn))]
     private async Task EvaluateBook()
     {
-        if (_dialogs.Confirm(
+        if (await _dialogs.ConfirmAsync(
             "Search every new position in the opening book and add the best moves that are not in it?\n\n" +
             "This can take a long time. You can stop at any time with Book > Stop Learning."))
         {
-            await LearnAsync((learner, progress, token) =>
-            {
-                learner.EvaluatePositions(progress, token);
-                learner.Minimax();
-            });
+            await LearnAsync(BookLearningKind.EvaluateBook);
         }
     }
 
     // C++: Lær spil (selfplay).
-    [RelayCommand(CanExecute = nameof(CanChangeGame))]
+    [RelayCommand(CanExecute = nameof(CanLearn))]
     private async Task SelfPlay()
     {
-        if (_dialogs.Confirm(
+        if (await _dialogs.ConfirmAsync(
             "Let the computer play against itself and learn the games into the opening book?\n\n" +
             "This runs until you stop it with Book > Stop Learning."))
         {
-            await LearnAsync((learner, progress, token) => learner.SelfPlay(
-                progress,
-                token,
-                (number, moves) => _bookStore.AppendSelfPlayLog($"played game {number}: {string.Join(' ', moves)}")));
+            await LearnAsync(BookLearningKind.SelfPlay);
         }
     }
 
@@ -357,12 +330,14 @@ public sealed partial class MainViewModel : ObservableObject
 
     private bool CanChangeGame() => !IsLearning;
 
+    private bool CanLearn() => !IsLearning && _engine.SupportsLearning;
+
     private bool CanUndo() => _game.CanUndo && !IsLearning;
 
     private bool CanRedo() => _game.CanRedo && !IsLearning;
 
     // Runs book learning in the background; the game waits until it has stopped.
-    private async Task LearnAsync(Action<BookLearner, IProgress<BookLearningProgress>, CancellationToken> learn)
+    private async Task LearnAsync(BookLearningKind kind)
     {
         await StopAsync();
         using var cancel = new CancellationTokenSource();
@@ -378,22 +353,12 @@ public sealed partial class MainViewModel : ObservableObject
             }
         });
 
-        BookLearner learner = CreateLearner();
-        string summary;
+        BookLearningSummary summary;
         try
         {
-            Learning = Task.Run(() => learn(learner, progress, cancel.Token), CancellationToken.None);
-            await Learning;
-            summary = "Book learning finished.";
-        }
-        catch (OperationCanceledException)
-        {
-            summary = "Book learning stopped.";
-        }
-        catch (Exception exception)
-        {
-            summary = "Book learning failed.";
-            _dialogs.ShowError($"Book learning failed.\n\n{exception.Message}");
+            Task<BookLearningSummary> learning = _engine.LearnAsync(kind, LearningLimits(), progress, cancel.Token);
+            Learning = learning;
+            summary = await learning;
         }
         finally
         {
@@ -401,22 +366,27 @@ public sealed partial class MainViewModel : ObservableObject
             IsLearning = false;
         }
 
-        bool saved = _bookStore.Save(_book);
-        _computer.BookTracker.Reset();
-        _notice = $"{summary} {learner.PositionsEvaluated:N0} positions searched, {learner.GamesPlayed:N0} games played, " +
-            $"{_book.NodeCount:N0} positions in the book.{(saved ? "" : " The opening book could not be saved.")}";
+        if (summary.Outcome == BookLearningOutcome.Failed)
+        {
+            _dialogs.ShowError($"Book learning failed.\n\n{summary.Error}");
+        }
+
+        string outcome = summary.Outcome switch
+        {
+            BookLearningOutcome.Finished => "Book learning finished.",
+            BookLearningOutcome.Stopped => "Book learning stopped.",
+            _ => "Book learning failed.",
+        };
+        _engine.ResetBookTracker();
+        _notice = $"{outcome} {summary.PositionsEvaluated:N0} positions searched, {summary.GamesPlayed:N0} games played, " +
+            $"{summary.NodeCount:N0} positions in the book.{(summary.Saved ? "" : " The opening book could not be saved.")}";
         Start();
     }
 
     // Book learning searches as the current settings allow, but at most the time per move (C++: 2 minutes each).
-    private BookLearner CreateLearner(int hashBits = 19) => new(
-        _book,
-        new SearchEngine(hashBits),
-        Settings.Mode == TimeControlMode.FixedDepth
-            ? SearchLimits.FixedDepth(Settings.Depth)
-            : SearchLimits.TimePerMove(TimeSpan.FromSeconds(Settings.SecondsPerMove)),
-        new Random(),
-        book => _bookStore.Save(book));
+    private SearchLimits LearningLimits() => Settings.Mode == TimeControlMode.FixedDepth
+        ? SearchLimits.FixedDepth(Settings.Depth)
+        : SearchLimits.TimePerMove(TimeSpan.FromSeconds(Settings.SecondsPerMove));
 
     private static string Describe(BookLearningProgress progress) => progress.Stage switch
     {
@@ -504,9 +474,7 @@ public sealed partial class MainViewModel : ObservableObject
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            SearchResult result = await Task.Run(
-                () => _computer.ChooseMove(board, player, limits, progress, cancel.Token, moveNow.Token),
-                CancellationToken.None);
+            SearchResult result = await _engine.ChooseMoveAsync(board, player, limits, progress, cancel.Token, moveNow.Token);
 
             _computerTimeLeft -= stopwatch.Elapsed;
             Analysis.Update(result, stopwatch.Elapsed);
@@ -545,7 +513,7 @@ public sealed partial class MainViewModel : ObservableObject
         ClockText = Settings.Mode == TimeControlMode.TimePerGame
             ? $"Computer time left: {(int)left.TotalMinutes}:{left.Seconds:00}"
             : "";
-        Title = $"Stello – {(_filePath is null ? "Untitled" : Path.GetFileName(_filePath))}";
+        Title = $"Stello – {(_fileName is null ? "Untitled" : Path.GetFileName(_fileName))}";
         UndoCommand.NotifyCanExecuteChanged();
         RedoCommand.NotifyCanExecuteChanged();
     }
@@ -583,13 +551,16 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    private void Write(string path)
+    private async Task WriteAsync(bool askForName)
     {
         try
         {
-            File.WriteAllText(path, GameRecordFormat.Format(_game) + Environment.NewLine);
-            _filePath = path;
-            Refresh();
+            string? name = await _files.SaveAsync(GameRecordFormat.Format(_game) + Environment.NewLine, _fileName, askForName);
+            if (name is not null)
+            {
+                _fileName = name;
+                Refresh();
+            }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {

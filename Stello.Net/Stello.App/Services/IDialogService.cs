@@ -5,19 +5,13 @@ namespace Stello.App.Services;
 
 public interface IDialogService
 {
-    bool Confirm(string message);
+    Task<bool> ConfirmAsync(string message);
 
     /// <returns>Who won the game, or null if the user cancelled.</returns>
-    GameResult? AskGameResult();
-
-    /// <returns>The chosen file, or null if the user cancelled.</returns>
-    string? ShowOpenDialog();
-
-    /// <returns>The chosen file, or null if the user cancelled.</returns>
-    string? ShowSaveDialog(string? currentPath);
+    Task<GameResult?> AskGameResultAsync();
 
     /// <returns>The new settings, or null if the user cancelled.</returns>
-    GameSettings? EditSettings(GameSettings current);
+    Task<GameSettings?> EditSettingsAsync(GameSettings current);
 
     void ShowError(string message);
 

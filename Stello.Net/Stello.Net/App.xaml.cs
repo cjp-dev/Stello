@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using Stello.App.Services;
 using Stello.App.ViewModels;
 using Stello.Engine;
 using Stello.Net.Services;
@@ -12,12 +13,14 @@ public partial class App : Application
         base.OnStartup(e);
 
         OpeningBook book = BookLoader.Load(AppPaths.BookFiles, out string? notice) ?? OpeningBook.CreateEmpty();
-        var computer = new ComputerPlayer(new SearchEngine(), book, new Random());
-        var viewModel = new MainViewModel(
-            computer,
+        var engine = new LocalEngineHost(
+            new ComputerPlayer(new SearchEngine(), book, new Random()),
             book,
-            new FileBookStore(AppPaths.UserBookFile, AppPaths.SelfPlayLogFile),
+            new FileBookStore(AppPaths.UserBookFile, AppPaths.SelfPlayLogFile));
+        var viewModel = new MainViewModel(
+            engine,
             new DialogService(),
+            new GameFileService(),
             new JsonSettingsStore(AppPaths.SettingsFile),
             notice);
         MainWindow = new MainWindow(viewModel);

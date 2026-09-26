@@ -1,7 +1,5 @@
-using System.IO;
 using System.Media;
 using System.Windows;
-using Microsoft.Win32;
 using Stello.App.Models;
 using Stello.App.Services;
 using Stello.App.ViewModels;
@@ -13,46 +11,27 @@ namespace Stello.Net.Services;
 internal sealed class DialogService : IDialogService
 {
     private const string Caption = "Stello";
-    private const string GameFilter = "Stello games (*.stello)|*.stello|Text files (*.txt)|*.txt|All files (*.*)|*.*";
 
     private static Window? Owner => Application.Current?.MainWindow;
 
-    public bool Confirm(string message) =>
-        Ask(message, MessageBoxButton.YesNo) == MessageBoxResult.Yes;
+    public Task<bool> ConfirmAsync(string message) =>
+        Task.FromResult(Ask(message, MessageBoxButton.YesNo) == MessageBoxResult.Yes);
 
     // C++: "Var det sort der vandt ?"
-    public GameResult? AskGameResult() => Ask(
+    public Task<GameResult?> AskGameResultAsync() => Task.FromResult<GameResult?>(Ask(
             "Did Black win the game?\n\nYes: Black won.\nNo: White won.\nCancel: do not add the game.",
             MessageBoxButton.YesNoCancel) switch
         {
             MessageBoxResult.Yes => GameResult.BlackWins,
             MessageBoxResult.No => GameResult.WhiteWins,
             _ => null,
-        };
+        });
 
-    public string? ShowOpenDialog()
-    {
-        var dialog = new OpenFileDialog { Filter = GameFilter, DefaultExt = ".stello" };
-        return dialog.ShowDialog(Owner) == true ? dialog.FileName : null;
-    }
-
-    public string? ShowSaveDialog(string? currentPath)
-    {
-        var dialog = new SaveFileDialog
-        {
-            Filter = GameFilter,
-            DefaultExt = ".stello",
-            FileName = currentPath is null ? "Game" : Path.GetFileName(currentPath),
-            InitialDirectory = currentPath is null ? "" : Path.GetDirectoryName(currentPath),
-        };
-        return dialog.ShowDialog(Owner) == true ? dialog.FileName : null;
-    }
-
-    public GameSettings? EditSettings(GameSettings current)
+    public Task<GameSettings?> EditSettingsAsync(GameSettings current)
     {
         var viewModel = new SettingsViewModel(current);
         var window = new SettingsWindow { Owner = Owner, DataContext = viewModel };
-        return window.ShowDialog() == true ? viewModel.ToSettings() : null;
+        return Task.FromResult(window.ShowDialog() == true ? viewModel.ToSettings() : null);
     }
 
     public void ShowError(string message) => Show(message, Caption, MessageBoxImage.Error);
