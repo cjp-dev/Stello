@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.JSInterop;
 using Stello.App.Services;
 using Stello.App.ViewModels;
-using Stello.Engine;
 using Stello.Web;
 using Stello.Web.Services;
 
@@ -19,14 +18,10 @@ builder.Services.AddSingleton<IGameFileService, BrowserGameFileService>();
 builder.Services.AddSingleton<ISettingsStore, LocalStorageSettingsStore>();
 builder.Services.AddSingleton<LocalStorageBookStore>();
 builder.Services.AddSingleton<StartupBook>();
-builder.Services.AddSingleton<IEngineHost>(services =>
-{
-    OpeningBook book = services.GetRequiredService<StartupBook>().Book;
-    return new LocalEngineHost(
-        new ComputerPlayer(new SearchEngine(), book, new Random()),
-        book,
-        services.GetRequiredService<LocalStorageBookStore>());
-});
+builder.Services.AddSingleton<IEngineHost>(services => new WebEngineHost(
+    services.GetRequiredService<IJSRuntime>(),
+    services.GetRequiredService<LocalStorageBookStore>(),
+    services.GetRequiredService<StartupBook>().Book));
 builder.Services.AddSingleton(services => new MainViewModel(
     services.GetRequiredService<IEngineHost>(),
     services.GetRequiredService<IDialogService>(),

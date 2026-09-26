@@ -34,9 +34,15 @@ public sealed class LocalStorageBookStore(IJSInProcessRuntime js) : IBookStore
     {
         using var stream = new MemoryStream();
         book.Save(stream);
+        return Save(stream.ToArray());
+    }
+
+    /// <param name="book">The book in the OPENING file format.</param>
+    public bool Save(byte[] book)
+    {
         try
         {
-            js.InvokeVoid("localStorage.setItem", Key, Convert.ToBase64String(stream.GetBuffer(), 0, (int)stream.Length));
+            js.InvokeVoid("localStorage.setItem", Key, Convert.ToBase64String(book));
             return true;
         }
         catch (JSException)
