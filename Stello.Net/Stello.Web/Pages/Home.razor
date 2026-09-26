@@ -100,6 +100,7 @@
             ]),
             new("View", [new("Analysis", Vm.ToggleAnalysisCommand, "Ctrl+A", () => Vm.IsAnalysisVisible)]),
             new("Book", [new("Add Game to Book...", Vm.AddGameToBookCommand)]),
+            new("Docs", [new("Brain Documentation", new RelayCommand(OpenDocs))]),
             new("Help", [new("About Stello...", Vm.AboutCommand)]),
         ];
         _commands = _menus.SelectMany(menu => menu.Entries).Select(entry => entry.Command).ToArray();
@@ -166,6 +167,9 @@
     private void OnDialogChanged() => InvokeAsync(StateHasChanged);
 
     private void Play(SquareViewModel square) => Vm.PlayCommand.Execute(square);
+
+    // A new tab, so the game stays open next to the documentation.
+    private void OpenDocs() => ((IJSInProcessRuntime)JS).InvokeVoid("open", BrainDocs.PageRoute(""), "_blank", "noopener");
 
     private void ToggleMenu(MenuDefinition menu) => _openMenu = _openMenu == menu ? null : menu;
 
