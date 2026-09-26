@@ -67,61 +67,71 @@
             </MenuItem>
         </Menu>
 
-        <StatusBar DockPanel.Dock="Bottom">
-            <StatusBarItem>
-                <TextBlock Text="{Binding Status}" />
-            </StatusBarItem>
-            <Separator />
-            <StatusBarItem>
-                <TextBlock>
-                    <Run Text="Black" /> <Run Text="{Binding BlackCount, Mode=OneWay}" />
-                    <Run Text="– White" /> <Run Text="{Binding WhiteCount, Mode=OneWay}" />
-                </TextBlock>
-            </StatusBarItem>
-            <Separator />
-            <StatusBarItem>
-                <TextBlock Text="{Binding SidesText}" />
-            </StatusBarItem>
-            <StatusBarItem HorizontalAlignment="Right">
-                <TextBlock Text="{Binding ClockText}" />
-            </StatusBarItem>
-        </StatusBar>
+        <!-- As in the web version: the board and the panels are centred together, with the panels level with the squares. -->
+        <Grid x:Name="PlayArea" Margin="12" SizeChanged="OnPlayAreaSizeChanged">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <!-- The board's empty right column is the gap to the panels. -->
+                <views:BoardView x:Name="Board" />
 
-        <GroupBox DockPanel.Dock="Right" Width="240" Margin="0,12,12,12" Header="Analysis"
-                  Visibility="{Binding IsAnalysisVisible, Converter={StaticResource BooleanToVisibility}}"
-                  DataContext="{Binding Analysis}">
-            <Grid Margin="8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+                <StackPanel x:Name="SidePanels" Width="240">
+                    <GroupBox x:Name="StatusBox" Header="Status">
+                        <StackPanel Margin="8">
+                            <TextBlock Style="{StaticResource Field}" Text="{Binding Status}" TextWrapping="Wrap" />
+                            <TextBlock Style="{StaticResource Field}">
+                                <Run Text="Black" /> <Run Text="{Binding BlackCount, Mode=OneWay}" />
+                                <Run Text="– White" /> <Run Text="{Binding WhiteCount, Mode=OneWay}" />
+                            </TextBlock>
+                            <TextBlock Style="{StaticResource Field}" Text="{Binding SidesText}" />
+                            <TextBlock Text="{Binding ClockText}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Field}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ClockText}" Value="">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </GroupBox>
 
-                <TextBlock Style="{StaticResource Label}" Text="Move:" />
-                <TextBlock Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Move}" />
-                <TextBlock Grid.Row="1" Style="{StaticResource Label}" Text="Depth:" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Depth}" TextWrapping="Wrap" />
-                <TextBlock Grid.Row="2" Style="{StaticResource Label}" Text="Value:" />
-                <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Value}" />
-                <TextBlock Grid.Row="3" Style="{StaticResource Label}" Text="Best move:" />
-                <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding BestMove}" />
-                <TextBlock Grid.Row="4" Style="{StaticResource Label}" Text="Nodes:" />
-                <TextBlock Grid.Row="4" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Nodes}" />
-                <TextBlock Grid.Row="5" Style="{StaticResource Label}" Text="Evaluations:" />
-                <TextBlock Grid.Row="5" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Evaluations}" />
-                <TextBlock Grid.Row="6" Style="{StaticResource Label}" Text="Time:" />
-                <TextBlock Grid.Row="6" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Time}" />
-            </Grid>
-        </GroupBox>
+                    <GroupBox Margin="0,12,0,0" Header="Analysis"
+                              Visibility="{Binding IsAnalysisVisible, Converter={StaticResource BooleanToVisibility}}"
+                              DataContext="{Binding Analysis}">
+                        <Grid Margin="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
 
-        <views:BoardView Margin="12" />
+                            <TextBlock Style="{StaticResource Label}" Text="Move:" />
+                            <TextBlock Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Move}" />
+                            <TextBlock Grid.Row="1" Style="{StaticResource Label}" Text="Depth:" />
+                            <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Depth}" TextWrapping="Wrap" />
+                            <TextBlock Grid.Row="2" Style="{StaticResource Label}" Text="Value:" />
+                            <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Value}" />
+                            <TextBlock Grid.Row="3" Style="{StaticResource Label}" Text="Best move:" />
+                            <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding BestMove}" />
+                            <TextBlock Grid.Row="4" Style="{StaticResource Label}" Text="Nodes:" />
+                            <TextBlock Grid.Row="4" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Nodes}" />
+                            <TextBlock Grid.Row="5" Style="{StaticResource Label}" Text="Evaluations:" />
+                            <TextBlock Grid.Row="5" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Evaluations}" />
+                            <TextBlock Grid.Row="6" Style="{StaticResource Label}" Text="Time:" />
+                            <TextBlock Grid.Row="6" Grid.Column="1" Style="{StaticResource Field}" Text="{Binding Time}" />
+                        </Grid>
+                    </GroupBox>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
     </DockPanel>
 </Window>

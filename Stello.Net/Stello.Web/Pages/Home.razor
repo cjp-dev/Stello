@@ -43,34 +43,40 @@
         <div class="menu-backdrop" @onclick="() => _openMenu = null"></div>
     }
 
-    <main class="content @(Vm.IsAnalysisVisible ? null : "without-analysis")">
+    <main class="content">
         <div class="board-area">
             <Board Squares="Vm.Squares" Appearance="_appearance" OnPlay="Play" />
         </div>
 
-        @if (Vm.IsAnalysisVisible)
-        {
-            <aside class="analysis @(_appearance.Board == BoardStyle.Green ? null : "beside-wood")" aria-label="Analysis">
-                <h2>Analysis</h2>
-                <dl>
-                    <dt>Move:</dt><dd>@Vm.Analysis.Move</dd>
-                    <dt>Depth:</dt><dd>@Vm.Analysis.Depth</dd>
-                    <dt>Value:</dt><dd>@Vm.Analysis.Value</dd>
-                    <dt>Best move:</dt><dd>@Vm.Analysis.BestMove</dd>
-                    <dt>Nodes:</dt><dd>@Vm.Analysis.Nodes</dd>
-                    <dt>Evaluations:</dt><dd>@Vm.Analysis.Evaluations</dd>
-                    <dt>Time:</dt><dd>@Vm.Analysis.Time</dd>
-                </dl>
-            </aside>
-        }
-    </main>
+        <div class="side-panels @(_appearance.Board == BoardStyle.Green ? null : "beside-wood")">
+            <section class="panel status" role="status" aria-label="Status">
+                <h2>Status</h2>
+                <p>@Vm.Status</p>
+                <p>Black @Vm.BlackCount – White @Vm.WhiteCount</p>
+                <p>@Vm.SidesText</p>
+                @if (Vm.ClockText.Length > 0)
+                {
+                    <p>@Vm.ClockText</p>
+                }
+            </section>
 
-    <footer class="statusbar" role="status">
-        <span>@Vm.Status</span>
-        <span>Black @Vm.BlackCount – White @Vm.WhiteCount</span>
-        <span>@Vm.SidesText</span>
-        <span class="clock">@Vm.ClockText</span>
-    </footer>
+            @if (Vm.IsAnalysisVisible)
+            {
+                <aside class="panel analysis" aria-label="Analysis">
+                    <h2>Analysis</h2>
+                    <dl>
+                        <dt>Move:</dt><dd>@Vm.Analysis.Move</dd>
+                        <dt>Depth:</dt><dd>@Vm.Analysis.Depth</dd>
+                        <dt>Value:</dt><dd>@Vm.Analysis.Value</dd>
+                        <dt>Best move:</dt><dd>@Vm.Analysis.BestMove</dd>
+                        <dt>Nodes:</dt><dd>@Vm.Analysis.Nodes</dd>
+                        <dt>Evaluations:</dt><dd>@Vm.Analysis.Evaluations</dd>
+                        <dt>Time:</dt><dd>@Vm.Analysis.Time</dd>
+                    </dl>
+                </aside>
+            }
+        </div>
+    </main>
 </div>
 
 @code {

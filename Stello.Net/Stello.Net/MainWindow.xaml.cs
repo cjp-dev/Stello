@@ -1,5 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using Stello.App.Models;
 using Stello.App.ViewModels;
 
@@ -52,4 +54,26 @@ public partial class MainWindow : Window
     }
 
     private void OnExit(object sender, RoutedEventArgs e) => Close();
+
+    // The square board fills the height, or the width left beside the panels.
+    // The panels' frames start level with the squares, below the a–h row (20 of BoardView's 440 units).
+    private void OnPlayAreaSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        double size = Math.Max(0, Math.Min(e.NewSize.Height, e.NewSize.Width - SidePanels.Width));
+        Board.Width = size;
+        Board.Height = size;
+        SidePanels.Margin = new Thickness(0, Math.Max(0, size * 20 / 440 - FrameTop(StatusBox)), 0, 0);
+    }
+
+    // A GroupBox draws its frame part-way down its header; the template's first Border (not the header) is the frame.
+    private static double FrameTop(GroupBox box)
+    {
+        if (VisualTreeHelper.GetChildrenCount(box) == 0 || VisualTreeHelper.GetChild(box, 0) is not Panel root)
+        {
+            return 0;
+        }
+
+        Border? frame = root.Children.OfType<Border>().FirstOrDefault(border => border.Name != "Header");
+        return frame?.TranslatePoint(new Point(), box).Y ?? 0;
+    }
 }

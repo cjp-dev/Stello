@@ -431,7 +431,7 @@ Notable features and quirks:
   - **Computer move (`ComputerMoveAsync`):** `ComputerPlayer.ChooseMove` runs with `Task.Run` and is awaited, so the result comes back on the UI thread. A `CancellationTokenSource` for cancel and one for "move now" are created per move. `Progress<SearchInfo>` updates the analysis panel. Late progress reports are ignored with a search id.
   - **Game loop (`RunAsync`):** refreshes the board, then:
     - shows the result when the game is over;
-    - **passes automatically** when the side to move has no legal move, with a notice in the status bar;
+    - **passes automatically** when the side to move has no legal move, with a notice in the status panel;
     - stops when the human is to move;
     - otherwise lets the computer move, and repeats.
   - Every command that changes the game (New, Open, Switch Sides, Back, Forward) first stops the search and waits for it (`StopAsync`). The `Idle` task lets the tests wait for the computer.
@@ -445,7 +445,7 @@ Notable features and quirks:
 - **`Views/BoardView`:** a scalable (`Viewbox`) green 8×8 board of buttons in a `UniformGrid`, with a1 in the top-left corner and a–h / 1–8 labels. Data triggers draw the discs, the legal-move dots and the last-move dot. Each square has a tooltip and automation name ("f5") for accessibility and keyboard focus.
 - **`MainWindow`:**
   - The menus are in English. Shortcuts: Ctrl+N, Ctrl+O, Ctrl+S, Ctrl+M (Move Now), Ctrl+Z/Ctrl+T (Back), Ctrl+Y/Ctrl+F (Forward), Ctrl+A (Analysis). The C++ shortcuts Ctrl+T/Ctrl+F still work.
-  - A status bar shows the status, disc counts, the human's colour and the computer's clock. The analysis panel is on the right and can be hidden.
+  - On the right of the board, a Status panel shows the status, disc counts, the human's colour and the computer's clock, and is always visible. The Analysis panel below it can be hidden. As in the web version, the board and the panels are centred together, and the panels' tops are level with the top of the squares, below the a–h row (as on the green web board). The code-behind sizes the square board to the height, or to the width left beside the panels.
 - **`Services/IDialogService`, `DialogService`:** file dialogs, settings dialog, message boxes, About box and beep. They are behind an interface so the view models can be tested.
 - **Engine addition:** `ComputerPlayer` (book first, then search; see phase 4) and `ScoreKind.Book`.
 - **Tests (`Stello.Net.Tests`, 36 tests):**
@@ -467,7 +467,7 @@ Notable features and quirks:
 | Computer thinking on the UI thread | Changed (improved) | Background task; the UI stays responsive. |
 | Direct UI calls from the engine | Changed | `IProgress<SearchInfo>` and the view model. |
 | "Træk nu" | New | It had no handler in C++; it now plays the best move so far. |
-| Human pass by clicking | Changed | Automatic pass with a notice in the status bar. |
+| Human pass by clicking | Changed | Automatic pass with a notice in the status panel. |
 | Back/Forward | Changed | They step between the human's turns and keep the human's colour. In C++ they moved one ply and gave the human the side to move, so the human could end up playing the other colour. The C++ rule is kept after Open. |
 | Clock restore on Back/Forward | 1:1 | As `timesleft[]`. |
 | Book re-enabled after New/Back | 1:1 | `BookTracker.Reset`. |
@@ -504,7 +504,7 @@ Notable features and quirks:
 - **`MainViewModel`:**
   - Loads the settings at startup (depth/time mode, whether the analysis panel is shown, window position).
   - Saves them when the settings dialog is confirmed, when the analysis panel is toggled, and when the window closes.
-  - A failed save is shown in the status bar.
+  - A failed save is shown in the status panel.
 - **`MainWindow`:** restores the saved position and size, and maximises if it was maximised. It is only restored if the window would still be on a screen (a monitor may have been removed). When closing, it saves the restored size, also when maximised.
 - **`Services/AppPaths`:** all file locations are fixed and independent of the current directory:
   - the settings file;
@@ -597,7 +597,7 @@ Notable features and quirks:
   - **`AddGameToBook`:** needs at least two moves and a confirmation. A finished game uses its result; otherwise it asks "Did Black win the game?" (Yes/No/Cancel). The computer's search is stopped first, and the book is saved.
   - **`EvaluateBook`** (evaluate + minimax) and **`SelfPlay`:** after a confirmation, `LearnAsync` stops the game search and sets `IsLearning`, then runs the learner with `Task.Run`.
     - While learning, moves on the board beep, and New, Open, Switch Sides, Back, Forward, Settings and the Book commands are disabled.
-    - Progress is shown in the status bar. Stop Learning cancels.
+    - Progress is shown in the status panel. Stop Learning cancels.
     - At the end the book is always saved, the book tracker is reset, a summary is shown (positions searched, games played, book size), and the game continues.
   - **Search time per learned position:** fixed depth if that mode is selected, otherwise the "time per move" setting (1–60 s).
   - Closing the window also cancels learning.
