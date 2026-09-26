@@ -22,6 +22,7 @@ The requirements are in [Migrate Othello game from C++ to C#.md](Migrate%20Othel
 | `BRAIN/Book.cpp`, `Book.h` (`booktree`, `getlib`) | `OpeningBook`, `BookNode`, `BookTracker` | 4 |
 | `getcomputer` book part, `libon`/`tryagain` | `ComputerPlayer`, `BookTracker` | 4, 5 |
 | MFC views and frames (`MainFrm`, `StelloView`, `Analyse`, `Spiltid`) | WPF `MainWindow`, `Views/*`, `ViewModels/*` | 5 |
+| (no C++ counterpart) | Blazor WebAssembly `Stello.Web`, shared `Stello.App` | 9 |
 
 Terms used below:
 
@@ -42,6 +43,8 @@ Terms used below:
 | `Stello.Engine.Tests` (xUnit) | Engine tests. |
 | `Stello.Net` (`net10.0-windows`, WPF) | UI with MVVM (`CommunityToolkit.Mvvm`). |
 | `Stello.Net.Tests` (xUnit) | View-model tests (phase 5). |
+| `Stello.App` (`net10.0`) | Added in phase 9: the models, view models and service interfaces, moved out of `Stello.Net` and shared with the web version. |
+| `Stello.Web` (`net10.0`, Blazor WebAssembly) | Added in phase 9: the web version. |
 
 - `Stello C++/OPENING` is linked into the output of the app and the engine tests as `Data/OPENING`.
 - `InternalsVisibleTo` lets the tests reach internal types (edge tables, book nodes, the view model's `Idle` task).
@@ -667,3 +670,80 @@ Reverted, with the measurements in the specification: MTD(f) for the exact pass,
 | Two entries per hash slot | Changed (improved) | The C++ replacement rule is kept for the first entry. |
 | Enhanced transposition cutoff | New | Endgame solver only. |
 | Flips computed once | Changed (optimisation) | Same results. |
+
+---
+
+## Phase 9 – Web version (Blazor WebAssembly)
+
+This phase has no C++ counterpart. The same engine and view models also run in the browser as a Blazor WebAssembly app, next to the WPF app; both are built from the same solution. The web version is hosted on Azure Static Web Apps at <https://white-mud-039080003.3.azurestaticapps.net>.
+
+### Shared code (`Stello.App`)
+
+- **Moved from `Stello.Net`, namespaces `Stello.App.*`:** `Models/AppSettings`, `Models/GameSettings`, all view models, and the interfaces `IDialogService`, `ISettingsStore`, `IBookStore`. The WPF project keeps the views, `App`, `MainWindow` and the Windows implementations (`DialogService`, `GameFileService`, `JsonSettingsStore`, `FileBookStore`, `AppPaths`, `BookLoader`).
+- **`Services/IEngineHost`:** everything the view model needs from the engine: choose a move (with progress, cancel and "move now"), reset the book tracker, add a game to the book, and book learning (`SupportsLearning`, `LearnAsync`, which returns a summary instead of throwing).
+  - **`LocalEngineHost`** runs the engine in the same process on a thread-pool thread. It contains the `Task.Run` code that was in `MainViewModel` (phases 5 and 7). WPF and the tests use it.
+- **`Services/IGameFileService`:** open returns the file name and text, save takes the text, the current name and whether to ask for a name. The file I/O moved out of `MainViewModel`; the WPF version uses the file dialogs and the file system.
+- **`IDialogService`:** the dialogs that return a value are async (`ConfirmAsync`, `AskGameResultAsync`, `EditSettingsAsync`), because browser dialogs cannot block. `ShowError`, `ShowAbout` and `Beep` are unchanged.
+- **`MainViewModel`:** the constructor takes `IEngineHost`, `IDialogService`, `IGameFileService`, `ISettingsStore` and the startup notice. Save, Save As and Settings are async commands. Evaluate Book and Self-play can only run if the host supports learning.
+- **`Models/AppSettingsJson`:** a source-generated `System.Text.Json` context (indented, enums as text), so the settings also serialise in the trimmed browser build. The WPF and browser settings stores both use it; the file format is unchanged.
+- **Tests (`Stello.Net.Tests`, 60 tests):** the view-model tests use `LocalEngineHost` and an in-memory `FakeGameFileService`. New: Save asks for a name only the first time, and a file that cannot be read shows an error.
+
+### Web app (`Stello.Web`)
+
+- **Startup (`Program.cs`, `Services/StartupBook`):** the user's book is loaded from local storage, otherwise the shipped book from `data/OPENING.bin`. A damaged saved book gives a notice, and the shipped book is used (as `BookLoader` on the desktop).
+- **Storage in the browser's local storage:**
+  - `LocalStorageSettingsStore`: the settings JSON under `stello.settings`. The window placement is not used on the web.
+  - `LocalStorageBookStore`: the book in the `OPENING` file format, base64-encoded under `stello.book` (about 250 KB). The shipped book is never changed. There is no self-play log.
+- **Files (`BrowserGameFileService`, `wwwroot/js/stello.js`):** Open uses the browser's file picker (game files up to 1 MB). Save downloads the game as a file; Save As, and the first Save, ask for the name in the app's own dialog.
+- **Dialogs (`BrowserDialogService`, `Components/DialogHost`):** modal dialogs shown one at a time: confirmation, who won ("Black won"/"White won"/"Cancel"), settings (reusing `SettingsViewModel`), a text box for the file name, errors and About. The page behind is inert while a dialog is open.
+- **UI (`Pages/Home`, `Components/Board`):**
+  - The same menus as the desktop, except that the Book menu only has Add Game to Book, and File has no Exit.
+  - The same keyboard shortcuts, except Ctrl+N, which the browser keeps.
+  - The board is a CSS grid with the colours and markers of `BoardView`. Each square has a label for screen readers (for example "f5, legal move").
+  - Blazor does not observe `INotifyPropertyChanged`, so the page subscribes to the view models' `PropertyChanged` and the commands' `CanExecuteChanged` and re-renders.
+- **Engine in a Web Worker:** WebAssembly in the browser runs on one thread, so a search on the page would freeze it.
+  - `wwwroot/js/engine-worker.js` starts a second .NET runtime in a Web Worker from the app's own `_framework` files. It calls `[JSExport]` methods in `Worker/EngineWorker.cs`, which holds the `ComputerPlayer` and the book (`Init`, `ChooseMove`, `ResetBookTracker`, `AddGame`, `GetBook`).
+  - `wwwroot/js/engine-client.js` starts and terminates the worker on the page side, and matches replies to requests.
+  - `Worker/EngineProtocol.cs`: the messages carry only plain values (source-generated JSON), so 64-bit boards and times stay exact.
+  - Progress is posted at most every 100 ms, but always when the depth or the best move changes.
+  - **`Services/WebEngineHost`:** the `IEngineHost` for the browser. A running search cannot be interrupted inside the worker, so Stop and Move Now terminate the worker and start a new one at once. Move Now plays the best move from the last progress report (or the current move, or the first legal move). After adding a game, the book is read back from the worker and saved in local storage. `SupportsLearning` is false.
+- **Opening book file:** a build target copies `Stello C++/OPENING` to `wwwroot/data/OPENING.bin`, which is git-ignored. A linked file is not served by the development server, and the extension makes Static Web Apps serve it as binary data.
+
+### Build and deployment
+
+- **AOT:** Release builds compile the .NET code to WebAssembly (`RunAOTCompilation`, needs the `wasm-tools` workload). A publish takes about 2½ minutes. Debug builds are interpreted and do not need the workload.
+- **`wwwroot/staticwebapp.config.json`:** unknown paths fall back to `index.html`, except the framework, data, script and style files. MIME types for `.bin`, `.dat`, `.json` and `.wasm`.
+- **`.github/workflows/azure-static-web-apps.yml`:** runs on pushes to `main` that change the web app, `Stello.App`, the engine, the opening book or the workflow, and by hand. It installs .NET 10 and `wasm-tools`, publishes with AOT, and uploads `publish/wwwroot` with the secret `AZURE_STATIC_WEB_APPS_API_TOKEN`. A run takes about 6 minutes.
+  - In the path filter the book is written `Stello C*/OPENING`, because `+` is special in GitHub's path patterns and `Stello C++/OPENING` broke the workflow before it started.
+  - Azure's own generated workflow was removed: its default build cannot do the AOT build, and both deployed to the same app.
+
+### Performance
+
+The same position (f5 d6 c7, depth 15) gives the same move, score and node count (f3, +98, 4,430,700 nodes) in every build:
+
+| Build | Nodes per second |
+|---|---|
+| Desktop (native, Release) | 3.1 M |
+| Web, AOT (locally and on Azure) | 2.1 M |
+| Web, interpreted (Debug) | about 0.05 M |
+
+### Verification
+
+- All 160 engine tests and 60 app tests pass; the whole solution builds without warnings.
+- In the browser, during development: board and markers; the computer's book and search moves; the page stays responsive during a depth-20 search, with live analysis; Move Now; New Game during a search; Back/Forward with the keyboard; settings and added games survive a reload; open and save; a damaged saved book falls back to the shipped one.
+- The AOT build was tested as plain static files, and the deployed site with a deep search, Move Now and a check of the served files.
+
+### Assessment
+
+| Part | Port | Notes |
+|---|---|---|
+| Engine | Unchanged | The same `Stello.Engine` in the browser. |
+| View models | Shared | Moved to `Stello.App`; the WPF app behaves as before. |
+| Computer thinking | Changed | In a Web Worker instead of a thread-pool thread. |
+| Stop and Move Now | Changed | They restart the worker, so the hash table and the book tracker start fresh. In the endgame, Move Now can play the move of the running endgame search, where the desktop keeps the midgame move. The new worker is usually ready before the computer's next move; in time-per-game mode its start-up time counts against the computer's clock. |
+| Settings and book storage | Changed | The browser's local storage instead of `%AppData%\Stello`. |
+| Open/Save | Changed | File picker and download instead of file dialogs. |
+| Add Game to Book | 1:1 | Runs in the worker. |
+| Evaluate Book, Self-play | Not ported to the web | Desktop only; long learning runs do not suit a browser tab. |
+| Window position | Not ported to the web | The browser manages the window. |
+| Ctrl+N | Not available on the web | The browser keeps it; New Game is in the File menu. |
