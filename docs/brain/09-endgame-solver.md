@@ -129,6 +129,20 @@ The tests solve five positions from the FFO endgame test suite. Measured with `S
 | #44 | 23 | White | ≤ −2 | −14 | d2, b8 | d2 | 0.6 s | 2.8 s | 43.3 M | 22.3 M |
 | **Total** | | | | | | | | **20.7 s** | **328 M** | |
 
+The nodes per position in millions, Stello (green bars) against Zebra (orange line):
+
+```mermaid
+%%{init: {"themeVariables": {"xyChart": {"plotColorPalette": "#1e7a3c, #d98c1a"}}}}%%
+xychart-beta
+    title "Nodes for the exact score (millions)"
+    x-axis "FFO position" ["#40", "#41", "#42", "#43", "#44"]
+    y-axis "Nodes (millions)" 0 --> 180
+    bar [18.0, 44.0, 55.3, 167.7, 43.3]
+    line [19.2, 20.8, 28.6, 23.7, 22.3]
+```
+
+Zebra needs about 20–30 M nodes for every position. Stello needs about the same for #40, about twice as many for #41, #42 and #44, and seven times as many for #43.
+
 - "Pass 1 done" is the time of the last progress report of the win/loss/draw pass.
 - #41 is a draw, so there is no second pass.
 - For #43, most of the time is spent in pass 2, proving that −12 is the best White can do.

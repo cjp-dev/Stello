@@ -37,7 +37,11 @@ To choose a move, the engine looks ahead: it tries its moves, the opponent's rep
 
 ### Negamax with alpha-beta
 
-In negamax, a position's score for the side to move is the maximum over its moves of the *negated* score of the position after the move (which is from the opponent's point of view). Alpha-beta passes a window (α, β) down the tree:
+In negamax, a position's score for the side to move is the maximum over its moves of the *negated* score of the position after the move (which is from the opponent's point of view):
+
+$$\operatorname{score}(p) = \max_{m\ \in\ \text{moves}(p)} \big( -\operatorname{score}(p \cdot m) \big)$$
+
+where $p \cdot m$ is the position after move $m$, and a position at the depth limit gets its evaluation. Alpha-beta passes a window (α, β) down the tree:
 
 - α is the score the side to move is already sure of from an earlier move; a move that cannot beat α need not be searched exactly.
 - β is the most the opponent will allow; as soon as a move reaches β, the opponent will avoid this position, so the other moves need not be searched: a **cutoff**.
@@ -129,6 +133,12 @@ $$\beta' = \beta + \left\lfloor \frac{|\beta|}{2} \right\rfloor + 50, \qquad \al
 - If the shallow search scores at least $\beta'$, the node returns β at once: a deep search would almost certainly fail high too.
 - If it scores at most $\alpha'$, the node returns α.
 
+For example, with the window (α, β) = (−40, 100):
+
+$$\beta' = 100 + 50 + 50 = 200, \qquad \alpha' = -40 - 20 - 50 = -110$$
+
+A 4-ply test search (`look` = 3) that scores 200 or more makes the node return 100, and one that scores −110 or less makes it return −40; anything in between means the full search is needed. The wider the window, the wider the margins.
+
 The test is skipped when |β| or |α| is 32 000 or more, near won and lost scores. This is Stello's version of the idea behind **ProbCut** (Buro): a shallow search predicts the deep one. ProbCut computes the margin from statistics of shallow against deep results; Stello uses a fixed margin of half the bound plus 50, from the C++ `SELEXT` code. It can miss a good move, but it lets the search go much deeper in the same time.
 
 ### Game over inside the search
@@ -163,7 +173,18 @@ The midgame test position after `f5 d6 c3 d3 c4 f4 c5 b3 c2 e6`, Black to move, 
 | 9 | c6 | 13 | 147 302 | 103 055 | 204 ms |
 | 10 | c6 | 70 | 675 903 | 437 509 | 361 ms |
 
-The counters and times are totals since the start of the search. Two things are typical:
+The counters and times are totals since the start of the search. The best move's score at each depth:
+
+```mermaid
+%%{init: {"themeVariables": {"xyChart": {"plotColorPalette": "#1e7a3c"}}}}%%
+xychart-beta
+    title "Score of the best move by depth"
+    x-axis "Depth (plies)" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    y-axis "Score (evaluation units)" -100 --> 120
+    line [-83, 61, -2, 103, 0, 113, 22, 88, 13, 70]
+```
+
+Two things are typical:
 
 - Each iteration costs a few times more than the previous one, so the earlier iterations are cheap.
 - The score goes up and down between odd and even depths: at odd depths the leaves have White to move, at even depths Black, and the evaluation depends on who is to move (mobility). This is the *odd-even effect*; comparing only odd or only even depths gives a steadier picture.

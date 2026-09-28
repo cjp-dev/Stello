@@ -6,26 +6,31 @@ This chapter shows the big picture: the projects, the main types, and what happe
 
 ## The projects
 
-The solution [Stello.Net.slnx](../../Stello.Net/Stello.Net.slnx) has four projects. The arrows show which project uses which.
+The solution [Stello.Net.slnx](../../Stello.Net/Stello.Net.slnx) has six projects. The arrows show which project uses which; the apps and the app tests also use the engine's types directly.
 
 ```mermaid
 flowchart LR
-    App["Stello.Net<br/>WPF app<br/>net10.0-windows"] --> Engine["Stello.Engine<br/>the brain<br/>net10.0"]
-    AppTests["Stello.Net.Tests<br/>view-model tests"] --> App
-    AppTests --> Engine
+    Wpf["Stello.Net<br/>WPF app<br/>net10.0-windows"] --> Shared["Stello.App<br/>view models and services<br/>net10.0"]
+    Web["Stello.Web<br/>Blazor WebAssembly app<br/>net10.0"] --> Shared
+    Shared --> Engine["Stello.Engine<br/>the brain<br/>net10.0"]
+    AppTests["Stello.Net.Tests<br/>view-model tests"] --> Wpf
+    AppTests --> Shared
     EngineTests["Stello.Engine.Tests<br/>engine tests"] --> Engine
-    Book[("Stello C++/OPENING<br/>master opening book")] -. "copied as Data/OPENING" .-> App
+    Book[("Stello C++/OPENING<br/>master opening book")] -. "copied as Data/OPENING" .-> Wpf
     Book -. "copied as Data/OPENING" .-> EngineTests
+    Book -. "copied as wwwroot/data/OPENING.bin" .-> Web
 ```
 
 | Project | Contents |
 |---|---|
 | [Stello.Engine](../../Stello.Net/Stello.Engine) | Rules, game record, evaluation, search, opening book, book learning. No UI code and no dependencies outside .NET. |
-| [Stello.Net](../../Stello.Net/Stello.Net) | The WPF user interface, built with MVVM ([CommunityToolkit.Mvvm](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/)). It runs the engine on a background task. |
+| [Stello.App](../../Stello.Net/Stello.App) | The view models ([CommunityToolkit.Mvvm](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/)), the settings, and the interfaces for the engine host, dialogs, files and storage, shared by both apps (chapter 13). |
+| [Stello.Net](../../Stello.Net/Stello.Net) | The WPF desktop app: windows, dialogs, and files in `%AppData%\Stello`. It runs the engine on a background task. |
+| [Stello.Web](../../Stello.Net/Stello.Web) | The web app (Blazor WebAssembly): the same game in the browser. It runs the engine in a Web Worker. |
 | [Stello.Engine.Tests](../../Stello.Net/Stello.Engine.Tests) | xUnit tests of the engine: perft, evaluation, search, endgame (FFO positions), book, book learning. |
 | [Stello.Net.Tests](../../Stello.Net/Stello.Net.Tests) | xUnit tests of the view models, with fake dialogs, settings and book storage. |
 
-The opening book file is not copied into the repository twice: both projects link to the master file [Stello C++/OPENING](../../Stello%20C++/OPENING) and copy it to their output folder as `Data/OPENING`.
+The opening book file is not copied into the repository twice: the WPF app and the engine tests link to the master file [Stello C++/OPENING](../../Stello%20C++/OPENING) and copy it to their output folder as `Data/OPENING`, and the web app copies it to `wwwroot/data/OPENING.bin` when it is built.
 
 ## The engine at a glance
 
@@ -178,7 +183,7 @@ classDiagram
 
 ## The life of one computer move
 
-This sequence shows what happens from the moment it is the computer's turn until its move is on the board. The view model runs on the UI thread; `ComputerPlayer` and `SearchEngine` run on a background task, so the window stays responsive while the computer thinks.
+This sequence shows what happens from the moment it is the computer's turn until its move is on the board. The view model runs on the UI thread; `ComputerPlayer` and `SearchEngine` run on a background task, so the window stays responsive while the computer thinks. This is the desktop app, where `LocalEngineHost` starts the task; in the web app the same steps run in a Web Worker (chapter 13).
 
 ```mermaid
 sequenceDiagram
@@ -233,7 +238,7 @@ Two tokens control a running search:
 | Edge tables | 8 tables of $3^8 = 6561$ values |
 | Hash tables | 2 tables (midgame, endgame), each $2^{19}$ slots of 2 entries of 24 bytes, so 24 MiB each |
 | Master opening book | 23 389 nodes |
-| Engine tests / app tests | 160 / 58 |
+| Engine tests / app tests | 160 / 60 |
 
 ---
 

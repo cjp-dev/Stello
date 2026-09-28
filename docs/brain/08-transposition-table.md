@@ -102,6 +102,14 @@ Midgame values (evaluation units, depending on the search depth) and endgame val
 
 The tiger opening `f5 d6 c3 d3 c4` and the order `f5 d6 c4 d3 c3` reach the same position, White to move:
 
+```mermaid
+flowchart LR
+    S["f5 d6"] -- "c3" --> A["f5 d6 c3"] -- "d3" --> B["f5 d6 c3 d3"] -- "c4" --> T["The same position<br/>White to move<br/>(one slot, one entry)"]
+    S -- "c4" --> C["f5 d6 c4"] -- "d3" --> D["f5 d6 c4 d3"] -- "c3" --> T
+```
+
+The slot comes from the two bitboards, not from the moves, so both paths lead to the same slot and entry:
+
 ```text
 --------
 --------

@@ -30,6 +30,17 @@ There is always one more position than moves: position *i* is the position befor
 
 For example, after "f5 d6 c3" and one Undo:
 
+```mermaid
+flowchart LR
+    P0["0: start<br/>Black to move"] -- "f5" --> P1["1: after f5<br/>White to move"]
+    P1 -- "d6" --> P2["2: after d6<br/>Black to move<br/>← Ply"]
+    P2 -. "c3 (undone)" .-> P3["3: after c3<br/>White to move"]
+    classDef current stroke-width:3px
+    classDef undone stroke-dasharray:4 3
+    class P2 current
+    class P3 undone
+```
+
 | Index | Position (side to move) | Move from it |
 |---|---|---|
 | 0 | start (Black) | f5 |

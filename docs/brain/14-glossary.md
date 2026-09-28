@@ -20,6 +20,7 @@ The terms used in these documents. The last column gives the chapter that explai
 | Edge index | The eight squares of an edge read as a base-3 number (0 to 6560); it selects the entry in the edge tables. | [05](05-evaluation.md#the-edge-index) |
 | Edge tables | Eight precomputed tables with one value per possible edge: its worth and the best edge moves. | [05](05-evaluation.md#the-edge-tables) |
 | Empties | The number of empty squares; the endgame code uses it instead of a depth. | [09](09-endgame-solver.md#which-routine-at-how-many-empty-squares) |
+| Engine host | `IEngineHost`: runs the searches and owns the book for the view model; in-process in the desktop app, in a Web Worker in the browser. | [13](13-app-integration.md#services) |
 | Enhanced transposition cutoff | Before searching the moves of a position, looking up the positions after each move in the hash table to find a cutoff at once. | [09](09-endgame-solver.md#solve-7-or-more-empty-squares) |
 | Evaluation | A heuristic score of a position for the side to move, used at the leaves of the midgame search. | [05](05-evaluation.md) |
 | Exact score | A search result that is the true value of the position, not just a bound. | [08](08-transposition-table.md#data-structures) |
@@ -55,6 +56,7 @@ The terms used in these documents. The last column gives the chapter that explai
 | Stable disc | A disc that can never be flipped again. | [05](05-evaluation.md#corner-stability-t) |
 | Transposition | The same position reached by different move orders. | [08](08-transposition-table.md#a-transposition) |
 | Transposition table | A table that remembers search results for positions, so a transposition is not searched twice. | [08](08-transposition-table.md) |
+| Web Worker | A browser thread without a page; the web app runs the engine in one so the page stays responsive. | [13](13-app-integration.md#the-engine-in-the-browser) |
 | Win/loss/draw pass | The first endgame pass, which only finds out whether the side to move wins, loses or draws; it is much faster than the exact score. | [09](09-endgame-solver.md#two-passes) |
 | Window | The pair (alpha, beta); only scores between them need to be exact. | [07](07-midgame-search.md#negamax-with-alpha-beta) |
 | X-square | The square diagonally next to a corner: b2, g2, b7, g7. | [05](05-evaluation.md#the-four-edges) |

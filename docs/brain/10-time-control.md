@@ -59,7 +59,19 @@ t &= T / n \qquad \text{(or } T \text{ if } n = 0\text{)} \\
 \end{aligned}
 $$
 
-  Early in the game $64 - s$ is small, so a move gets about a third of its average share $t$; near the end it gets almost all of it. This saves time for the middle and end of the game, where the search matters most. The 6 is `FastEndgameEmpties` (C++ `lookahead − 2` at the default level). If the clock is already below zero, 10 ms is used.
+  Early in the game $64 - s$ is small, so a move gets about a third of its average share $t$; near the end it gets almost all of it. This saves time for the middle and end of the game, where the search matters most:
+
+```mermaid
+%%{init: {"themeVariables": {"xyChart": {"plotColorPalette": "#1e7a3c, #d98c1a"}}}}%%
+xychart-beta
+    title "Time for one move, in % of the average share t"
+    x-axis "Empty squares" [60, 50, 40, 30, 20, 10]
+    y-axis "% of t" 0 --> 100
+    line [37, 48, 60, 72, 84, 95]
+    line [24, 32, 40, 48, 56, 64]
+```
+
+  The green line is the hard limit, $\frac{1}{4} + \frac{3\,(64 - s)}{256}$ of $t$; the orange line is the soft limit, two thirds of it. The 6 is `FastEndgameEmpties` (C++ `lookahead − 2` at the default level). If the clock is already below zero, 10 ms is used.
 - **Fixed depth and solve:** no time limit.
 
 ### The budget for the endgame
