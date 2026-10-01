@@ -17,7 +17,7 @@ public sealed partial class BrainDocs(HttpClient http)
     private const string Route = "docs";
 
     // Links from docs/brain to other files in the repository open them on GitHub.
-    private static readonly Uri RepositoryFolder = new("https://github.com/cjpkmd/Stello/blob/main/docs/brain/");
+    private static readonly Uri RepositoryFolder = new("https://github.com/cjp-dev/Stello/blob/main/docs/brain/");
 
     // GitHub heading ids, so links such as "05-evaluation.md#a-midgame-position" work; the docs have no raw HTML.
     private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
