@@ -4,13 +4,13 @@
 
 ## In short
 
-The opening book can grow and improve itself. **Adding a game** stores its moves in the tree, with a value that says who won. **Evaluating the book** searches every new leaf of the tree, and for each position it also searches the best move that is *not* yet in the book and adds it (**dropout expansion**). **Minimax** then backs the values up the tree and sorts every list of replies best first, so the book plays its best known move. **Self-play** repeats all of this: the engine plays games against itself with the book, adds them, and evaluates again, until it is stopped. This is a port of the C++ menu items "Flet spil", "Minmaxlib" and "Lær spil".
+The opening book can grow and improve itself. **Adding a game** stores its moves in the book, with a value that says who won. **Evaluating the book** searches every new leaf (a book move whose position is not in the book), and for each position it also searches the best move that is *not* yet in the book and adds it (**dropout expansion**). **Minimax** then backs the values up through the book and sorts the moves of every position best first, so the book plays its best known move. **Self-play** repeats all of this: the engine plays games against itself with the book, adds them, and evaluates again, until it is stopped. This is a port of the C++ menu items "Flet spil", "Minmaxlib" and "Lær spil".
 
 ## Data structures
 
-### Values and flags
+### Values, origin and effort
 
-- The **value** of a node is the value of its move **for the player who makes it**. The value of a list of replies, for the player to move, is the highest value in the list.
+- The **value** of a book move is the value of the move **for the player who makes it**. The value of a position, for the player to move, is the highest value of its book moves.
 - Values of different origin share one scale:
 
 | Origin | Value |
@@ -18,17 +18,19 @@ The opening book can grow and improve itself. **Adding a game** stores its moves
 | A move in an added game | +32 665 for the winner's moves, −32 665 for the loser's, 0 in a draw (`WinValue`) |
 | A search with a heuristic score | The evaluation score (chapter 05) |
 | A search that solved the position | ±(32 600 + disc difference), 0 for a draw |
-| An interior node | −(value of the best reply), backed up by minimax |
+| A move to a position that is in the book | −(value of the best move there), backed up by minimax |
 
-- The **flags** (`BookFlags`) record what is known about a leaf:
+- Each book move also records its **origin** and **effort** (chapter 11):
 
-| Flag | Meaning |
+| Origin | Set by |
 |---|---|
-| `Calculated` | The value comes from a search of this leaf; it is not searched again |
-| `Exact` | That search solved the position exactly |
-| `Inexact` | That search solved it for win/loss/draw only |
+| `Unknown` | `AddGame`, for a new move (the game value) |
+| `Heuristic`, `WinLossDraw`, `Exact` | A search of the position after the move, from the kind of its result; also a finished game (`Exact`) |
+| `BackedUp` | Evaluation and minimax, when the position after the move is in the book |
 
-The flags are saved in the file, so a long learning run can be stopped and continued later.
+- A move with a search origin (`IsSearched`, C++ `CALCULATED`) is not searched again. Its effort records the learning's search limit (fixed depth or time per move), the depth the search reached and the engine version.
+
+Origin and effort are saved in the file, so a long learning run can be stopped and continued later.
 
 ### `BookLearner`
 
@@ -51,7 +53,6 @@ Two small public types go with it:
 |---|---|---|
 | `WinValue` | 32 665 | The value of a move in an added game |
 | `MaxGameDepth` | 56 | Moves after ply 56 are not added |
-| `MinimaxRounds` | 10 | Rounds of backing up, so values also travel through transpositions |
 | `CheckpointInterval` | 10 | Save the book after every 10 searched positions |
 
 ## Algorithm
@@ -62,37 +63,31 @@ Two small public types go with it:
 
 ```mermaid
 flowchart TD
-    A["AddGame(moves, result)"] --> Sym["Start with the symmetry that maps<br/>Black's first move to d3, and the root list"]
-    Sym --> Ply["Next move (up to ply 56):<br/>play it (throws if illegal)"]
-    Ply --> Known{"Is the new position<br/>already in the book (any symmetry)?"}
-    Known -- "yes" --> Cont["Continue from that position's replies<br/>and its symmetry"]
-    Known -- "no" --> Node{"Is the move (in the book's frame)<br/>already in the current list?"}
-    Node -- "yes" --> Down["Continue with its replies"]
-    Node -- "no" --> Add["Add a node with the value for the mover<br/>(+32665, −32665 or 0)"]
-    Add --> Down
-    Cont --> More{"More moves?"}
-    Down --> More
+    A["AddGame(moves, result)"] --> First["Play Black's first move"]
+    First --> Ply["Next move (up to ply 56):<br/>play it (throws if illegal)"]
+    Ply --> Pos["Find the position before the move<br/>(canonical form), or add it"]
+    Pos --> Known{"Is the move (in the book's frame)<br/>already one of its book moves?"}
+    Known -- "no" --> Add["Add it with the value for the mover<br/>(+32665, −32665 or 0), origin Unknown"]
+    Known -- "yes" --> More
+    Add --> More{"More moves?"}
     More -- "yes" --> Ply
-    More -- "no" --> Rebuild["Rebuild the position index"]
 ```
 
-- A pass is stored as move 0, so the values keep alternating between the two players.
-- Nodes that already exist keep their values: a game only adds new moves.
-- Because the position index is checked at every ply, a game that transposes into a known line continues there instead of creating a second copy of the same positions.
+- A pass is stored as a pass move, so the values keep alternating between the two players.
+- Book moves that already exist keep their values: a game only adds new moves.
+- Positions are found by their canonical form, so a game that reaches a known position by another move order, or in another frame, continues there instead of creating a second copy. The move that led there is added to the position it was played in, so the book knows both move orders.
 
 ### Evaluating the book: `EvaluatePositions`
 
-`EvaluatePositions` walks the whole tree from the position after d3 (C++ `minmaxlib`). For each list of replies:
+`EvaluatePositions` walks every position of the book from the position after d3 (C++ `minmaxlib`), each position once. For each position:
 
-1. Replies that are not legal moves in the position are **removed**.
-2. For each reply:
-   - with replies of its own: recurse, and take the negated best value of the child list;
-   - a leaf with `Calculated`: keep its value;
-   - a leaf whose position is in the book through another line (a transposition): take the negated value of the book's reply there;
-   - otherwise: **search** the position after the move and store the value and the flags.
-3. **Dropout expansion.** If no reply in the list had `Calculated` when the list was reached, the engine searches the position once more with only the moves that are *not* in the book (`onlyMoves`, chapter 07), and adds the best one as a new node with its value and `Calculated`.
+1. For each book move:
+   - if the position after it is in the book: evaluate that position first, and take the negated value of its best move (`BackedUp`);
+   - a move with a search origin: keep its value;
+   - otherwise: **search** the position after the move and store the value, origin and effort.
+2. **Dropout expansion.** If no book move had a search origin when the position was reached, the engine searches the position once more with only the moves that are *not* in the book (`onlyMoves`, chapter 07), and adds the best one as a new book move with its value, origin and effort.
 
-Step 3 is how the book grows: every position in the book gets at least one searched alternative, so the book knows whether the move it has is really the best one. A list gets its dropout move on the first evaluation; while it has a calculated leaf, no more moves are added. Interior nodes and transposition leaves get the flags `None`, so a list whose calculated leaf later gets replies (from an added game) gets a new dropout move.
+Step 2 is how the book grows: every position in the book gets at least one searched alternative, so the book knows whether the move it has is really the best one. A position gets its dropout move on the first evaluation; while it has a searched move, no more moves are added. A searched move whose position later gets book moves (from an added game) becomes `BackedUp`, so the position gets a new dropout move.
 
 Each search counts as one evaluated position. After every 10 positions the checkpoint callback saves the book, so hours of work are not lost if the program is closed. Progress is reported after every search, and cancellation stops the current search.
 
@@ -100,8 +95,8 @@ Each search counts as one evaluated position. After every 10 positions the check
 
 `Minimax` (C++ `minmax_lib` and `sort_lib`):
 
-1. **Back up** the values 10 times: every interior node gets −(best value of its replies); a leaf whose position is also in the book elsewhere gets the value of the book's reply there. Repeating it lets values travel through transpositions, where one line's leaf is another line's interior node.
-2. **Sort** every list of replies by value, best first. The sort is stable, so equal values keep their order.
+1. **Back up** the values: every book move whose position is in the book gets −(best value in that position). Each position is backed up once, after all the positions below it, so one pass is enough, also through transpositions (C++ needed ten rounds).
+2. **Sort** the moves of every position by value, best first. The sort is stable, so equal values keep their order.
 
 Because `TryGetMove` plays the first legal reply (chapter 11), the sorted book plays its best known move.
 
@@ -144,29 +139,33 @@ Starting from `OpeningBook.CreateEmpty()`, with `SearchLimits.FixedDepth(4)`: th
 
 ![Three trees. After AddGame the four moves have values ±32665. After EvaluatePositions the leaf e6 and four dropout moves (e3 at the root, e6 after c5, e3 after f6, d6 after f5) are searched and the values are backed up, c5 −100 and e3 17 at the root. After minimax and sorting, e3 comes first at the root and e6 before f6 after c5.](images/book-minimax-example.svg)
 
-- **AddGame** creates 4 nodes with ±32 665.
-- **EvaluatePositions** searches 5 positions: the leaf e6, and one dropout move in each of the four lists (e3 as White's reply to d3, e6 after c5, e3 after f6, d6 after f5). The book now has 8 nodes, and the values are backed up: the game move c5 is worth −100 for White, the new move e3 +17.
-- **Minimax** sorts the lists: the book now answers d3 with e3, and after d3 c5 it plays e6 (100) instead of the game move f6 (−54).
+- **AddGame** creates 4 book moves with ±32 665.
+- **EvaluatePositions** searches 5 positions: the leaf e6, and one dropout move in each of the four positions (e3 as White's reply to d3, e6 after c5, e3 after f6, d6 after f5). The book now has 8 book moves, and the values are backed up: the game move c5 is worth −100 for White, the new move e3 +17.
+- **Minimax** sorts the moves: the book now answers d3 with e3, and after d3 c5 it plays e6 (100) instead of the game move f6 (−54).
 
-Adding the same game in another frame afterwards, `f5 d6 c3 d3 c4` (the tiger after f5), adds no nodes: the book still has 8.
+Adding the same game in another frame afterwards, `f5 d6 c3 d3 c4` (the tiger after f5), adds no moves: the book still has 8. The test `Learning_WorkedExampleOfChapter12` checks these numbers.
 
 ## Design notes
 
-- **A port of the C++ learning.** The node values, flags, file layout, dropout expansion, removal of illegal nodes, 10 minimax rounds, stable sorting and saving every 10 positions work as in C++ `Book.cpp`.
-- **Transpositions everywhere.** Adding a game, evaluating and minimax all use the position index with the four symmetries (chapter 11) instead of the C++ `convop`/`getlibpos`, so every transposition is found.
-- **Bugs fixed.** C++ stored a solved draw as −32 600 (a loss); C# stores 0. C++ self-play took the result from the last *midgame* value even when the endgame had been solved; C# uses the exact score or the final board. C++ wrote `flag &= !CALCULATED`, which clears all flags; C# writes `Flag = None`, which is what the C++ line does.
+- **A port of the C++ learning.** The values, dropout expansion, stable sorting and saving every 10 positions work as in C++ `Book.cpp`. The flags became origin and effort (chapter 11).
+- **Positions instead of lines.** The book stores each position once (chapter 11), so evaluation searches a transposed position once, and minimax backs up in one pass instead of ten rounds. C++ (and the first C# version) did not add the move that led into a known position by another move order; now it is added, so back-up also reaches that move order.
+- **No illegal moves to remove.** C++ removed book moves that were not legal while it evaluated; the files are now checked when they are read, and games when they are added, so the book never holds an illegal move.
+- **Bugs fixed.** C++ stored a solved draw as −32 600 (a loss); C# stores 0. C++ self-play took the result from the last *midgame* value even when the endgame had been solved; C# uses the exact score or the final board.
 - **Usable interactively.** C++ self-play ran forever on the UI thread and the program had to be killed; C# runs in the background and stops on request.
-- **An illegal game throws.** `AddGame` checks every move and throws an `ArgumentException` for an illegal one; the moves before it have then already been added, but the index is not rebuilt until the next change. The app only adds games it has played itself, which are always legal.
+- **An illegal game throws.** `AddGame` checks every move and throws an `ArgumentException` for an illegal one; the moves before it have then already been added. The app only adds games it has played itself, which are always legal.
 - **Not ported.** `extend_lib` (not reachable from the Windows menus) and `Mergelib.cpp` (merging a black and a white book, not in the C++ build).
 
-See [Stello porting documentation.md](../../Stello%20porting%20documentation.md), phase 7.
+See [Stello porting documentation.md](../../Stello%20porting%20documentation.md), phases 7 and 10.
 
 ## Where in the code
 
 | File | Main members |
 |---|---|
-| [BookLearner.cs](../../Stello.Net/Stello.Engine/BookLearner.cs) | `AddGame`, `EvaluatePositions`, `EvaluateReplies`, `Minimax`, `BackUp`, `Sort`, `PlayGame`, `SelfPlay`, `Learn`, `SearchValue`, `Search`, `ValueFor` |
-| [OpeningBook.cs](../../Stello.Net/Stello.Engine/OpeningBook.cs) | `CreateEmpty`, `Rebuild`, `TryFindReplies` |
+| [BookLearner.cs](../../Stello.Net/Stello.Engine/BookLearner.cs) | `AddGame`, `EvaluatePositions`, `EvaluateReplies`, `Minimax`, `PlayGame`, `SelfPlay`, `Learn`, `Searched`, `ValueFor` |
+| [BookSearch.cs](../../Stello.Net/Stello.Engine/BookSearch.cs) | `PositionValue` (C++ `getvalue`), `Search` (shared with the book tool, chapter 16) |
+| [BookMinimax.cs](../../Stello.Net/Stello.Engine/BookMinimax.cs) | `Run`, `BackUp`, `Sort` (shared with the book tool) |
+| [OpeningBook.cs](../../Stello.Net/Stello.Engine/OpeningBook.cs) | `CreateEmpty`, `GetOrAddReplies`, `TryGetReplies`, `Canonical`, `Transform` |
+| [BookEntry.cs](../../Stello.Net/Stello.Engine/BookEntry.cs) | `BookEntry.Set`, `IsSearched`, `BookEffort.For` |
 | [MainViewModel.cs](../../Stello.Net/Stello.App/ViewModels/MainViewModel.cs) | `AddGameToBook`, `EvaluateBook`, `SelfPlay`, `StopLearning`, `LearnAsync` |
 | [LocalEngineHost.cs](../../Stello.Net/Stello.App/Services/LocalEngineHost.cs) | `AddGameToBookAsync`, `LearnAsync`, `CreateLearner` |
 | [FileBookStore.cs](../../Stello.Net/Stello.Net/Services/FileBookStore.cs) | `Save`, `AppendSelfPlayLog` |
@@ -177,12 +176,13 @@ See [Stello porting documentation.md](../../Stello%20porting%20documentation.md)
 
 - [BookLearnerTests.cs](../../Stello.Net/Stello.Engine.Tests/BookLearnerTests.cs):
   - a game is stored normalised to d3, and the book then suggests the line for all symmetric move orders;
-  - known, repeated and symmetric games add no nodes, also into the master book;
-  - a draw gives 0 values; a pass is stored as move 0; an illegal game throws;
-  - `EvaluatePositions` searches the leaf and adds dropout moves, a second run searches nothing new, and illegal moves are removed;
-  - `Minimax` backs up the values and sorts best first;
+  - known, repeated and symmetric games add no moves, also into the master book; a game that transposes into a known position joins it;
+  - a draw gives 0 values; a pass is stored; an illegal game throws;
+  - `EvaluatePositions` searches the leaf and adds dropout moves with origin and effort, a second run searches nothing new, and a transposed position is searched once;
+  - `Minimax` backs up the values and sorts best first, also through a transposition to both move orders;
+  - the worked example above;
   - `PlayGame` gives a legal game; `SelfPlay` runs until cancelled and saves checkpoints;
-  - the flags survive saving and loading;
+  - origins and efforts survive saving and loading;
   - `onlyMoves` searches even a single move and must contain a legal move.
 - [MainViewModelTests.cs](../../Stello.Net/Stello.Net.Tests/MainViewModelTests.cs): adding a finished and an unfinished game, cancelling the questions, a game that is too short, Evaluate Book, and self-play with Stop Learning.
 

@@ -2,7 +2,7 @@ namespace Stello.Engine.Tests;
 
 public class ComputerPlayerTests
 {
-    private static readonly OpeningBook Book = OpeningBook.Load(Path.Combine(AppContext.BaseDirectory, "Data", "OPENING"));
+    private static readonly OpeningBook Book = OpeningBook.Load(BookTestData.BinaryPath);
 
     [Fact]
     public void ChooseMove_UsesTheBookFirst()

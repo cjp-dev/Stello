@@ -12,13 +12,15 @@ public class BookLearnerTests
 
         Learner(book).AddGame(Moves("f5 d6 c3"), GameResult.BlackWins);
 
-        BookNode reply = Assert.Single(book.Root);
-        Assert.Equal(Square.Parse("c5").ToLegacy(), reply.Move);
-        Assert.Equal(-Win, reply.Value);
-        BookNode answer = Assert.Single(reply.Children);
-        Assert.Equal(Square.Parse("f6").ToLegacy(), answer.Move);
-        Assert.Equal(Win, answer.Value);
+        (Move reply, BookEntry replyEntry) = Assert.Single(BookTestData.Replies(book, "d3"));
+        Assert.Equal("c5", reply.ToString());
+        Assert.Equal(-Win, replyEntry.Value);
+        Assert.Equal(BookOrigin.Unknown, replyEntry.Origin);
+        (Move answer, BookEntry answerEntry) = Assert.Single(BookTestData.Replies(book, "d3 c5"));
+        Assert.Equal("f6", answer.ToString());
+        Assert.Equal(Win, answerEntry.Value);
         Assert.Equal(2, book.NodeCount);
+        Assert.Equal(2, book.PositionCount);
     }
 
     [Theory]
@@ -47,7 +49,23 @@ public class BookLearnerTests
         learner.AddGame(Moves("d3 c5 f6"), GameResult.BlackWins);
 
         Assert.Equal(2, book.NodeCount);
-        Assert.Equal(-Win, book.Root[0].Value);
+        Assert.Equal(-Win, BookTestData.Replies(book, "d3")[0].Entry.Value);
+    }
+
+    [Fact]
+    public void AddGame_TranspositionJoinsTheKnownPosition()
+    {
+        (string first, string second, string next) = Transposition();
+        OpeningBook book = OpeningBook.CreateEmpty();
+        BookLearner learner = Learner(book);
+
+        learner.AddGame(Moves($"{first} {next}"), GameResult.BlackWins);
+        BookEntry entry = Assert.Single(BookTestData.Replies(book, first)).Entry;
+        short value = entry.Value;
+        learner.AddGame(Moves($"{second} {next}"), GameResult.WhiteWins);
+
+        Assert.Same(entry, Assert.Single(BookTestData.Replies(book, second)).Entry);
+        Assert.Equal(value, entry.Value);
     }
 
     [Fact]
@@ -57,12 +75,12 @@ public class BookLearnerTests
 
         Learner(book).AddGame(Moves("d3 c5 f6"), GameResult.Draw);
 
-        Assert.Equal(0, book.Root[0].Value);
-        Assert.Equal(0, book.Root[0].Children[0].Value);
+        Assert.Equal(0, BookTestData.Replies(book, "d3")[0].Entry.Value);
+        Assert.Equal(0, BookTestData.Replies(book, "d3 c5")[0].Entry.Value);
     }
 
     [Fact]
-    public void AddGame_StoresPassesAsMoveZero()
+    public void AddGame_StoresPasses()
     {
         Game game = TestGames.Play(TestGames.BlackMustPass);
         game.Pass();
@@ -72,13 +90,8 @@ public class BookLearnerTests
         Learner(book).AddGame(game.PlayedMoves.ToList(), GameResult.WhiteWins);
 
         Assert.Equal(game.Ply - 1, book.NodeCount);
-        BookNode node = book.Root[0];
-        while (node.Move != 0)
-        {
-            node = Assert.Single(node.Children);
-        }
-
-        Assert.Equal(0, node.Move);
+        Board beforePass = TestGames.Play(TestGames.BlackMustPass).Board;
+        Assert.True(Assert.Single(BookTestData.Replies(book, beforePass, Player.Black)).Move.IsPass);
     }
 
     [Fact]
@@ -92,7 +105,7 @@ public class BookLearnerTests
     [Fact]
     public void AddGame_KnownLineInTheMasterBookAddsNoNodes()
     {
-        OpeningBook book = OpeningBook.Load(Path.Combine(AppContext.BaseDirectory, "Data", "OPENING"));
+        OpeningBook book = OpeningBook.Load(BookTestData.BinaryPath);
         int nodes = book.NodeCount;
 
         Learner(book).AddGame(Moves("f5 d6"), GameResult.BlackWins);
@@ -112,10 +125,13 @@ public class BookLearnerTests
         // f6 is searched, then the best black move except f6 and the best white move except c5 are added.
         Assert.Equal(3, learner.PositionsEvaluated);
         Assert.Equal(4, book.NodeCount);
-        Assert.Equal(2, book.Root.Count);
-        Assert.Equal(2, book.Root[0].Children.Count);
-        Assert.All(Leaves(book.Root), leaf => Assert.True(leaf.Flag.HasFlag(BookFlags.Calculated)));
-        Assert.NotEqual(Win, book.Root[0].Children[0].Value);
+        Assert.Equal(2, BookTestData.Replies(book, "d3").Count);
+        List<(Move Move, BookEntry Entry)> afterC5 = BookTestData.Replies(book, "d3 c5");
+        Assert.Equal(2, afterC5.Count);
+        Assert.All(afterC5, reply => Assert.True(reply.Entry.IsSearched));
+        Assert.All(afterC5, reply => Assert.Equal(new BookEffort(EffortKind.Depth, 1, 1, OpeningBook.EngineVersion), reply.Entry.Effort));
+        Assert.Equal(BookOrigin.BackedUp, BookTestData.Replies(book, "d3")[0].Entry.Origin);
+        Assert.NotEqual(Win, afterC5[0].Entry.Value);
 
         learner.EvaluatePositions();
 
@@ -124,14 +140,21 @@ public class BookLearnerTests
     }
 
     [Fact]
-    public void EvaluatePositions_RemovesIllegalMoves()
+    public void EvaluatePositions_SearchesATransposedPositionOnce()
     {
-        byte[] data = Bytes([(Square.Parse("a1").ToLegacy(), 0), (Square.Parse("c5").ToLegacy(), 0)]);
-        OpeningBook book = OpeningBook.Load(new MemoryStream(data));
+        (string first, string second, string next) = Transposition();
+        OpeningBook book = OpeningBook.CreateEmpty();
+        BookLearner learner = Learner(book);
+        learner.AddGame(Moves($"{first} {next}"), GameResult.BlackWins);
+        learner.EvaluatePositions();
+        int searched = learner.PositionsEvaluated;
 
-        Learner(book).EvaluatePositions();
+        learner.AddGame(Moves($"{second} {next}"), GameResult.BlackWins);
+        learner.EvaluatePositions();
 
-        Assert.DoesNotContain(book.Root, n => n.Move == Square.Parse("a1").ToLegacy());
+        // Only the positions on the new move order before the shared position are new.
+        int newPositions = Moves(second).Count - 1 - Moves(first).Zip(Moves(second)).TakeWhile(p => p.First == p.Second).Count();
+        Assert.Equal(searched + newPositions, learner.PositionsEvaluated);
     }
 
     [Fact]
@@ -141,17 +164,60 @@ public class BookLearnerTests
         BookLearner learner = Learner(book);
         learner.AddGame(Moves("d3 c5 f6"), GameResult.BlackWins);
         learner.AddGame(Moves("d3 e3"), GameResult.WhiteWins);
-        BookNode c5 = book.Root.Single(n => n.Move == Square.Parse("c5").ToLegacy());
-        BookNode e3 = book.Root.Single(n => n.Move == Square.Parse("e3").ToLegacy());
-        c5.Children[0].Value = 100;
-        e3.Value = 20;
+        BookEntry c5 = Entry(book, "d3", "c5");
+        BookEntry e3 = Entry(book, "d3", "e3");
+        Entry(book, "d3 c5", "f6").Set(100, BookOrigin.Heuristic);
+        e3.Set(20, BookOrigin.Heuristic);
 
         learner.Minimax();
 
         Assert.Equal(-100, c5.Value);
-        Assert.Equal([e3, c5], book.Root);
+        Assert.Equal(BookOrigin.BackedUp, c5.Origin);
+        Assert.Equal([e3, c5], BookTestData.Replies(book, "d3").Select(r => r.Entry));
         Assert.True(book.TryGetMove(TestGames.Play("d3").Board, Player.White, new Random(0), out BookMove move));
         Assert.Equal(Square.Parse("e3"), move.Square);
+    }
+
+    [Fact]
+    public void Minimax_BacksUpThroughATranspositionToBothMoveOrders()
+    {
+        (string first, string second, string next) = Transposition();
+        OpeningBook book = OpeningBook.CreateEmpty();
+        BookLearner learner = Learner(book);
+        learner.AddGame(Moves($"{first} {next}"), GameResult.BlackWins);
+        learner.AddGame(Moves($"{second} {next}"), GameResult.BlackWins);
+        Entry(book, first, next).Set(50, BookOrigin.Heuristic);
+
+        learner.Minimax();
+
+        string[] firstMoves = first.Split(' ');
+        string[] secondMoves = second.Split(' ');
+        Assert.Equal(-50, Entry(book, string.Join(' ', firstMoves[..^1]), firstMoves[^1]).Value);
+        Assert.Equal(-50, Entry(book, string.Join(' ', secondMoves[..^1]), secondMoves[^1]).Value);
+    }
+
+    [Fact]
+    public void Learning_WorkedExampleOfChapter12()
+    {
+        OpeningBook book = OpeningBook.CreateEmpty();
+        var learner = new BookLearner(book, new SearchEngine(hashBits: 12), SearchLimits.FixedDepth(4), new Random(0));
+        learner.AddGame(Moves("d3 c5 f6 f5 e6"), GameResult.BlackWins);
+        Assert.Equal(4, book.NodeCount);
+
+        learner.EvaluatePositions();
+
+        Assert.Equal(5, learner.PositionsEvaluated);
+        Assert.Equal(8, book.NodeCount);
+        Assert.Equal(-100, Entry(book, "d3", "c5").Value);
+        Assert.Equal(17, Entry(book, "d3", "e3").Value);
+
+        learner.Minimax();
+
+        Assert.Equal(["e3", "c5"], BookTestData.Replies(book, "d3").Select(r => r.Move.ToString()));
+        Assert.Equal([("e6", 100), ("f6", -54)], BookTestData.Replies(book, "d3 c5").Select(r => (r.Move.ToString(), (int)r.Entry.Value)));
+
+        learner.AddGame(Moves("f5 d6 c3 d3 c4"), GameResult.BlackWins);
+        Assert.Equal(8, book.NodeCount);
     }
 
     [Fact]
@@ -188,20 +254,17 @@ public class BookLearnerTests
     }
 
     [Fact]
-    public void Save_KeepsLearnedNodesAndFlags()
+    public void Save_KeepsLearnedMovesWithOriginAndEffort()
     {
         OpeningBook book = OpeningBook.CreateEmpty();
         BookLearner learner = Learner(book);
         learner.AddGame(Moves("d3 c5 f6"), GameResult.BlackWins);
         learner.EvaluatePositions();
-        using var stream = new MemoryStream();
 
-        book.Save(stream);
-        stream.Position = 0;
-        OpeningBook loaded = OpeningBook.Load(stream);
+        OpeningBook loaded = OpeningBook.Load(new MemoryStream(BookTestData.WriteBinary(book)));
 
         Assert.Equal(book.NodeCount, loaded.NodeCount);
-        Assert.Equal(Leaves(book.Root).Select(n => n.Flag), Leaves(loaded.Root).Select(n => n.Flag));
+        Assert.Equal(BookTestData.WriteText(book), BookTestData.WriteText(loaded));
     }
 
     [Fact]
@@ -224,27 +287,9 @@ public class BookLearnerTests
 
     private static BookLearner Learner(OpeningBook book) => new(book, new SearchEngine(hashBits: 12), Quick, new Random(0));
 
-    private static List<Move> Moves(string text) => GameRecordFormat.Parse(text).PlayedMoves.ToList();
+    private static List<Move> Moves(string text) => BookTestData.Moves(text);
 
-    private static IEnumerable<BookNode> Leaves(List<BookNode> replies) =>
-        replies.SelectMany(n => n.Children.Count == 0 ? [n] : Leaves(n.Children));
+    private static BookEntry Entry(OpeningBook book, string moves, string move) => BookTestData.Entry(book, moves, move);
 
-    private static byte[] Bytes((int Move, short Value)[] chain)
-    {
-        using var stream = new MemoryStream();
-        using (var writer = new BinaryWriter(stream))
-        {
-            writer.Write(chain.Length);
-            writer.Write((short)chain.Length);
-            foreach ((int move, short value) in chain)
-            {
-                writer.Write((short)move);
-                writer.Write(value);
-                writer.Write((short)0);
-                writer.Write((short)0);
-            }
-        }
-
-        return stream.ToArray();
-    }
+    private static (string First, string Second, string Next) Transposition() => BookTestData.Transposition();
 }

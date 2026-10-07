@@ -37,7 +37,7 @@ public sealed class LocalStorageBookStore(IJSInProcessRuntime js) : IBookStore
         return Save(stream.ToArray());
     }
 
-    /// <param name="book">The book in the OPENING file format.</param>
+    /// <param name="book">The book in the binary book format (<see cref="OpeningBook.Save(Stream)"/>).</param>
     public bool Save(byte[] book)
     {
         try

@@ -24,6 +24,8 @@
 
   <ItemGroup>
     <None Include="..\..\Stello C++\OPENING" Link="Data\OPENING" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Book\opening-book.txt" Link="Data\opening-book.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Book\opening-book.bin" Link="Data\opening-book.bin" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Data\endgame-c-positions.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

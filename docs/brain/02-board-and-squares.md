@@ -73,7 +73,7 @@ Shifting "right" from column h would land on column a of the next row (h4 is bit
 
 ### Legacy square numbers
 
-The C++ program used a 10 × 10 array with a border ring around the board, and numbered the squares 10 × row + column, both counted from 1. These numbers are still used in two places: the moves in the opening book file (chapter 11) and the tables ported from the C++ evaluation (chapter 05).
+The C++ program used a 10 × 10 array with a border ring around the board, and numbered the squares 10 × row + column, both counted from 1. These numbers are still used in two places: the moves in the C++ opening book file, which is read to import it (chapter 11), and the tables ported from the C++ evaluation (chapter 05).
 
 ![A 10 by 10 grid: a grey border ring with numbers 0 to 99, and the playing squares from 11 (a1) to 88 (h8).](images/board-legacy-numbers.svg)
 
@@ -118,7 +118,7 @@ As bitboards:
 
 `Square.InMask(0x0000_1020_0408_0000)` returns d3, c4, f5, e6: it takes the lowest set bit with `TrailingZeroCount`, then clears it with `mask &= mask - 1`, until the mask is 0.
 
-The four first moves in legacy numbers are d3 = 34, c4 = 43, f5 = 56 and e6 = 65; the opening book uses these numbers.
+The four first moves in legacy numbers are d3 = 34, c4 = 43, f5 = 56 and e6 = 65; the C++ opening book uses these numbers.
 
 ## Design notes
 

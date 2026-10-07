@@ -6,7 +6,7 @@ Stello is an Othello program. Its "brain" is the engine library `Stello.Engine`,
 - **the evaluation**: edge tables, corners, mobility;
 - **the search**: alpha-beta with a hash table, move ordering and selective search;
 - **the endgame solver**: perfect play near the end of the game;
-- **the opening book**: a tree of known openings, which can learn from games.
+- **the opening book**: the known opening positions, which can learn from games.
 
 These documents explain how the parts work and how they fit together. They describe the current C# code in [Stello.Net](../../Stello.Net). How the C++ original was ported is described in [Stello porting documentation.md](../../Stello%20porting%20documentation.md).
 
@@ -49,17 +49,18 @@ The time limit can stop the search at any point; the best move found so far is t
 | 08 | [Transposition table](08-transposition-table.md) | Two-entry slots, bounds, replacement |
 | 09 | [Endgame solver](09-endgame-solver.md) | Win/loss/draw and exact passes, fastest-first, parity, enhanced transposition cutoff |
 | 10 | [Time control](10-time-control.md) | Time modes, time per move, "Move Now" |
-| 11 | [Opening book](11-opening-book.md) | The file format, symmetries, the position index, `BookTracker` |
+| 11 | [Opening book](11-opening-book.md) | Positions in canonical form, the text and binary files, the import of the C++ book, `BookTracker` |
 | 12 | [Book learning](12-book-learning.md) | Adding games, dropout expansion, minimax, self-play |
 | 13 | [App integration](13-app-integration.md) | The game loop, threading, settings, book files |
 | 14 | [Glossary](14-glossary.md) | The terms used in these documents |
 | 15 | [References](15-references.md) | Articles, papers and source code on the internet |
+| 16 | [Book tool](16-book-tool.md) | The console tool for the master book: import, build, verify, statistics, recalculating the leaves, comparing and matching books |
 
 ## Reading paths
 
 - **Everything:** read the chapters in order.
 - **Just the search:** 01, 02, 05, 06, 07, 08, 09.
-- **Just the opening book:** 01, 02 (square numbers), 11, 12.
+- **Just the opening book:** 01, 02 (square numbers), 11, 12, 16.
 - **Tuning the engine:** 05, 06, 07, 08, 09, 10, and phase 8 in [Stello porting documentation.md](../../Stello%20porting%20documentation.md#phase-8--performance-tuning-rounds-1-and-2-paused) for what has already been tried, with measurements, and the remaining ideas.
 - **Changing the app:** 01, 10, 13.
 

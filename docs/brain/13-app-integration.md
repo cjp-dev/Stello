@@ -50,7 +50,7 @@ In the desktop app, `BookLoader` (static) picks the book file at start-up, and `
 | `SelfPlayLogFile` | `%AppData%\Stello\SELFPLAY` | One line per self-play game |
 | `DefaultBookFile` | `Data\OPENING` next to the program | Never; it is the shipped master book |
 
-Settings and the book are written to a temporary file first and then renamed over the old file, so a crash cannot leave half a file. Nothing depends on the current directory.
+Settings and the book are written to a temporary file first and then renamed over the old file, so a crash cannot leave half a file. Nothing depends on the current directory. Both book files are in the binary book format (chapter 11); a user book saved by an older version in the C++ format is still read, and is written in the new format the next time it is saved.
 
 ## Algorithm
 

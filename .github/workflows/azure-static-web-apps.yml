@@ -7,8 +7,7 @@ on:
       - 'Stello.Net/Stello.Web/**'
       - 'Stello.Net/Stello.App/**'
       - 'Stello.Net/Stello.Engine/**'
-      # "+" is special in path filters, so "Stello C++" is matched with a wildcard.
-      - 'Stello C*/OPENING'
+      - 'Stello.Net/Book/**'
       - 'docs/brain/**'
       - 'Stello.Net/Images/**'
       - '.github/workflows/azure-static-web-apps.yml'

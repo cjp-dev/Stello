@@ -13,7 +13,7 @@ public static class AboutInfo
     [
         "Stello is an Othello program. You play against the computer on an 8 × 8 board, and you can watch it think in the analysis panel.",
         "Its brain searches ahead with alpha-beta search, a hash table and iterative deepening, and judges positions by their edges, " +
-        "corners and mobility. It knows more than 23,000 opening positions, and near the end of the game it works out the exact " +
+        "corners and mobility. It knows more than 11,000 opening positions, and near the end of the game it works out the exact " +
         "result and plays perfectly.",
         "The C++ original from 1992 was ported to C# and .NET 10 in 2026. The same brain now runs as a Windows program (WPF) and " +
         "in the browser (Blazor WebAssembly).",

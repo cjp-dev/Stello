@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
 
 namespace Stello.Engine;
 
@@ -6,37 +7,31 @@ namespace Stello.Engine;
 public readonly record struct BookMove(Square Square, int Value);
 
 /// <summary>
-/// The opening book from the C++ version (file "OPENING"). Lines are stored after Black's first move,
-/// normalised to d3; the other first moves are found by symmetry.
+/// The opening book: the book moves and their values for every book position. A position is stored once,
+/// whatever move order and whichever of Black's four (symmetric) first moves led to it.
 /// </summary>
 /// <remarks>
-/// File layout (little-endian, as written by Put_book/savebook in Book.cpp):
-/// int32 node count (C++ allocation counter, can be larger than the real number of nodes), then the root
-/// sibling chain. A chain is an int16 number of nodes; each node is int16 move, int16 value, int16 flag,
-/// followed by the chain of its replies.
+/// A position is keyed by its canonical form: of the four symmetries that keep the start position, the one that
+/// gives the smallest bitboards. Its moves are stored in that frame. All lines start after Black's first move,
+/// written as d3. Files: <see cref="BookBinaryFormat"/> for the apps, <see cref="BookTextFormat"/> for the master
+/// book in git, and the C++ "OPENING" file, which is only read (<see cref="LegacyBookFormat"/>).
 /// </remarks>
 public sealed class OpeningBook
 {
-    private const int MaxChainLength = 64;
-    private const int MaxDepth = 64;
+    /// <summary>Bumped by hand when a change to the evaluation or the search changes the values it finds.</summary>
+    internal const int EngineVersion = 1;
 
-    // C++ savebook writes 0 instead of this value for the first node in a chain.
-    private const short ClearedValue = 32600;
+    internal const Player RootPlayer = Player.White;
 
-    private static readonly Square NormalisedFirstMove = Square.Parse("d3");
     private static readonly Square[] FirstMoves = [Square.Parse("d3"), Square.Parse("c4"), Square.Parse("f5"), Square.Parse("e6")];
 
-    private readonly int _headerNodeCount;
-    private readonly Dictionary<(ulong Black, ulong White, Player ToMove), List<BookNode>> _positions = [];
+    private readonly Dictionary<BookKey, List<BookEntry>> _positions = [];
 
-    private OpeningBook(List<BookNode> root, int headerNodeCount)
+    private OpeningBook()
     {
-        Root = root;
-        _headerNodeCount = headerNodeCount;
-        Rebuild();
     }
 
-    // The symmetries that keep the start position (C++: convop).
+    // The symmetries that keep the start position (C++: convop). Each one is its own inverse.
     internal enum Symmetry
     {
         Identity,
@@ -45,43 +40,47 @@ public sealed class OpeningBook
         HalfTurn,
     }
 
-    /// <summary>White's replies to d3.</summary>
-    internal List<BookNode> Root { get; }
+    /// <summary>The position after d3, where every line of the book starts.</summary>
+    internal static Board RootBoard { get; } = Board.Initial.Play(Player.Black, Square.Parse("d3"));
 
-    public int NodeCount { get; private set; }
+    /// <summary>The number of book moves.</summary>
+    public int NodeCount => _positions.Values.Sum(replies => replies.Count);
+
+    /// <summary>The number of positions with book moves.</summary>
+    public int PositionCount => _positions.Count;
 
     /// <summary>A book without any lines, to be filled by book learning.</summary>
-    public static OpeningBook CreateEmpty() => new([], 0);
+    public static OpeningBook CreateEmpty() => new();
 
+    /// <summary>Reads a book in the binary or the text format, or the C++ "OPENING" file.</summary>
     /// <exception cref="InvalidDataException">The data is not a valid opening book.</exception>
     public static OpeningBook Load(Stream stream)
     {
-        using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
-        try
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        byte[] data = buffer.ToArray();
+
+        if (BookBinaryFormat.IsBinary(data))
         {
-            int headerNodeCount = reader.ReadInt32();
-            List<BookNode> root = ReadChain(reader, depth: 0);
-            return new OpeningBook(root, headerNodeCount);
+            return BookBinaryFormat.Read(data);
         }
-        catch (EndOfStreamException exception)
-        {
-            throw new InvalidDataException("The opening book file is truncated.", exception);
-        }
+
+        return BookTextFormat.IsText(data)
+            ? BookTextFormat.Read(new StringReader(Encoding.UTF8.GetString(data)))
+            : LegacyBookFormat.Read(data);
     }
 
+    /// <inheritdoc cref="Load(Stream)"/>
     public static OpeningBook Load(string path)
     {
         using FileStream stream = File.OpenRead(path);
         return Load(stream);
     }
 
-    public void Save(Stream stream)
-    {
-        using var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true);
-        writer.Write(Math.Max(_headerNodeCount, NodeCount));
-        WriteChain(writer, Root);
-    }
+    /// <summary>Writes the book in the binary format.</summary>
+    public void Save(Stream stream) => BookBinaryFormat.Write(this, stream);
 
+    /// <inheritdoc cref="Save(Stream)"/>
     public void Save(string path)
     {
         using FileStream stream = File.Create(path);
@@ -90,7 +89,7 @@ public sealed class OpeningBook
 
     /// <summary>
     /// Finds a book move for <paramref name="player"/> (C++: getlib). Black's first move is chosen at random;
-    /// later the first legal reply in book order is used.
+    /// later the first move in book order is used.
     /// </summary>
     public bool TryGetMove(Board board, Player player, Random random, out BookMove move)
     {
@@ -102,25 +101,13 @@ public sealed class OpeningBook
             return true;
         }
 
-        foreach (Symmetry symmetry in Enum.GetValues<Symmetry>())
+        if (TryGetReplies(board, player, out List<BookEntry>? replies, out Symmetry symmetry))
         {
-            if (!TryFindReplies(board, player, symmetry, out List<BookNode>? replies))
+            foreach (BookEntry reply in replies)
             {
-                continue;
-            }
-
-            foreach (BookNode reply in replies)
-            {
-                if (!IsSquare(reply.Move))
+                if (reply.Move.Square is { } square)
                 {
-                    continue;
-                }
-
-                // Every symmetry is its own inverse.
-                Square square = Transform(Square.FromLegacy(reply.Move), symmetry);
-                if (board.IsLegal(player, square))
-                {
-                    move = new BookMove(square, reply.Value);
+                    move = new BookMove(Transform(square, symmetry), reply.Value);
                     return true;
                 }
             }
@@ -130,37 +117,59 @@ public sealed class OpeningBook
         return false;
     }
 
-    /// <summary>Recomputes the node count and the position index after the tree was changed.</summary>
-    internal void Rebuild()
+    /// <summary>The book moves in the position, and the symmetry between the board and the book's frame.</summary>
+    internal bool TryGetReplies(Board board, Player player, [NotNullWhen(true)] out List<BookEntry>? replies, out Symmetry symmetry)
     {
-        NodeCount = CountNodes(Root);
-        _positions.Clear();
-        Index(Root, Board.Initial.Play(Player.Black, NormalisedFirstMove), Player.White);
+        (BookKey key, symmetry) = Canonical(board, player);
+        return _positions.TryGetValue(key, out replies);
     }
 
-    /// <summary>The book's replies in the position, and the symmetry that maps the board to the book's frame.</summary>
-    internal bool TryFindReplies(Board board, Player player, out List<BookNode> replies, out Symmetry symmetry)
+    internal bool Contains(Board board, Player player) => _positions.ContainsKey(Canonical(board, player).Key);
+
+    internal bool TryGetReplies(BookKey key, [NotNullWhen(true)] out List<BookEntry>? replies) =>
+        _positions.TryGetValue(key, out replies);
+
+    internal List<BookEntry> GetOrAddReplies(Board board, Player player, out Symmetry symmetry)
     {
-        foreach (Symmetry candidate in Enum.GetValues<Symmetry>())
+        (BookKey key, symmetry) = Canonical(board, player);
+        if (!_positions.TryGetValue(key, out List<BookEntry>? replies))
         {
-            if (TryFindReplies(board, player, candidate, out List<BookNode>? found))
+            replies = [];
+            _positions.Add(key, replies);
+        }
+
+        return replies;
+    }
+
+    /// <summary>Maps a move between the board and the book's frame (both ways, as every symmetry is its own inverse).</summary>
+    internal static Move Transform(Move move, Symmetry symmetry) =>
+        move.Square is { } square ? new Move(Transform(square, symmetry)) : move;
+
+    internal static (Board Board, Player Player) Play(Board board, Player player, Move move) =>
+        move.Square is { } square ? (board.Play(player, square), player.Opponent()) : (board, player.Opponent());
+
+    /// <summary>A legal square, or a pass when the player has no move but the opponent has.</summary>
+    internal static bool IsLegal(Board board, Player player, Move move) =>
+        move.Square is { } square
+            ? board.IsLegal(player, square)
+            : !board.HasLegalMove(player) && board.HasLegalMove(player.Opponent());
+
+    internal static (BookKey Key, Symmetry Symmetry) Canonical(Board board, Player player)
+    {
+        Board best = board;
+        Symmetry bestSymmetry = Symmetry.Identity;
+        for (Symmetry symmetry = Symmetry.MainDiagonal; symmetry <= Symmetry.HalfTurn; symmetry++)
+        {
+            Board transformed = Transform(board, symmetry);
+            if (transformed.Black < best.Black || (transformed.Black == best.Black && transformed.White < best.White))
             {
-                replies = found;
-                symmetry = candidate;
-                return true;
+                best = transformed;
+                bestSymmetry = symmetry;
             }
         }
 
-        replies = [];
-        symmetry = Symmetry.Identity;
-        return false;
+        return (new BookKey(best.Black, best.White, player), bestSymmetry);
     }
-
-    /// <summary>The symmetry that maps one of Black's first moves to d3 (C++: convop).</summary>
-    internal static Symmetry FirstMoveSymmetry(Square firstMove) =>
-        Enum.GetValues<Symmetry>().First(s => Transform(firstMove, s) == NormalisedFirstMove);
-
-    internal static bool IsSquare(short legacy) => legacy is >= 11 and <= 88 && legacy % 10 is >= 1 and <= 8;
 
     internal static Square Transform(Square square, Symmetry symmetry) => symmetry switch
     {
@@ -169,78 +178,6 @@ public sealed class OpeningBook
         Symmetry.HalfTurn => Square.At(7 - square.Column, 7 - square.Row),
         _ => square,
     };
-
-    private bool TryFindReplies(Board board, Player player, Symmetry symmetry, [NotNullWhen(true)] out List<BookNode>? replies)
-    {
-        Board transformed = Transform(board, symmetry);
-        return _positions.TryGetValue((transformed.Black, transformed.White, player), out replies);
-    }
-
-    private static List<BookNode> ReadChain(BinaryReader reader, int depth)
-    {
-        short count = reader.ReadInt16();
-        if (count is < 0 or > MaxChainLength || (count > 0 && depth >= MaxDepth))
-        {
-            throw new InvalidDataException("The opening book file is not valid.");
-        }
-
-        var chain = new List<BookNode>(count);
-        for (int i = 0; i < count; i++)
-        {
-            var node = new BookNode(reader.ReadInt16(), reader.ReadInt16(), (BookFlags)reader.ReadInt16());
-            node.Children.AddRange(ReadChain(reader, depth + 1));
-            chain.Add(node);
-        }
-
-        return chain;
-    }
-
-    private static void WriteChain(BinaryWriter writer, List<BookNode> chain)
-    {
-        writer.Write((short)chain.Count);
-        for (int i = 0; i < chain.Count; i++)
-        {
-            BookNode node = chain[i];
-            writer.Write(node.Move);
-            writer.Write(i == 0 && node.Value == ClearedValue ? (short)0 : node.Value);
-            writer.Write((short)node.Flag);
-            WriteChain(writer, node.Children);
-        }
-    }
-
-    private static int CountNodes(List<BookNode> chain) =>
-        chain.Sum(node => 1 + CountNodes(node.Children));
-
-    // Maps every book position to its replies; the first line that reaches a position wins.
-    private void Index(List<BookNode> replies, Board board, Player player)
-    {
-        if (replies.Count == 0)
-        {
-            return;
-        }
-
-        _positions.TryAdd((board.Black, board.White, player), replies);
-        Player opponent = player.Opponent();
-
-        foreach (BookNode node in replies)
-        {
-            if (node.Move == 0)
-            {
-                if (!board.HasLegalMove(player))
-                {
-                    Index(node.Children, board, opponent);
-                }
-
-                continue;
-            }
-
-            // Lines with moves that are not legal cannot be reached and are skipped.
-            if (IsSquare(node.Move) && board.IsLegal(player, Square.FromLegacy(node.Move)))
-            {
-                Index(node.Children, board.Play(player, Square.FromLegacy(node.Move)), opponent);
-            }
-        }
-    }
 
     internal static Board Transform(Board board, Symmetry symmetry) => symmetry == Symmetry.Identity
         ? board
@@ -257,3 +194,6 @@ public sealed class OpeningBook
         return result;
     }
 }
+
+/// <summary>A position in its canonical form (see <see cref="OpeningBook"/>).</summary>
+internal readonly record struct BookKey(ulong Black, ulong White, Player ToMove);

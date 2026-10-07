@@ -6,7 +6,7 @@ This chapter shows the big picture: the projects, the main types, and what happe
 
 ## The projects
 
-The solution [Stello.Net.slnx](../../Stello.Net/Stello.Net.slnx) has six projects. The arrows show which project uses which; the apps and the app tests also use the engine's types directly.
+The solution [Stello.Net.slnx](../../Stello.Net/Stello.Net.slnx) has seven projects. The arrows show which project uses which; the apps and the app tests also use the engine's types directly.
 
 ```mermaid
 flowchart LR
@@ -16,8 +16,10 @@ flowchart LR
     AppTests["Stello.Net.Tests<br/>view-model tests"] --> Wpf
     AppTests --> Shared
     EngineTests["Stello.Engine.Tests<br/>engine tests"] --> Engine
-    Book[("Stello C++/OPENING<br/>master opening book")] -. "copied as Data/OPENING" .-> Wpf
-    Book -. "copied as Data/OPENING" .-> EngineTests
+    Tool["Stello.BookTool<br/>book tool<br/>net10.0"] --> Engine
+    Text[("Stello.Net/Book/opening-book.txt<br/>master opening book")] -. "build" .-> Tool
+    Tool -. "build" .-> Book[("Stello.Net/Book/opening-book.bin")]
+    Book -. "copied as Data/OPENING" .-> Wpf
     Book -. "copied as wwwroot/data/OPENING.bin" .-> Web
 ```
 
@@ -29,8 +31,9 @@ flowchart LR
 | [Stello.Web](../../Stello.Net/Stello.Web) | The web app (Blazor WebAssembly): the same game in the browser. It runs the engine in a Web Worker. |
 | [Stello.Engine.Tests](../../Stello.Net/Stello.Engine.Tests) | xUnit tests of the engine: perft, evaluation, search, endgame (FFO positions), book, book learning. |
 | [Stello.Net.Tests](../../Stello.Net/Stello.Net.Tests) | xUnit tests of the view models, with fake dialogs, settings and book storage. |
+| [Stello.BookTool](../../Stello.Net/tools/Stello.BookTool) | Console tool for the master opening book: import, format, build, verify, statistics, recalculating the leaves, comparing and matching books (chapter 16). |
 
-The opening book file is not copied into the repository twice: the WPF app and the engine tests link to the master file [Stello C++/OPENING](../../Stello%20C++/OPENING) and copy it to their output folder as `Data/OPENING`, and the web app copies it to `wwwroot/data/OPENING.bin` when it is built.
+The master opening book is the text file [Stello.Net/Book/opening-book.txt](../../Stello.Net/Book/opening-book.txt). The book tool builds [opening-book.bin](../../Stello.Net/Book/opening-book.bin) from it, which the WPF app links as `Data/OPENING` and the web app copies to `wwwroot/data/OPENING.bin` when it is built. The engine tests use both files, and the C++ file [Stello C++/OPENING](../../Stello%20C++/OPENING) to test the import (chapter 11).
 
 ## The engine at a glance
 
@@ -54,7 +57,8 @@ The engine types fall into five groups. "Internal" types are only visible inside
 | | [`SearchLimits`](../../Stello.Net/Stello.Engine/SearchLimits.cs) | public | Fixed depth, time per move, time per game, or solve. |
 | | [`SearchResult`, `SearchInfo`, `ScoreKind`](../../Stello.Net/Stello.Engine/SearchResult.cs) | public | The result of a search, progress reports, and what kind of score it is. |
 | Opening book | [`OpeningBook`](../../Stello.Net/Stello.Engine/OpeningBook.cs) | public | Loads, saves and looks up the book. |
-| | [`BookNode`, `BookFlags`](../../Stello.Net/Stello.Engine/BookNode.cs) | internal | One move in the book tree, with its value and flags. |
+| | [`BookEntry`, `BookOrigin`, `BookEffort`](../../Stello.Net/Stello.Engine/BookEntry.cs) | internal | One book move, with its value, where the value comes from, and how hard it was searched for. |
+| | [`BookTextFormat`, `BookBinaryFormat`, `LegacyBookFormat`](../../Stello.Net/Stello.Engine/BookTextFormat.cs) | internal | The text book, the binary book, and the import of the C++ book. |
 | | [`BookTracker`](../../Stello.Net/Stello.Engine/BookTracker.cs) | public | Decides when to stop asking the book. |
 | | [`ComputerPlayer`](../../Stello.Net/Stello.Engine/ComputerPlayer.cs) | public | Chooses the computer's move: the book first, then the search. |
 | | [`BookLearner`](../../Stello.Net/Stello.Engine/BookLearner.cs) | public | Adds games to the book, evaluates it, and plays self-play games. |
@@ -127,15 +131,16 @@ classDiagram
     }
     class OpeningBook {
         +NodeCount int
+        +PositionCount int
         +TryGetMove(board, player, random, move) bool
         +Save(path)
     }
-    class BookNode {
+    class BookEntry {
         <<internal>>
-        +short Move
+        +Move Move
         +short Value
-        +BookFlags Flag
-        +List~BookNode~ Children
+        +BookOrigin Origin
+        +BookEffort Effort
     }
     class SearchEngine {
         +Search(board, player, limits, ...) SearchResult
@@ -170,7 +175,7 @@ classDiagram
     ComputerPlayer *-- BookTracker
     ComputerPlayer --> OpeningBook : 1. asks
     ComputerPlayer --> SearchEngine : 2. searches
-    OpeningBook *-- BookNode : tree
+    OpeningBook *-- BookEntry : moves of each position
     SearchEngine *-- TranspositionTable : midgame and endgame
     SearchEngine *-- MoveOrdering
     SearchEngine ..> Evaluator
@@ -225,10 +230,10 @@ Two tokens control a running search:
 
 - **Immutable boards.** `Board` is a 16-byte value. Making a move returns a new board, so the search needs no "undo move" code and the game record can store every position.
 - **Bitboards.** Each colour is one 64-bit number with one bit per square. Legal moves and flips are computed for all squares at once with shifts and masks.
-- **No global state.** All state is in objects: the search engine owns its hash tables and move-ordering tables, the book owns its tree. Several engines could run side by side.
+- **No global state.** All state is in objects: the search engine owns its hash tables and move-ordering tables, the book owns its positions. Several engines could run side by side.
 - **The engine does not know the UI.** It reports progress through `IProgress<SearchInfo>` and is stopped with cancellation tokens. This is why it can be tested without a window.
 - **A synchronous engine.** `SearchEngine.Search` runs to the end on the calling thread. The app decides where it runs (a background task); the tests call it directly.
-- **Faithful where it matters.** The evaluation, the selective search and the book format are ported from the C++ original so the program plays in the same style. Data structures and the endgame solver were modernised. The details are in [Stello porting documentation.md](../../Stello%20porting%20documentation.md).
+- **Faithful where it matters.** The evaluation, the selective search and the book's moves and values are ported from the C++ original so the program plays in the same style. Data structures, the endgame solver and the book format were modernised. The details are in [Stello porting documentation.md](../../Stello%20porting%20documentation.md).
 
 ## Some numbers
 
@@ -237,8 +242,8 @@ Two tokens control a running search:
 | Size of a `Board` | 16 bytes (two `ulong`) |
 | Edge tables | 8 tables of $3^8 = 6561$ values |
 | Hash tables | 2 tables (midgame, endgame), each $2^{19}$ slots of 2 entries of 24 bytes, so 24 MiB each |
-| Master opening book | 23 389 nodes |
-| Engine tests / app tests | 160 / 60 |
+| Master opening book | 11 200 positions, 22 878 book moves; binary file 172 KB |
+| Engine tests / app tests | 194 / 60 |
 
 ---
 

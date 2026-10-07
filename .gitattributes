@@ -3,6 +3,9 @@
 ###############################################################################
 * text=auto
 
+# The binary opening book is built from Stello.Net/Book/opening-book.txt by Stello.BookTool.
+Stello.Net/Book/*.bin binary
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

@@ -2,27 +2,7 @@ namespace Stello.Engine.Tests;
 
 public class OpeningBookTests
 {
-    private static readonly string BookPath = Path.Combine(AppContext.BaseDirectory, "Data", "OPENING");
-    private static readonly Lazy<OpeningBook> MasterBook = new(() => OpeningBook.Load(BookPath));
-
-    [Fact]
-    public void Load_ReadsAllNodes()
-    {
-        // File size = 4 (header) + 2 (root chain) + 8 per node (6 for the node, 2 for its reply chain).
-        long nodes = (new FileInfo(BookPath).Length - 6) / 8;
-
-        Assert.Equal(nodes, MasterBook.Value.NodeCount);
-    }
-
-    [Fact]
-    public void Save_AfterLoadGivesIdenticalFile()
-    {
-        using var stream = new MemoryStream();
-
-        MasterBook.Value.Save(stream);
-
-        Assert.Equal(File.ReadAllBytes(BookPath), stream.ToArray());
-    }
+    private const string Header = BookTextFormat.FirstLine + "\n";
 
     [Fact]
     public void TryGetMove_ChoosesBlacksFirstMoveAtRandom()
@@ -30,7 +10,7 @@ public class OpeningBookTests
         var moves = new HashSet<string>();
         for (int seed = 0; seed < 100; seed++)
         {
-            Assert.True(MasterBook.Value.TryGetMove(Board.Initial, Player.Black, new Random(seed), out BookMove move));
+            Assert.True(BookTestData.Master.TryGetMove(Board.Initial, Player.Black, new Random(seed), out BookMove move));
             moves.Add(move.Square.ToString());
         }
 
@@ -46,42 +26,35 @@ public class OpeningBookTests
     {
         Board board = TestGames.Play(first).Board;
 
-        Assert.True(MasterBook.Value.TryGetMove(board, Player.White, new Random(0), out BookMove move));
+        Assert.True(BookTestData.Master.TryGetMove(board, Player.White, new Random(0), out BookMove move));
 
         Assert.Equal(Square.Parse(reply), move.Square);
         Assert.Equal(-39, move.Value);
     }
 
     [Fact]
-    public void TryGetMove_GivesLegalMoveInEveryBookPosition()
+    public void TryGetMove_GivesTheSameLegalMoveInEveryBookPositionAndItsSymmetries()
     {
-        OpeningBook book = MasterBook.Value;
+        OpeningBook book = BookTestData.Master;
         int positions = 0;
 
-        void Visit(List<BookNode> replies, Board board, Player player)
+        foreach (BookLine line in BookTextFormat.Lines(book).Where(l => l.Board.HasLegalMove(l.Player)))
         {
-            if (replies.Count == 0 || !board.HasLegalMove(player))
-            {
-                return;
-            }
-
             positions++;
-            Assert.True(book.TryGetMove(board, player, new Random(0), out BookMove move));
-            Assert.True(board.IsLegal(player, move.Square));
+            Assert.True(book.TryGetMove(line.Board, line.Player, new Random(0), out BookMove move));
+            Assert.True(line.Board.IsLegal(line.Player, move.Square));
+            BookKey after = OpeningBook.Canonical(line.Board.Play(line.Player, move.Square), line.Player.Opponent()).Key;
 
-            foreach (BookNode node in replies.Where(n => n.Move != 0))
+            // In a symmetric position the mirrored move can be another, equivalent move.
+            foreach (OpeningBook.Symmetry symmetry in Enum.GetValues<OpeningBook.Symmetry>())
             {
-                Square square = Square.FromLegacy(node.Move);
-                if (board.IsLegal(player, square))
-                {
-                    Visit(node.Children, board.Play(player, square), player.Opponent());
-                }
+                Board mirrored = OpeningBook.Transform(line.Board, symmetry);
+                Assert.True(book.TryGetMove(mirrored, line.Player, new Random(0), out BookMove reply));
+                Assert.Equal(after, OpeningBook.Canonical(mirrored.Play(line.Player, reply.Square), line.Player.Opponent()).Key);
             }
         }
 
-        Visit(book.Root, TestGames.Play("d3").Board, Player.White);
-
-        Assert.True(positions > 1000);
+        Assert.True(positions > 11_000);
     }
 
     [Fact]
@@ -89,32 +62,140 @@ public class OpeningBookTests
     {
         (Board board, Player player) = TestPositions.RandomPositions(seed: 5, count: 1, plies: 40).Single();
 
-        Assert.False(MasterBook.Value.TryGetMove(board, player, new Random(0), out _));
+        Assert.False(BookTestData.Master.TryGetMove(board, player, new Random(0), out _));
     }
 
     [Fact]
-    public void Save_WritesZeroForFirstNodeWithValue32600()
+    public void TryGetMove_PlaysTheMainLineFromTheStart()
     {
-        // Kept from C++ savebook.
-        byte[] data = Bytes(header: 2, chain: [(35, 32600), (53, 32600)]);
-        using var output = new MemoryStream();
+        var game = new Game();
+        var random = new Random(0);
+        while (BookTestData.Master.TryGetMove(game.Board, game.ToMove, random, out BookMove move))
+        {
+            game.Play(move.Square);
+        }
 
-        OpeningBook.Load(new MemoryStream(data)).Save(output);
-
-        byte[] expected = Bytes(header: 2, chain: [(35, 0), (53, 32600)]);
-        Assert.Equal(expected, output.ToArray());
+        Assert.Equal("f5 d6 c3 d3 c4 f4 f6 g5 e6 f7 g6 e7 f3 e3 c6 b4", GameRecordFormat.Format(game));
     }
 
     [Fact]
-    public void Load_RejectsTruncatedFile()
+    public void Canonical_IsTheSameAfterEachOfTheFourFirstMoves()
     {
-        byte[] data = File.ReadAllBytes(BookPath)[..1000];
+        BookKey[] keys = new[] { "d3", "c4", "f5", "e6" }
+            .Select(first => OpeningBook.Canonical(TestGames.Play(first).Board, Player.White).Key)
+            .ToArray();
+
+        Assert.Single(keys.Distinct());
+    }
+
+    [Fact]
+    public void ShippedBinaryBook_HoldsTheTextBook()
+    {
+        byte[] built = BookTestData.WriteBinary(OpeningBook.Load(BookTestData.TextPath));
+
+        Assert.Equal(File.ReadAllBytes(BookTestData.BinaryPath), built);
+    }
+
+    [Fact]
+    public void TextBook_IsInNormalForm()
+    {
+        string text = File.ReadAllText(BookTestData.TextPath).Replace("\r\n", "\n", StringComparison.Ordinal);
+
+        Assert.Equal(text, BookTestData.WriteText(BookTestData.ReadText(text)));
+    }
+
+    [Fact]
+    public void Load_ReadsTheThreeFormatsToTheSameBook()
+    {
+        string fromText = BookTestData.WriteText(OpeningBook.Load(BookTestData.TextPath));
+
+        Assert.Equal(fromText, BookTestData.WriteText(OpeningBook.Load(BookTestData.BinaryPath)));
+        Assert.Equal(fromText, BookTestData.WriteText(OpeningBook.Load(BookTestData.LegacyPath)));
+    }
+
+    [Fact]
+    public void Save_KeepsValuesOriginsAndEfforts()
+    {
+        string text = Header +
+            "d3 c5:-39:B c3:-40:H:60s:d14:v1 e3:-110:W:1500ms:d20:v1\n" +
+            "d3c5 f6:39:X:solve:d58:v1 e6:12:H:8ply:d8:v1 d6:-16:H:-:d9:v1 c6:-56:U\n";
+        OpeningBook book = BookTestData.ReadText(text);
+
+        OpeningBook loaded = OpeningBook.Load(new MemoryStream(BookTestData.WriteBinary(book)));
+
+        Assert.EndsWith(text[Header.Length..], BookTestData.WriteText(loaded));
+        Assert.Equal(new BookEffort(EffortKind.Time, 1500, 20, 1), BookTestData.Replies(loaded, "d3")[2].Entry.Effort);
+    }
+
+    [Fact]
+    public void Import_PlaysTheSameMovesAsTheOldBook()
+    {
+        var legacy = new LegacyLookup(BookTestData.LegacyPath);
+        OpeningBook book = OpeningBook.Load(BookTestData.LegacyPath);
+        int positions = 0;
+
+        foreach ((Board board, Player player) in legacy.Positions.Where(p => p.Board.HasLegalMove(p.Player)))
+        {
+            positions++;
+            Square? expected = legacy.Move(board, player);
+            Assert.True(book.TryGetMove(board, player, new Random(0), out BookMove move));
+
+            // The old book could store a position in more than one mirrored frame; then the first one is used now.
+            if (move.Square != expected)
+            {
+                Assert.True(legacy.Frames(board, player) > 1);
+            }
+        }
+
+        Assert.True(positions > 11_000);
+    }
+
+    [Fact]
+    public void Import_StoresEachPositionOnce()
+    {
+        OpeningBook book = OpeningBook.Load(BookTestData.LegacyPath);
+
+        Assert.Equal(11_200, book.PositionCount);
+        Assert.Equal(22_878, book.NodeCount);
+    }
+
+    [Fact]
+    public void Import_TakesTheOriginFromTheFlags()
+    {
+        // Flags: 1 = calculated, 2 = exact, 4 = win/loss/draw. C++ wrote 0 for the first value of a chain if it was 32600.
+        byte[] data = BookTestData.Legacy(
+            (Square.Parse("c5").ToLegacy(), 0, 1),
+            (Square.Parse("c3").ToLegacy(), -40, 1),
+            (Square.Parse("e3").ToLegacy(), -32610, 1 | 2),
+            (Square.Parse("a1").ToLegacy(), 5, 1));
+
+        OpeningBook book = OpeningBook.Load(new MemoryStream(data));
+
+        Assert.Equal(
+            [("c5", BookOrigin.Unknown), ("c3", BookOrigin.Heuristic), ("e3", BookOrigin.Exact)],
+            BookTestData.Replies(book, "d3").Select(r => (r.Move.ToString(), r.Entry.Origin)));
+    }
+
+    [Fact]
+    public void Import_MarksMovesFromGamesAsUnknown()
+    {
+        byte[] data = BookTestData.Legacy((Square.Parse("c5").ToLegacy(), 32665, 0), (Square.Parse("e3").ToLegacy(), -50, 1 | 4));
+
+        OpeningBook book = OpeningBook.Load(new MemoryStream(data));
+
+        Assert.Equal([BookOrigin.Unknown, BookOrigin.WinLossDraw], BookTestData.Replies(book, "d3").Select(r => r.Entry.Origin));
+    }
+
+    [Fact]
+    public void LoadLegacy_RejectsTruncatedFile()
+    {
+        byte[] data = File.ReadAllBytes(BookTestData.LegacyPath)[..1000];
 
         Assert.Throws<InvalidDataException>(() => OpeningBook.Load(new MemoryStream(data)));
     }
 
     [Fact]
-    public void Load_RejectsNegativeChainLength()
+    public void LoadLegacy_RejectsNegativeChainLength()
     {
         byte[] data = [1, 0, 0, 0, 0xFF, 0xFF];
 
@@ -122,7 +203,7 @@ public class OpeningBookTests
     }
 
     [Fact]
-    public void Load_RejectsTooDeepTree()
+    public void LoadLegacy_RejectsTooDeepTree()
     {
         using var stream = new MemoryStream();
         using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
@@ -141,23 +222,56 @@ public class OpeningBookTests
         Assert.Throws<InvalidDataException>(() => OpeningBook.Load(stream));
     }
 
-    private static byte[] Bytes(int header, (short Move, short Value)[] chain)
+    [Fact]
+    public void LoadBinary_RejectsTruncatedFile()
     {
-        using var stream = new MemoryStream();
-        using (var writer = new BinaryWriter(stream))
-        {
-            writer.Write(header);
-            writer.Write((short)chain.Length);
-            foreach ((short move, short value) in chain)
-            {
-                writer.Write(move);
-                writer.Write(value);
-                writer.Write((short)0);
-                writer.Write((short)0);
-            }
-        }
+        byte[] data = File.ReadAllBytes(BookTestData.BinaryPath)[..^1];
 
-        return stream.ToArray();
+        Assert.Throws<InvalidDataException>(() => OpeningBook.Load(new MemoryStream(data)));
+    }
+
+    [Fact]
+    public void LoadBinary_RejectsUnknownVersion()
+    {
+        byte[] data = File.ReadAllBytes(BookTestData.BinaryPath);
+        data[4] = 3;
+
+        Assert.Throws<InvalidDataException>(() => OpeningBook.Load(new MemoryStream(data)));
+    }
+
+    [Fact]
+    public void LoadBinary_RejectsIllegalMove()
+    {
+        byte[] data = BookTestData.WriteBinary(BookTestData.ReadText(Header + "d3 c5:-39:U\n"));
+
+        // Magic, version, two counts, the number of moves, then the first square.
+        data[4 + 1 + 4 + 4 + 1] = (byte)Square.Parse("a1").Index;
+
+        Assert.Throws<InvalidDataException>(() => OpeningBook.Load(new MemoryStream(data)));
+    }
+
+    [Theory]
+    [InlineData("d3 a1:0:H", "a1 is not legal")]
+    [InlineData("d4 c5:0:U", "starting with d3")]
+    [InlineData("d3", "no book moves")]
+    [InlineData("d3 c5:0:U\nd3 c3:0:U", "already in the book")]
+    [InlineData("d3 c5:0:U c5:1:U", "given twice")]
+    [InlineData("d3 c5:x:U", "not a book move")]
+    [InlineData("d3 c5:0:Q", "not an origin")]
+    [InlineData("d3 c5:0:U:60s:d3:v1", "search effort")]
+    [InlineData("d3 c5:0:H:60:d3:v1", "search effort")]
+    [InlineData("d3 c5:0:U\nd3c3 c4:0:U", "cannot be reached")]
+    public void LoadText_RejectsInvalidBook(string lines, string message)
+    {
+        var exception = Assert.Throws<InvalidDataException>(() => BookTestData.ReadText(Header + lines + "\n"));
+
+        Assert.Contains(message, exception.Message);
+    }
+
+    [Fact]
+    public void LoadText_RequiresTheFirstLine()
+    {
+        Assert.Throws<InvalidDataException>(() => BookTestData.ReadText("d3 c5:0:U\n"));
     }
 }
 

@@ -9,7 +9,7 @@ This document describes, phase by phase, how the C++ program Stello (`Stello C++
 The main requirements for the port were:
 
 - Port the engine's algorithms (evaluation, alpha-beta search, endgame solver, hash table, time control, opening book and book learning). The moves and values do not have to be the same as in C++, but for a given position, depth and settings the C# engine must always give the same result. Bitboards and modernised code are allowed.
-- Read and write the existing binary `OPENING` file byte for byte.
+- Read and write the existing binary `OPENING` file byte for byte. (Changed in phase 10: the book has a new format, and the C++ file is only read, to import it.)
 - A WPF user interface in English with MVVM (`CommunityToolkit.Mvvm`) and no game logic in code-behind; the search and the book learning run in the background and can be stopped.
 - Human against computer only; three time modes (fixed depth, time per move, time per game); games saved as a text move list.
 - xUnit tests: move generation, perft 1–8, FFO #40–#44, a byte-identical book round trip, and play against greedy and random players. No comparison tests against the C++ engine.
@@ -30,6 +30,8 @@ The main requirements for the port were:
 | `getcomputer` book part, `libon`/`tryagain` | `ComputerPlayer`, `BookTracker` | 4, 5 |
 | MFC views and frames (`MainFrm`, `StelloView`, `Analyse`, `Spiltid`) | WPF `MainWindow`, `Views/*`, `ViewModels/*` | 5 |
 | (no C++ counterpart) | Blazor WebAssembly `Stello.Web`, shared `Stello.App` | 9 |
+| `OPENING` file, `booktree` | `BookEntry`, `BookTextFormat`, `BookBinaryFormat`, `LegacyBookFormat`, `Stello.BookTool` | 10 |
+| (no C++ counterpart) | `BookRecalculator`, `BookComparison`, `BookMatch`, book tool `recalc`/`compare`/`match` | 11 |
 
 Terms used below:
 
@@ -52,8 +54,9 @@ Terms used below:
 | `Stello.Net.Tests` (xUnit) | View-model tests (phase 5). |
 | `Stello.App` (`net10.0`) | Added in phase 9: the models, view models and service interfaces, moved out of `Stello.Net` and shared with the web version. |
 | `Stello.Web` (`net10.0`, Blazor WebAssembly) | Added in phase 9: the web version. |
+| `tools/Stello.BookTool` (`net10.0`, console) | Added in phase 10: import, format, build, verify and statistics for the master opening book. |
 
-- `Stello C++/OPENING` is linked into the output of the app and the engine tests as `Data/OPENING`.
+- `Stello C++/OPENING` is linked into the output of the app and the engine tests as `Data/OPENING`. (Since phase 10 the app gets `Stello.Net/Book/opening-book.bin` instead; the engine tests still use the C++ file to test the import.)
 - `InternalsVisibleTo` lets the tests reach internal types (edge tables, book nodes, the view model's `Idle` task).
 
 **Assessment:** Changed. The global variables and the MFC document/view structure are replaced by a separate engine library, so the engine can be tested without a UI.
@@ -803,3 +806,82 @@ The same position (f5 d6 c7, depth 15) gives the same move, score and node count
 | Evaluate Book, Self-play | Not ported to the web | Desktop only; long learning runs do not suit a browser tab. |
 | Window position | Not ported to the web | The browser manages the window. |
 | Ctrl+N | Not available on the web | The browser keeps it; New Game is in the File menu. |
+
+---
+
+## Phase 10 – Opening book format 2
+
+The first step of the book improvement ([Opening book improvment.md](Opening%20book%20improvment.md), phase 1): a new book format, so the values can be recalculated and the book can grow later. The C++ program and its file `Stello C++/OPENING` are not changed.
+
+### C++ (as in phases 4 and 7)
+
+- A tree of lines after d3 (`booktree`), so a position reached by two lines is stored twice; ten rounds of `mmlib` carry values between the copies.
+- Each node has a move, a value and the flags `CALCULATED`/`EXACT`/`INEXACT`. How long a value was searched for is not stored.
+- The file has no magic number or version; its header is the node allocation counter; `savebook` writes 0 instead of 32600 for the first node of a chain.
+
+### C# (`Stello.Engine`)
+
+- **`OpeningBook`:** a `Dictionary<BookKey, List<BookEntry>>` from a position in **canonical form** (the smallest bitboards of the four symmetries that keep the start position) to its book moves, stored in that frame. `TryGetMove` makes one lookup instead of trying four symmetries against a position index. `NodeCount` is the number of book moves, `PositionCount` the number of positions. The book starts after d3, as before.
+- **`BookEntry`** (replaces `BookNode`): move, value, `BookOrigin` (`Unknown`, `Heuristic`, `WinLossDraw`, `Exact`, `BackedUp`) and `BookEffort` (search limit, depth reached, engine version; `OpeningBook.EngineVersion` = 1).
+- **Files:**
+  - `BookTextFormat`: the master book in git, `Stello.Net/Book/opening-book.txt`. One line per position, keyed by its shortest line of book moves from d3 (alphabetically first), with `move:value:origin[:limit:dN:vN]` per book move; deterministic order, so a git diff shows what changed.
+  - `BookBinaryFormat`: `"STBK"`, version 2, counts, then the positions depth first from d3 with moves only (positions are found by playing them) and back-references for transpositions. 172 KB for the master book. Used for `Data/OPENING`, `wwwroot/data/OPENING.bin` and the user's book.
+  - `LegacyBookFormat`: reads the C++ file and imports it (below). There is no writer any more.
+  - `OpeningBook.Load` recognises the three formats by their first bytes; `Save` writes the binary format. All readers check legality, references and counts, and throw `InvalidDataException`.
+- **Import of the C++ book:** depth first in file order; a position reached again gets the moves it does not have yet appended; for a move in both, the better founded value wins. Origins from the flags; game moves (not `CALCULATED`) and a first-in-chain 0 become `Unknown`; a move whose position is in the book becomes `BackedUp`. Illegal moves are left out. Result: 11 200 positions and 22 878 book moves (C++: 23 389 nodes; 14 positions were stored in two frames).
+- **`BookLearner`** on the new model: `AddGame` adds the move to the position it was played in (also when the next position is already known by another move order, which C++ did not do); `EvaluatePositions` evaluates every position once and stores origin and effort; `Minimax` backs up in one pass (positions after the ones below them) and sorts. Illegal moves are no longer removed while learning, because the book can no longer hold one.
+- **`BookAnalysis`:** statistics and consistency checks (moves not backed up, positions not sorted) for the book tool.
+
+### C# (`Stello.BookTool`, apps, build)
+
+- New console project `tools/Stello.BookTool`: `import`, `format`, `build`, `verify`, `stats` (docs/brain chapter 16).
+- `opening-book.bin` is built by the tool and committed next to the text file; the engine test `ShippedBinaryBook_HoldsTheTextBook` fails if it was not built again, and `TextBook_IsInNormalForm` if the text was not formatted. (Building it inside MSBuild was considered, but it would need the tool to run during the WPF and web builds and in the GitHub workflow.)
+- WPF links `Book/opening-book.bin` as `Data/OPENING`; the web build copies it to `wwwroot/data/OPENING.bin`; the GitHub workflow runs on changes in `Stello.Net/Book/**` instead of `Stello C++/OPENING`. `.gitattributes` marks the binary book as binary.
+- The About box says "more than 11,000 opening positions" (positions, no longer nodes).
+- **Tests:** `OpeningBookTests` and `BookLearnerTests` rewritten for the new model (55 tests), with a helper that implements the old lookup: the imported book plays the same move as the old one in every position of the C++ book, except where C++ stored a position in two frames (one position). New tests: the three formats, invalid files in each format, the shipped files, transpositions in `AddGame`, `EvaluatePositions` and `Minimax`, and the worked examples of chapters 11 and 12. All 184 engine tests and 60 app tests pass; the whole solution builds without warnings.
+
+### Assessment
+
+| Part | Port | Notes |
+|---|---|---|
+| Tree of lines | Changed | One entry per position (canonical form); transpositions and mirror images share it. |
+| Flags | Changed | Origin and effort, so a value's quality is known; the C++ meaning is kept (`IsSearched` = `CALCULATED`). |
+| C++ file format | Changed | Only read, to import; byte-identical saving dropped. |
+| Text and binary files | New | Text in git, binary for the apps. |
+| Book moves played | 1:1 | The import keeps the first line's order, so the same moves are played (one exception, above). |
+| `mmlib` × 10 | Changed | One pass in the right order. |
+| `mmgame` | Changed | Also adds the move into a known position reached by another move order. |
+| Removing illegal moves while learning | Changed | Not needed; every reader checks legality. |
+| The import's 104 moves not backed up, 18 positions not sorted | Kept | Left as in the C++ book so the computer plays the same moves; `verify` reports them, and Evaluate Book or the planned recalculation fixes them. |
+
+---
+
+## Phase 11 – Recalculating the book
+
+The second step of the book improvement ([Opening book improvment.md](Opening%20book%20improvment.md), phase 2): the book tool can search all leaves of the book again with the current engine, and compare the old and the new book in a match. There is no C++ counterpart; C++ only searched leaves that had never been searched (`minmaxlib`, phase 7), one at a time.
+
+### C# (`Stello.Engine`)
+
+- **`BookSearch`** (moved from `BookLearner`): `PositionValue` (C++ `getvalue`: a search, the opponent after a pass, or the disc count of a finished game) and `Search` (only the given moves; solved results as ±(32600 + discs); origin from `ScoreKind`, effort from the limits).
+- **`BookMinimax`** (moved from `BookLearner`): back-up in one pass and stable sort.
+- **`BookRecalculator`:** collects the positions after the leaves in text-book order (nearest d3 first), one per position even if several leaves lead there; skips exact values and values searched at least as hard by the current engine version; searches the rest on N `SearchEngine`s (`ParallelWork`, one long-running task each), each with a cleared hash table so the values do not depend on the number of workers; stores value, origin and effort; keeps a `WinLossDraw` value if the new search could not solve the position; calls a checkpoint every N searches.
+- **`BookComparison`:** values and origins that changed, and the positions where the first book move changed, as a report whose non-comment lines are start positions.
+- **`BookMatch`:** pairs of games with the colours swapped from each start position; each side a `ComputerPlayer` with its own engine (hash cleared per game) and book; `MatchSummary` with the score and a 95 % interval over the pairs.
+- `BookTextFormat.Replay` plays a line from d3 (used by the text reader and the match).
+
+### C# (`Stello.BookTool`)
+
+- `recalc` (default 60 s per move, `--depth`, `--workers` = physical cores, `--save-every 10`, `--hash-bits 19`): progress line per search, Ctrl+C stops and saves, a new run continues; at the end back-up and sort, save, and `<book>.report.txt`.
+- `compare <old> <new> [--out]` and `match <A> <B> (--starts <report> | --starts-ply N) [--max-starts] [--depth 10 | --time-s]`.
+- Options are parsed by `Options`; temporary files are renamed with a few retries, because a virus scanner can hold a file that was just written.
+- **Measured:** 10 522 leaf positions to search in the master book (1 091 exact ones kept); in the opening a search takes 48–60 s and reaches depth 17–18, so 12 workers need up to about 14 hours. A test run at depth 4 took 35 s and left a consistent book (`verify` without warnings).
+- **Tests (`BookRecalculatorTests`, 10 tests):** only the leaves that are not good enough are searched; a transposed leaf once; a proven result is kept; the same book with 1 and 4 workers, consistent after back-up; a stopped run continues with checkpoints; the comparison and its report; a match of a book against itself scores exactly 50 % with legal, finished games; an illegal start is rejected; the summary; reading start positions. All 194 engine tests and 60 app tests pass.
+
+### Assessment
+
+| Part | Port | Notes |
+|---|---|---|
+| Recalculating all leaves | New | C++ never searched a leaf again. |
+| Parallel search | New | Several engines on different positions; the search itself is unchanged. |
+| Comparison and match | New | |
+| `getvalue`, `mmlib`, `sort_lib` | Moved | Shared by book learning and the book tool; unchanged behaviour. |
