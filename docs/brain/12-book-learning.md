@@ -119,7 +119,7 @@ flowchart TD
 
 ### In the app
 
-The Book menu has four commands ([chapter 13](13-app-integration.md#threading)):
+The Book menu has four commands ([chapter 14](14-app-integration.md#threading)):
 
 | Command | Does |
 |---|---|
@@ -162,7 +162,7 @@ See [Stello porting documentation.md](../../Stello%20porting%20documentation.md)
 | File | Main members |
 |---|---|
 | [BookLearner.cs](../../Stello.Net/Stello.Engine/BookLearner.cs) | `AddGame`, `EvaluatePositions`, `EvaluateReplies`, `Minimax`, `PlayGame`, `SelfPlay`, `Learn`, `Searched`, `ValueFor` |
-| [BookSearch.cs](../../Stello.Net/Stello.Engine/BookSearch.cs) | `PositionValue` (C++ `getvalue`), `Search` (shared with the book tool, chapter 16) |
+| [BookSearch.cs](../../Stello.Net/Stello.Engine/BookSearch.cs) | `PositionValue` (C++ `getvalue`), `Search` (shared with the book tool, chapter 13) |
 | [BookMinimax.cs](../../Stello.Net/Stello.Engine/BookMinimax.cs) | `Run`, `BackUp`, `Sort` (shared with the book tool) |
 | [OpeningBook.cs](../../Stello.Net/Stello.Engine/OpeningBook.cs) | `CreateEmpty`, `GetOrAddReplies`, `TryGetReplies`, `Canonical`, `Transform` |
 | [BookEntry.cs](../../Stello.Net/Stello.Engine/BookEntry.cs) | `BookEntry.Set`, `IsSearched`, `BookEffort.For` |
@@ -193,4 +193,4 @@ See [Stello porting documentation.md](../../Stello%20porting%20documentation.md)
 
 ---
 
-Previous: [11 Opening book](11-opening-book.md) · Next: [13 App integration](13-app-integration.md)
+Previous: [11 Opening book](11-opening-book.md) · Next: [13 Book tool](13-book-tool.md)

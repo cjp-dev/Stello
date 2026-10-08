@@ -6,7 +6,7 @@
 
 In the opening, even a deep search sees little difference between the moves, and the same positions come up in game after game. So Stello plays its first moves from an **opening book**: the known positions, each with its **book moves** and a value for each move. A position is stored **once**, whatever order of moves led to it and whichever of Black's four (mirror-image) first moves started the game: positions are stored in a **canonical form**, the smallest of the four mirror images. Each value also records **how it was found** (its origin and search effort), so the values can be improved later.
 
-The master book lives in git as a **text file**, one line per position; the apps use a compact **binary file** built from it by the book tool ([chapter 16](16-book-tool.md)). The book is the one the C++ program learned over many games; its file is only read once, to import it. The computer asks the book until it has missed three times in a row.
+The master book lives in git as a **text file**, one line per position; the apps use a compact **binary file** built from it by the book tool ([chapter 13](13-book-tool.md)). The book is the one the C++ program learned over many games; its file is only read once, to import it. The computer asks the book until it has missed three times in a row.
 
 ## Data structures
 
@@ -175,7 +175,7 @@ A book move returns at once, with 0 nodes and no time used.
 ### Loading and saving
 
 - `Load(stream)` reads the binary format, the text format or the C++ file, by looking at the first bytes. A damaged file gives an `InvalidDataException`.
-- `Save(stream)` always writes the binary format. An old user book in the C++ format is read as before and saved in the new format the next time it is saved (after book learning or Add Game to Book). The app never overwrites the shipped book (chapters 12 and 13).
+- `Save(stream)` always writes the binary format. An old user book in the C++ format is read as before and saved in the new format the next time it is saved (after book learning or Add Game to Book). The app never overwrites the shipped book (chapters 12 and 14).
 - `CreateEmpty` gives an empty book, used when no book file can be loaded, so that learning still works.
 
 ## Worked examples
@@ -191,11 +191,11 @@ A book move returns at once, with 0 nodes and no time used.
 | White's replies to d3 | c5 (−10), c3 (−35), e3 (−126) |
 | Longest line | 57 plies |
 | Origins | 11 256 backed up, 5 645 heuristic, 2 987 win/loss/draw, 2 990 exact |
-| Search effort | 10 531 values searched for 60 s per move (`recalc`, chapter 16); 1 091 exact values from the C++ book |
+| Search effort | 10 531 values searched for 60 s per move (`recalc`, chapter 13); 1 091 exact values from the C++ book |
 | Pass moves | 4 |
 | Files | text 898 KB, binary 193 KB |
 
-Counting d3 as ply 1 and each position at its shortest line, the book has about 500 positions at plies 10–12, then 180–330 per ply up to ply 40; after that fewer and fewer lines continue, down to 26 positions at ply 55. The C++ tree had 23 389 nodes; the import has 511 fewer moves, because a move stored in two lines (or in two frames) is now stored once and moves that could not be played are left out. 14 positions were stored in two frames. After the import all leaves were searched again (chapter 16), and the book now plays another first move in 2 163 positions.
+Counting d3 as ply 1 and each position at its shortest line, the book has about 500 positions at plies 10–12, then 180–330 per ply up to ply 40; after that fewer and fewer lines continue, down to 26 positions at ply 55. The C++ tree had 23 389 nodes; the import has 511 fewer moves, because a move stored in two lines (or in two frames) is now stored once and moves that could not be played are left out. 14 positions were stored in two frames. After the import all leaves were searched again (chapter 13), and the book now plays another first move in 2 163 positions.
 
 ### The same reply for all four first moves
 

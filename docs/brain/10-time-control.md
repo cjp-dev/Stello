@@ -108,7 +108,7 @@ sequenceDiagram
     VM->>VM: Game.Play(result.Move), subtract the time used from the clock
 ```
 
-New Game, Open, Back and the other commands that change the game use the other token: `StopAsync` cancels the search and waits for it, and `ComputerMoveAsync` catches the `OperationCanceledException` and plays nothing (chapter 13).
+New Game, Open, Back and the other commands that change the game use the other token: `StopAsync` cancels the search and waits for it, and `ComputerMoveAsync` catches the `OperationCanceledException` and plays nothing (chapter 14).
 
 ## Worked example: time budgets
 
@@ -132,7 +132,7 @@ For the first move with 5 minutes: $s = 54$, $n = 27$, $t = 300\,000 / 27 = 11\,
 - **Seconds instead of levels.** C++ had levels 0–14 that mapped to times in the tables `tider` and `rtider`. C# uses seconds and plies directly; the formulas for the game clock are the same.
 - **Deadline checks instead of a timer and `longjmp`.** C++ used a Windows multimedia timer that set a flag, and jumped out of the search with `longjmp`. C# checks a `Stopwatch` every 1024 nodes and unwinds with an exception, which is safe in .NET.
 - **Two kinds of stop.** C++ had a "Træk nu" (Move Now) menu item without any code behind it. C# has both Move Now and cancel.
-- **The engine does not know the clock.** The app keeps the computer's clock, passes the time left in `TimePerGame`, subtracts the time used after each move, and restores it on Back and Forward (chapter 13).
+- **The engine does not know the clock.** The app keeps the computer's clock, passes the time left in `TimePerGame`, subtracts the time used after each move, and restores it on Back and Forward (chapter 14).
 
 See [Stello porting documentation.md](../../Stello%20porting%20documentation.md), section 3.8.
 

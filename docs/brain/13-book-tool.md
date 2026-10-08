@@ -1,4 +1,4 @@
-# 16 – Book tool
+# 13 – Book tool
 
 [Back to the index](README.md)
 
@@ -256,4 +256,4 @@ The tool itself has no tests; the code it calls is tested in [OpeningBookTests.c
 
 ---
 
-Previous: [15 References](15-references.md) · Next: [Index](README.md)
+Previous: [12 Book learning](12-book-learning.md) · Next: [14 App integration](14-app-integration.md)

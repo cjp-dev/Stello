@@ -29,8 +29,8 @@ The current Stello book is described in [docs/brain/11-opening-book.md](docs/bra
 
 ### Status
 
-- **Phase 1: done (2026-10-07).** Described in [docs/brain chapter 11](docs/brain/11-opening-book.md), [chapter 12](docs/brain/12-book-learning.md), the new [chapter 16](docs/brain/16-book-tool.md) and [Stello porting documentation.md](Stello%20porting%20documentation.md), phase 10. Decisions taken while implementing it are marked *(phase 1)* below.
-- **Phase 2: done (2026-10-08).** `recalc`, `compare` and `match` are in the book tool ([chapter 16](docs/brain/16-book-tool.md#the-result-october-2026)) and in [Stello porting documentation.md](Stello%20porting%20documentation.md), phase 11. The master book was recalculated with 60 s per position (8 workers, about a day): 10 531 leaf values searched, exact values from 1 091 to 2 990, 2 163 positions with another first move. In the match from those positions the recalculated book scored 52.8 % (95 % interval 51.6–54.0 %) against the C++ book, so it is shipped.
+- **Phase 1: done (2026-10-07).** Described in [docs/brain chapter 11](docs/brain/11-opening-book.md), [chapter 12](docs/brain/12-book-learning.md), the new [chapter 13](docs/brain/13-book-tool.md) and [Stello porting documentation.md](Stello%20porting%20documentation.md), phase 10. Decisions taken while implementing it are marked *(phase 1)* below.
+- **Phase 2: done (2026-10-08).** `recalc`, `compare` and `match` are in the book tool ([chapter 13](docs/brain/13-book-tool.md#the-result-october-2026)) and in [Stello porting documentation.md](Stello%20porting%20documentation.md), phase 11. The master book was recalculated with 60 s per position (8 workers, about a day): 10 531 leaf values searched, exact values from 1 091 to 2 990, 2 163 positions with another first move. In the match from those positions the recalculated book scored 52.8 % (95 % interval 51.6–54.0 %) against the C++ book, so it is shipped.
 
 ### Decisions (answers to the review questions)
 

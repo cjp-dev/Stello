@@ -1,4 +1,4 @@
-# 15 – References
+# 16 – References
 
 [Back to the index](README.md)
 
@@ -95,7 +95,7 @@ Articles, papers and source code on the internet that explain the techniques use
 |---|---|
 | [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Opening knowledge": adding the best move that no game has played to every book position, then minimaxing the book. The same idea as Stello's dropout expansion. |
 
-## 13 App integration
+## 14 App integration
 
 | Link | What you find there |
 |---|---|
@@ -114,4 +114,4 @@ Articles, papers and source code on the internet that explain the techniques use
 
 ---
 
-Previous: [14 Glossary](14-glossary.md) · Next: [16 Book tool](16-book-tool.md)
+Previous: [15 Glossary](15-glossary.md) · Next: [Index](README.md)

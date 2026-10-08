@@ -26,12 +26,12 @@ flowchart LR
 | Project | Contents |
 |---|---|
 | [Stello.Engine](../../Stello.Net/Stello.Engine) | Rules, game record, evaluation, search, opening book, book learning. No UI code and no dependencies outside .NET. |
-| [Stello.App](../../Stello.Net/Stello.App) | The view models ([CommunityToolkit.Mvvm](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/)), the settings, and the interfaces for the engine host, dialogs, files and storage, shared by both apps (chapter 13). |
+| [Stello.App](../../Stello.Net/Stello.App) | The view models ([CommunityToolkit.Mvvm](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/)), the settings, and the interfaces for the engine host, dialogs, files and storage, shared by both apps (chapter 14). |
 | [Stello.Net](../../Stello.Net/Stello.Net) | The WPF desktop app: windows, dialogs, and files in `%AppData%\Stello`. It runs the engine on a background task. |
 | [Stello.Web](../../Stello.Net/Stello.Web) | The web app (Blazor WebAssembly): the same game in the browser. It runs the engine in a Web Worker. |
 | [Stello.Engine.Tests](../../Stello.Net/Stello.Engine.Tests) | xUnit tests of the engine: perft, evaluation, search, endgame (FFO positions), book, book learning. |
 | [Stello.Net.Tests](../../Stello.Net/Stello.Net.Tests) | xUnit tests of the view models, with fake dialogs, settings and book storage. |
-| [Stello.BookTool](../../Stello.Net/tools/Stello.BookTool) | Console tool for the master opening book: import, format, build, verify, statistics, recalculating the leaves, comparing and matching books (chapter 16). |
+| [Stello.BookTool](../../Stello.Net/tools/Stello.BookTool) | Console tool for the master opening book: import, format, build, verify, statistics, recalculating the leaves, comparing and matching books (chapter 13). |
 
 The master opening book is the text file [Stello.Net/Book/opening-book.txt](../../Stello.Net/Book/opening-book.txt). The book tool builds [opening-book.bin](../../Stello.Net/Book/opening-book.bin) from it, which the WPF app links as `Data/OPENING` and the web app copies to `wwwroot/data/OPENING.bin` when it is built. The engine tests use both files, and the C++ file [Stello C++/OPENING](../../Stello%20C++/OPENING) to test the import (chapter 11).
 
@@ -188,7 +188,7 @@ classDiagram
 
 ## The life of one computer move
 
-This sequence shows what happens from the moment it is the computer's turn until its move is on the board. The view model runs on the UI thread; `ComputerPlayer` and `SearchEngine` run on a background task, so the window stays responsive while the computer thinks. This is the desktop app, where `LocalEngineHost` starts the task; in the web app the same steps run in a Web Worker (chapter 13).
+This sequence shows what happens from the moment it is the computer's turn until its move is on the board. The view model runs on the UI thread; `ComputerPlayer` and `SearchEngine` run on a background task, so the window stays responsive while the computer thinks. This is the desktop app, where `LocalEngineHost` starts the task; in the web app the same steps run in a Web Worker (chapter 14).
 
 ```mermaid
 sequenceDiagram

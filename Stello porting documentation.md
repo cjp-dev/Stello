@@ -834,7 +834,7 @@ The first step of the book improvement ([Opening book improvment.md](Opening%20b
 
 ### C# (`Stello.BookTool`, apps, build)
 
-- New console project `tools/Stello.BookTool`: `import`, `format`, `build`, `verify`, `stats` (docs/brain chapter 16).
+- New console project `tools/Stello.BookTool`: `import`, `format`, `build`, `verify`, `stats` (docs/brain chapter 13).
 - `opening-book.bin` is built by the tool and committed next to the text file; the engine test `ShippedBinaryBook_HoldsTheTextBook` fails if it was not built again, and `TextBook_IsInNormalForm` if the text was not formatted. (Building it inside MSBuild was considered, but it would need the tool to run during the WPF and web builds and in the GitHub workflow.)
 - WPF links `Book/opening-book.bin` as `Data/OPENING`; the web build copies it to `wwwroot/data/OPENING.bin`; the GitHub workflow runs on changes in `Stello.Net/Book/**` instead of `Stello C++/OPENING`. `.gitattributes` marks the binary book as binary.
 - The About box says "more than 11,000 opening positions" (positions, no longer nodes).

@@ -1,4 +1,4 @@
-# 14 – Glossary
+# 15 – Glossary
 
 [Back to the index](README.md)
 
@@ -20,7 +20,7 @@ The terms used in these documents. The last column gives the chapter that explai
 | Edge index | The eight squares of an edge read as a base-3 number (0 to 6560); it selects the entry in the edge tables. | [05](05-evaluation.md#the-edge-index) |
 | Edge tables | Eight precomputed tables with one value per possible edge: its worth and the best edge moves. | [05](05-evaluation.md#the-edge-tables) |
 | Empties | The number of empty squares; the endgame code uses it instead of a depth. | [09](09-endgame-solver.md#which-routine-at-how-many-empty-squares) |
-| Engine host | `IEngineHost`: runs the searches and owns the book for the view model; in-process in the desktop app, in a Web Worker in the browser. | [13](13-app-integration.md#services) |
+| Engine host | `IEngineHost`: runs the searches and owns the book for the view model; in-process in the desktop app, in a Web Worker in the browser. | [14](14-app-integration.md#services) |
 | Enhanced transposition cutoff | Before searching the moves of a position, looking up the positions after each move in the hash table to find a cutoff at once. | [09](09-endgame-solver.md#solve-7-or-more-empty-squares) |
 | Evaluation | A heuristic score of a position for the side to move, used at the leaves of the midgame search. | [05](05-evaluation.md) |
 | Exact score | A search result that is the true value of the position, not just a bound. | [08](08-transposition-table.md#data-structures) |
@@ -29,7 +29,7 @@ The terms used in these documents. The last column gives the chapter that explai
 | Fail-soft | A search that may return a score outside the (alpha, beta) window, which gives a tighter bound. | [07](07-midgame-search.md#negamax-with-alpha-beta) |
 | Fastest-first | Endgame move ordering: try first the moves that leave the opponent the fewest replies. | [09](09-endgame-solver.md#solve-7-or-more-empty-squares) |
 | FFO test suite | A standard set of endgame test positions (#40–#59) from the French Othello Federation. | [09](09-endgame-solver.md#worked-example-the-ffo-positions) |
-| Game loop | The app's `RunAsync`: plays passes and computer moves until the human is to move or the game is over. | [13](13-app-integration.md#the-game-loop) |
+| Game loop | The app's `RunAsync`: plays passes and computer moves until the human is to move or the game is over. | [14](14-app-integration.md#the-game-loop) |
 | Hard limit | The time after which the search is stopped in the middle and the best move so far is played. | [10](10-time-control.md#how-the-search-uses-the-limits) |
 | Hash move | The best move stored in the hash table for a position; it is searched first. | [06](06-move-ordering.md#ordering-the-moves-of-one-position) |
 | Hash table | See transposition table. | [08](08-transposition-table.md) |
@@ -56,11 +56,11 @@ The terms used in these documents. The last column gives the chapter that explai
 | Stable disc | A disc that can never be flipped again. | [05](05-evaluation.md#corner-stability-t) |
 | Transposition | The same position reached by different move orders. | [08](08-transposition-table.md#a-transposition) |
 | Transposition table | A table that remembers search results for positions, so a transposition is not searched twice. | [08](08-transposition-table.md) |
-| Web Worker | A browser thread without a page; the web app runs the engine in one so the page stays responsive. | [13](13-app-integration.md#the-engine-in-the-browser) |
+| Web Worker | A browser thread without a page; the web app runs the engine in one so the page stays responsive. | [14](14-app-integration.md#the-engine-in-the-browser) |
 | Win/loss/draw pass | The first endgame pass, which only finds out whether the side to move wins, loses or draws; it is much faster than the exact score. | [09](09-endgame-solver.md#two-passes) |
 | Window | The pair (alpha, beta); only scores between them need to be exact. | [07](07-midgame-search.md#negamax-with-alpha-beta) |
 | X-square | The square diagonally next to a corner: b2, g2, b7, g7. | [05](05-evaluation.md#the-four-edges) |
 
 ---
 
-Previous: [13 App integration](13-app-integration.md) · Next: [15 References](15-references.md)
+Previous: [14 App integration](14-app-integration.md) · Next: [16 References](16-references.md)

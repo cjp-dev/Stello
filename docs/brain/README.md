@@ -51,18 +51,18 @@ The time limit can stop the search at any point; the best move found so far is t
 | 10 | [Time control](10-time-control.md) | Time modes, time per move, "Move Now" |
 | 11 | [Opening book](11-opening-book.md) | Positions in canonical form, the text and binary files, the import of the C++ book, `BookTracker` |
 | 12 | [Book learning](12-book-learning.md) | Adding games, dropout expansion, minimax, self-play |
-| 13 | [App integration](13-app-integration.md) | The game loop, threading, settings, book files |
-| 14 | [Glossary](14-glossary.md) | The terms used in these documents |
-| 15 | [References](15-references.md) | Articles, papers and source code on the internet |
-| 16 | [Book tool](16-book-tool.md) | The console tool for the master book: import, build, verify, statistics, recalculating the leaves, comparing and matching books |
+| 13 | [Book tool](13-book-tool.md) | The console tool for the master book: import, build, verify, statistics, recalculating the leaves, comparing and matching books |
+| 14 | [App integration](14-app-integration.md) | The game loop, threading, settings, book files |
+| 15 | [Glossary](15-glossary.md) | The terms used in these documents |
+| 16 | [References](16-references.md) | Articles, papers and source code on the internet |
 
 ## Reading paths
 
 - **Everything:** read the chapters in order.
 - **Just the search:** 01, 02, 05, 06, 07, 08, 09.
-- **Just the opening book:** 01, 02 (square numbers), 11, 12, 16.
+- **Just the opening book:** 01, 02 (square numbers), 11, 12, 13.
 - **Tuning the engine:** 05, 06, 07, 08, 09, 10, and phase 8 in [Stello porting documentation.md](../../Stello%20porting%20documentation.md#phase-8--performance-tuning-rounds-1-and-2-paused) for what has already been tried, with measurements, and the remaining ideas.
-- **Changing the app:** 01, 10, 13.
+- **Changing the app:** 01, 10, 14.
 
 ## How to view these documents
 

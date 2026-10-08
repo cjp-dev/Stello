@@ -1,4 +1,4 @@
-# 13 – App integration
+# 14 – App integration
 
 [Back to the index](README.md)
 
@@ -280,4 +280,4 @@ No test checks the clock restore on Back and Forward; the worked example above w
 
 ---
 
-Previous: [12 Book learning](12-book-learning.md) · Next: [14 Glossary](14-glossary.md)
+Previous: [13 Book tool](13-book-tool.md) · Next: [15 Glossary](15-glossary.md)

@@ -4,7 +4,7 @@ using Stello.Engine;
 
 namespace Stello.BookTool;
 
-/// <summary>Command line tool for the opening book (docs/brain chapter 16).</summary>
+/// <summary>Command line tool for the opening book (docs/brain chapter 13).</summary>
 internal static class Program
 {
     private const string Usage = """

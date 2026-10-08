@@ -79,7 +79,7 @@ stateDiagram-v2
     Earlier --> Empty: NewGame
 ```
 
-The app does not always undo one ply at a time: Back and Forward jump to the previous or next position where the human is to move, skipping the computer's moves (chapter 13).
+The app does not always undo one ply at a time: Back and Forward jump to the previous or next position where the human is to move, skipping the computer's moves (chapter 14).
 
 ### The text format
 
