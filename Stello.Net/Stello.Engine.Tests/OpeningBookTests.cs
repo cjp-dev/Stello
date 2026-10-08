@@ -29,7 +29,7 @@ public class OpeningBookTests
         Assert.True(BookTestData.Master.TryGetMove(board, Player.White, new Random(0), out BookMove move));
 
         Assert.Equal(Square.Parse(reply), move.Square);
-        Assert.Equal(-39, move.Value);
+        Assert.Equal(-10, move.Value);
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public class OpeningBookTests
             game.Play(move.Square);
         }
 
-        Assert.Equal("f5 d6 c3 d3 c4 f4 f6 g5 e6 f7 g6 e7 f3 e3 c6 b4", GameRecordFormat.Format(game));
+        Assert.Equal("f5 d6 c3 d3 c4 f4 f6 g5 e6 f7 g6 c5 f3 e7 h6 g4 g3", GameRecordFormat.Format(game));
     }
 
     [Fact]
@@ -105,12 +105,11 @@ public class OpeningBookTests
     }
 
     [Fact]
-    public void Load_ReadsTheThreeFormatsToTheSameBook()
+    public void Load_ReadsTheTextAndTheBinaryBookToTheSameBook()
     {
         string fromText = BookTestData.WriteText(OpeningBook.Load(BookTestData.TextPath));
 
         Assert.Equal(fromText, BookTestData.WriteText(OpeningBook.Load(BookTestData.BinaryPath)));
-        Assert.Equal(fromText, BookTestData.WriteText(OpeningBook.Load(BookTestData.LegacyPath)));
     }
 
     [Fact]

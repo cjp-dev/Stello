@@ -30,7 +30,7 @@ The current Stello book is described in [docs/brain/11-opening-book.md](docs/bra
 ### Status
 
 - **Phase 1: done (2026-10-07).** Described in [docs/brain chapter 11](docs/brain/11-opening-book.md), [chapter 12](docs/brain/12-book-learning.md), the new [chapter 16](docs/brain/16-book-tool.md) and [Stello porting documentation.md](Stello%20porting%20documentation.md), phase 10. Decisions taken while implementing it are marked *(phase 1)* below.
-- **Phase 2: implemented (2026-10-07); the run on the master book is still to do.** `recalc`, `compare` and `match` are in the book tool ([chapter 16](docs/brain/16-book-tool.md#recalculating-the-master-book) has the commands for the run) and in [Stello porting documentation.md](Stello%20porting%20documentation.md), phase 11. Measured: 10 522 leaf positions to search, 48–60 s each in the opening at depth 17–18, so about 14 hours with 12 workers.
+- **Phase 2: done (2026-10-08).** `recalc`, `compare` and `match` are in the book tool ([chapter 16](docs/brain/16-book-tool.md#the-result-october-2026)) and in [Stello porting documentation.md](Stello%20porting%20documentation.md), phase 11. The master book was recalculated with 60 s per position (8 workers, about a day): 10 531 leaf values searched, exact values from 1 091 to 2 990, 2 163 positions with another first move. In the match from those positions the recalculated book scored 52.8 % (95 % interval 51.6–54.0 %) against the C++ book, so it is shipped.
 
 ### Decisions (answers to the review questions)
 
@@ -198,7 +198,7 @@ Stello.BookTool match <book A> <book B> (--starts <report.txt> | --starts-ply N)
 ## Phases
 
 1. **Format**: in-memory DAG model, text and binary format, `import`/`build`/`verify`/`stats`, legacy conversion on load, port `BookLearner` and the app's book stores; the master book moves to `Stello.Net/Book/opening-book.txt` and the apps ship it converted. No change in play.
-2. **Recalc**: `recalc` with workers and resume, the end-of-run report and `match`; run it on all ~10 000 leaves of the master book (≈ 14 h with 12 workers, measured), compare the old and the new book with `match`, and ship the result. *(Implemented; the run is still to do.)*
+2. **Recalc**: `recalc` with workers and resume, the end-of-run report and `match`; run it on all ~10 000 leaves of the master book (≈ 14 h with 12 workers, measured), compare the old and the new book with `match`, and ship the result. *(Done: 52.8 % for the recalculated book.)*
 
 ## Open questions (phases 1 and 2)
 

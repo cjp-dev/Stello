@@ -53,7 +53,7 @@ Two engine tests guard the files: `ShippedBinaryBook_HoldsTheTextBook` fails if 
   - a book move whose value is not minus the best value of the position after it;
   - a position whose moves are not sorted best first.
 
-The imported master book has 104 moves that are not backed up and 18 positions that are not sorted:
+The master book as imported from the C++ book had 104 moves that were not backed up and 18 positions that were not sorted:
 
 ```text
 Stello.Net/Book/opening-book.txt: 11,200 positions, 22,878 moves, every move legal and every position reached from d3.
@@ -68,7 +68,7 @@ Warning: positions whose moves are not sorted best first: 18, e.g.
 Stello.Net/Book/opening-book.bin holds the same book.
 ```
 
-They come from positions that the C++ tree stored more than once: each copy had its own values, and the import joined them. The import does not back up or sort, so the computer plays the same book moves as before (chapter 11). `recalc`, or Evaluate Book in the app, backs up and sorts the whole book.
+They came from positions that the C++ tree stored more than once: each copy had its own values, and the import joined them. The import does not back up or sort, so the computer played the same book moves as before (chapter 11). `recalc` backs up and sorts the whole book, so the recalculated master book gives no warnings.
 
 ## Recalculating the leaves: `recalc`
 
@@ -111,21 +111,25 @@ The master book has 10 522 leaf positions to search (the 1 091 exact ones are ke
 
 ## Comparing two books: `compare`
 
-`compare` (`BookComparison`) compares the book moves the two books have in common, and the move each book plays first in each position. The report (also written by `recalc`) looks like this, here after a quick test run with `--depth 4`:
+`compare` (`BookComparison`) compares the book moves the two books have in common, and the move each book plays first in each position. The report (also written by `recalc`) for the recalculation of the master book:
 
 ```text
-# Recalculated new.txt with depth 4 per position (2026-10-07 18:29)
+# Comparison of old-book.txt (old) and Stello.Net/Book/opening-book.txt (new)
 # Positions: 11,200 (before 11,200); book moves: 22,878 (before 22,878)
-# Values changed: 14,358
+# Values changed: 15,729
 # Origin before -> after: book moves (values changed)
 #   Unknown     -> Heuristic        15 (15)
-#   Heuristic   -> Heuristic     7,132 (7,108)
-#   WinLossDraw -> WinLossDraw   3,384 (0)
+#   Heuristic   -> Heuristic     5,630 (5,605)
+#   Heuristic   -> WinLossDraw     264 (264)
+#   Heuristic   -> Exact         1,238 (1,238)
+#   WinLossDraw -> WinLossDraw   2,723 (0)
+#   WinLossDraw -> Exact           661 (661)
 #   Exact       -> Exact         1,091 (0)
-#   BackedUp    -> BackedUp     11,256 (7,235)
-# Positions whose first book move changed: 1,997
+#   BackedUp    -> BackedUp     11,256 (7,946)
+# Positions whose first book move changed: 2,163
 # <line> <old move>:<old value> <new move>:<new value>
-d3c5 f6:39 d6:38
+d3c5e6 d2:-32 f5:-10
+d3c5d6e3 b5:-16 f4:-8
 ...
 ```
 
@@ -142,15 +146,14 @@ Everything except the changed positions is a comment, so the report can be given
 - **Fixed depth by default** (`--depth 10`), so the result does not depend on the machine's load.
 
 ```text
-Finished after 0m 01s: 40 pairs. Book B scored 43 of 80 (53.7 %, 95 % interval 44.5 % to 63.0 %), +0.7 discs per game.
-No significant difference.
+Finished after 9m 36s: 2,163 pairs. Book B scored 2284 of 4,326 (52.8 %, 95 % interval 51.6 % to 54.0 %), +1.1 discs per game.
+Book B is stronger.
 
-Pairs where book B lost points (8):
-  d3c3c4c5b4e3 B 0.0
+Pairs where book B lost points (376):
   ...
 ```
 
-(A quick test: the old book against the book recalculated at depth 4, depth 6 per move, the first 40 changed positions.)
+(The C++ book as imported, A, against the recalculated book, B, from the 2 163 positions of the report above, depth 10 per move, 8 workers.)
 
 ## Recalculating the master book
 
@@ -170,6 +173,21 @@ dotnet run -c Release --project Stello.Net/tools/Stello.BookTool -- verify Stell
 
 The report that `recalc` writes compares with the book at the start of the last run; after a run that was stopped and continued, `compare` against the book in git gives the report of the whole recalculation. Commit the text and the binary book if the match does not show that the old book is stronger.
 
+### The result (October 2026)
+
+The master book was recalculated with 60 s per position and 8 workers on an Intel i7-12850HX laptop, over about a day, with one restart after a reboot.
+
+| | Before (C++ book) | After |
+|---|---|---|
+| Leaf values searched for 60 s | 0 | 10 531 |
+| Exact / win-loss-draw / heuristic values | 1 091 / 3 384 / 7 132 (and 15 unknown) | 2 990 / 2 987 / 5 645 |
+| Moves not backed up / positions not sorted | 104 / 18 | 0 / 0 |
+| White's replies to d3 | c5 −39, c3 −40, e3 −110 | c5 −10, c3 −35, e3 −126 |
+| Main line from the start | 16 moves (±39) | 17 moves (±10), the same up to move 11 |
+| Binary file | 172 KB | 193 KB (the efforts are stored) |
+
+2 163 positions got another first move, the first one at ply 3 (after d3 c5 e6 the book now plays f5 instead of d2). In the match from those positions, the recalculated book won 387 pairs 2–0 and lost 292 pairs 0–2; 1 264 pairs were even, 136 ended 1½–½ and 84 ½–1½. In total it scored 52.8 % (95 % interval 51.6–54.0 %), so it is stronger.
+
 ## Worked example: `stats`
 
 `stats Stello.Net/Book/opening-book.bin` (shortened):
@@ -180,17 +198,17 @@ Moves:        22,878
 Leaf moves:   11,622
 Passes:       4
 Longest line: 57 plies
-Replies to d3: c5 (-39, BackedUp), c3 (-40, BackedUp), e3 (-110, BackedUp)
+Replies to d3: c5 (-10, BackedUp), c3 (-35, BackedUp), e3 (-126, BackedUp)
 
 Origin of the values:
-  Unknown            15
-  Heuristic       7,132
-  WinLossDraw     3,384
-  Exact           1,091
+  Heuristic       5,645
+  WinLossDraw     2,987
+  Exact           2,990
   BackedUp       11,256
 
 Search limit of the searched values:
-  unknown        11,607
+  unknown         1,091
+  60s            10,531
 
 Ply  Positions  Leaf moves   (d3 is ply 1; a position counts at its shortest line)
   1          1           0
@@ -200,7 +218,7 @@ Ply  Positions  Leaf moves   (d3 is ply 1; a position counts at its shortest lin
  55         26           2
 ```
 
-All searched values come from the C++ book, so their search limit is unknown; `recalc` gives them a known effort.
+Only the 1 091 exact values from the C++ book have no known effort; all other leaves were searched by `recalc` with 60 s per move.
 
 ## Design notes
 

@@ -242,7 +242,7 @@ Two tokens control a running search:
 | Size of a `Board` | 16 bytes (two `ulong`) |
 | Edge tables | 8 tables of $3^8 = 6561$ values |
 | Hash tables | 2 tables (midgame, endgame), each $2^{19}$ slots of 2 entries of 24 bytes, so 24 MiB each |
-| Master opening book | 11 200 positions, 22 878 book moves; binary file 172 KB |
+| Master opening book | 11 200 positions, 22 878 book moves, all leaves searched for 60 s; binary file 193 KB |
 | Engine tests / app tests | 194 / 60 |
 
 ---

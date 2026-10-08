@@ -54,16 +54,16 @@ The master book is [Stello.Net/Book/opening-book.txt](../../Stello.Net/Book/open
 # 11200 positions, 22878 moves
 # <line> <move>:<value>:<origin>[:<limit>:d<depth reached>:v<engine version>] ...
 # origin: U unknown, H heuristic, W win/loss/draw, X exact, B backed up; limit: time per move (s, ms), depth (ply), solve, - unknown
-d3 c5:-39:B c3:-40:B e3:-110:B
-d3c3 c4:40:B e6:-18:W
-d3c5 f6:39:B e6:32:B d6:-16:B c6:-56:W
-d3e3 f4:110:B f3:35:W
-d3c3c4 c5:-40:B e3:-40:B
+d3 c5:-10:B c3:-35:B e3:-126:B
+d3c3 c4:35:B e6:-18:W:60s:d18:v1
+d3c5 f6:10:B e6:10:B d6:-8:B c6:-56:W:60s:d18:v1
+d3e3 f4:126:B f3:35:W:60s:d18:v1
+d3c3c4 c5:-35:B e3:-35:B
 ```
 
 - The first line identifies the format; other lines starting with `#` are comments.
 - Each other line is one position. It starts with the **key**: the moves from the start that reach it, without spaces and beginning with d3 (`--` is a pass). Of the lines of book moves that reach the position, the shortest is used, and of those the alphabetically first.
-- Then follow the book moves in book order, in the frame of the key line, as `move:value:origin`. A searched value can add the effort, e.g. `e6:12:H:60s:d14:v1` (60 s per move, depth 14 reached, engine version 1). The imported values have no effort yet.
+- Then follow the book moves in book order, in the frame of the key line, as `move:value:origin`. A searched value adds the effort, e.g. `c6:-56:W:60s:d18:v1` (a win/loss/draw result, 60 s per move, depth 18 reached, engine version 1). Only the 1 091 exact values from the C++ book have no effort.
 - The lines are sorted by length, then alphabetically, and written with `\n` and invariant culture, so a change to the book only changes the lines of the positions that changed.
 - Reading checks that every line is a legal game from the start, every book move is legal, no position or move is given twice, and every position can be reached from d3 by book moves. Errors give an `InvalidDataException` with the line number.
 
@@ -78,7 +78,7 @@ The apps use [Stello.Net/Book/opening-book.bin](../../Stello.Net/Book/opening-bo
 | Move | byte square (0–63, 64 = pass), `int16` value, byte origin; for a searched origin also byte effort kind, 7-bit encoded amount, byte depth reached, byte engine version; then a 7-bit encoded reference to the position after the move |
 | Reference | 0 = not in the book, 1 = the position follows here, $n + 2$ = position number $n$ (numbered in the order they are written), reached by another move order |
 
-The positions are written depth first from the position after d3, in book order. A position's bitboards are not stored: they are found by playing the moves, and the squares are written in the frame of the board as it is reached. So a book move takes about 7.5 bytes (the master book is 172 087 bytes, against 187 118 for the C++ file). Reading checks the moves, the references and the counts.
+The positions are written depth first from the position after d3, in book order. A position's bitboards are not stored: they are found by playing the moves, and the squares are written in the frame of the board as it is reached. So a book move takes about 8.5 bytes (the master book is 193 209 bytes, against 187 118 for the C++ file, which had no search effort). Reading checks the moves, the references and the counts.
 
 ### The C++ file (import only)
 
@@ -110,7 +110,7 @@ The import walks the tree depth first, in file order, and adds each legal move t
 
 Black's four first moves d3, c4, f5 and e6 are equivalent: each can be turned into d3 by a mirror or a turn of the board that keeps the start position.
 
-![Four boards: Black opens with d3, c4, f5 or e6, and the book replies c5, e3, d6 or f4. c4 is mapped to d3 by the main diagonal, f5 by the anti-diagonal and e6 by a half turn; every reply has the value −39.](images/book-symmetries.svg)
+![Four boards: Black opens with d3, c4, f5 or e6, and the book replies c5, e3, d6 or f4. c4 is mapped to d3 by the main diagonal, f5 by the anti-diagonal and e6 by a half turn; every reply has the value −10.](images/book-symmetries.svg)
 
 | Symmetry | Square (column, row) goes to | Maps to d3 |
 |---|---|---|
@@ -188,34 +188,35 @@ A book move returns at once, with 0 nodes and no time used.
 |---|---|
 | Positions / book moves | 11 200 / 22 878 |
 | Leaf moves (the position after them is not in the book) | 11 622 |
-| White's replies to d3 | c5 (−39), c3 (−40), e3 (−110) |
+| White's replies to d3 | c5 (−10), c3 (−35), e3 (−126) |
 | Longest line | 57 plies |
-| Origins | 11 256 backed up, 7 132 heuristic, 3 384 win/loss/draw, 1 091 exact, 15 unknown |
+| Origins | 11 256 backed up, 5 645 heuristic, 2 987 win/loss/draw, 2 990 exact |
+| Search effort | 10 531 values searched for 60 s per move (`recalc`, chapter 16); 1 091 exact values from the C++ book |
 | Pass moves | 4 |
-| Files | text 776 KB, binary 172 KB |
+| Files | text 898 KB, binary 193 KB |
 
-Counting d3 as ply 1 and each position at its shortest line, the book has about 500 positions at plies 10–12, then 180–330 per ply up to ply 40; after that fewer and fewer lines continue, down to 26 positions at ply 55. The C++ tree had 23 389 nodes; the import has 511 fewer moves, because a move stored in two lines (or in two frames) is now stored once and moves that could not be played are left out. 14 positions were stored in two frames.
+Counting d3 as ply 1 and each position at its shortest line, the book has about 500 positions at plies 10–12, then 180–330 per ply up to ply 40; after that fewer and fewer lines continue, down to 26 positions at ply 55. The C++ tree had 23 389 nodes; the import has 511 fewer moves, because a move stored in two lines (or in two frames) is now stored once and moves that could not be played are left out. 14 positions were stored in two frames. After the import all leaves were searched again (chapter 16), and the book now plays another first move in 2 163 positions.
 
 ### The same reply for all four first moves
 
-After each of Black's first moves the book gives the mirrored reply with the same value −39:
+After each of Black's first moves the book gives the mirrored reply with the same value −10:
 
 | Black's first move | Symmetry to d3 | Book reply | Value |
 |---|---|---|---|
-| d3 | `Identity` | c5 | −39 |
-| c4 | `MainDiagonal` | e3 | −39 |
-| f5 | `AntiDiagonal` | d6 | −39 |
-| e6 | `HalfTurn` | f4 | −39 |
+| d3 | `Identity` | c5 | −10 |
+| c4 | `MainDiagonal` | e3 | −10 |
+| f5 | `AntiDiagonal` | d6 | −10 |
+| e6 | `HalfTurn` | f4 | −10 |
 
 ### A game from the book
 
-Playing only book moves for both sides from the start (random first move with `new Random(0)`) gives 16 moves:
+Playing only book moves for both sides from the start (random first move with `new Random(0)`) gives 17 moves, with the values ±10:
 
 ```text
-f5 d6 c3 d3 c4 f4 f6 g5 e6 f7 g6 e7 f3 e3 c6 b4
+f5 d6 c3 d3 c4 f4 f6 g5 e6 f7 g6 c5 f3 e7 h6 g4 g3
 ```
 
-This is the start of the text book (`d3 c5 f6 f5 e6 e3 ...`) seen in the f5 frame; it is the well-known "tiger" opening. After b4 the book has no reply.
+It starts as the well-known "tiger" opening (f5 d6 c3 d3 c4). Up to g6 it is the main line of the C++ book; there the C++ book played e7, the recalculated book plays c5. After g3 the book has no reply.
 
 ## Design notes
 
@@ -245,10 +246,10 @@ See [Stello porting documentation.md](../../Stello%20porting%20documentation.md)
 ## Tests
 
 - [OpeningBookTests.cs](../../Stello.Net/Stello.Engine.Tests/OpeningBookTests.cs):
-  - all four first moves over 100 seeds; the same reply (value −39) after the four symmetric first moves; the 16-move main line;
+  - all four first moves over 100 seeds; the same reply (value −10) after the four symmetric first moves; the 17-move main line;
   - a legal book move in every one of the more than 11 000 book positions, and an equivalent move in each of their mirror images;
   - a random position is not in the book; the four first moves give the same canonical position;
-  - the shipped binary file holds the text book, the text book is in its normal form, and the three formats read to the same book;
+  - the shipped binary file holds the text book, the text book is in its normal form, and the text and binary files read to the same book;
   - values, origins and efforts survive saving and loading;
   - the import plays the same move as the old lookup in every position of the C++ book (except positions it stored in two frames), stores each position once, and takes the origins from the flags;
   - invalid files in all three formats.

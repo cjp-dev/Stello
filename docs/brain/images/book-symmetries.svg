@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 330" width="800" height="330" font-family="sans-serif">
 <title>The four symmetries of the opening book</title>
-<desc>Four boards. Black opens with d3, c4, f5 or e6 and the book replies c5, e3, d6 or f4. c4 is mapped to d3 by the main diagonal, f5 by the anti-diagonal and e6 by a half turn; each reply has the value -39.</desc>
+<desc>Four boards. Black opens with d3, c4, f5 or e6 and the book replies c5, e3, d6 or f4. c4 is mapped to d3 by the main diagonal, f5 by the anti-diagonal and e6 by a half turn; each reply has the value -10.</desc>
 <rect x="0" y="0" width="800" height="330" fill="#FFFFFF"/>
-<text x="20" y="26" font-size="16" font-weight="bold" fill="#000000">Black's four first moves and the book's reply to each (value −39)</text>
+<text x="20" y="26" font-size="16" font-weight="bold" fill="#000000">Black's four first moves and the book's reply to each (value −10)</text>
 <text x="40" y="59" font-size="12" text-anchor="middle" fill="#000000">a</text>
 <text x="60" y="59" font-size="12" text-anchor="middle" fill="#000000">b</text>
 <text x="80" y="59" font-size="12" text-anchor="middle" fill="#000000">c</text>

@@ -885,3 +885,10 @@ The second step of the book improvement ([Opening book improvment.md](Opening%20
 | Parallel search | New | Several engines on different positions; the search itself is unchanged. |
 | Comparison and match | New | |
 | `getvalue`, `mmlib`, `sort_lib` | Moved | Shared by book learning and the book tool; unchanged behaviour. |
+
+### The recalculated master book
+
+- Run with 60 s per position and 8 workers on an i7-12850HX, about a day including a restart after a reboot. All 10 531 leaf values that were not exact were searched again; exact values went from 1 091 to 2 990, and 0 moves are left not backed up or not sorted.
+- 2 163 positions got another first move. The reply value after the first move went from −39 to −10, and the main line from the start is now 17 moves (`f5 d6 c3 d3 c4 f4 f6 g5 e6 f7 g6 c5 f3 e7 h6 g4 g3`), the same as before up to move 11.
+- Match from the 2 163 changed positions, depth 10, the C++ book as imported against the recalculated book: the recalculated book scored 52.8 % (95 % interval 51.6–54.0 %), +1.1 discs per game; 387 pairs won 2–0, 292 lost 0–2.
+- The binary book grew from 172 to 193 KB (the search effort of each value is stored). Three tests were changed to the new book: the reply value (−10), the main line, and the import test, which now only compares the text and binary books (the C++ book is no longer the same book).
