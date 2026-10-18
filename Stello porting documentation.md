@@ -755,7 +755,7 @@ This phase has no C++ counterpart. The same engine and view models also run in t
   - Progress is posted at most every 100 ms, but always when the depth or the best move changes.
   - **`Services/WebEngineHost`:** the `IEngineHost` for the browser. A running search cannot be interrupted inside the worker, so Stop and Move Now terminate the worker and start a new one at once. Move Now plays the best move from the last progress report (or the current move, or the first legal move). After adding a game, the book is read back from the worker and saved in local storage. `SupportsLearning` is false.
 - **Opening book file:** a build target copies `Stello C++/OPENING` to `wwwroot/data/OPENING.bin`, which is git-ignored. A linked file is not served by the development server, and the extension makes Static Web Apps serve it as binary data.
-- **Brain documentation (Brain → How Stello Thinks):** opens the documents in `docs/brain` in a new tab, so the game stays open.
+- **Rules and documentation (Help → Rules & Documentation):** opens the documents in `docs/brain` in a new tab, so the game stays open.
   - A build target copies `docs/brain` to `wwwroot/content/brain` (git-ignored), like the book.
   - `Services/BrainDocs` turns the Markdown into HTML with Markdig: GitHub heading ids, tables, and raw HTML turned off. Links to chapters become pages of the app, pictures point to the copied files, and links to other files in the repository open them on GitHub.
   - The README is the front page, and its links to the chapter files give the contents list with the chapters' names.

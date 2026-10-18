@@ -24,6 +24,8 @@ button {
     position: relative;
     z-index: 20;
     display: flex;
+    box-sizing: border-box;
+    padding-left: var(--menu-left, 0px);
     background: #fff;
     border-bottom: 1px solid #ccc;
 }

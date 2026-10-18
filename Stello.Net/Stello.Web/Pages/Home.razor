@@ -122,8 +122,11 @@
                 new("3D Pieces", ChangeAppearance(a => a with { Pieces3D = !a.Pieces3D }), IsChecked: () => _appearance.Pieces3D, SeparatorBefore: true),
                 new("Animate Flips", ChangeAppearance(a => a with { AnimateFlips = !a.AnimateFlips }), IsChecked: () => _appearance.AnimateFlips),
             ]),
-            new("Brain", [new("How Stello Thinks", new RelayCommand(OpenDocs))]),
-            new("Help", [new("About Stello...", Vm.AboutCommand)]),
+            new("Help",
+            [
+                new("Rules & Documentation", new RelayCommand(OpenDocs)),
+                new("About Stello...", Vm.AboutCommand, SeparatorBefore: true),
+            ]),
         ];
         _commands = _menus.SelectMany(menu => menu.Entries).Select(entry => entry.Command).ToArray();
 
@@ -147,6 +150,7 @@
         {
             _self = DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("stello.registerShortcuts", _self);
+            await JS.InvokeVoidAsync("stello.initMenuAlignment");
         }
     }
 
@@ -168,6 +172,7 @@
         if (_self is not null)
         {
             ((IJSInProcessRuntime)JS).InvokeVoid("stello.unregisterShortcuts");
+            ((IJSInProcessRuntime)JS).InvokeVoid("stello.cleanupMenuAlignment");
             _self.Dispose();
         }
     }
