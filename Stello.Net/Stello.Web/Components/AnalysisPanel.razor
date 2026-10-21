@@ -1,0 +1,43 @@
+@using System.ComponentModel
+@implements IDisposable
+
+<aside class="panel analysis" aria-label="Analysis">
+    <h2>Analysis</h2>
+    <dl>
+        <dt>Move:</dt><dd>@Analysis.Move</dd>
+        <dt>Depth:</dt><dd>@Analysis.Depth</dd>
+        <dt>Value:</dt><dd>@Analysis.Value</dd>
+        <dt>Best move:</dt><dd>@Analysis.BestMove</dd>
+        <dt>Nodes:</dt><dd>@Analysis.Nodes</dd>
+        <dt>Evaluations:</dt><dd>@Analysis.Evaluations</dd>
+        <dt>Time:</dt><dd>@Analysis.Time</dd>
+    </dl>
+</aside>
+
+@code {
+    private bool _renderPending;
+
+    [Parameter, EditorRequired]
+    public AnalysisViewModel Analysis { get; set; } = default!;
+
+    protected override void OnInitialized() => Analysis.PropertyChanged += OnChanged;
+
+    public void Dispose() => Analysis.PropertyChanged -= OnChanged;
+
+    private void OnChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_renderPending)
+        {
+            return;
+        }
+
+        _renderPending = true;
+        _ = InvokeAsync(async () =>
+        {
+            await Task.Yield();
+            _renderPending = false;
+            StateHasChanged();
+        });
+    }
+}
+

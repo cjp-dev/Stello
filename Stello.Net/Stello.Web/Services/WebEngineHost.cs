@@ -7,8 +7,8 @@ using Stello.Web.Worker;
 namespace Stello.Web.Services;
 
 /// <summary>
-/// Runs the engine in a Web Worker so the page stays responsive. A running search cannot be interrupted inside
-/// the worker, so Stop and Move Now terminate it and start a new one (with a fresh hash table and book tracker).
+/// Runs the engine in a Web Worker so the page stays responsive. A running search is stopped cooperatively
+/// via a SharedArrayBuffer signal (preserving the hash tables), falling back to restarting the worker if needed.
 /// </summary>
 public sealed class WebEngineHost : IEngineHost
 {
@@ -66,20 +66,43 @@ public sealed class WebEngineHost : IEngineHost
             {
                 return EngineProtocol.ReadResult(await search);
             }
+
+            bool isMoveNow = await stopped.Task;
+            bool signaled = client.Invoke<bool>("signal", isMoveNow ? 1 : 2);
+            if (signaled)
+            {
+                Task completed = await Task.WhenAny(search, Task.Delay(300));
+                if (completed == search)
+                {
+                    if (!isMoveNow)
+                    {
+                        Forget(search);
+                        throw new OperationCanceledException(cancellationToken);
+                    }
+                    try
+                    {
+                        return EngineProtocol.ReadResult(await search);
+                    }
+                    catch (JSException)
+                    {
+                        // Fallback if worker threw
+                    }
+                }
+            }
+
+            Forget(search);
+            Restart(client);
+            if (!isMoveNow)
+            {
+                throw new OperationCanceledException(cancellationToken);
+            }
+
+            return EngineProtocol.MoveNowResult(board, player, last, clock.Elapsed);
         }
         finally
         {
             _progress = null;
         }
-
-        Forget(search);
-        Restart(client);
-        if (!await stopped.Task)
-        {
-            throw new OperationCanceledException(cancellationToken);
-        }
-
-        return EngineProtocol.MoveNowResult(board, player, last, clock.Elapsed);
     }
 
     public void ResetBookTracker()

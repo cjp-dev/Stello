@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 
 namespace Stello.Engine.Tests;
@@ -62,6 +63,26 @@ public class SearchEngineTests
         new SearchEngine().Search(Midgame, Player.Black, SearchLimits.FixedDepth(5), progress);
 
         Assert.Equal([1, 2, 3, 4, 5], depths.Distinct());
+    }
+
+    [Fact]
+    public async Task Search_WithMoveNow_ReportsPeriodicProgressAndReturnsBestMove()
+    {
+        using var moveNow = new CancellationTokenSource();
+        var reports = new ConcurrentBag<SearchInfo>();
+        var progress = new SyncProgress<SearchInfo>(reports.Add);
+        var engine = new SearchEngine();
+
+        Task<SearchResult> search = Task.Run(() =>
+            engine.Search(Midgame, Player.Black, SearchLimits.FixedDepth(60), progress, moveNowToken: moveNow.Token));
+
+        await Task.Delay(350);
+        await moveNow.CancelAsync();
+        SearchResult result = await search;
+
+        Assert.True(reports.Count >= 2);
+        Assert.True(Midgame.IsLegal(Player.Black, result.Move.Square!.Value));
+        Assert.Equal(ScoreKind.Heuristic, result.Kind);
     }
 
     [Fact]

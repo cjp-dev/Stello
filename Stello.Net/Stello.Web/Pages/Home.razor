@@ -52,28 +52,32 @@
             <section class="panel status" role="status" aria-label="Status">
                 <h2>Status</h2>
                 <p>@Vm.Status</p>
+                @if (Vm.IsThinking)
+                {
+                    <div class="thinking-bar" role="progressbar" aria-label="Computer thinking">
+                        <div class="thinking-progress"></div>
+                    </div>
+                }
                 <p>Black @Vm.BlackCount – White @Vm.WhiteCount</p>
                 <p>@Vm.SidesText</p>
                 @if (Vm.ClockText.Length > 0)
                 {
                     <p>@Vm.ClockText</p>
                 }
+                <div class="action-buttons">
+                    <button class="btn" disabled="@(!Vm.NewGameCommand.CanExecute(null))" @onclick="() => RunAsync(Vm.NewGameCommand)">New</button>
+                    <button class="btn" disabled="@(!Vm.UndoCommand.CanExecute(null))" @onclick="() => RunAsync(Vm.UndoCommand)">Back</button>
+                    <button class="btn" disabled="@(!Vm.RedoCommand.CanExecute(null))" @onclick="() => RunAsync(Vm.RedoCommand)">Forward</button>
+                    @if (Vm.IsThinking)
+                    {
+                        <button class="btn btn-primary action-span" @onclick="() => RunAsync(Vm.MoveNowCommand)">Move Now</button>
+                    }
+                </div>
             </section>
 
             @if (Vm.IsAnalysisVisible)
             {
-                <aside class="panel analysis" aria-label="Analysis">
-                    <h2>Analysis</h2>
-                    <dl>
-                        <dt>Move:</dt><dd>@Vm.Analysis.Move</dd>
-                        <dt>Depth:</dt><dd>@Vm.Analysis.Depth</dd>
-                        <dt>Value:</dt><dd>@Vm.Analysis.Value</dd>
-                        <dt>Best move:</dt><dd>@Vm.Analysis.BestMove</dd>
-                        <dt>Nodes:</dt><dd>@Vm.Analysis.Nodes</dd>
-                        <dt>Evaluations:</dt><dd>@Vm.Analysis.Evaluations</dd>
-                        <dt>Time:</dt><dd>@Vm.Analysis.Time</dd>
-                    </dl>
-                </aside>
+                <AnalysisPanel Analysis="Vm.Analysis" />
             }
         </div>
     </main>
@@ -131,7 +135,6 @@
         _commands = _menus.SelectMany(menu => menu.Entries).Select(entry => entry.Command).ToArray();
 
         Vm.PropertyChanged += OnChanged;
-        Vm.Analysis.PropertyChanged += OnChanged;
         Dialogs.Changed += OnDialogChanged;
         foreach (SquareViewModel square in Vm.Squares)
         {
@@ -157,7 +160,6 @@
     public void Dispose()
     {
         Vm.PropertyChanged -= OnChanged;
-        Vm.Analysis.PropertyChanged -= OnChanged;
         Dialogs.Changed -= OnDialogChanged;
         foreach (SquareViewModel square in Vm.Squares)
         {

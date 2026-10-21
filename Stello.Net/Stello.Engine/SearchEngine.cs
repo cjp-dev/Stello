@@ -52,6 +52,12 @@ public sealed class SearchEngine
     private CancellationToken _cancel;
     private CancellationToken _moveNow;
     private IProgress<SearchInfo>? _progress;
+    private long _lastHeartbeatMs;
+    private int _reportDepth;
+    private int _reportMove = -1;
+    private int _reportBestMove = -1;
+    private int _reportScore;
+    private ScoreKind _reportKind;
 
     /// <param name="hashBits">Each of the two hash tables gets 2^hashBits slots of two entries (C++: HASHSIZE 19, one entry).</param>
     public SearchEngine(int hashBits = 19)
@@ -87,6 +93,8 @@ public sealed class SearchEngine
         cancellationToken.ThrowIfCancellationRequested();
 
         _clock.Restart();
+        _lastHeartbeatMs = 0;
+        _reportMove = -1;
         _nodes = 0;
         _evaluations = 0;
         _cancel = cancellationToken;
@@ -178,6 +186,11 @@ public sealed class SearchEngine
         for (int i = 0; i < rootMoves.Length; i++)
         {
             int move = rootMoves[i];
+            _reportDepth = look + 1;
+            _reportMove = move;
+            _reportBestMove = bestMove >= 0 ? bestMove : best.Move;
+            _reportScore = bestMove >= 0 ? bestScore : best.Score;
+            _reportKind = ScoreKind.Heuristic;
             Board child = Play(board, player, move);
             int score;
 
@@ -356,6 +369,11 @@ public sealed class SearchEngine
         for (int i = 0; i < rootMoves.Length; i++)
         {
             int move = rootMoves[i];
+            _reportDepth = empties;
+            _reportMove = move;
+            _reportBestMove = bestMove >= 0 ? bestMove : rootMoves[0];
+            _reportScore = bestMove >= 0 ? bestScore : 0;
+            _reportKind = kind;
             ulong flips = Bitboards.Flips(own, opponent, move);
             ulong childOwn = own | flips | (1UL << move);
             ulong childOpponent = opponent & ~flips;
@@ -699,6 +717,11 @@ public sealed class SearchEngine
 
     private void CheckAbort()
     {
+        if (_progress is not null && _reportMove >= 0 && _clock.ElapsedMilliseconds - _lastHeartbeatMs >= 100)
+        {
+            Report(_reportDepth, _reportMove, _reportBestMove, _reportScore, _reportKind);
+        }
+
         _cancel.ThrowIfCancellationRequested();
         if (_moveNow.IsCancellationRequested || _clock.ElapsedMilliseconds >= _hardLimitMs)
         {
@@ -706,7 +729,9 @@ public sealed class SearchEngine
         }
     }
 
-    private void Report(int depth, int move, int bestMove, int score, ScoreKind kind) =>
+    private void Report(int depth, int move, int bestMove, int score, ScoreKind kind)
+    {
+        _lastHeartbeatMs = _clock.ElapsedMilliseconds;
         _progress?.Report(new SearchInfo(
             depth,
             new Square(move),
@@ -716,6 +741,7 @@ public sealed class SearchEngine
             _nodes,
             _evaluations,
             _clock.Elapsed));
+    }
 
     private SearchResult Result(Best best) => new(
         best.Move >= 0 ? new Move(new Square(best.Move)) : Move.Pass,

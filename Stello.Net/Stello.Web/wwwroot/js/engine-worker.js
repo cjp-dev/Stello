@@ -1,19 +1,24 @@
 // Web Worker that runs the engine in its own .NET runtime, loaded from the app's _framework folder.
 // The page passes the (fingerprinted) URL of dotnet.js in the query string.
 const dotnetUrl = new URL(self.location.href).searchParams.get('dotnet');
+let signalView = null;
 
 const started = (async () => {
     const { dotnet } = await import(dotnetUrl);
     const runtime = await dotnet.create();
     runtime.setModuleImports('engine-worker', {
         postProgress: json => self.postMessage({ type: 'progress', json }),
+        pollSignal: () => signalView ? Atomics.load(signalView, 0) : 0,
     });
     const exports = await runtime.getAssemblyExports(runtime.getConfig().mainAssemblyName);
     return exports.Stello.Web.Worker.EngineWorker;
 })();
 
 self.addEventListener('message', async e => {
-    const { id, command, args } = e.data;
+    const { id, command, args, signalBuffer } = e.data;
+    if (signalBuffer) {
+        signalView = new Int32Array(signalBuffer);
+    }
     try {
         const engine = await started;
         let result;

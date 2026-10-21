@@ -27,7 +27,11 @@ public static partial class EngineWorker
     public static string ChooseMove(string request)
     {
         (Board board, Player player, SearchLimits limits) = EngineProtocol.ReadRequest(request);
-        return EngineProtocol.WriteResult(Computer.ChooseMove(board, player, limits, new ProgressPoster()));
+        using var cancelCts = new CancellationTokenSource();
+        using var moveNowCts = new CancellationTokenSource();
+        var poster = new ProgressPoster(cancelCts, moveNowCts);
+        SearchResult result = Computer.ChooseMove(board, player, limits, poster, cancelCts.Token, moveNowCts.Token);
+        return EngineProtocol.WriteResult(result);
     }
 
     [JSExport]
@@ -58,18 +62,41 @@ public static partial class EngineWorker
     [JSImport("postProgress", "engine-worker")]
     private static partial void PostProgress(string json);
 
+    [JSImport("pollSignal", "engine-worker")]
+    private static partial int PollSignal();
+
     // Posting every report would flood the page; new depths and new best moves always go through.
     private sealed class ProgressPoster : IProgress<SearchInfo>
     {
         private const long IntervalMs = 100;
 
+        private readonly CancellationTokenSource _cancelCts;
+        private readonly CancellationTokenSource _moveNowCts;
         private readonly Stopwatch _clock = Stopwatch.StartNew();
         private long _lastPostMs = -IntervalMs;
         private int _lastDepth = -1;
         private Square? _lastBest;
 
+        public ProgressPoster(CancellationTokenSource cancelCts, CancellationTokenSource moveNowCts)
+        {
+            _cancelCts = cancelCts;
+            _moveNowCts = moveNowCts;
+        }
+
         public void Report(SearchInfo info)
         {
+            int signal = PollSignal();
+            if (signal == 2)
+            {
+                _cancelCts.Cancel();
+                return;
+            }
+            if (signal == 1)
+            {
+                _moveNowCts.Cancel();
+                return;
+            }
+
             long now = _clock.ElapsedMilliseconds;
             if (info.Depth == _lastDepth && info.BestMove == _lastBest && now - _lastPostMs < IntervalMs)
             {
