@@ -85,7 +85,7 @@ export function signal(code) {
     return true;
 }
 
-// Stops a running search at once; the worker cannot be interrupted any other way.
+// Force-stops the worker as a fallback if cooperative signalling is unavailable or times out.
 export function terminate() {
     worker?.terminate();
     worker = null;

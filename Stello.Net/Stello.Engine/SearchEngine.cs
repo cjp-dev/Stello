@@ -152,7 +152,7 @@ public sealed class SearchEngine
             _hardLimitMs = budget.HardMs;
 
             // Win/loss/draw first with a null window around 0; it is much faster than the exact score.
-            (int wld, int wldMove) = SolveRoot(board, player, -1, 1, ScoreKind.WinLossDraw, rootMoves);
+            (int wld, int wldMove) = SolveRoot(board, player, -1, 1, ScoreKind.WinLossDraw, rootMoves, ref best);
             bool keepMidgameMove = wld < 0 && best.Kind == ScoreKind.Heuristic;
             best = new Best(keepMidgameMove ? best.Move : wldMove, wld, wld == 0 ? ScoreKind.Exact : ScoreKind.WinLossDraw, empties);
 
@@ -162,7 +162,7 @@ public sealed class SearchEngine
             }
 
             (int alpha, int beta) = wld > 0 ? (wld - 1, 65) : (-65, wld + 1);
-            (int exact, int exactMove) = SolveRoot(board, player, alpha, beta, ScoreKind.Exact, rootMoves);
+            (int exact, int exactMove) = SolveRoot(board, player, alpha, beta, ScoreKind.Exact, rootMoves, ref best);
             best = new Best(exactMove, exact, ScoreKind.Exact, empties);
         }
         catch (SearchAbortedException)
@@ -356,7 +356,7 @@ public sealed class SearchEngine
         return best;
     }
 
-    private (int Score, int Move) SolveRoot(in Board board, Player player, int alpha, int beta, ScoreKind kind, int[] rootMoves)
+    private (int Score, int Move) SolveRoot(in Board board, Player player, int alpha, int beta, ScoreKind kind, int[] rootMoves, ref Best best)
     {
         ulong own = board.Discs(player);
         ulong opponent = board.Discs(player.Opponent());
@@ -369,11 +369,12 @@ public sealed class SearchEngine
         for (int i = 0; i < rootMoves.Length; i++)
         {
             int move = rootMoves[i];
-            _reportDepth = empties;
+            bool hasSolvedMove = bestMove >= 0 || best.Kind is ScoreKind.WinLossDraw or ScoreKind.Exact;
+            _reportDepth = hasSolvedMove ? empties : best.Depth;
             _reportMove = move;
-            _reportBestMove = bestMove >= 0 ? bestMove : rootMoves[0];
-            _reportScore = bestMove >= 0 ? bestScore : 0;
-            _reportKind = kind;
+            _reportBestMove = bestMove >= 0 ? bestMove : best.Move;
+            _reportScore = bestMove >= 0 ? bestScore : best.Score;
+            _reportKind = bestMove >= 0 ? kind : best.Kind;
             ulong flips = Bitboards.Flips(own, opponent, move);
             ulong childOwn = own | flips | (1UL << move);
             ulong childOpponent = opponent & ~flips;
@@ -398,6 +399,10 @@ public sealed class SearchEngine
                 bestMove = move;
                 alpha = Math.Max(alpha, score);
                 improvements[improved++] = move;
+                if (kind == ScoreKind.Exact || score >= 0 || best.Kind == ScoreKind.None)
+                {
+                    best = new Best(move, score, kind == ScoreKind.WinLossDraw && score == 0 ? ScoreKind.Exact : kind, empties);
+                }
             }
 
             Report(empties, move, bestMove, bestScore, kind);
