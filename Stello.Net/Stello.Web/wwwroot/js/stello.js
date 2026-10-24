@@ -1,20 +1,33 @@
 // Browser helpers called from .NET through JS interop.
 window.stello = (() => {
     const maxFileSize = 1_000_000;
-    const shortcutKeys = 'osmztyfa';
+    const shortcutKeys = 'oszyman';
+    const sounds = new Map();
+    let queue = Promise.resolve();
     let keydown = null;
     let audio = null;
-    let menuCleanup = null;
 
     return {
-        // Ctrl+key shortcuts from the desktop version; Ctrl+N belongs to the browser.
         registerShortcuts(dotnet) {
             keydown = e => {
+                if (e.key === 'F1') {
+                    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) {
+                        return;
+                    }
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                        dotnet.invokeMethodAsync('OnShortcut', 'shift+f1');
+                    } else if (!e.ctrlKey && !e.altKey && !e.metaKey) {
+                        dotnet.invokeMethodAsync('OnShortcut', 'f1');
+                    }
+                    return;
+                }
+
                 if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.length !== 1) {
                     return;
                 }
                 const key = e.key.toLowerCase();
-                if (!shortcutKeys.includes(key) || e.target instanceof HTMLInputElement) {
+                if (!shortcutKeys.includes(key) || e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) {
                     return;
                 }
                 e.preventDefault();
@@ -24,7 +37,10 @@ window.stello = (() => {
         },
 
         unregisterShortcuts() {
-            document.removeEventListener('keydown', keydown);
+            if (keydown) {
+                document.removeEventListener('keydown', keydown);
+                keydown = null;
+            }
         },
 
         // Resolves to [name, text], or null if the user cancels.
@@ -56,12 +72,11 @@ window.stello = (() => {
             document.body.appendChild(link);
             link.click();
             link.remove();
-            // Some browsers still read the URL after click() returns.
             setTimeout(() => URL.revokeObjectURL(url), 10_000);
         },
 
         beep() {
-            audio ??= new AudioContext();
+            audio ??= new (window.AudioContext || window.webkitAudioContext)();
             const oscillator = audio.createOscillator();
             const gain = audio.createGain();
             oscillator.frequency.value = 880;
@@ -71,55 +86,21 @@ window.stello = (() => {
             oscillator.stop(audio.currentTime + 0.1);
         },
 
-        initMenuAlignment() {
-            this.cleanupMenuAlignment();
-            const menubar = document.querySelector('.menubar');
-            const boardArea = document.querySelector('.board-area');
-            const content = document.querySelector('.content');
-            if (!menubar || !boardArea) {
-                return;
-            }
-
-            const update = () => this.updateMenuAlignment();
-            update();
-
-            const resizeObserver = new ResizeObserver(update);
-            resizeObserver.observe(boardArea);
-            if (content) {
-                resizeObserver.observe(content);
-                content.addEventListener('scroll', update, { passive: true });
-            }
-            window.addEventListener('resize', update, { passive: true });
-
-            menuCleanup = () => {
-                resizeObserver.disconnect();
-                if (content) {
-                    content.removeEventListener('scroll', update);
-                }
-                window.removeEventListener('resize', update);
-                document.documentElement.style.removeProperty('--menu-left');
-            };
+        registerSound(name, bytes) {
+            sounds.set(name, URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' })));
         },
 
-        updateMenuAlignment() {
-            const menubar = document.querySelector('.menubar');
-            const boardArea = document.querySelector('.board-area');
-            if (!menubar || !boardArea) {
+        playSound(name) {
+            const url = sounds.get(name);
+            if (!url) {
                 return;
             }
-            const boardRect = boardArea.getBoundingClientRect();
-            let itemsWidth = 0;
-            menubar.querySelectorAll('.menu').forEach(m => itemsWidth += m.offsetWidth);
-            const maxLeft = Math.max(0, window.innerWidth - itemsWidth);
-            const left = Math.min(Math.max(0, Math.round(boardRect.left)), maxLeft);
-            document.documentElement.style.setProperty('--menu-left', `${left}px`);
-        },
-
-        cleanupMenuAlignment() {
-            if (menuCleanup) {
-                menuCleanup();
-                menuCleanup = null;
-            }
+            queue = queue.then(() => new Promise(resolve => {
+                const sound = new Audio(url);
+                sound.addEventListener('ended', resolve);
+                sound.addEventListener('error', resolve);
+                sound.play().catch(resolve);
+            }));
         },
     };
 })();

@@ -1,4 +1,6 @@
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Numerics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Stello.App.Models;
@@ -7,25 +9,34 @@ using Stello.Engine;
 
 namespace Stello.App.ViewModels;
 
+public sealed record MoveHistoryItem(int Ply, string Notation);
+
 /// <summary>
-/// The game window: a human plays against the computer. The computer thinks in the background; commands
-/// that change the game stop it first (C++: CMainFrame and CStelloView).
+/// The game window: coordinates game modes, AI search, clocks, board state, move history and sounds.
 /// </summary>
-public sealed partial class MainViewModel : ObservableObject
+public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly IEngineHost _engine;
     private readonly IDialogService _dialogs;
     private readonly IGameFileService _files;
     private readonly ISettingsStore _settingsStore;
+    private readonly ISoundService _soundService;
     private readonly bool _settingsLoaded;
 
-    // Computer clock before its move at each ply, so taking back moves also gives the time back (C++: timesleft).
-    private readonly Dictionary<int, TimeSpan> _timeLeftAtPly = [];
+    // Clock history before each ply so undo restores consumed time.
+    private readonly Dictionary<int, (TimeSpan Black, TimeSpan White)> _timeLeftAtPly = [];
 
     private Game _game = new();
     private string? _fileName;
     private string? _notice;
-    private TimeSpan _computerTimeLeft;
+    private TimeSpan _blackTimeLeft;
+    private TimeSpan _whiteTimeLeft;
+    private long _lastTickTimestamp;
+    private readonly Timer _clockTimer;
+    private readonly SynchronizationContext? _syncContext;
+    private bool _hasHumanContinuedOnTime;
+    private bool _isTimeoutPrompting;
+
     private CancellationTokenSource? _cancel;
     private CancellationTokenSource? _moveNow;
     private CancellationTokenSource? _learningCancel;
@@ -35,10 +46,19 @@ public sealed partial class MainViewModel : ObservableObject
     private string _status = "";
 
     [ObservableProperty]
+    private string _statusText = "";
+
+    [ObservableProperty]
     private int _blackCount;
 
     [ObservableProperty]
     private int _whiteCount;
+
+    [ObservableProperty]
+    private int _blackMobility;
+
+    [ObservableProperty]
+    private int _whiteMobility;
 
     [ObservableProperty]
     private string _sidesText = "";
@@ -50,7 +70,17 @@ public sealed partial class MainViewModel : ObservableObject
     private string _title = "";
 
     [ObservableProperty]
+    private GameMode _gameMode = GameMode.HumanVsComputer;
+
+    [ObservableProperty]
+    private bool _isGameModified;
+
+    [ObservableProperty]
+    private bool _isSoundOn = true;
+
+    [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(MoveNowCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SwitchSidesCommand))]
     private bool _isThinking;
 
     [ObservableProperty]
@@ -66,17 +96,87 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private GameSettings _settings = GameSettings.Default;
 
+    public ObservableCollection<MoveHistoryItem> MoveHistoryList { get; } = [];
+
+    public IReadOnlyList<SquareViewModel> Squares { get; }
+
+    public AnalysisViewModel Analysis { get; } = new();
+
+    public WindowPlacement? WindowPlacement { get; private set; }
+
+    internal Task Idle { get; private set; } = Task.CompletedTask;
+
+    internal Task Learning { get; private set; } = Task.CompletedTask;
+
+    internal Game Game => _game;
+
+    public bool IsHumanVsComputer => GameMode == GameMode.HumanVsComputer;
+    public bool IsComputerVsHuman => GameMode == GameMode.ComputerVsHuman;
+    public bool IsHumanVsHuman => GameMode == GameMode.HumanVsHuman;
+    public bool IsVsComputer => GameMode is GameMode.HumanVsComputer or GameMode.ComputerVsHuman or GameMode.ComputerVsComputer;
+
+    public bool IsStatusModified => IsVsComputer && IsGameModified;
+
+    public bool IsGameSettingVisible => IsVsComputer;
+    public bool IsClockVisible => Settings.Mode == TimeControlMode.TimePerGame;
+
+    public string SettingsBadgeText => Settings.Summary;
+    public string VariantBadgeText => Settings.VariantBadgeText;
+
+    public string BlackPlayerLabel => GameMode switch
+    {
+        GameMode.HumanVsComputer => "Human",
+        GameMode.ComputerVsHuman => "Computer",
+        _ => "Player 1"
+    };
+
+    public string WhitePlayerLabel => GameMode switch
+    {
+        GameMode.HumanVsComputer => "Computer",
+        GameMode.ComputerVsHuman => "Human",
+        _ => "Player 2"
+    };
+
+    public string BlackMobilityText => $"Moves: {BlackMobility}";
+    public string WhiteMobilityText => $"Moves: {WhiteMobility}";
+
+    public string BlackClockText => FormatClock(_blackTimeLeft);
+    public string WhiteClockText => FormatClock(_whiteTimeLeft);
+
+    public string MoveCountText => $"{_game.Ply} {(_game.Ply == 1 ? "ply" : "plies")}";
+
+    public TimeSpan ComputerTimeLeft => GameMode switch
+    {
+        GameMode.HumanVsComputer => _whiteTimeLeft,
+        GameMode.ComputerVsHuman => _blackTimeLeft,
+        _ => TimeSpan.Zero
+    };
+
+    public bool CanSwitchSides =>
+        IsVsComputer &&
+        !IsThinking &&
+        !IsLearning &&
+        !_game.IsGameOver &&
+        IsHumanTurn();
+
+    public bool CanUndo => _game.CanUndo && !IsLearning && !IsThinking;
+    public bool CanRedo => _game.CanRedo && !IsLearning && !IsThinking;
+    public Player ToMove => _game.ToMove;
+    public bool IsGameOver => _game.IsGameOver;
+
     public MainViewModel(
         IEngineHost engine,
         IDialogService dialogs,
         IGameFileService files,
         ISettingsStore settingsStore,
-        string? startupNotice = null)
+        string? startupNotice = null,
+        ISoundService? soundService = null)
     {
         _engine = engine;
         _dialogs = dialogs;
         _files = files;
         _settingsStore = settingsStore;
+        _soundService = soundService ?? NullSoundService.Instance;
 
         AppSettings saved = settingsStore.Load();
         Settings = saved.Game;
@@ -84,32 +184,84 @@ public sealed partial class MainViewModel : ObservableObject
         WindowPlacement = saved.Window;
         _settingsLoaded = true;
 
-        _computerTimeLeft = Settings.GameTime;
+        _blackTimeLeft = Settings.GameTime;
+        _whiteTimeLeft = Settings.GameTime;
+        _syncContext = SynchronizationContext.Current;
+        _clockTimer = new Timer(OnClockTimerTick, null, 250, 250);
+
         _notice = startupNotice;
         Squares = Enumerable.Range(0, 64).Select(i => new SquareViewModel(new Square(i))).ToArray();
         Start();
     }
 
-    public IReadOnlyList<SquareViewModel> Squares { get; }
+    partial void OnGameModeChanged(GameMode value)
+    {
+        OnPropertyChanged(nameof(IsHumanVsComputer));
+        OnPropertyChanged(nameof(IsComputerVsHuman));
+        OnPropertyChanged(nameof(IsHumanVsHuman));
+        OnPropertyChanged(nameof(IsVsComputer));
+        OnPropertyChanged(nameof(IsStatusModified));
+        OnPropertyChanged(nameof(IsGameSettingVisible));
+        OnPropertyChanged(nameof(BlackPlayerLabel));
+        OnPropertyChanged(nameof(WhitePlayerLabel));
+        SwitchSidesCommand.NotifyCanExecuteChanged();
+    }
 
-    public AnalysisViewModel Analysis { get; } = new();
+    partial void OnIsGameModifiedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsStatusModified));
+    }
 
-    /// <summary>The saved window position, or null for the default position.</summary>
-    public WindowPlacement? WindowPlacement { get; private set; }
+    partial void OnIsAnalysisVisibleChanged(bool value) => SaveSettings();
 
-    /// <summary>Completes when the computer has moved and it is the human's turn or the game is over.</summary>
-    internal Task Idle { get; private set; } = Task.CompletedTask;
+    partial void OnIsSoundOnChanged(bool value)
+    {
+        _soundService.IsEnabled = value;
+    }
 
-    /// <summary>Completes when book learning has stopped.</summary>
-    internal Task Learning { get; private set; } = Task.CompletedTask;
+    [RelayCommand]
+    public void ToggleSound()
+    {
+        IsSoundOn = !IsSoundOn;
+    }
 
-    internal Game Game => _game;
+    public async Task SetGameMode(GameMode mode)
+    {
+        if (GameMode == mode)
+        {
+            return;
+        }
 
-    /// <summary>Stops the computer and book learning without waiting, e.g. when the window closes.</summary>
+        if (_game.Ply > 0 && !_game.IsGameOver)
+        {
+            if (!await _dialogs.ConfirmAsync("Abandon current match and start a new game?"))
+            {
+                return;
+            }
+        }
+
+        await StopAsync();
+        GameMode = mode;
+        Player human = mode == GameMode.ComputerVsHuman ? Player.White : Player.Black;
+        _game = new Game(human);
+        _fileName = null;
+        IsGameModified = false;
+        ResetClock();
+        _engine.ResetBookTracker();
+        Analysis.Clear();
+        Start();
+    }
+
     public void Stop()
     {
         _cancel?.Cancel();
         _learningCancel?.Cancel();
+    }
+
+    public void Dispose()
+    {
+        _clockTimer.Dispose();
+        Stop();
     }
 
     public void SaveWindowPlacement(WindowPlacement placement)
@@ -117,8 +269,6 @@ public sealed partial class MainViewModel : ObservableObject
         WindowPlacement = placement;
         SaveSettings();
     }
-
-    partial void OnIsAnalysisVisibleChanged(bool value) => SaveSettings();
 
     private void SaveSettings()
     {
@@ -128,15 +278,19 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
+    private bool IsHumanTurn() =>
+        GameMode == GameMode.HumanVsHuman || _game.IsHumanToMove;
+
     [RelayCommand]
     private void Play(SquareViewModel square)
     {
-        if (IsThinking || IsLearning || _game.IsGameOver || !_game.IsHumanToMove || !_game.Board.IsLegal(_game.ToMove, square.Square))
+        if (IsThinking || IsLearning || _game.IsGameOver || !IsHumanTurn() || !_game.Board.IsLegal(_game.ToMove, square.Square))
         {
             _dialogs.Beep();
             return;
         }
 
+        _soundService.Play(SoundType.Move);
         _game.Play(square.Square);
         Start();
     }
@@ -144,9 +298,24 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanChangeGame))]
     private async Task NewGame()
     {
+        if (_game.Ply > 0 && !_game.IsGameOver)
+        {
+            if (!await _dialogs.ConfirmAsync("Abandon current match and start a new game?"))
+            {
+                return;
+            }
+        }
+
+        await StartNewGameAsync();
+    }
+
+    private async Task StartNewGameAsync()
+    {
         await StopAsync();
-        _game.NewGame();
+        Player human = GameMode == GameMode.ComputerVsHuman ? Player.White : Player.Black;
+        _game = new Game(human);
         _fileName = null;
+        IsGameModified = false;
         ResetClock();
         _engine.ResetBookTracker();
         Analysis.Clear();
@@ -176,14 +345,17 @@ public sealed partial class MainViewModel : ObservableObject
 
         await StopAsync();
 
-        // Like Forward/Back in C++, the human continues with the side to move.
-        if (!loaded.IsHumanToMove)
+        if (GameMode != GameMode.HumanVsHuman && !loaded.IsHumanToMove)
         {
             loaded.SwitchSides();
         }
 
         _game = loaded;
         _fileName = file.Name;
+        if (GameMode != GameMode.HumanVsHuman)
+        {
+            GameMode = loaded.Human == Player.Black ? GameMode.HumanVsComputer : GameMode.ComputerVsHuman;
+        }
         ResetClock();
         _engine.ResetBookTracker();
         Analysis.Clear();
@@ -196,44 +368,66 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private Task SaveAs() => WriteAsync(askForName: true);
 
-    // C++: OnSkiftSide; the computer moves at once.
-    [RelayCommand(CanExecute = nameof(CanChangeGame))]
+    [RelayCommand(CanExecute = nameof(CanSwitchSides))]
     private async Task SwitchSides()
     {
+        if (!CanSwitchSides)
+        {
+            return;
+        }
+
         await StopAsync();
+        GameMode = GameMode == GameMode.HumanVsComputer
+            ? GameMode.ComputerVsHuman
+            : GameMode.HumanVsComputer;
+
         _game.SwitchSides();
+        IsGameModified = true;
         Start();
     }
 
     [RelayCommand(CanExecute = nameof(IsThinking))]
     private void MoveNow() => _moveNow?.Cancel();
 
-    // Back to the previous position where the human is to move (C++: Tilbage).
     [RelayCommand(CanExecute = nameof(CanUndo))]
     private async Task Undo()
     {
         await StopAsync();
-        do
+        if (IsVsComputer)
+        {
+            do
+            {
+                _game.Undo();
+            }
+            while (_game.CanUndo && !IsHumanTurn());
+            IsGameModified = true;
+        }
+        else
         {
             _game.Undo();
         }
-        while (_game.CanUndo && !_game.IsHumanToMove);
 
         RestoreClock();
         _engine.ResetBookTracker();
         Start();
     }
 
-    // Forward to the next position where the human is to move, or to the end (C++: Frem).
     [RelayCommand(CanExecute = nameof(CanRedo))]
     private async Task Redo()
     {
         await StopAsync();
-        do
+        if (IsVsComputer)
+        {
+            do
+            {
+                _game.Redo();
+            }
+            while (_game.CanRedo && !IsHumanTurn());
+        }
+        else
         {
             _game.Redo();
         }
-        while (_game.CanRedo && !_game.IsHumanToMove);
 
         RestoreClock();
         Start();
@@ -249,6 +443,11 @@ public sealed partial class MainViewModel : ObservableObject
         }
 
         bool clockChanged = settings.Mode != Settings.Mode || settings.MinutesPerGame != Settings.MinutesPerGame;
+        if (_game.Ply > 0 && settings != Settings)
+        {
+            IsGameModified = true;
+        }
+
         Settings = settings;
         SaveSettings();
         if (clockChanged)
@@ -265,7 +464,6 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void About() => _dialogs.ShowAbout();
 
-    // C++: Flet spil ("Spil i database ?", "Var det sort der vandt ?").
     [RelayCommand(CanExecute = nameof(CanChangeGame))]
     private async Task AddGameToBook()
     {
@@ -301,7 +499,6 @@ public sealed partial class MainViewModel : ObservableObject
         Start();
     }
 
-    // C++: Minmaxlib (calc_lib, minmax_lib, sort_lib).
     [RelayCommand(CanExecute = nameof(CanLearn))]
     private async Task EvaluateBook()
     {
@@ -313,7 +510,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    // C++: Lær spil (selfplay).
     [RelayCommand(CanExecute = nameof(CanLearn))]
     private async Task SelfPlay()
     {
@@ -332,11 +528,6 @@ public sealed partial class MainViewModel : ObservableObject
 
     private bool CanLearn() => !IsLearning && _engine.SupportsLearning;
 
-    private bool CanUndo() => _game.CanUndo && !IsLearning;
-
-    private bool CanRedo() => _game.CanRedo && !IsLearning;
-
-    // Runs book learning in the background; the game waits until it has stopped.
     private async Task LearnAsync(BookLearningKind kind)
     {
         await StopAsync();
@@ -383,7 +574,6 @@ public sealed partial class MainViewModel : ObservableObject
         Start();
     }
 
-    // Book learning searches as the current settings allow, but at most the time per move (C++: 2 minutes each).
     private SearchLimits LearningLimits() => Settings.Mode == TimeControlMode.FixedDepth
         ? SearchLimits.FixedDepth(Settings.Depth)
         : SearchLimits.TimePerMove(TimeSpan.FromSeconds(Settings.SecondsPerMove));
@@ -402,7 +592,6 @@ public sealed partial class MainViewModel : ObservableObject
         await Idle;
     }
 
-    // Plays passes and computer moves until the human is to move or the game is over.
     private async Task RunAsync()
     {
         try
@@ -413,29 +602,35 @@ public sealed partial class MainViewModel : ObservableObject
                 if (_game.IsGameOver)
                 {
                     Status = WithNotice(GameOverText());
+                    StatusText = Status;
+                    PlayGameOverSound();
                     return;
                 }
 
                 if (_game.MustPass)
                 {
-                    _notice = _game.IsHumanToMove
+                    _soundService.Play(SoundType.Pass);
+                    _notice = IsHumanTurn()
                         ? "You have no legal move and must pass."
                         : "The computer has no legal move and passes.";
                     _game.Pass();
                     continue;
                 }
 
-                if (_game.IsHumanToMove)
+                if (IsHumanTurn())
                 {
                     Status = WithNotice("Your move.");
+                    StatusText = $"{_game.ToMove}'s Turn — Click a square to place a disc";
                     return;
                 }
 
                 Status = WithNotice("Thinking…");
+                StatusText = "Thinking…";
                 if (!await ComputerMoveAsync())
                 {
                     Refresh();
                     Status = "Stopped.";
+                    StatusText = "Stopped.";
                     return;
                 }
             }
@@ -443,7 +638,27 @@ public sealed partial class MainViewModel : ObservableObject
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             Status = "Error.";
+            StatusText = "Error.";
             _dialogs.ShowError($"Something went wrong.\n\n{exception.Message}");
+        }
+    }
+
+    private void PlayGameOverSound()
+    {
+        if (IsVsComputer)
+        {
+            if (_game.Winner == _game.Human)
+            {
+                _soundService.Play(SoundType.Win);
+            }
+            else if (_game.Winner != null)
+            {
+                _soundService.Play(SoundType.Loss);
+            }
+        }
+        else if (_game.Winner != null)
+        {
+            _soundService.Play(SoundType.Win);
         }
     }
 
@@ -458,13 +673,13 @@ public sealed partial class MainViewModel : ObservableObject
 
         Board board = _game.Board;
         Player player = _game.ToMove;
-        _timeLeftAtPly[_game.Ply] = _computerTimeLeft;
-        SearchLimits limits = Settings.ToLimits(_computerTimeLeft);
+        _timeLeftAtPly[_game.Ply] = (_blackTimeLeft, _whiteTimeLeft);
+        TimeSpan computerTime = player == Player.Black ? _blackTimeLeft : _whiteTimeLeft;
+        SearchLimits limits = Settings.ToLimits(computerTime);
 
         int searchId = ++_searchId;
         var progress = new Progress<SearchInfo>(info =>
         {
-            // Reports can arrive after the search has finished.
             if (searchId == _searchId && IsThinking)
             {
                 Analysis.Update(info);
@@ -476,8 +691,18 @@ public sealed partial class MainViewModel : ObservableObject
         {
             SearchResult result = await _engine.ChooseMoveAsync(board, player, limits, progress, cancel.Token, moveNow.Token);
 
-            _computerTimeLeft -= stopwatch.Elapsed;
-            Analysis.Update(result, stopwatch.Elapsed);
+            TimeSpan elapsed = stopwatch.Elapsed;
+            if (player == Player.Black)
+            {
+                _blackTimeLeft = _blackTimeLeft > elapsed ? _blackTimeLeft - elapsed : TimeSpan.Zero;
+            }
+            else
+            {
+                _whiteTimeLeft = _whiteTimeLeft > elapsed ? _whiteTimeLeft - elapsed : TimeSpan.Zero;
+            }
+
+            Analysis.Update(result, elapsed);
+            _soundService.Play(SoundType.Move);
             _game.Play(result.Move);
             return true;
         }
@@ -496,7 +721,8 @@ public sealed partial class MainViewModel : ObservableObject
     private void Refresh()
     {
         Board board = _game.Board;
-        ulong legal = _game.IsHumanToMove && !_game.IsGameOver ? board.LegalMoves(_game.ToMove) : 0;
+        bool isHumanTurn = IsHumanTurn() && !_game.IsGameOver;
+        ulong legal = isHumanTurn ? board.LegalMoves(_game.ToMove) : 0;
         Square? last = _game.LastMove?.Square;
 
         foreach (SquareViewModel square in Squares)
@@ -508,14 +734,40 @@ public sealed partial class MainViewModel : ObservableObject
 
         BlackCount = board.Count(Player.Black);
         WhiteCount = board.Count(Player.White);
+
+        BlackMobility = BitOperations.PopCount(board.LegalMoves(Player.Black));
+        WhiteMobility = BitOperations.PopCount(board.LegalMoves(Player.White));
+
         SidesText = $"You play {_game.Human}";
-        TimeSpan left = _computerTimeLeft > TimeSpan.Zero ? _computerTimeLeft : TimeSpan.Zero;
+        TimeSpan left = ComputerTimeLeft > TimeSpan.Zero ? ComputerTimeLeft : TimeSpan.Zero;
         ClockText = Settings.Mode == TimeControlMode.TimePerGame
             ? $"Computer time left: {(int)left.TotalMinutes}:{left.Seconds:00}"
             : "";
+
         Title = $"Stello – {(_fileName is null ? "Untitled" : Path.GetFileName(_fileName))}";
+
+        RebuildMoveHistory();
+
         UndoCommand.NotifyCanExecuteChanged();
         RedoCommand.NotifyCanExecuteChanged();
+        SwitchSidesCommand.NotifyCanExecuteChanged();
+
+        OnPropertyChanged(nameof(BlackMobilityText));
+        OnPropertyChanged(nameof(WhiteMobilityText));
+        OnPropertyChanged(nameof(BlackClockText));
+        OnPropertyChanged(nameof(WhiteClockText));
+        OnPropertyChanged(nameof(MoveCountText));
+    }
+
+    private void RebuildMoveHistory()
+    {
+        MoveHistoryList.Clear();
+        int ply = 1;
+        foreach (Move move in _game.PlayedMoves)
+        {
+            string notation = move.Square is { } sq ? sq.ToString() : "pass";
+            MoveHistoryList.Add(new MoveHistoryItem(ply++, notation));
+        }
     }
 
     private string GameOverText()
@@ -538,8 +790,15 @@ public sealed partial class MainViewModel : ObservableObject
 
     private void ResetClock()
     {
-        _computerTimeLeft = Settings.GameTime;
+        _blackTimeLeft = Settings.GameTime;
+        _whiteTimeLeft = Settings.GameTime;
         _timeLeftAtPly.Clear();
+        _lastTickTimestamp = 0;
+        _hasHumanContinuedOnTime = false;
+        _isTimeoutPrompting = false;
+        OnPropertyChanged(nameof(BlackClockText));
+        OnPropertyChanged(nameof(WhiteClockText));
+        OnPropertyChanged(nameof(ClockText));
     }
 
     private void RestoreClock()
@@ -547,8 +806,133 @@ public sealed partial class MainViewModel : ObservableObject
         int next = _timeLeftAtPly.Keys.Where(ply => ply >= _game.Ply).DefaultIfEmpty(-1).Min();
         if (next >= 0)
         {
-            _computerTimeLeft = _timeLeftAtPly[next];
+            (_blackTimeLeft, _whiteTimeLeft) = _timeLeftAtPly[next];
         }
+    }
+
+    private void OnClockTimerTick(object? state)
+    {
+        if (_syncContext != null && SynchronizationContext.Current != _syncContext)
+        {
+            _syncContext.Post(_ => TickClock(), null);
+        }
+        else
+        {
+            TickClock();
+        }
+    }
+
+    private void TickClock()
+    {
+        if (_isTimeoutPrompting ||
+            Settings.Mode != TimeControlMode.TimePerGame ||
+            _game.IsGameOver ||
+            _game.Ply == 0)
+        {
+            _lastTickTimestamp = 0;
+            return;
+        }
+
+        long now = Stopwatch.GetTimestamp();
+        if (_lastTickTimestamp == 0)
+        {
+            _lastTickTimestamp = now;
+            return;
+        }
+
+        double elapsedSeconds = (now - _lastTickTimestamp) / (double)Stopwatch.Frequency;
+        _lastTickTimestamp = now;
+
+        if (elapsedSeconds <= 0)
+        {
+            return;
+        }
+
+        TimeSpan elapsed = TimeSpan.FromSeconds(elapsedSeconds);
+        Player active = _game.ToMove;
+
+        if (active == Player.Black)
+        {
+            if (GameMode == GameMode.HumanVsComputer && _hasHumanContinuedOnTime)
+            {
+                _blackTimeLeft = TimeSpan.Zero;
+            }
+            else
+            {
+                _blackTimeLeft = _blackTimeLeft > elapsed ? _blackTimeLeft - elapsed : TimeSpan.Zero;
+                if (_blackTimeLeft <= TimeSpan.Zero)
+                {
+                    _blackTimeLeft = TimeSpan.Zero;
+                    _ = HandleTimeoutAsync(Player.Black);
+                    return;
+                }
+            }
+        }
+        else
+        {
+            if (GameMode == GameMode.ComputerVsHuman && _hasHumanContinuedOnTime)
+            {
+                _whiteTimeLeft = TimeSpan.Zero;
+            }
+            else
+            {
+                _whiteTimeLeft = _whiteTimeLeft > elapsed ? _whiteTimeLeft - elapsed : TimeSpan.Zero;
+                if (_whiteTimeLeft <= TimeSpan.Zero)
+                {
+                    _whiteTimeLeft = TimeSpan.Zero;
+                    _ = HandleTimeoutAsync(Player.White);
+                    return;
+                }
+            }
+        }
+
+        OnPropertyChanged(nameof(BlackClockText));
+        OnPropertyChanged(nameof(WhiteClockText));
+        OnPropertyChanged(nameof(ClockText));
+    }
+
+    private async Task HandleTimeoutAsync(Player timedOut)
+    {
+        if (_game.IsGameOver)
+        {
+            return;
+        }
+
+        _lastTickTimestamp = 0;
+        bool isHumanTimedOut = (GameMode == GameMode.HumanVsComputer && timedOut == Player.Black) ||
+                               (GameMode == GameMode.ComputerVsHuman && timedOut == Player.White);
+
+        if (isHumanTimedOut && !_hasHumanContinuedOnTime)
+        {
+            _isTimeoutPrompting = true;
+            bool continuePlaying = false;
+            try
+            {
+                continuePlaying = await _dialogs.ConfirmAsync("You ran out of time!\n\nDo you want to continue playing?");
+            }
+            finally
+            {
+                _isTimeoutPrompting = false;
+            }
+
+            if (continuePlaying)
+            {
+                _hasHumanContinuedOnTime = true;
+                IsGameModified = true;
+                return;
+            }
+        }
+
+        await StopAsync();
+        Status = $"{timedOut} ran out of time. Game over.";
+        StatusText = Status;
+        PlayGameOverSound();
+    }
+
+    private static string FormatClock(TimeSpan time)
+    {
+        TimeSpan clamped = time > TimeSpan.Zero ? time : TimeSpan.Zero;
+        return $"{(int)clamped.TotalMinutes}:{clamped.Seconds:02}";
     }
 
     private async Task WriteAsync(bool askForName)

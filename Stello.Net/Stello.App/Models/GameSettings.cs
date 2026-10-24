@@ -16,6 +16,15 @@ public sealed record GameSettings(TimeControlMode Mode, int Depth, int SecondsPe
     [JsonIgnore]
     public TimeSpan GameTime => TimeSpan.FromMinutes(MinutesPerGame);
 
+    public string Summary => Mode switch
+    {
+        TimeControlMode.FixedDepth => $"{Depth} plies",
+        TimeControlMode.TimePerMove => $"{SecondsPerMove}s / move",
+        _ => $"{MinutesPerGame} min / game",
+    };
+
+    public string VariantBadgeText => "Othello";
+
     /// <summary>The same settings with every value in its allowed range.</summary>
     public GameSettings Normalize() => new(
         Mode is TimeControlMode.FixedDepth or TimeControlMode.TimePerMove or TimeControlMode.TimePerGame ? Mode : Default.Mode,

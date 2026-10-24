@@ -9,6 +9,8 @@ public sealed partial class AnalysisViewModel : ObservableObject
 {
     private const int WinScore = 32600;
 
+    public event Action? Updated;
+
     [ObservableProperty]
     private string _move = "";
 
@@ -16,7 +18,7 @@ public sealed partial class AnalysisViewModel : ObservableObject
     private string _depth = "";
 
     [ObservableProperty]
-    private string _value = "";
+    private string _score = "";
 
     [ObservableProperty]
     private string _bestMove = "";
@@ -25,25 +27,31 @@ public sealed partial class AnalysisViewModel : ObservableObject
     private string _nodes = "";
 
     [ObservableProperty]
-    private string _evaluations = "";
+    private string _speed = "";
 
     [ObservableProperty]
     private string _time = "";
 
+    // Backward-compatibility aliases for existing WPF / tests
+    public string Value => Score;
+    public string Evaluations => Speed;
+
     public void Clear()
     {
-        Move = Depth = Value = BestMove = Nodes = Evaluations = Time = "";
+        Move = Depth = Score = BestMove = Nodes = Speed = Time = "";
+        Updated?.Invoke();
     }
 
     public void Update(SearchInfo info)
     {
         Move = info.CurrentMove.ToString();
         Depth = FormatDepth(info.Depth, info.Kind);
-        Value = FormatScore(info.Score, info.Kind);
+        Score = FormatScore(info.Score, info.Kind);
         BestMove = info.BestMove?.ToString() ?? "";
         Nodes = info.Nodes.ToString("N0", CultureInfo.CurrentCulture);
-        Evaluations = info.Evaluations.ToString("N0", CultureInfo.CurrentCulture);
+        Speed = FormatSpeed(info.Nodes, info.Elapsed);
         Time = FormatTime(info.Elapsed);
+        Updated?.Invoke();
     }
 
     public void Update(SearchResult result, TimeSpan elapsed)
@@ -51,10 +59,21 @@ public sealed partial class AnalysisViewModel : ObservableObject
         Move = result.Move.ToString();
         BestMove = result.Move.ToString();
         Depth = FormatDepth(result.Depth, result.Kind);
-        Value = FormatScore(result.Score, result.Kind);
+        Score = FormatScore(result.Score, result.Kind);
         Nodes = result.Nodes.ToString("N0", CultureInfo.CurrentCulture);
-        Evaluations = result.Evaluations.ToString("N0", CultureInfo.CurrentCulture);
+        Speed = FormatSpeed(result.Nodes, elapsed);
         Time = FormatTime(elapsed);
+        Updated?.Invoke();
+    }
+
+    private static string FormatSpeed(long nodes, TimeSpan elapsed)
+    {
+        if (elapsed.TotalSeconds >= 0.05 && nodes > 0)
+        {
+            double nps = nodes / elapsed.TotalSeconds;
+            return $"{((long)nps):N0} nps";
+        }
+        return "";
     }
 
     public static string FormatScore(int score, ScoreKind kind) => kind switch

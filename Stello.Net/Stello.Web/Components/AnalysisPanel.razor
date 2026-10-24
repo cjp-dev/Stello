@@ -1,30 +1,44 @@
-@using System.ComponentModel
+@using Stello.App.ViewModels
 @implements IDisposable
 
-<aside class="panel analysis" aria-label="Analysis">
-    <h2>Analysis</h2>
-    <dl>
-        <dt>Move:</dt><dd>@Analysis.Move</dd>
-        <dt>Depth:</dt><dd>@Analysis.Depth</dd>
-        <dt>Value:</dt><dd>@Analysis.Value</dd>
-        <dt>Best move:</dt><dd>@Analysis.BestMove</dd>
-        <dt>Nodes:</dt><dd>@Analysis.Nodes</dd>
-        <dt>Evaluations:</dt><dd>@Analysis.Evaluations</dd>
-        <dt>Time:</dt><dd>@Analysis.Time</dd>
+<aside class="panel analysis-panel" aria-label="Analysis">
+    <h2>ANALYSIS</h2>
+    <dl class="analysis-grid">
+        <dt>Move:</dt>
+        <dd>@Analysis.Move</dd>
+
+        <dt>Depth:</dt>
+        <dd>@Analysis.Depth</dd>
+
+        <dt>Score:</dt>
+        <dd>@Analysis.Score</dd>
+
+        <dt>Best move:</dt>
+        <dd>@Analysis.BestMove</dd>
+
+        <dt>Nodes:</dt>
+        <dd>@Analysis.Nodes</dd>
+
+        <dt>Speed:</dt>
+        <dd>@Analysis.Speed</dd>
+
+        <dt>Time:</dt>
+        <dd>@Analysis.Time</dd>
     </dl>
 </aside>
 
 @code {
-    private bool _renderPending;
-
     [Parameter, EditorRequired]
     public AnalysisViewModel Analysis { get; set; } = default!;
 
-    protected override void OnInitialized() => Analysis.PropertyChanged += OnChanged;
+    private bool _renderPending;
 
-    public void Dispose() => Analysis.PropertyChanged -= OnChanged;
+    protected override void OnInitialized()
+    {
+        Analysis.Updated += OnAnalysisUpdated;
+    }
 
-    private void OnChanged(object? sender, PropertyChangedEventArgs e)
+    private void OnAnalysisUpdated()
     {
         if (_renderPending)
         {
@@ -39,5 +53,9 @@
             StateHasChanged();
         });
     }
-}
 
+    public void Dispose()
+    {
+        Analysis.Updated -= OnAnalysisUpdated;
+    }
+}

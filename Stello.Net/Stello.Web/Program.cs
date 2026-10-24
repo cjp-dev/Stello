@@ -15,6 +15,7 @@ builder.Services.AddSingleton(services => (IJSInProcessRuntime)services.GetRequi
 builder.Services.AddSingleton<BrowserDialogService>();
 builder.Services.AddSingleton<IDialogService>(services => services.GetRequiredService<BrowserDialogService>());
 builder.Services.AddSingleton<IGameFileService, BrowserGameFileService>();
+builder.Services.AddSingleton<ISoundService, BrowserSoundService>();
 builder.Services.AddSingleton<ISettingsStore, LocalStorageSettingsStore>();
 builder.Services.AddSingleton<LocalStorageBookStore>();
 builder.Services.AddSingleton<StartupBook>();
@@ -29,7 +30,8 @@ builder.Services.AddSingleton(services => new MainViewModel(
     services.GetRequiredService<IDialogService>(),
     services.GetRequiredService<IGameFileService>(),
     services.GetRequiredService<ISettingsStore>(),
-    services.GetRequiredService<StartupBook>().Notice));
+    services.GetRequiredService<StartupBook>().Notice,
+    services.GetRequiredService<ISoundService>()));
 
 WebAssemblyHost host = builder.Build();
 
