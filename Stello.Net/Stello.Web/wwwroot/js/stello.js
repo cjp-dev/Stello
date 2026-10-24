@@ -6,6 +6,7 @@ window.stello = (() => {
     let queue = Promise.resolve();
     let keydown = null;
     let audio = null;
+    let menuCleanup = null;
 
     return {
         registerShortcuts(dotnet) {
@@ -101,6 +102,57 @@ window.stello = (() => {
                 sound.addEventListener('error', resolve);
                 sound.play().catch(resolve);
             }));
+        },
+
+        initMenuAlignment() {
+            this.cleanupMenuAlignment();
+            const menubar = document.querySelector('.menubar');
+            const boardArea = document.querySelector('.board-area');
+            const content = document.querySelector('.content');
+            if (!menubar || !boardArea) {
+                return;
+            }
+
+            const update = () => this.updateMenuAlignment();
+            update();
+
+            const resizeObserver = new ResizeObserver(update);
+            resizeObserver.observe(boardArea);
+            if (content) {
+                resizeObserver.observe(content);
+                content.addEventListener('scroll', update, { passive: true });
+            }
+            window.addEventListener('resize', update, { passive: true });
+
+            menuCleanup = () => {
+                resizeObserver.disconnect();
+                if (content) {
+                    content.removeEventListener('scroll', update);
+                }
+                window.removeEventListener('resize', update);
+                document.documentElement.style.removeProperty('--menu-left');
+            };
+        },
+
+        updateMenuAlignment() {
+            const menubar = document.querySelector('.menubar');
+            const boardArea = document.querySelector('.board-area');
+            if (!menubar || !boardArea) {
+                return;
+            }
+            const boardRect = boardArea.getBoundingClientRect();
+            let itemsWidth = 0;
+            menubar.querySelectorAll('.desktop-menu-bar .menu').forEach(m => itemsWidth += m.offsetWidth);
+            const maxLeft = Math.max(0, window.innerWidth - itemsWidth);
+            const left = Math.min(Math.max(0, Math.round(boardRect.left)), maxLeft);
+            document.documentElement.style.setProperty('--menu-left', `${left}px`);
+        },
+
+        cleanupMenuAlignment() {
+            if (menuCleanup) {
+                menuCleanup();
+                menuCleanup = null;
+            }
         },
     };
 })();

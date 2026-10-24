@@ -281,6 +281,7 @@
         {
             _self = DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("stello.registerShortcuts", _self);
+            await JS.InvokeVoidAsync("stello.initMenuAlignment");
         }
     }
 
@@ -301,6 +302,7 @@
         if (_self is not null)
         {
             ((IJSInProcessRuntime)JS).InvokeVoid("stello.unregisterShortcuts");
+            ((IJSInProcessRuntime)JS).InvokeVoid("stello.cleanupMenuAlignment");
             _self.Dispose();
         }
     }

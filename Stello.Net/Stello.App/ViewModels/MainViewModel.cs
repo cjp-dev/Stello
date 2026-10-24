@@ -929,11 +929,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         PlayGameOverSound();
     }
 
-    private static string FormatClock(TimeSpan time)
-    {
-        TimeSpan clamped = time > TimeSpan.Zero ? time : TimeSpan.Zero;
-        return $"{(int)clamped.TotalMinutes}:{clamped.Seconds:02}";
-    }
+    private static string FormatClock(TimeSpan span) =>
+        span <= TimeSpan.Zero ? "0:00" : $"{(int)span.TotalMinutes}:{span.Seconds:00}";
 
     private async Task WriteAsync(bool askForName)
     {

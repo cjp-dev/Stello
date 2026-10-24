@@ -159,5 +159,16 @@ public sealed class NewGuiFeaturesTests
         Assert.Equal("Computer", vm.BlackPlayerLabel);
         Assert.Equal("Human", vm.WhitePlayerLabel);
     }
+
+    [Fact]
+    public void Clock_InitialValuesAreFormattedAs5Minutes()
+    {
+        var settings = new GameSettings(TimeControlMode.TimePerGame, 8, 5, 5);
+        MainViewModel vm = Create(settings);
+
+        Assert.Equal("5:00", vm.BlackClockText);
+        Assert.Equal("5:00", vm.WhiteClockText);
+        Assert.True(vm.IsClockVisible);
+    }
 }
 

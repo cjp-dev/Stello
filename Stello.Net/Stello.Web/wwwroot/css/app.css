@@ -36,13 +36,16 @@ button {
 
 .menubar-inner {
     display: flex;
-    max-width: 1650px;
-    margin: 0 auto;
-    padding: 0 1.5rem;
     width: 100%;
 }
 
-.menubar-inner .menu:first-child .menu-title {
+.desktop-menu-bar {
+    display: flex;
+    padding-left: var(--menu-left, 1.5rem);
+    width: 100%;
+}
+
+.desktop-menu-bar .menu:first-child .menu-title {
     margin-left: 0;
 }
 
@@ -347,8 +350,9 @@ button {
     flex: 0 0 auto;
     display: flex;
     justify-content: center;
-    width: min(calc(100cqw - 420px), 80dvh, 720px);
+    width: min(calc(100cqw - 420px), 80dvh, 1080px);
     min-width: 300px;
+    aspect-ratio: 1 / 1;
 }
 
 /* Othello Game Board */
@@ -567,12 +571,11 @@ button {
 
 /* Side Panels */
 .side-panels {
-    flex: 1;
+    width: 380px;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    min-width: 280px;
-    max-width: 420px;
+    gap: 1.25rem;
+    flex-shrink: 0;
 }
 
 /* Mobile vertical stack (narrow screens or portrait aspect ratio) */
@@ -589,12 +592,12 @@ button {
     }
 
     .board-area {
-        width: min(94cqw, 62dvh, 720px);
+        width: min(94cqw, 62dvh, 1080px);
         min-width: 260px;
     }
 
     .side-panels {
-        width: min(94cqw, 62dvh, 720px);
+        width: min(94cqw, 62dvh, 1080px);
         min-width: 260px;
         max-width: 100%;
     }
@@ -614,7 +617,7 @@ button {
     }
 
     .board-area {
-        width: min(calc(100cqw - 300px), 82dvh, 600px);
+        width: min(calc(100cqw - 300px), 82dvh, 700px);
         min-width: 260px;
     }
 
