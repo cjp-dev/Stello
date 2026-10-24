@@ -59,11 +59,14 @@ public sealed class SearchEngine
     private int _reportScore;
     private ScoreKind _reportKind;
 
+    public int HashBits { get; }
+
     /// <param name="hashBits">Each of the two hash tables gets 2^hashBits slots of two entries (C++: HASHSIZE 19, one entry).</param>
     public SearchEngine(int hashBits = 19)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(hashBits, 10);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(hashBits, 26);
+        HashBits = hashBits;
         _midgameTable = new TranspositionTable(hashBits);
         _endgameTable = new TranspositionTable(hashBits);
     }

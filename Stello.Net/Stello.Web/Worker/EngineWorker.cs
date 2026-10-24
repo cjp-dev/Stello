@@ -27,6 +27,11 @@ public static partial class EngineWorker
     public static string ChooseMove(string request)
     {
         (Board board, Player player, SearchLimits limits) = EngineProtocol.ReadRequest(request);
+        if (s_computer is null || s_computer.Engine.HashBits != limits.HashBits)
+        {
+            s_computer = new ComputerPlayer(new SearchEngine(limits.HashBits), s_book, new Random());
+        }
+
         using var cancelCts = new CancellationTokenSource();
         using var moveNowCts = new CancellationTokenSource();
         var poster = new ProgressPoster(cancelCts, moveNowCts);

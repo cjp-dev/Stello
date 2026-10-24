@@ -52,6 +52,24 @@
                            @bind="settings.MinutesPerGame" @bind:event="oninput" />
                     <span>@settings.MinutesPerGame minutes</span>
                 </fieldset>
+
+                <fieldset class="settings">
+                    <legend>Stello Opening Book &amp; Transposition Table</legend>
+                    <label style="font-weight: normal; display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" @bind="settings.UseOpeningBook" />
+                        <span>Stello Opening Book (11,200 canonical positions)</span>
+                    </label>
+                    <div style="margin-top: 0.75rem;">
+                        <label style="margin-top: 0; display: block; margin-bottom: 0.25rem;">Transposition Table Capacity:</label>
+                        <select class="dialog-text" style="margin: 0.25rem 0;" @bind="settings.TranspositionTableEntries">
+                            <option value="65536">65,536 entries (3 MB)</option>
+                            <option value="262144">262,144 entries (12 MB)</option>
+                            <option value="1048576">1,048,576 entries (48 MB) - Default</option>
+                            <option value="4194304">4,194,304 entries (192 MB)</option>
+                            <option value="16777216">16,777,216 entries (768 MB)</option>
+                        </select>
+                    </div>
+                </fieldset>
             }
             <div class="dialog-buttons">
                 @for (int i = 0; i < dialog.Buttons.Count; i++)

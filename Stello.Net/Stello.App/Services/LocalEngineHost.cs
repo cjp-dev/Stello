@@ -5,6 +5,8 @@ namespace Stello.App.Services;
 /// <summary>The engine on a thread-pool thread in this process, as in the desktop app.</summary>
 public sealed class LocalEngineHost(ComputerPlayer computer, OpeningBook book, IBookStore bookStore) : IEngineHost
 {
+    private ComputerPlayer _computer = computer;
+
     public bool SupportsLearning => true;
 
     public Task<SearchResult> ChooseMoveAsync(
@@ -13,10 +15,17 @@ public sealed class LocalEngineHost(ComputerPlayer computer, OpeningBook book, I
         SearchLimits limits,
         IProgress<SearchInfo>? progress,
         CancellationToken cancellationToken,
-        CancellationToken moveNowToken) =>
-        Task.Run(() => computer.ChooseMove(board, player, limits, progress, cancellationToken, moveNowToken), CancellationToken.None);
+        CancellationToken moveNowToken)
+    {
+        if (_computer.Engine.HashBits != limits.HashBits)
+        {
+            _computer = new ComputerPlayer(new SearchEngine(limits.HashBits), book, new Random());
+        }
 
-    public void ResetBookTracker() => computer.BookTracker.Reset();
+        return Task.Run(() => _computer.ChooseMove(board, player, limits, progress, cancellationToken, moveNowToken), CancellationToken.None);
+    }
+
+    public void ResetBookTracker() => _computer.BookTracker.Reset();
 
     public Task<BookUpdate> AddGameToBookAsync(IReadOnlyList<Move> moves, GameResult result)
     {

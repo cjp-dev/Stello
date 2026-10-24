@@ -8,49 +8,68 @@
         d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel}"
         Title="Settings" SizeToContent="WidthAndHeight" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
-    <Grid Margin="16">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="200" />
-            <ColumnDefinition Width="90" />
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <StackPanel Margin="16">
+        <GroupBox Header="Thinking Limits" Padding="8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="200" />
+                    <ColumnDefinition Width="100" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-        <TextBlock Grid.ColumnSpan="3" Margin="0,0,0,12" Text="How long may the computer think?" />
+                <RadioButton Grid.Row="0" Margin="0,4,12,4" VerticalAlignment="Center" GroupName="Mode"
+                             Content="Fixed depth" IsChecked="{Binding IsFixedDepth}" />
+                <Slider Grid.Row="0" Grid.Column="1" VerticalAlignment="Center" Minimum="1" Maximum="{Binding MaxDepth}"
+                        IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding Depth}" IsEnabled="{Binding IsFixedDepth}"
+                        AutomationProperties.Name="Depth" />
+                <TextBlock Grid.Row="0" Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Center"
+                           Text="{Binding Depth, StringFormat={}{0} plies}" />
 
-        <RadioButton Grid.Row="1" Margin="0,4,12,4" VerticalAlignment="Center" GroupName="Mode"
-                     Content="Fixed depth" IsChecked="{Binding IsFixedDepth}" />
-        <Slider Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" Minimum="1" Maximum="{Binding MaxDepth}"
-                IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding Depth}" IsEnabled="{Binding IsFixedDepth}"
-                AutomationProperties.Name="Depth" />
-        <TextBlock Grid.Row="1" Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Center"
-                   Text="{Binding Depth, StringFormat={}{0} plies}" />
+                <RadioButton Grid.Row="1" Margin="0,4,12,4" VerticalAlignment="Center" GroupName="Mode"
+                             Content="Time per move" IsChecked="{Binding IsTimePerMove}" />
+                <Slider Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" Minimum="1" Maximum="{Binding MaxSecondsPerMove}"
+                        IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding SecondsPerMove}" IsEnabled="{Binding IsTimePerMove}"
+                        AutomationProperties.Name="Seconds per move" />
+                <TextBlock Grid.Row="1" Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Center"
+                           Text="{Binding SecondsPerMove, StringFormat={}{0} seconds}" />
 
-        <RadioButton Grid.Row="2" Margin="0,4,12,4" VerticalAlignment="Center" GroupName="Mode"
-                     Content="Time per move" IsChecked="{Binding IsTimePerMove}" />
-        <Slider Grid.Row="2" Grid.Column="1" VerticalAlignment="Center" Minimum="1" Maximum="{Binding MaxSecondsPerMove}"
-                IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding SecondsPerMove}" IsEnabled="{Binding IsTimePerMove}"
-                AutomationProperties.Name="Seconds per move" />
-        <TextBlock Grid.Row="2" Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Center"
-                   Text="{Binding SecondsPerMove, StringFormat={}{0} seconds}" />
+                <RadioButton Grid.Row="2" Margin="0,4,12,4" VerticalAlignment="Center" GroupName="Mode"
+                             Content="Time per game" IsChecked="{Binding IsTimePerGame}" />
+                <Slider Grid.Row="2" Grid.Column="1" VerticalAlignment="Center" Minimum="1" Maximum="{Binding MaxMinutesPerGame}"
+                        IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding MinutesPerGame}" IsEnabled="{Binding IsTimePerGame}"
+                        AutomationProperties.Name="Minutes per game" />
+                <TextBlock Grid.Row="2" Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Center"
+                           Text="{Binding MinutesPerGame, StringFormat={}{0} minutes}" />
+            </Grid>
+        </GroupBox>
 
-        <RadioButton Grid.Row="3" Margin="0,4,12,4" VerticalAlignment="Center" GroupName="Mode"
-                     Content="Time per game" IsChecked="{Binding IsTimePerGame}" />
-        <Slider Grid.Row="3" Grid.Column="1" VerticalAlignment="Center" Minimum="1" Maximum="{Binding MaxMinutesPerGame}"
-                IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding MinutesPerGame}" IsEnabled="{Binding IsTimePerGame}"
-                AutomationProperties.Name="Minutes per game" />
-        <TextBlock Grid.Row="3" Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Center"
-                   Text="{Binding MinutesPerGame, StringFormat={}{0} minutes}" />
+        <GroupBox Header="Stello Opening Book &amp; Transposition Table" Margin="0,12,0,0" Padding="8">
+            <StackPanel>
+                <CheckBox Content="Enable Stello Opening Book (11,200 canonical positions)"
+                          IsChecked="{Binding UseOpeningBook}" Margin="0,4,0,8" />
+                <Grid Margin="0,4,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="180" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Table Capacity:" VerticalAlignment="Center" Margin="0,0,12,0" Foreground="#475569" />
+                    <Slider Grid.Column="1" Minimum="{Binding MinTranspositionTablePower}" Maximum="{Binding MaxTranspositionTablePower}"
+                            IsSnapToTickEnabled="True" TickFrequency="2" Value="{Binding TranspositionTablePower}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Text="{Binding TranspositionTableEntriesText}" Margin="8,0,0,0"
+                               VerticalAlignment="Center" FontWeight="SemiBold" />
+                </Grid>
+            </StackPanel>
+        </GroupBox>
 
-        <StackPanel Grid.Row="4" Grid.ColumnSpan="3" Margin="0,16,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
+        <StackPanel Margin="0,16,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Width="80" Content="OK" IsDefault="True" Click="OnOk" />
             <Button Width="80" Margin="8,0,0,0" Content="Cancel" IsCancel="True" />
         </StackPanel>
-    </Grid>
+    </StackPanel>
 </Window>

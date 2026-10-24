@@ -6,7 +6,7 @@ using Stello.Engine;
 namespace Stello.Web.Worker;
 
 // Messages between the page and the engine worker; plain values only, so 64-bit boards and ticks stay exact.
-internal sealed record MoveRequest(ulong Black, ulong White, Player Player, TimeControlMode Mode, int Depth, long TimeTicks);
+internal sealed record MoveRequest(ulong Black, ulong White, Player Player, TimeControlMode Mode, int Depth, long TimeTicks, bool UseOpeningBook = true, int HashBits = 19);
 
 internal sealed record MoveResponse(int Square, int Score, ScoreKind Kind, int Depth, long Nodes, long Evaluations, long ElapsedTicks);
 
@@ -20,7 +20,7 @@ internal sealed partial class EngineProtocolJson : JsonSerializerContext;
 internal static class EngineProtocol
 {
     public static string WriteRequest(Board board, Player player, SearchLimits limits) => JsonSerializer.Serialize(
-        new MoveRequest(board.Black, board.White, player, limits.Mode, limits.Depth, limits.Time.Ticks),
+        new MoveRequest(board.Black, board.White, player, limits.Mode, limits.Depth, limits.Time.Ticks, limits.UseOpeningBook, limits.HashBits),
         EngineProtocolJson.Default.MoveRequest);
 
     public static (Board Board, Player Player, SearchLimits Limits) ReadRequest(string json)
@@ -29,9 +29,9 @@ internal static class EngineProtocol
         TimeSpan time = TimeSpan.FromTicks(request.TimeTicks);
         SearchLimits limits = request.Mode switch
         {
-            TimeControlMode.FixedDepth => SearchLimits.FixedDepth(request.Depth),
-            TimeControlMode.TimePerMove => SearchLimits.TimePerMove(time),
-            TimeControlMode.TimePerGame => SearchLimits.TimePerGame(time),
+            TimeControlMode.FixedDepth => SearchLimits.FixedDepth(request.Depth, request.UseOpeningBook, request.HashBits),
+            TimeControlMode.TimePerMove => SearchLimits.TimePerMove(time, request.UseOpeningBook, request.HashBits),
+            TimeControlMode.TimePerGame => SearchLimits.TimePerGame(time, request.UseOpeningBook, request.HashBits),
             _ => SearchLimits.Solve,
         };
         return (new Board(request.Black, request.White), request.Player, limits);

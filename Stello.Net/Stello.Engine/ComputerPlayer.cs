@@ -6,6 +6,10 @@ namespace Stello.Engine;
 /// </summary>
 public sealed class ComputerPlayer(SearchEngine engine, OpeningBook? book, Random random)
 {
+    public SearchEngine Engine { get; } = engine;
+
+    public OpeningBook? Book { get; } = book;
+
     public BookTracker BookTracker { get; } = new();
 
     public SearchResult ChooseMove(
@@ -16,9 +20,9 @@ public sealed class ComputerPlayer(SearchEngine engine, OpeningBook? book, Rando
         CancellationToken cancellationToken = default,
         CancellationToken moveNowToken = default)
     {
-        if (book is not null && board.HasLegalMove(player) && BookTracker.ShouldConsult)
+        if (limits.UseOpeningBook && Book is not null && board.HasLegalMove(player) && BookTracker.ShouldConsult)
         {
-            bool found = book.TryGetMove(board, player, random, out BookMove move);
+            bool found = Book.TryGetMove(board, player, random, out BookMove move);
             BookTracker.Record(found);
             if (found)
             {
@@ -26,6 +30,6 @@ public sealed class ComputerPlayer(SearchEngine engine, OpeningBook? book, Rando
             }
         }
 
-        return engine.Search(board, player, limits, progress, cancellationToken, moveNowToken);
+        return Engine.Search(board, player, limits, progress, cancellationToken, moveNowToken);
     }
 }

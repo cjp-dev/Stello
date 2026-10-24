@@ -1,3 +1,4 @@
+using System.IO;
 using Stello.App.Models;
 using Stello.App.Services;
 using Stello.App.ViewModels;
@@ -169,6 +170,51 @@ public sealed class NewGuiFeaturesTests
         Assert.Equal("5:00", vm.BlackClockText);
         Assert.Equal("5:00", vm.WhiteClockText);
         Assert.True(vm.IsClockVisible);
+    }
+
+    [Fact]
+    public void SettingsViewModel_OpeningBookAndTranspositionTableConfigurable()
+    {
+        var vm = new SettingsViewModel(GameSettings.Default);
+
+        Assert.True(vm.UseOpeningBook);
+        Assert.Equal(GameSettings.DefaultTranspositionTableEntries, vm.TranspositionTableEntries);
+        Assert.Equal(20, vm.TranspositionTablePower);
+        Assert.Equal("1,048,576 (48 MB) - Default", vm.TranspositionTableEntriesText);
+
+        vm.UseOpeningBook = false;
+        vm.TranspositionTableEntries = 262_144;
+
+        Assert.False(vm.UseOpeningBook);
+        Assert.Equal(18, vm.TranspositionTablePower);
+        Assert.Equal("262,144 (12 MB)", vm.TranspositionTableEntriesText);
+
+        GameSettings saved = vm.ToSettings();
+        Assert.False(saved.UseOpeningBook);
+        Assert.Equal(262_144, saved.TranspositionTableEntries);
+        Assert.Equal(17, saved.HashBits);
+    }
+
+    [Fact]
+    public void ComputerPlayer_RespectsUseOpeningBookFlag()
+    {
+        string bookText = "# Stello opening book, format 2\nd3 c5:10:H\n";
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(bookText));
+        OpeningBook book = OpeningBook.Load(stream);
+
+        Board board = Board.Initial.Play(Player.Black, Square.Parse("d3"));
+
+        var player = new ComputerPlayer(new SearchEngine(hashBits: 10), book, new Random(0));
+
+        SearchLimits withBook = SearchLimits.FixedDepth(1, useOpeningBook: true, hashBits: 10);
+        SearchResult bookResult = player.ChooseMove(board, Player.White, withBook);
+        Assert.Equal(ScoreKind.Book, bookResult.Kind);
+        Assert.Equal("c5", bookResult.Move.Square?.ToString());
+
+        player.BookTracker.Reset();
+        SearchLimits withoutBook = SearchLimits.FixedDepth(1, useOpeningBook: false, hashBits: 10);
+        SearchResult searchResult = player.ChooseMove(board, Player.White, withoutBook);
+        Assert.NotEqual(ScoreKind.Book, searchResult.Kind);
     }
 }
 
