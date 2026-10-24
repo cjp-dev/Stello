@@ -73,7 +73,7 @@ Shifting "right" from column h would land on column a of the next row (h4 is bit
 
 ### Legacy square numbers
 
-The C++ program used a 10 × 10 array with a border ring around the board, and numbered the squares 10 × row + column, both counted from 1. These numbers are still used in two places: the moves in the C++ opening book file, which is read to import it (chapter 11), and the tables ported from the C++ evaluation (chapter 05).
+The C++ program used a 10 × 10 array with a border ring around the board, and numbered the squares 10 × row + column, both counted from 1. These numbers are still used in two places: the moves in the C++ opening book file, which is read to import it (chapter 10), and the tables ported from the C++ evaluation (chapter 04).
 
 ![A 10 by 10 grid: a grey border ring with numbers 0 to 99, and the playing squares from 11 (a1) to 88 (h8).](images/board-legacy-numbers.svg)
 
@@ -87,7 +87,7 @@ $$\text{row} = \left\lfloor \frac{\text{legacy}}{10} \right\rfloor - 1, \qquad \
 
 ### The text form of a board
 
-`Board.ToString` writes eight lines, row 1 first, with `X` for black, `O` for white and `-` for an empty square. `Board.Parse` reads the same format (it also accepts lower case and `.`, and ignores whitespace), so a position can be written directly in a test. The FFO endgame test positions (chapter 09) use the same 64-character layout on one line.
+`Board.ToString` writes eight lines, row 1 first, with `X` for black, `O` for white and `-` for an empty square. `Board.Parse` reads the same format (it also accepts lower case and `.`, and ignores whitespace), so a position can be written directly in a test. The FFO endgame test positions (chapter 08) use the same 64-character layout on one line.
 
 ## Worked example: the start position
 
@@ -123,10 +123,10 @@ The four first moves in legacy numbers are d3 = 34, c4 = 43, f5 = 56 and e6 = 65
 ## Design notes
 
 - **Why bitboards.** The C++ version used a 10 × 10 array with a border, a list of empty squares next to discs, and tables of directions per square. Bitboards replace all three: the border is replaced by the two column masks, and "all empty squares next to a disc" is a few shifts. See [Stello porting documentation.md](../../Stello%20porting%20documentation.md), phase 1.
-- **Why immutable.** A `Board` is 16 bytes, the same size as two `long` values. Copying it is as cheap as passing a reference, so the search keeps the parent position in a local variable instead of undoing moves, and the game record stores every position ([chapter 04](04-game-record.md)).
+- **Why immutable.** A `Board` is 16 bytes, the same size as two `long` values. Copying it is as cheap as passing a reference, so the search keeps the parent position in a local variable instead of undoing moves, and the game record stores every position ([chapter 13](13-game-record.md)).
 - **Value equality.** `Board` is a record struct, so two boards with the same discs are equal. The tests compare boards directly, and the hash table and the opening book use the two bitboards as keys.
 - **Side to move is not part of the board.** A position is a `Board` plus the `Player` to move. The search, the game record and the book always pass both.
-- **Legacy numbers only at the edges.** The rest of the engine uses `Square` and bitboards. The evaluation still fills a 10 × 10 array for the ported C++ code (chapter 05).
+- **Legacy numbers only at the edges.** The rest of the engine uses `Square` and bitboards. The evaluation still fills a 10 × 10 array for the ported C++ code (chapter 04).
 
 ## Where in the code
 

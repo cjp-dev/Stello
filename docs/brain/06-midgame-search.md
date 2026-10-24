@@ -1,10 +1,10 @@
-# 07 – Midgame search
+# 06 – Midgame search
 
 [Back to the index](README.md)
 
 ## In short
 
-To choose a move, the engine looks ahead: it tries its moves, the opponent's replies, its answers to those, and so on, and evaluates the positions at the end of each line (chapter 05). The best move is the one that leads to the best position when both sides play their best. This is **minimax**; Stello writes it as **negamax** with **alpha-beta pruning**, which skips lines that cannot change the result. The search runs **iteratively deeper**: first 1 ply, then 2, then 3, until the time is used. It is helped by the hash table (chapter 08), move ordering (chapter 06), a few **extensions** and a **selective search** that cuts off positions that are clearly outside the interesting range. When the end of the game is near enough, the endgame solver takes over (chapter 09).
+To choose a move, the engine looks ahead: it tries its moves, the opponent's replies, its answers to those, and so on, and evaluates the positions at the end of each line (chapter 04). The best move is the one that leads to the best position when both sides play their best. This is **minimax**; Stello writes it as **negamax** with **alpha-beta pruning**, which skips lines that cannot change the result. The search runs **iteratively deeper**: first 1 ply, then 2, then 3, until the time is used. It is helped by the hash table (chapter 07), move ordering (chapter 05), a few **extensions** and a **selective search** that cuts off positions that are clearly outside the interesting range. When the end of the game is near enough, the endgame solver takes over (chapter 08).
 
 ## Data structures
 
@@ -12,9 +12,9 @@ To choose a move, the engine looks ahead: it tries its moves, the opponent's rep
 
 | Field | Contents |
 |---|---|
-| `_midgameTable`, `_endgameTable` | The two hash tables (chapter 08) |
-| `_ordering` | The move ordering with the response table (chapter 06) |
-| `_clock`, `_hardLimitMs` | A `Stopwatch` and the time limit (chapter 10) |
+| `_midgameTable`, `_endgameTable` | The two hash tables (chapter 07) |
+| `_ordering` | The move ordering with the response table (chapter 05) |
+| `_clock`, `_hardLimitMs` | A `Stopwatch` and the time limit (chapter 09) |
 | `_nodes`, `_evaluations` | Counters, reported in `SearchInfo` and `SearchResult` |
 | `_hashGetHeight`, `_hashPutHeight` | How far from the root the midgame hash table is used |
 | `_cancel`, `_moveNow`, `_progress` | The two tokens and the progress callback of the running search |
@@ -52,7 +52,7 @@ The picture shows a real depth-2 search for Black in the midgame test position (
 
 ![Four rows, one per black move a3, f3, c6 and a4, each with the evaluated white replies. a3 gives −105. f3 is cut off after b4 = −124, skipping four replies. c6 gives 61, the new best. a4 is cut off after its first reply c1 = 45, skipping eleven.](images/alpha-beta-tree.svg)
 
-With the root moves in this order and the replies in square order, alpha-beta evaluates 45 leaves instead of the 124 of a full minimax. In the real search, the depth-1 iteration has already moved c6 to the front, so α is 61 from the first move on and the other moves are refuted sooner; the replies are also tried in square-value order (chapter 06). The depth-2 iteration then needs only 21 evaluations. Both find c6 with score 61.
+With the root moves in this order and the replies in square order, alpha-beta evaluates 45 leaves instead of the 124 of a full minimax. In the real search, the depth-1 iteration has already moved c6 to the front, so α is 61 from the first move on and the other moves are refuted sooner; the replies are also tried in square-value order (chapter 05). The depth-2 iteration then needs only 21 evaluations. Both find c6 with score 61.
 
 ### The search as a whole
 
@@ -71,11 +71,11 @@ flowchart TD
     Root --> Stop{"Depth or soft time<br/>limit reached?"}
     Stop -- "no" --> Near
     Stop -- "yes" --> Done["Return the best move"]
-    Near -- "yes" --> WLD["Endgame solver (chapter 09)"]
+    Near -- "yes" --> WLD["Endgame solver (chapter 08)"]
     WLD --> Done
 ```
 
-With `onlyMoves`, only the given moves are searched, even a single one (used by book learning, chapter 12). A single legal move is not searched either, unless the limit is `Solve` or `onlyMoves` is given. If the time runs out or "Move Now" is used at any point, the search unwinds and returns the best move found so far (chapter 10).
+With `onlyMoves`, only the given moves are searched, even a single one (used by book learning, chapter 11). A single legal move is not searched either, unless the limit is `Solve` or `onlyMoves` is given. If the time runs out or "Move Now" is used at any point, the search unwinds and returns the best move found so far (chapter 09).
 
 ### Iterative deepening
 
@@ -117,11 +117,11 @@ flowchart TD
 
 Some details:
 
-- **Leaves are evaluated in the parent's loop.** When `look` is 0, the positions after each move are evaluated directly with `Evaluator.Evaluate`, passing the number of moves in the current position as the opponent's mobility $m'$ (chapter 05). This saves a function call per leaf, as in C++.
+- **Leaves are evaluated in the parent's loop.** When `look` is 0, the positions after each move are evaluated directly with `Evaluator.Evaluate`, passing the number of moves in the current position as the opponent's mobility $m'$ (chapter 04). This saves a function call per leaf, as in C++.
 - **Passes** do not use up depth: the opponent is searched with the same `look`.
 - **Extensions.** A position with only one legal move at the horizon is searched one ply deeper. A corner move that the edge tables mark as dangerous (`Evaluator.IsDangerous`) is searched instead of evaluated.
-- **The response table** is updated after every searched child (chapter 06).
-- **The hash table** is read only at plies ≤ `look` − 1 and written only at plies ≤ `look` of the current iteration, the same heights as in C++; so it is used in the upper part of the tree, where each entry saves the most work. A hash move is only used if it is legal in the position (chapter 08).
+- **The response table** is updated after every searched child (chapter 05).
+- **The hash table** is read only at plies ≤ `look` − 1 and written only at plies ≤ `look` of the current iteration, the same heights as in C++; so it is used in the upper part of the tree, where each entry saves the most work. A hash move is only used if it is legal in the position (chapter 07).
 - Inside the tree the midgame search is plain alpha-beta; PVS is only used at the root.
 
 ### Selective search
@@ -225,4 +225,4 @@ See [Stello porting documentation.md](../../Stello%20porting%20documentation.md)
 
 ---
 
-Previous: [06 Move ordering](06-move-ordering.md) · Next: [08 Transposition table](08-transposition-table.md)
+Previous: [05 Move ordering](05-move-ordering.md) · Next: [07 Transposition table](07-transposition-table.md)

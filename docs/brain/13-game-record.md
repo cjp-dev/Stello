@@ -1,4 +1,4 @@
-# 04 – Game record
+# 13 – Game record
 
 [Back to the index](README.md)
 
@@ -94,7 +94,7 @@ The app does not always undo one ply at a time: Back and Forward jump to the pre
 | Pass that is not forced | `pass` | Move 1: Black has a legal move and cannot pass. |
 | Move after the end | a wipe-out game followed by `a1` | Move 10: the game is already over. |
 
-Upper and lower case and extra whitespace are accepted. The app saves games as `*.stello` files in this format.
+Upper and lower case and extra whitespace are accepted. The app saves games as `*.stello` files in this format (and also opens standard `*.txt` move list files). In the user interface, the active game history is displayed chronologically in the Move History panel (chapter 15).
 
 ## Worked example: a game with a pass
 
@@ -150,4 +150,4 @@ Reading this text back with `Parse` gives the same game: the "pass" is accepted 
 
 ---
 
-Previous: [03 Rules and move generation](03-rules-and-move-generation.md) · Next: [05 Evaluation](05-evaluation.md)
+Previous: [12 Book tool](12-book-tool.md) · Next: [14 App integration](14-app-integration.md)

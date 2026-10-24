@@ -1,4 +1,4 @@
-# 09 – Endgame solver
+# 08 – Endgame solver
 
 [Back to the index](README.md)
 
@@ -25,7 +25,7 @@ The solver is part of `SearchEngine` and works on raw bitboards (`own`, `opponen
 
 ### When the solver runs
 
-- In the normal modes, the iterative deepening loop (chapter 07) switches to the solver when the next midgame iteration would end with 7 or fewer empty squares. With 8 or fewer empty squares there is no midgame search at all.
+- In the normal modes, the iterative deepening loop (chapter 06) switches to the solver when the next midgame iteration would end with 7 or fewer empty squares. With 8 or fewer empty squares there is no midgame search at all.
 - With `SearchLimits.Solve`, the midgame search is skipped and the solver runs at once, without a time limit. The tests and book learning use this.
 
 ### Final score
@@ -84,12 +84,12 @@ flowchart TD
 
 1. Count the node; every 1024 nodes check the time and the tokens.
 2. Generate the legal moves. Without a move: if the opponent cannot move either, return the final score; otherwise pass (the number of empty squares stays the same).
-3. Look up the endgame hash table (chapter 08): an exact entry is returned; a bound narrows (α, β); the stored move is tried first.
+3. Look up the endgame hash table (chapter 07): an exact entry is returned; a bound narrows (α, β); the stored move is tried first.
 4. Compute the flips of every move once; they are used for ordering, for the cutoff test and for playing the move.
 5. **Enhanced transposition cutoff** (from 10 empty squares): look up the position after each move in the hash table. If one of them has an exact value or an upper bound $v$ (from the opponent's point of view) with $-v \ge \beta$, that move already proves a cutoff, and the node returns $-v$ without searching anything.
 6. **Order the moves** (the hash move always first):
-   - from 18 empty squares: by the evaluation of the position after the move (chapter 05), best for the side to move first;
-   - otherwise **fastest-first**: fewest replies for the opponent first, with replies on corners counted twice, and the square value (chapter 06) as tie-breaker:
+   - from 18 empty squares: by the evaluation of the position after the move (chapter 04), best for the side to move first;
+   - otherwise **fastest-first**: fewest replies for the opponent first, with replies on corners counted twice, and the square value (chapter 05) as tie-breaker:
 
      $$\text{key} = -256 \cdot (r + r_{\text{corner}}) + \text{BaseScore}(\text{square})$$
 
@@ -191,4 +191,4 @@ Zebra needs about 20–30 M nodes for every position. Stello needs about the sam
 
 ---
 
-Previous: [08 Transposition table](08-transposition-table.md) · Next: [10 Time control](10-time-control.md)
+Previous: [07 Transposition table](07-transposition-table.md) · Next: [09 Time control](09-time-control.md)

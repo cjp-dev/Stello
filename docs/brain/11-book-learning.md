@@ -1,4 +1,4 @@
-# 12 – Book learning
+# 11 – Book learning
 
 [Back to the index](README.md)
 
@@ -16,11 +16,11 @@ The opening book can grow and improve itself. **Adding a game** stores its moves
 | Origin | Value |
 |---|---|
 | A move in an added game | +32 665 for the winner's moves, −32 665 for the loser's, 0 in a draw (`WinValue`) |
-| A search with a heuristic score | The evaluation score (chapter 05) |
+| A search with a heuristic score | The evaluation score (chapter 04) |
 | A search that solved the position | ±(32 600 + disc difference), 0 for a draw |
 | A move to a position that is in the book | −(value of the best move there), backed up by minimax |
 
-- Each book move also records its **origin** and **effort** (chapter 11):
+- Each book move also records its **origin** and **effort** (chapter 10):
 
 | Origin | Set by |
 |---|---|
@@ -85,7 +85,7 @@ flowchart TD
    - if the position after it is in the book: evaluate that position first, and take the negated value of its best move (`BackedUp`);
    - a move with a search origin: keep its value;
    - otherwise: **search** the position after the move and store the value, origin and effort.
-2. **Dropout expansion.** If no book move had a search origin when the position was reached, the engine searches the position once more with only the moves that are *not* in the book (`onlyMoves`, chapter 07), and adds the best one as a new book move with its value, origin and effort.
+2. **Dropout expansion.** If no book move had a search origin when the position was reached, the engine searches the position once more with only the moves that are *not* in the book (`onlyMoves`, chapter 06), and adds the best one as a new book move with its value, origin and effort.
 
 Step 2 is how the book grows: every position in the book gets at least one searched alternative, so the book knows whether the move it has is really the best one. A position gets its dropout move on the first evaluation; while it has a searched move, no more moves are added. A searched move whose position later gets book moves (from an added game) becomes `BackedUp`, so the position gets a new dropout move.
 
@@ -98,7 +98,7 @@ Each search counts as one evaluated position. After every 10 positions the check
 1. **Back up** the values: every book move whose position is in the book gets −(best value in that position). Each position is backed up once, after all the positions below it, so one pass is enough, also through transpositions (C++ needed ten rounds).
 2. **Sort** the moves of every position by value, best first. The sort is stable, so equal values keep their order.
 
-Because `TryGetMove` plays the first legal reply (chapter 11), the sorted book plays its best known move.
+Because `TryGetMove` plays the first legal reply (chapter 10), the sorted book plays its best known move.
 
 ### Self-play: `PlayGame` and `SelfPlay`
 
@@ -147,8 +147,8 @@ Adding the same game in another frame afterwards, `f5 d6 c3 d3 c4` (the tiger af
 
 ## Design notes
 
-- **A port of the C++ learning.** The values, dropout expansion, stable sorting and saving every 10 positions work as in C++ `Book.cpp`. The flags became origin and effort (chapter 11).
-- **Positions instead of lines.** The book stores each position once (chapter 11), so evaluation searches a transposed position once, and minimax backs up in one pass instead of ten rounds. C++ (and the first C# version) did not add the move that led into a known position by another move order; now it is added, so back-up also reaches that move order.
+- **A port of the C++ learning.** The values, dropout expansion, stable sorting and saving every 10 positions work as in C++ `Book.cpp`. The flags became origin and effort (chapter 10).
+- **Positions instead of lines.** The book stores each position once (chapter 10), so evaluation searches a transposed position once, and minimax backs up in one pass instead of ten rounds. C++ (and the first C# version) did not add the move that led into a known position by another move order; now it is added, so back-up also reaches that move order.
 - **No illegal moves to remove.** C++ removed book moves that were not legal while it evaluated; the files are now checked when they are read, and games when they are added, so the book never holds an illegal move.
 - **Bugs fixed.** C++ stored a solved draw as −32 600 (a loss); C# stores 0. C++ self-play took the result from the last *midgame* value even when the endgame had been solved; C# uses the exact score or the final board.
 - **Usable interactively.** C++ self-play ran forever on the UI thread and the program had to be killed; C# runs in the background and stops on request.
@@ -162,7 +162,7 @@ See [Stello porting documentation.md](../../Stello%20porting%20documentation.md)
 | File | Main members |
 |---|---|
 | [BookLearner.cs](../../Stello.Net/Stello.Engine/BookLearner.cs) | `AddGame`, `EvaluatePositions`, `EvaluateReplies`, `Minimax`, `PlayGame`, `SelfPlay`, `Learn`, `Searched`, `ValueFor` |
-| [BookSearch.cs](../../Stello.Net/Stello.Engine/BookSearch.cs) | `PositionValue` (C++ `getvalue`), `Search` (shared with the book tool, chapter 13) |
+| [BookSearch.cs](../../Stello.Net/Stello.Engine/BookSearch.cs) | `PositionValue` (C++ `getvalue`), `Search` (shared with the book tool, chapter 12) |
 | [BookMinimax.cs](../../Stello.Net/Stello.Engine/BookMinimax.cs) | `Run`, `BackUp`, `Sort` (shared with the book tool) |
 | [OpeningBook.cs](../../Stello.Net/Stello.Engine/OpeningBook.cs) | `CreateEmpty`, `GetOrAddReplies`, `TryGetReplies`, `Canonical`, `Transform` |
 | [BookEntry.cs](../../Stello.Net/Stello.Engine/BookEntry.cs) | `BookEntry.Set`, `IsSearched`, `BookEffort.For` |
@@ -193,4 +193,4 @@ See [Stello porting documentation.md](../../Stello%20porting%20documentation.md)
 
 ---
 
-Previous: [11 Opening book](11-opening-book.md) · Next: [13 Book tool](13-book-tool.md)
+Previous: [10 Opening book](10-opening-book.md) · Next: [12 Book tool](12-book-tool.md)

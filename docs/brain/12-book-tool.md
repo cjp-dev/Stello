@@ -1,10 +1,10 @@
-# 13 – Book tool
+# 12 – Book tool
 
 [Back to the index](README.md)
 
 ## In short
 
-`Stello.BookTool` is a console program for keeping the master opening book ([chapter 11](11-opening-book.md)). It imports the C++ book, keeps the text book in its normal form, builds the binary book that the apps use, checks the book, and prints statistics. It also **recalculates** the book: it searches every leaf again with the current engine, on several engines at once, and then plays the old and the new book against each other in a **match**, to see whether the new book is stronger. It uses the book code in `Stello.Engine`, so the tool and the apps always agree on the format.
+`Stello.BookTool` is a console program for keeping the master opening book ([chapter 10](10-opening-book.md)). It imports the C++ book, keeps the text book in its normal form, builds the binary book that the apps use, checks the book, and prints statistics. It also **recalculates** the book: it searches every leaf again with the current engine, on several engines at once, and then plays the old and the new book against each other in a **match**, to see whether the new book is stronger. It uses the book code in `Stello.Engine`, so the tool and the apps always agree on the format.
 
 ## Running it
 
@@ -16,7 +16,7 @@ dotnet run -c Release --project Stello.Net/tools/Stello.BookTool -- <command> [a
 
 | Command | Does |
 |---|---|
-| `import <OPENING> <book.txt>` | Reads the C++ book file and writes the text book (origins as in chapter 11) |
+| `import <OPENING> <book.txt>` | Reads the C++ book file and writes the text book (origins as in chapter 10) |
 | `format <book.txt>` | Reads the text book and writes it again in its normal form, e.g. after editing it by hand |
 | `build <book.txt> <book.bin>` | Builds the binary book for the apps from the text book |
 | `verify <book.txt> [<book.bin>]` | Checks the text book and, if given, that the binary book holds the same book |
@@ -25,7 +25,7 @@ dotnet run -c Release --project Stello.Net/tools/Stello.BookTool -- <command> [a
 | `compare <old book> <new book> [--out <report.txt>]` | Reports the values and first moves that changed |
 | `match <book A> <book B> (--starts <report.txt> \| --starts-ply N) [--max-starts N] [--depth 10 \| --time-s S] [--workers N] [--hash-bits 19]` | Plays the two books against each other |
 
-Files are written to a temporary file first and then renamed, so a failed run never leaves half a book. A file that cannot be read gives the error and exit code 1. `--workers` is the number of engines that search at the same time; the default is half the number of logical processors (the physical cores with hyper-threading). Each engine has two hash tables of $2^{\text{hash-bits}}$ slots (48 MiB at 19, chapter 08). Ctrl+C stops `recalc` and `match` cleanly; they then exit with code 2.
+Files are written to a temporary file first and then renamed, so a failed run never leaves half a book. A file that cannot be read gives the error and exit code 1. `--workers` is the number of engines that search at the same time; the default is half the number of logical processors (the physical cores with hyper-threading). Each engine has two hash tables of $2^{\text{hash-bits}}$ slots (48 MiB at 19, chapter 07). Ctrl+C stops `recalc` and `match` cleanly; they then exit with code 2.
 
 ## Updating the master book
 
@@ -68,7 +68,7 @@ Warning: positions whose moves are not sorted best first: 18, e.g.
 Stello.Net/Book/opening-book.bin holds the same book.
 ```
 
-They came from positions that the C++ tree stored more than once: each copy had its own values, and the import joined them. The import does not back up or sort, so the computer played the same book moves as before (chapter 11). `recalc` backs up and sorts the whole book, so the recalculated master book gives no warnings.
+They came from positions that the C++ tree stored more than once: each copy had its own values, and the import joined them. The import does not back up or sort, so the computer played the same book moves as before (chapter 10). `recalc` backs up and sorts the whole book, so the recalculated master book gives no warnings.
 
 ## Recalculating the leaves: `recalc`
 
@@ -83,7 +83,7 @@ flowchart TD
     Store --> End["When all are done, or after Ctrl+C:<br/>back up and sort, save,<br/>write the report"]
 ```
 
-- **The search** is the one used in a game (`SearchEngine.Search` through `BookSearch.PositionValue`, chapter 07): with 60 s per move it deepens the midgame search and switches to the endgame solver when it gets near enough to the end (chapter 09). The kind of result gives the origin: `Heuristic`, `WinLossDraw` or `Exact`. A position with a single legal move is searched too; for a position where the player must pass, the opponent's position is searched; a finished game gets its disc count.
+- **The search** is the one used in a game (`SearchEngine.Search` through `BookSearch.PositionValue`, chapter 06): with 60 s per move it deepens the midgame search and switches to the endgame solver when it gets near enough to the end (chapter 08). The kind of result gives the origin: `Heuristic`, `WinLossDraw` or `Exact`. A position with a single legal move is searched too; for a position where the player must pass, the opponent's position is searched; a finished game gets its disc count.
 - **A proven result is kept.** If a leaf was `WinLossDraw` and the new search could not solve the position, the old value stays, with the new effort.
 - **The same result with any number of workers.** Each search starts with a clean hash table, so a value does not depend on which searches the worker did before.
 - **Stop and continue.** The text book is the checkpoint: it is saved every `--save-every` searches (default 10) and when the run stops. Running `recalc` again skips what is already done, because those leaves now have the effort of this run.
@@ -91,7 +91,7 @@ flowchart TD
 
 | Option | Default | Meaning |
 |---|---|---|
-| `--time-s S` | 60 | Time per move for each position (the soft limit is two thirds of it, chapter 10) |
+| `--time-s S` | 60 | Time per move for each position (the soft limit is two thirds of it, chapter 09) |
 | `--depth N` | | A fixed depth instead of a time |
 | `--workers N` | physical cores | Engines searching at the same time |
 | `--save-every N` | 10 | Save the book after every N searches |
@@ -107,7 +107,7 @@ Each search prints a line with the count, the ply and line of the leaf position,
 [     6/10,522] ply  5 d3c5e6f3c4     49 Heuristic d17 (60.0 s), ...
 ```
 
-The master book has 10 522 leaf positions to search (the 1 091 exact ones are kept). In the opening a search takes 48–60 s and reaches depth 17–18 (60 s is the hard limit, chapter 10); near the end it is much faster. With 12 workers the whole run takes up to about 14 hours.
+The master book has 10 522 leaf positions to search (the 1 091 exact ones are kept). In the opening a search takes 48–60 s and reaches depth 17–18 (60 s is the hard limit, chapter 09); near the end it is much faster. With 12 workers the whole run takes up to about 14 hours.
 
 ## Comparing two books: `compare`
 
@@ -228,7 +228,7 @@ Only the 1 091 exact values from the C++ book have no known effort; all other le
 - **The engine's own endgame switch.** `recalc` does not decide when to solve exactly; the normal search does that, as in a game, within the time limit.
 - **The book is the checkpoint.** Unlike the Checkers book tool, there is no separate `.partial` file: the effort stored with each value tells what is done.
 - **Workers instead of a parallel search.** The engine searches on one thread; running one engine per core on different positions uses all cores without changing the search.
-- **Only the leaves.** The values of the other book moves follow from the leaves by back-up. New moves are not added (that is dropout expansion, chapter 12, and the planned drop-out expansion of the book tool).
+- **Only the leaves.** The values of the other book moves follow from the leaves by back-up. New moves are not added (that is dropout expansion, chapter 11, and the planned drop-out expansion of the book tool).
 
 ## Where in the code
 
@@ -248,7 +248,7 @@ Only the 1 091 exact values from the C++ book have no known effort; all other le
 
 ## Tests
 
-The tool itself has no tests; the code it calls is tested in [OpeningBookTests.cs](../../Stello.Net/Stello.Engine.Tests/OpeningBookTests.cs) (chapter 11), including the two tests on the shipped files above, and in [BookRecalculatorTests.cs](../../Stello.Net/Stello.Engine.Tests/BookRecalculatorTests.cs):
+The tool itself has no tests; the code it calls is tested in [OpeningBookTests.cs](../../Stello.Net/Stello.Engine.Tests/OpeningBookTests.cs) (chapter 10), including the two tests on the shipped files above, and in [BookRecalculatorTests.cs](../../Stello.Net/Stello.Engine.Tests/BookRecalculatorTests.cs):
 
 - `recalc` searches only the leaves that are not good enough, searches a transposed leaf once, keeps a proven result the search cannot solve, gives the same book with 1 and 4 workers (and a consistent book after back-up), and continues where a stopped run stopped, with checkpoints;
 - `compare` reports the changed values and first moves, and its report gives the start positions;
@@ -256,4 +256,4 @@ The tool itself has no tests; the code it calls is tested in [OpeningBookTests.c
 
 ---
 
-Previous: [12 Book learning](12-book-learning.md) · Next: [14 App integration](14-app-integration.md)
+Previous: [11 Book learning](11-book-learning.md) · Next: [13 Game record](13-game-record.md)

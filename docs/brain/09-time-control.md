@@ -1,4 +1,4 @@
-# 10 – Time control
+# 09 – Time control
 
 [Back to the index](README.md)
 
@@ -12,12 +12,16 @@ The search can always go one ply deeper, so something must decide when to stop. 
 
 | Mode (`TimeControlMode`) | Created with | Meaning | C++ |
 |---|---|---|---|
-| `FixedDepth` | `SearchLimits.FixedDepth(plies)` | Search 1–60 plies, no time limit | `sogedybde` |
-| `TimePerMove` | `SearchLimits.TimePerMove(time)` | A fixed time for this move | `tid_per_trek` |
-| `TimePerGame` | `SearchLimits.TimePerGame(remaining)` | Share the time left on the computer's clock over the remaining moves | `spil_tid` |
+| `FixedDepth` | `SearchLimits.FixedDepth(plies, ...)` | Search 1–60 plies, no time limit | `sogedybde` |
+| `TimePerMove` | `SearchLimits.TimePerMove(time, ...)` | A fixed time for this move | `tid_per_trek` |
+| `TimePerGame` | `SearchLimits.TimePerGame(remaining, ...)` | Share the time left on the computer's clock over the remaining moves | `spil_tid` |
 | `Solve` | `SearchLimits.Solve` | Solve to the end, no time limit (tests and book learning) | – |
 
-In the app, the settings dialog gives a depth of 1–20 plies, 1–60 seconds per move or 1–60 minutes per game; the default is 5 minutes per game, as in C++ (`GameSettings.ToLimits`).
+In addition to the time mode, `SearchLimits` carries two engine configuration properties configured via the settings dialog (chapter 15):
+* `UseOpeningBook` (`bool`, default `true`): toggles whether the opening book is queried.
+* `HashBits` (`int`, default `19`): specifies the power-of-two capacity for transposition tables.
+
+In the app, the settings dialog gives a depth of 1–20 plies, 1–60 seconds per move or 1–60 minutes per game; the default is 5 minutes per game (`GameSettings.ToLimits`). In timed games (`TimePerGame`), both players have independent digital countdown clocks shown on the dual-card scoreboard. If time runs out against the computer, a timeout continuation safeguard dialog allows continuing the match casually while marking the match status modified (`#E74C3C`).
 
 ### `TimeBudget`
 
@@ -80,7 +84,7 @@ When the search switches to the solver, `TimeControl.ForEndgame` gives it more t
 
 $$m = \lfloor R / 2 \rfloor, \qquad \text{hard} = \text{elapsed} + m, \qquad \text{soft} = \left\lfloor \frac{10\,m}{15} \right\rfloor$$
 
-The soft limit decides whether pass 2 (the exact score) is started after pass 1 (chapter 09). With a time per move, the midgame budget is kept.
+The soft limit decides whether pass 2 (the exact score) is started after pass 1 (chapter 08). With a time per move, the midgame budget is kept.
 
 ### How the search uses the limits
 
@@ -92,7 +96,7 @@ At 15–20 million nodes per second, 1024 nodes take well under a millisecond, s
 
 ### Move Now
 
-This sequence shows what happens when the user presses Ctrl+M while the computer thinks:
+This sequence shows what happens when the user clicks the prominent `[Move Now]` button or presses `Ctrl+M` while the computer thinks:
 
 ```mermaid
 sequenceDiagram
@@ -165,4 +169,4 @@ In the app tests, [MainViewModelTests.cs](../../Stello.Net/Stello.Net.Tests/Main
 
 ---
 
-Previous: [09 Endgame solver](09-endgame-solver.md) · Next: [11 Opening book](11-opening-book.md)
+Previous: [08 Endgame solver](08-endgame-solver.md) · Next: [10 Opening book](10-opening-book.md)

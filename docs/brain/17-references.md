@@ -1,4 +1,4 @@
-# 16 – References
+# 17 – References
 
 [Back to the index](README.md)
 
@@ -29,7 +29,7 @@ Articles, papers and source code on the internet that explain the techniques use
 | [Bitboards – Chess Programming Wiki](https://www.chessprogramming.org/Bitboards) | What bitboards are and the basic operations on them. |
 | [Perft for Reversi – Aart Bik](http://www.aartbik.com/MISC/reversi.html) | Perft numbers for Othello from the start position; Stello's perft test uses the same numbers up to depth 8. |
 
-## 05 Evaluation
+## 04 Evaluation
 
 | Link | What you find there |
 |---|---|
@@ -37,14 +37,14 @@ Articles, papers and source code on the internet that explain the techniques use
 | [Computer Othello – Wikipedia](https://en.wikipedia.org/wiki/Computer_Othello) | Evaluation techniques, including mobility and potential mobility. |
 | [Othello – Chess Programming Wiki](https://www.chessprogramming.org/Othello) | The "Evaluation" section, with references to IAGO (edge stability, mobility, potential mobility). |
 
-## 06 Move ordering
+## 05 Move ordering
 
 | Link | What you find there |
 |---|---|
 | [Alpha-Beta – Chess Programming Wiki](https://www.chessprogramming.org/Alpha-Beta) | "Savings": why searching the best move first gives the most cutoffs. |
 | [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Move ordering": killer responses in Othello. |
 
-## 07 Midgame search
+## 06 Midgame search
 
 | Link | What you find there |
 |---|---|
@@ -59,14 +59,14 @@ Articles, papers and source code on the internet that explain the techniques use
 | [Odd-Even Effect – Chess Programming Wiki](https://www.chessprogramming.org/Odd-Even_Effect) | Why node counts and scores differ between odd and even depths. |
 | [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Searching": alpha-beta, move ordering and selective search in Othello. |
 
-## 08 Transposition table
+## 07 Transposition table
 
 | Link | What you find there |
 |---|---|
 | [Transposition Table – Chess Programming Wiki](https://www.chessprogramming.org/Transposition_Table) | What is stored, bounds, collisions, and replacement schemes, including the two-tier system Stello uses. |
 | [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Transposition tables", with the tiger-opening example. |
 
-## 09 Endgame solver
+## 08 Endgame solver
 
 | Link | What you find there |
 |---|---|
@@ -76,20 +76,20 @@ Articles, papers and source code on the internet that explain the techniques use
 | [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Endgame": why ordering decides everything, and fastest-first. |
 | [Edax on GitHub](https://github.com/abulmo/edax-reversi) | A much faster open-source bitboard endgame solver. |
 
-## 10 Time control
+## 09 Time control
 
 | Link | What you find there |
 |---|---|
 | [Iterative Deepening – Chess Programming Wiki](https://www.chessprogramming.org/Iterative_Deepening) | Iterative deepening as the basis of time management. |
 
-## 11 Opening book
+## 10 Opening book
 
 | Link | What you find there |
 |---|---|
 | [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Opening knowledge": why an opening book pays off, and how it can be built. |
 | [Computer Othello – Wikipedia](https://en.wikipedia.org/wiki/Computer_Othello) | "Opening book": how Othello programs use opening books. |
 
-## 12 Book learning
+## 11 Book learning
 
 | Link | What you find there |
 |---|---|
@@ -104,6 +104,14 @@ Articles, papers and source code on the internet that explain the techniques use
 | [Progress&lt;T&gt; class – Microsoft Learn](https://learn.microsoft.com/dotnet/api/system.progress-1) | Callbacks run on the `SynchronizationContext` captured when the object is created. |
 | [Cancellation in managed threads – Microsoft Learn](https://learn.microsoft.com/dotnet/standard/threading/cancellation-in-managed-threads) | Cooperative cancellation with `CancellationTokenSource` and `OperationCanceledException`. |
 
+## 15 GUI and settings
+
+| Link | What you find there |
+|---|---|
+| [World Othello Federation (WOF)](https://www.worldothello.org/) | Official tournament rules, clock specifications, first-mover (Black) conventions, and ratings. |
+| [Logistello – Michael Buro](https://skatgame.net/mburo/log.html) | Michael Buro's historic championship Othello program and evaluation papers. |
+| [Usability 101: Introduction to Usability – Nielsen Norman Group](https://www.nngroup.com/articles/usability-101-introduction-to-usability/) | Principles of status visibility, match integrity, and user control. |
+
 ## Writing these documents
 
 | Link | What you find there |
@@ -114,4 +122,4 @@ Articles, papers and source code on the internet that explain the techniques use
 
 ---
 
-Previous: [15 Glossary](15-glossary.md) · Next: [Index](README.md)
+Previous: [16 Glossary](16-glossary.md) · Next: [Index](README.md)

@@ -1,10 +1,10 @@
-# 06 – Move ordering
+# 05 – Move ordering
 
 [Back to the index](README.md)
 
 ## In short
 
-Alpha-beta search (chapter 07) is fastest when the best move in each position is searched first: then the other moves are refuted quickly and whole branches are cut off. The engine cannot know the best move in advance, so it guesses, in this order: the move stored in the hash table from an earlier search, then replies that worked well against the opponent's last move before (the *response table*), and finally a fixed value per square that prefers corners and avoids the squares next to empty corners. This chapter describes the ordering of the midgame search; the endgame solver has its own ordering (chapter 09).
+Alpha-beta search (chapter 06) is fastest when the best move in each position is searched first: then the other moves are refuted quickly and whole branches are cut off. The engine cannot know the best move in advance, so it guesses, in this order: the move stored in the hash table from an earlier search, then replies that worked well against the opponent's last move before (the *response table*), and finally a fixed value per square that prefers corners and avoids the squares next to empty corners. This chapter describes the ordering of the midgame search; the endgame solver has its own ordering (chapter 08).
 
 ## Data structures
 
@@ -62,13 +62,13 @@ The row is chosen by the replying colour and the move it replied to, so the tabl
 
 ### Where the ordering is used
 
-- At every node of the midgame search, with the hash move and the opponent's last move (chapter 07).
-- At the root, once at the start of a search without a hash move; after that, the root list is reordered by the search itself: each move that becomes the best is moved to the front for the next iteration (chapter 07).
-- The endgame solver uses different keys (evaluation, fewest replies, parity), with `BaseScore` as a tie-breaker (chapter 09).
+- At every node of the midgame search, with the hash move and the opponent's last move (chapter 06).
+- At the root, once at the start of a search without a hash move; after that, the root list is reordered by the search itself: each move that becomes the best is moved to the front for the next iteration (chapter 06).
+- The endgame solver uses different keys (evaluation, fewest replies, parity), with `BaseScore` as a tie-breaker (chapter 08).
 
 ## Worked example
 
-In the midgame position of [chapter 05](05-evaluation.md#a-midgame-position), Black has eight legal moves. Their square values for this position (a1 is White's, h1 and h8 are empty, a8 is empty):
+In the midgame position of [chapter 04](04-evaluation.md#a-midgame-position), Black has eight legal moves. Their square values for this position (a1 is White's, h1 and h8 are empty, a8 is empty):
 
 | Move | e2 | f4 | g5 | a6 | f6 | f7 | b8 | c8 |
 |---|---|---|---|---|---|---|---|---|
@@ -110,4 +110,4 @@ There is no unit test of `MoveOrdering` on its own. The ordering only affects sp
 
 ---
 
-Previous: [05 Evaluation](05-evaluation.md) · Next: [07 Midgame search](07-midgame-search.md)
+Previous: [04 Evaluation](04-evaluation.md) · Next: [06 Midgame search](06-midgame-search.md)

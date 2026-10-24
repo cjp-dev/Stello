@@ -42,27 +42,28 @@ The time limit can stop the search at any point; the best move found so far is t
 | 01 | [Overview](01-overview.md) | Projects, main types, the life of one computer move, design principles |
 | 02 | [Board and squares](02-board-and-squares.md) | Bitboards, square numbering, the start position |
 | 03 | [Rules and move generation](03-rules-and-move-generation.md) | Legal moves with shift-and-mask, flips, pass, game over, perft |
-| 04 | [Game record](04-game-record.md) | Move history, undo/redo, the text file format |
-| 05 | [Evaluation](05-evaluation.md) | Edge tables, corners, stability, mobility |
-| 06 | [Move ordering](06-move-ordering.md) | Square values, the response table, the hash move |
-| 07 | [Midgame search](07-midgame-search.md) | Negamax alpha-beta, iterative deepening, PVS, selective search |
-| 08 | [Transposition table](08-transposition-table.md) | Two-entry slots, bounds, replacement |
-| 09 | [Endgame solver](09-endgame-solver.md) | Win/loss/draw and exact passes, fastest-first, parity, enhanced transposition cutoff |
-| 10 | [Time control](10-time-control.md) | Time modes, time per move, "Move Now" |
-| 11 | [Opening book](11-opening-book.md) | Positions in canonical form, the text and binary files, the import of the C++ book, `BookTracker` |
-| 12 | [Book learning](12-book-learning.md) | Adding games, dropout expansion, minimax, self-play |
-| 13 | [Book tool](13-book-tool.md) | The console tool for the master book: import, build, verify, statistics, recalculating the leaves, comparing and matching books |
-| 14 | [App integration](14-app-integration.md) | The game loop, threading, settings, book files |
-| 15 | [Glossary](15-glossary.md) | The terms used in these documents |
-| 16 | [References](16-references.md) | Articles, papers and source code on the internet |
+| 04 | [Evaluation](04-evaluation.md) | Edge tables, corners, stability, mobility |
+| 05 | [Move ordering](05-move-ordering.md) | Square values, the response table, the hash move |
+| 06 | [Midgame search](06-midgame-search.md) | Negamax alpha-beta, iterative deepening, PVS, selective search |
+| 07 | [Transposition table](07-transposition-table.md) | Two-entry slots, bounds, replacement |
+| 08 | [Endgame solver](08-endgame-solver.md) | Win/loss/draw and exact passes, fastest-first, parity, enhanced transposition cutoff |
+| 09 | [Time control](09-time-control.md) | Time modes, time per move, "Move Now" |
+| 10 | [Opening book](10-opening-book.md) | Positions in canonical form, the text and binary files, the import of the C++ book, `BookTracker` |
+| 11 | [Book learning](11-book-learning.md) | Adding games, dropout expansion, minimax, self-play |
+| 12 | [Book tool](12-book-tool.md) | The console tool for the master book: import, build, verify, statistics, recalculating the leaves, comparing and matching books |
+| 13 | [Game record](13-game-record.md) | Move history, undo/redo, the text file format |
+| 14 | [App integration](14-app-integration.md) | The game loop, threading, engine hosts, WebAssembly worker, settings, book files |
+| 15 | [GUI and settings](15-gui-and-settings.md) | Interface layout, menu commands, settings dialog, opening book and TT memory, real-time analysis |
+| 16 | [Glossary](16-glossary.md) | The terms used in these documents |
+| 17 | [References](17-references.md) | Articles, papers and source code on the internet |
 
 ## Reading paths
 
 - **Everything:** read the chapters in order.
-- **Just the search:** 01, 02, 05, 06, 07, 08, 09.
-- **Just the opening book:** 01, 02 (square numbers), 11, 12, 13.
-- **Tuning the engine:** 05, 06, 07, 08, 09, 10, and phase 8 in [Stello porting documentation.md](../../Stello%20porting%20documentation.md#phase-8--performance-tuning-rounds-1-and-2-paused) for what has already been tried, with measurements, and the remaining ideas.
-- **Changing the app:** 01, 10, 14.
+- **Just the search:** 01, 02, 03, 04, 05, 06, 07, 08, 09.
+- **Just the opening book:** 01, 02 (square numbers), 10, 11, 12.
+- **Tuning the engine:** 04, 05, 06, 07, 08, 09, and phase 8 in [Stello porting documentation.md](../../Stello%20porting%20documentation.md#phase-8--performance-tuning-rounds-1-and-2-paused) for what has already been tried, with measurements, and the remaining ideas.
+- **UI & application architecture:** 01, 13, 14, 15.
 
 ## How to view these documents
 

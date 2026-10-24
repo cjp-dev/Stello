@@ -22,7 +22,7 @@ All rule code works on raw bitboards in the internal static class `Bitboards`. `
 |---|---|
 | `Bitboards.LegalMoves(own, opponent)` | A bitboard of all legal moves for `own` |
 | `Bitboards.Flips(own, opponent, square)` | A bitboard of the discs flipped by a move on `square`; 0 if none |
-| `Bitboards.PotentialMobility(own, opponent)` | A count used by the evaluation (chapter 05) |
+| `Bitboards.PotentialMobility(own, opponent)` | A count used by the evaluation (chapter 04) |
 | `Board.LegalMoves(player)`, `HasLegalMove`, `IsLegal` | The same for a `Board` and a `Player` |
 | `Board.Flips(player, square)` | 0 if the square is occupied, otherwise `Bitboards.Flips` |
 | `Board.Play(player, square)` | The new board; throws if the move flips nothing |
@@ -144,9 +144,9 @@ flowchart TD
 
 ### Pass and game over
 
-- A player **must pass** when `LegalMoves` is 0 but the opponent can still move. The game record stores the pass as a move ([chapter 04](04-game-record.md)).
+- A player **must pass** when `LegalMoves` is 0 but the opponent can still move. The game record stores the pass as a move ([chapter 13](13-game-record.md)).
 - The game is **over** when neither player can move (`Board.IsGameOver`). This happens when the board is full, when one colour is wiped out, or in rare positions where no empty square can be taken by either side.
-- The **winner** has the most discs. The search scores a finished game with the empty squares given to the winner, which is the standard tournament rule ([Reversi – Wikipedia](https://en.wikipedia.org/wiki/Reversi)); see chapter 09.
+- The **winner** has the most discs. The search scores a finished game with the empty squares given to the winner, which is the standard tournament rule ([Reversi – Wikipedia](https://en.wikipedia.org/wiki/Reversi)); see chapter 08.
 
 ## Worked example: perft
 
@@ -198,4 +198,4 @@ These are the values in [PerftTests.cs](../../Stello.Net/Stello.Engine.Tests/Per
 
 ---
 
-Previous: [02 Board and squares](02-board-and-squares.md) · Next: [04 Game record](04-game-record.md)
+Previous: [02 Board and squares](02-board-and-squares.md) · Next: [04 Evaluation](04-evaluation.md)

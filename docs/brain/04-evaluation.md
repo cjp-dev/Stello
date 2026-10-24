@@ -1,4 +1,4 @@
-# 05 – Evaluation
+# 04 – Evaluation
 
 [Back to the index](README.md)
 
@@ -148,11 +148,11 @@ The "+ 2" keeps the fraction defined when both counts are 0, and the fraction ke
 
 ### Dangerous corner moves
 
-`Evaluator.IsDangerous(after, mover, move)` is called by the search before a leaf is evaluated. If the move just played is a corner, and the edge tables mark that corner as dangerous for the mover on the edges after the move, the leaf is **not evaluated**: the search looks one ply deeper instead (chapter 07). A corner that looks good but is dangerous is thus checked by a real search.
+`Evaluator.IsDangerous(after, mover, move)` is called by the search before a leaf is evaluated. If the move just played is a corner, and the edge tables mark that corner as dangerous for the mover on the edges after the move, the leaf is **not evaluated**: the search looks one ply deeper instead (chapter 06). A corner that looks good but is dangerous is thus checked by a real search.
 
 ### Game over
 
-A player without discs has lost: the score is $\pm(32600 + \text{discs of the winner})$. Other finished games are scored by the search itself, with the disc difference and the empty squares given to the winner (chapter 07). Values beyond ±32 600 therefore mean a won or lost game.
+A player without discs has lost: the score is $\pm(32600 + \text{discs of the winner})$. Other finished games are scored by the search itself, with the disc difference and the empty squares given to the winner (chapter 06). Values beyond ±32 600 therefore mean a won or lost game.
 
 ## Worked examples
 
@@ -219,7 +219,7 @@ Here $p = 734$ (34 discs), but no corner is only "possible", so it is not used.
 
 - **Edge knowledge in tables.** The tables turn a lot of Othello edge knowledge (stable discs, unbalanced edges, dangerous C-squares, corner fights) into one array lookup per edge. The two-ply look-ahead on the tables adds tactics on the edges at a small cost.
 - **A faithful port.** The four corner blocks, written out four times in C++ (about 1000 lines), are written once in C# and driven by a table of corners (`Corners`: the two edges, first or last square, the diagonal). The globals `sindex1..4` that C++ computed in `dangerous()` are now computed inside `Evaluate`. The unused `pbonus` was dropped. Everything else, including the quirks, gives the same results as C++. See [Stello porting documentation.md](../../Stello%20porting%20documentation.md), sections 3.1–3.3.
-- **Cost.** Building the 10 × 10 array for every call is the price of the line-by-line port. The evaluation is only called at the leaves of the midgame search and for move ordering far from the end (chapter 09), so it has not been a bottleneck so far.
+- **Cost.** Building the 10 × 10 array for every call is the price of the line-by-line port. The evaluation is only called at the leaves of the midgame search and for move ordering far from the end (chapter 08), so it has not been a bottleneck so far.
 - **The weights are old.** 400, 600, 60 and the edge values were tuned by hand for the C++ program. They are not learned from games, as in modern pattern-based programs (see Gunnar Andersson's page below).
 
 ## Where in the code
@@ -251,4 +251,4 @@ Here $p = 734$ (34 discs), but no corner is only "possible", so it is not used.
 
 ---
 
-Previous: [04 Game record](04-game-record.md) · Next: [06 Move ordering](06-move-ordering.md)
+Previous: [03 Rules and move generation](03-rules-and-move-generation.md) · Next: [05 Move ordering](05-move-ordering.md)

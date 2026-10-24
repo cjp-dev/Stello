@@ -1,4 +1,4 @@
-# 11 – Opening book
+# 10 – Opening book
 
 [Back to the index](README.md)
 
@@ -6,7 +6,7 @@
 
 In the opening, even a deep search sees little difference between the moves, and the same positions come up in game after game. So Stello plays its first moves from an **opening book**: the known positions, each with its **book moves** and a value for each move. A position is stored **once**, whatever order of moves led to it and whichever of Black's four (mirror-image) first moves started the game: positions are stored in a **canonical form**, the smallest of the four mirror images. Each value also records **how it was found** (its origin and search effort), so the values can be improved later.
 
-The master book lives in git as a **text file**, one line per position; the apps use a compact **binary file** built from it by the book tool ([chapter 13](13-book-tool.md)). The book is the one the C++ program learned over many games; its file is only read once, to import it. The computer asks the book until it has missed three times in a row.
+The master book lives in git as a **text file**, one line per position; the apps use a compact **binary file** built from it by the book tool ([chapter 12](12-book-tool.md)). The book is the one the C++ program learned over many games; its file is only read once, to import it. The computer asks the book until it has missed three times in a row.
 
 ## Data structures
 
@@ -17,7 +17,7 @@ One book move (internal class):
 | Member | Type | Contents |
 |---|---|---|
 | `Move` | `Move` | The move in the position's canonical frame; `Move.Pass` for a pass |
-| `Value` | `short` | The value of the move for the player who makes it (chapter 12) |
+| `Value` | `short` | The value of the move for the player who makes it (chapter 11) |
 | `Origin` | `BookOrigin` | Where the value comes from (below) |
 | `Effort` | `BookEffort` | How hard it was searched for (below) |
 | `IsSearched` | `bool` | The origin is a search: `Heuristic`, `WinLossDraw` or `Exact` (C++ flag `CALCULATED`) |
@@ -136,7 +136,7 @@ flowchart TD
     First --> Found["Return it with its value"]
 ```
 
-The **first** book move is played, as in C++. Book learning sorts every list of moves best first (chapter 12), so the first move is the book's best move. A position where the player must pass has only a pass in the book; the app plays passes itself and does not ask the book.
+The **first** book move is played, as in C++. Book learning sorts every list of moves best first (chapter 11), so the first move is the book's best move. A position where the player must pass has only a pass in the book; the app plays passes itself and does not ask the book.
 
 ### When to ask the book: `BookTracker`
 
@@ -157,20 +157,22 @@ After a miss the game may still transpose back into the book, so the book is ask
 
 ### Choosing the computer's move: `ComputerPlayer`
 
-`ComputerPlayer` asks the book first and searches only when the book has no move:
+`ComputerPlayer` queries the book first when enabled, and launches tree search when the book has no move or book usage is disabled:
 
 ```mermaid
 flowchart TD
-    C["ChooseMove(board, player, limits, ...)"] --> Has{"A book, a legal move,<br/>and the tracker says ask?"}
+    C["ChooseMove(board, player, limits, ...)"] --> Enabled{"limits.UseOpeningBook<br/>enabled?"}
+    Enabled -- "no" --> Search["SearchEngine.Search"]
+    Enabled -- "yes" --> Has{"A book, a legal move,<br/>and the tracker says ask?"}
     Has -- "yes" --> Try["book.TryGetMove"]
     Try --> Rec["tracker.Record(found)"]
     Rec --> Found{"Found?"}
     Found -- "yes" --> Book["Return the book move<br/>(ScoreKind.Book, the book value)"]
     Found -- "no" --> Search
-    Has -- "no" --> Search["SearchEngine.Search"]
+    Has -- "no" --> Search
 ```
 
-A book move returns at once, with 0 nodes and no time used.
+The checkbox **Stello Opening Book (11,200 canonical positions)** in the settings dialog (chapter 15) controls `limits.UseOpeningBook`. When unchecked, the book lookup is completely bypassed. A book move returns at once, with 0 nodes and no time used.
 
 ### Loading and saving
 
@@ -191,11 +193,11 @@ A book move returns at once, with 0 nodes and no time used.
 | White's replies to d3 | c5 (−10), c3 (−35), e3 (−126) |
 | Longest line | 57 plies |
 | Origins | 11 256 backed up, 5 645 heuristic, 2 987 win/loss/draw, 2 990 exact |
-| Search effort | 10 531 values searched for 60 s per move (`recalc`, chapter 13); 1 091 exact values from the C++ book |
+| Search effort | 10 531 values searched for 60 s per move (`recalc`, chapter 12); 1 091 exact values from the C++ book |
 | Pass moves | 4 |
 | Files | text 898 KB, binary 193 KB |
 
-Counting d3 as ply 1 and each position at its shortest line, the book has about 500 positions at plies 10–12, then 180–330 per ply up to ply 40; after that fewer and fewer lines continue, down to 26 positions at ply 55. The C++ tree had 23 389 nodes; the import has 511 fewer moves, because a move stored in two lines (or in two frames) is now stored once and moves that could not be played are left out. 14 positions were stored in two frames. After the import all leaves were searched again (chapter 13), and the book now plays another first move in 2 163 positions.
+Counting d3 as ply 1 and each position at its shortest line, the book has about 500 positions at plies 10–12, then 180–330 per ply up to ply 40; after that fewer and fewer lines continue, down to 26 positions at ply 55. The C++ tree had 23 389 nodes; the import has 511 fewer moves, because a move stored in two lines (or in two frames) is now stored once and moves that could not be played are left out. 14 positions were stored in two frames. After the import all leaves were searched again (chapter 12), and the book now plays another first move in 2 163 positions.
 
 ### The same reply for all four first moves
 
@@ -220,7 +222,7 @@ It starts as the well-known "tiger" opening (f5 d6 c3 d3 c4). Up to g6 it is the
 
 ## Design notes
 
-- **Positions instead of a tree.** The C++ book was a tree of lines, so a position reached by two lines was stored twice, possibly with different moves and values, and minimax needed ten rounds to carry values between the copies. Now each position is stored once, and back-up is exact in one pass (chapter 12).
+- **Positions instead of a tree.** The C++ book was a tree of lines, so a position reached by two lines was stored twice, possibly with different moves and values, and minimax needed ten rounds to carry values between the copies. Now each position is stored once, and back-up is exact in one pass (chapter 11).
 - **One canonical form instead of four lookups.** C++ transformed the game's moves (`convop`, with a special case for the symmetric position after c3, c4, c5) and tried three transposition patterns; the first C# version tried all four symmetries against an index. The canonical form finds a position in any frame with one lookup.
 - **Origin and effort instead of flags.** The C++ flags did not say how long a value was searched for, so a 1-second value could not be told from a 2-minute value. The effort lets the book tool search only the values that are not good enough yet.
 - **Text in git, binary for the apps.** The text file can be read and compared in git; the binary file is small for the web version. The binary file is built by the book tool and committed next to the text file; a test checks that it holds the same book, instead of building it on every build.
@@ -263,4 +265,4 @@ See [Stello porting documentation.md](../../Stello%20porting%20documentation.md)
 
 ---
 
-Previous: [10 Time control](10-time-control.md) · Next: [12 Book learning](12-book-learning.md)
+Previous: [09 Time control](09-time-control.md) · Next: [11 Book learning](11-book-learning.md)

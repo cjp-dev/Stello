@@ -1,4 +1,4 @@
-# 08 – Transposition table
+# 07 – Transposition table
 
 [Back to the index](README.md)
 
@@ -27,9 +27,23 @@ An `Entry` is a `readonly record struct` of 24 bytes:
 | `Lower` | The true score is at least the value (it failed high: ≥ β) | `HI_HASH` |
 | `Upper` | The true score is at most the value (it failed low: ≤ α) | `LO_HASH` |
 
-`new TranspositionTable(bits)` allocates $2^{\text{bits}}$ slots of two entries. `SearchEngine` takes `hashBits` (10–26, default 19) and creates two tables of that size:
+`new TranspositionTable(bits)` allocates $2^{\text{bits}}$ slots of two entries. `SearchEngine` takes `hashBits` (10–26, default 19) and creates two tables of that size (one for the heuristic midgame and one for the exact endgame solver):
 
-$$2^{19} \text{ slots} \times 2 \text{ entries} \times 24 \text{ bytes} = 24 \text{ MiB per table}$$
+$$2 \times \big(2^{19} \text{ slots} \times 2 \text{ entries} \times 24 \text{ bytes}\big) = 48 \text{ MiB total}$$
+
+### Configurable Capacity Options
+
+In the application settings dialog (chapter 15), players can configure the total transposition table capacity across 5 power-of-two tiers:
+
+| Option Label | `hashBits` | Entries / Table | Combined Memory | Target Environment |
+|---|---|---|---|---|
+| **65,536 entries (3 MB)** | 15 | 65,536 | $3.15\text{ MB}$ | Ultra-compact memory for resource-constrained devices |
+| **262,144 entries (12 MB)** | 17 | 262,144 | $12.58\text{ MB}$ | Lightweight cache for mobile browsers |
+| **1,048,576 entries (48 MB) - Default** | 19 | 1,048,576 | $50.33\text{ MB}$ | Balanced tournament search performance |
+| **4,194,304 entries (192 MB)** | 21 | 4,194,304 | $201.33\text{ MB}$ | Deep searches and complex endgame solving |
+| **16,777,216 entries (768 MB)** | 23 | 16,777,216 | $805.31\text{ MB}$ | Maximum 64-bit desktop cache |
+
+The setting is converted via $\text{hashBits} = \log_2(\text{entries}) - 1$ and passed in `SearchLimits.HashBits`. If the active search engine's `HashBits` does not match the requested size, `LocalEngineHost` (desktop) and `EngineWorker` (Web Worker) automatically recreate the engine with the requested capacity before launching the search.
 
 ## Algorithm
 
@@ -71,7 +85,7 @@ The first entry is "depth-preferred": it survives until a result at least as dee
 
 ### Use in the midgame search
 
-In the node search (chapter 07):
+In the node search (chapter 06):
 
 - The table is read at plies ≤ `look` − 1 and written at plies ≤ `look` of the current iteration, with the side to move as the tag.
 - A stored move is only used if it is a legal move in the position.
@@ -79,18 +93,18 @@ In the node search (chapter 07):
   - the bound is `Exact`, or
   - the bound is `Upper` and the value is below α (the position is too bad for us), or
   - the bound is `Lower` and the value is at least β (too good; the opponent avoids it).
-- Otherwise the stored move is searched first (chapter 06).
+- Otherwise the stored move is searched first (chapter 05).
 - After the node is searched, the result is stored with the node's `look` as depth and the bound from the window: `Lower` if the best score ≥ β, `Exact` if it is above α, else `Upper`.
 
 ### Use in the endgame solver
 
-In `Solve` (chapter 09), with 7 or more empty squares and tag 0:
+In `Solve` (chapter 08), with 7 or more empty squares and tag 0:
 
 - An `Exact` entry is returned at once.
 - A `Lower` entry raises α and an `Upper` entry lowers β; if then α ≥ β, the stored value is returned.
 - The stored move is tried first.
 - The result is stored with the number of empty squares as depth; an exact endgame score never needs a deeper search.
-- With 10 or more empty squares, the positions after each move are looked up first (*enhanced transposition cutoff*, chapter 09).
+- With 10 or more empty squares, the positions after each move are looked up first (*enhanced transposition cutoff*, chapter 08).
 
 ### Two tables
 
@@ -154,7 +168,7 @@ The deep result A survived two shallow stores (steps 2 and 3); only a deeper res
 
 ## Tests
 
-[TranspositionTableTests.cs](../../Stello.Net/Stello.Engine.Tests/TranspositionTableTests.cs): store and find; another position or tag is not found; the deeper result for the same position is kept; a deep entry survives many shallow entries in the same slot; clear removes everything. The endgame tests (chapter 09) check that the table gives correct scores in real searches.
+[TranspositionTableTests.cs](../../Stello.Net/Stello.Engine.Tests/TranspositionTableTests.cs): store and find; another position or tag is not found; the deeper result for the same position is kept; a deep entry survives many shallow entries in the same slot; clear removes everything. The endgame tests (chapter 08) check that the table gives correct scores in real searches.
 
 ## Further reading
 
@@ -164,4 +178,4 @@ The deep result A survived two shallow stores (steps 2 and 3); only a deeper res
 
 ---
 
-Previous: [07 Midgame search](07-midgame-search.md) · Next: [09 Endgame solver](09-endgame-solver.md)
+Previous: [06 Midgame search](06-midgame-search.md) · Next: [08 Endgame solver](08-endgame-solver.md)
