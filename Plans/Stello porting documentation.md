@@ -188,7 +188,7 @@ Notable features and quirks:
 | Part | Port | Notes |
 |---|---|---|
 | Edge look-ahead, blend, corner diagonals | 1:1 logic | Restructured into loops; the results are the same. |
-| `score = min(tscore, escore)` overwrite | C++ quirk kept | Marked with a comment. Changing it would change the playing style. |
+| `score = min(tscore, escore)` overwrite | Bug fixed | Fixed so diagonal corner threats properly penalize the candidate reply score. |
 | Corner stability (including the unchecked diagonal square) | 1:1 | |
 | Lazy cut-off, mobility weights and formulas | 1:1 | |
 | Globals `sindex1..4` | Changed | Computed locally, so there is no hidden dependency on `dangerous()`. |

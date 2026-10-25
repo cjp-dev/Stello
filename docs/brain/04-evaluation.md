@@ -6,7 +6,7 @@
 
 At the leaves of the midgame search the engine cannot look further ahead, so it estimates how good the position is for the side to move. Stello's evaluation is built around the **edges**: corners and edges decide most Othello games, and a disc on an edge is hard to flip. Each of the four edges is looked up in precomputed tables, and a small two-ply search on the edges alone checks which edge and corner moves each side has. **Stable discs** grown out of the corners add a bonus. **Mobility** (how many moves each side has) and **potential mobility** (how many empty squares border the opponent's discs) make up the rest. The score is in "evaluation units"; a won game is worth more than 32 600.
 
-The evaluation is a faithful port of the C++ `eval()` in [Eval.cpp](../../Stello%20C++/BRAIN/Eval.cpp). Its logic has been kept, including one quirk, so that the program plays in the same style.
+The evaluation is a faithful port of the C++ `eval()` in [Eval.cpp](../../Stello%20C++/BRAIN/Eval.cpp).
 
 ## Data structures
 
@@ -71,7 +71,7 @@ flowchart TD
     Own -- "no" --> Opp{"opponent has no discs?"}
     Opp -- "yes" --> Won["return 32600 + own discs"]
     Opp -- "no" --> Alpha{"alpha > 32600?"}
-    Alpha -- "yes" --> Quirk["return −32600 (kept from C++)"]
+    Alpha -- "yes" --> Cutoff["return −32600 (kept from C++)"]
     Alpha -- "no" --> Edges["Edge look-ahead S"]
     Edges --> Stab["+ corner stability T"]
     Stab --> Lazy{"S + T more than 1000<br/>outside (alpha, beta)?"}
@@ -113,64 +113,6 @@ so $p$ falls from 968 at the start to 500 on a full board. The score with the co
 $$B = \frac{p \cdot s_{\text{with}} + (1000 - p) \cdot s_{\text{without}}}{1000}$$
 
 This is `EdgeContext.Blend`. `EdgeContext.Score` is $S_0$, and `EdgeContext.Reply` is the opponent's reply in step 4.
-
-> [!NOTE]
-> **Preserved C++ Evaluation Quirk: The `score = min(tscore, escore)` Overwrite**
->
-> In `EdgeContext.Reply` (porting `Eval.cpp`), when evaluating an own edge candidate move against a *potential* opponent diagonal corner reply (`OpponentPossible & bit`, C++ `psj && !hj`), the code assigns:
-> ```csharp
-> score = Math.Min(result, Blend(Score(TakeCorner(t, c, Opponent)), start));
-> ```
-> rather than lowering `result` (C++ `tscore`).
->
-> **Difference in Playing Style (With vs. Without the Quirk):**
-> 1. **Intended Behavior (Without Quirk):** The reply score `result` of the candidate move should be minimized by the blended corner threat: `result = Math.Min(result, blend)`. At the end of the candidate move, `score = Math.Max(score, result)` would compare this candidate move against previous moves. This cleanly isolates each candidate move so only the move opening a potential corner leak is penalized.
-> 2. **Actual Behavior (With Quirk):**
->    - **Under-penalizing the leaky move:** Because `result` is left unchanged and the method concludes with `Math.Max(result, score)`, the candidate move that opened the diagonal leak is returned as `result` without being discounted by `blend`! This makes the engine bolder and more optimistic about playing edge moves that invite potential diagonal counter-attacks.
->    - **Contaminating prior safe moves:** The variable `score` (representing the running best score of earlier safe candidate moves) is prematurely overwritten and dragged down to `Math.Min(result, blend)`. If an earlier candidate move found a strong, safe edge position, evaluating a subsequent candidate move with a potential diagonal leak erases the prior move's high score.
->    - **Order-dependency & Historical Fidelity:** This introduces an evaluation order-dependency across the 4 edges and corners. Because Stello's master opening book was trained over thousands of games with this exact C++ evaluation function, fixing the quirk would alter leaf evaluations and diverge from Stello's historical playing style.
->
-> **Code Comparison:**
->
-> In C++ (`Eval.cpp`):
-> ```cpp
-> // C++ with quirk (active Eval.cpp):
-> else if (psj1 && !hj1) {
->     escore = propc * (sco_sgn*(sikker[hum_v[tindex1]] + ...)) + (1000 - propc)*fscore;
->     escore /= 1000;
->     score = (short int)min(tscore, escore); // <-- overwrites outer 'score'
-> }
-> ...
-> score = max(tscore, score);
->
-> // C++ without quirk (intended):
-> else if (psj1 && !hj1) {
->     escore = propc * (sco_sgn*(sikker[hum_v[tindex1]] + ...)) + (1000 - propc)*fscore;
->     escore /= 1000;
->     tscore = (short int)min(tscore, escore); // <-- properly lowers candidate reply 'tscore'
-> }
-> ...
-> score = max(tscore, score);
-> ```
->
-> In C# (`Evaluator.cs`, `EdgeContext.Reply`):
-> ```csharp
-> // C# with quirk (active production code in Evaluator.cs):
-> else if ((OpponentPossible & bit) != 0 && (OwnCorners & bit) == 0)
-> {
->     // Kept from C++: overwrites the best score so far instead of lowering reply score.
->     score = Math.Min(result, Blend(Score(TakeCorner(t, c, Opponent)), start));
-> }
-> return Math.Max(result, score);
->
-> // C# without quirk (corrected logic):
-> else if ((OpponentPossible & bit) != 0 && (OwnCorners & bit) == 0)
-> {
->     // Properly penalizes the candidate move's reply score:
->     result = Math.Min(result, Blend(Score(TakeCorner(t, c, Opponent)), start));
-> }
-> return Math.Max(result, score);
-> ```
 
 ### Corner stability (T)
 
@@ -273,7 +215,7 @@ Here $p = 734$ (34 discs), but no corner is only "possible", so it is not used.
 ## Design notes
 
 - **Edge knowledge in tables.** The tables turn a lot of Othello edge knowledge (stable discs, unbalanced edges, dangerous C-squares, corner fights) into one array lookup per edge. The two-ply look-ahead on the tables adds tactics on the edges at a small cost.
-- **A faithful port.** The four corner blocks, written out four times in C++ (about 1000 lines), are written once in C# and driven by a table of corners (`Corners`: the two edges, first or last square, the diagonal). The globals `sindex1..4` that C++ computed in `dangerous()` are now computed inside `Evaluate`. The unused `pbonus` was dropped. Everything else, including the quirks, gives the same results as C++. See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md), sections 3.1–3.3.
+- **A faithful port.** The four corner blocks, written out four times in C++ (about 1000 lines), are written once in C# and driven by a table of corners (`Corners`: the two edges, first or last square, the diagonal). The globals `sindex1..4` that C++ computed in `dangerous()` are now computed inside `Evaluate`. The unused `pbonus` was dropped. Everything else gives the same results as C++, with edge candidate reply penalization properly isolated. See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md), sections 3.1–3.3.
 - **Cost.** Building the 10 × 10 array for every call is the price of the line-by-line port. The evaluation is only called at the leaves of the midgame search and for move ordering far from the end (chapter 08), so it has not been a bottleneck so far.
 - **The weights are old.** 400, 600, 60 and the edge values were tuned by hand for the C++ program. They are not learned from games, as in modern pattern-based programs (see Gunnar Andersson's page below).
 

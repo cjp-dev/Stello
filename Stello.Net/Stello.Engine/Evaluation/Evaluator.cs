@@ -414,8 +414,7 @@ internal static class Evaluator
                 }
                 else if ((OpponentPossible & bit) != 0 && (OwnCorners & bit) == 0)
                 {
-                    // Kept from C++: this overwrites the best score so far instead of lowering the reply score.
-                    score = Math.Min(result, Blend(Score(TakeCorner(t, c, Opponent)), start));
+                    result = Math.Min(result, Blend(Score(TakeCorner(t, c, Opponent)), start));
                 }
             }
 

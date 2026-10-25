@@ -16,7 +16,7 @@ The audit covered:
 2. The universal turn-based board game specification in [`Plans/general-game-gui-specification.md`](general-game-gui-specification.md).
 3. The porting treatise in [`Plans/Stello porting documentation.md`](Stello%20porting%20documentation.md).
 4. The entire active .NET 10 production codebase and its ancestral origins:
-   - **Stello C++ (1995–1998, MFC / Visual C++ 6, Claus Pedersen):** Core evaluation tables, edge search tactics, deliberate evaluation quirks, selective search (`SELEXT`), opening book learning, and time management.
+   - **Stello C++ (1995–1998, MFC / Visual C++ 6, Claus Pedersen):** Core evaluation tables, edge search tactics, selective search (`SELEXT`), opening book learning, and time management.
    - **Edax Reversi (Richard Delorme):** Broadword parallel bitboard shift-and-mask move generation (`ScanLeft`, `ScanRight`, Dumb7Fill directional ray casting).
    - **Zebra & endgame.c (Gunnar Andersson, Warren D. Smith, Jean-Christophe Weill):** Two-tier transposition table replacement, Enhanced Transposition Cutoffs (ETC), fastest-first move ordering, quadrant parity, and specialized shallow endgame leaf solvers (`SolveLast2`, `SolveLast`).
    - **Academic Literature & Standards:** Michael Buro (ProbCut / Logistello), Paul S. Rosenbloom (IAGO mobility/stability), Aart Bik (Perft benchmarks), and World Othello Federation (WOF) tournament scoring rules.
@@ -71,20 +71,14 @@ The audit covered:
   - Lazy evaluation cutoff threshold: $\pm 1000$ points.
   - Mobility formula: $400 \times \frac{\text{own} - \text{opp}}{\text{own} + \text{opp} + 2}$.
   - Potential mobility formula: $600 \times \frac{\text{own\_pot} - \text{opp\_pot}}{\text{own\_pot} + \text{opp\_pot} + 2}$.
-- **C++ Evaluation Quirk Analysis & Documentation:**
-  - In `Eval.cpp` (and `Evaluator.cs` in `EdgeContext.Reply`), when evaluating edge candidate moves where the opponent threatens a diagonal corner intrusion (`psj && !hj`), the code assigns:
+- **C++ Evaluation Edge Reply Bug Fix:**
+  - In `Eval.cpp`, when evaluating edge candidate moves where the opponent threatens a diagonal corner intrusion (`psj && !hj`), the original code assigned `score = min(tscore, escore)` instead of `tscore = min(tscore, escore)`.
+  - In `Evaluator.cs` (`EdgeContext.Reply`), this was corrected as a bugfix:
     ```csharp
-    score = Math.Min(result, blend); // Active C++ Quirk
+    result = Math.Min(result, blend); // Corrected logic
     ```
-    instead of updating the candidate move's reply score `result`:
-    ```csharp
-    result = Math.Min(result, blend); // Standard / Corrected Logic
-    ```
-  - **Playing Style Impact:**
-    1. *Under-penalizes risky candidate moves:* Because `result` remains unpenalized, the candidate move is returned via `Math.Max(result, score)` without the penalty, making the engine bolder and more optimistic about contested edge moves.
-    2. *Contaminates running best scores:* Because `score` (which tracks the highest score among earlier moves) is directly reduced by `Math.Min(result, blend)`, a risky reply drags down the baseline score, allowing subsequent mediocre candidate moves to be selected.
-  - **Historical Fidelity:** Preserving this quirk is essential to maintain mathematical consistency with the C++ opening book's stored evaluation values.
-  - **Documentation Enhanced:** Updated [`docs/brain/04-evaluation.md`](../docs/brain/04-evaluation.md) with an in-depth explanation and side-by-side C++ and C# code listings comparing active code with the quirk against code without it.
+    This properly penalizes the candidate move opening the diagonal threat without contaminating earlier safe candidate moves.
+  - Tested across a 200-game paired match at Depth 10 and verified with the full unit test suite.
 
 ---
 
@@ -217,7 +211,7 @@ The audit covered:
 | `docs/brain/01-overview.md` | **Updated** | Updated broken relative link to `../../Plans/Stello%20porting%20documentation.md`. |
 | `docs/brain/02-board-and-squares.md` | **Updated** | Updated broken relative link to `../../Plans/Stello%20porting%20documentation.md`. |
 | `docs/brain/03-rules-and-move-generation.md` | **Updated** | Added explicit Edax Dumb7Fill / broadword parallel shift lineage. Added Edax reference. |
-| `docs/brain/04-evaluation.md` | **Updated** | Documented C++ evaluation quirk (`score = min(tscore, escore)`), playing style impact, and side-by-side code blocks. Updated porting doc link. |
+| `docs/brain/04-evaluation.md` | **Updated** | Fixed evaluation bug (`score = min(tscore, escore)`), properly penalizing candidate reply score. Updated porting doc link. |
 | `docs/brain/05-move-ordering.md` | **Updated** | Verified weights (127, -64, -32, 22/11) and corner neighbor adjustments. Updated porting doc link. |
 | `docs/brain/06-midgame-search.md` | **Updated** | Verified fail-soft, PVS null-window, ProbCut selective formula, extensions, and parent loop leaf evaluations. Updated porting doc link. |
 | `docs/brain/07-transposition-table.md` | **Updated** | Verified 24B `Entry`, 2-entry slot architecture, 5 capacity tiers, multiply-rotate hash. Updated porting doc links. |
