@@ -18,6 +18,7 @@ The terms used in these documents. The last column gives the chapter that explai
 | Cutoff | Stopping the search of a position because one move already reaches beta. | [06](06-midgame-search.md#negamax-with-alpha-beta) |
 | Dangerous corner move | A corner move that the edge tables mark as risky; the search looks one ply deeper instead of evaluating it. | [04](04-evaluation.md#dangerous-corner-moves) |
 | Dropout expansion | Book learning step: the best move that is not yet in the book is searched and added to it. | [11](11-book-learning.md#evaluating-the-book-evaluatepositions) |
+| Dumb7Fill | Broadword parallel bitboard fill technique (Delorme, Edax) used for directional ray casting in move generation. | [03](03-rules-and-move-generation.md#algorithm) |
 | Edge index | The eight squares of an edge read as a base-3 number (0 to 6560); it selects the entry in the edge tables. | [04](04-evaluation.md#the-edge-index) |
 | Edge tables | Eight precomputed tables with one value per possible edge: its worth and the best edge moves. | [04](04-evaluation.md#the-edge-tables) |
 | Empties | The number of empty squares; the endgame code uses it instead of a depth. | [08](08-endgame-solver.md#which-routine-at-how-many-empty-squares) |
@@ -30,6 +31,7 @@ The terms used in these documents. The last column gives the chapter that explai
 | Fail-soft | A search that may return a score outside the (alpha, beta) window, which gives a tighter bound. | [06](06-midgame-search.md#negamax-with-alpha-beta) |
 | Fastest-first | Endgame move ordering: try first the moves that leave the opponent the fewest replies. | [08](08-endgame-solver.md#solve-7-or-more-empty-squares) |
 | FFO test suite | A standard set of endgame test positions (#40–#59) from the French Othello Federation. | [08](08-endgame-solver.md#worked-example-the-ffo-positions) |
+| Frontier disc | A disc adjacent to at least one empty square; potential mobility measures empty squares bordering opponent frontier discs. | [04](04-evaluation.md#mobility-m-and-potential-mobility-p) |
 | Game loop | The app's `RunAsync`: plays passes and computer moves until the human is to move or the game is over. | [14](14-app-integration.md#the-game-loop) |
 | Hard limit | The time after which the search is stopped in the middle and the best move so far is played. | [09](09-time-control.md#how-the-search-uses-the-limits) |
 | Hash move | The best move stored in the hash table for a position; it is searched first. | [05](05-move-ordering.md#ordering-the-moves-of-one-position) |

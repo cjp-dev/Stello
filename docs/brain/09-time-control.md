@@ -138,7 +138,7 @@ For the first move with 5 minutes: $s = 54$, $n = 27$, $t = 300\,000 / 27 = 11\,
 - **Two kinds of stop.** C++ had a "Træk nu" (Move Now) menu item without any code behind it. C# has both Move Now and cancel.
 - **The engine does not know the clock.** The app keeps the computer's clock, passes the time left in `TimePerGame`, subtracts the time used after each move, and restores it on Back and Forward (chapter 14).
 
-See [Stello porting documentation.md](../../Stello%20porting%20documentation.md), section 3.8.
+See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md), section 3.8.
 
 ## Where in the code
 

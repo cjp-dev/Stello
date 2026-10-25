@@ -48,7 +48,7 @@ graph TD
 ### 2.2 Wireframe Layout
 
 #### Desktop Multi-Column View ($> 768\text{ px}$)
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ File   Game   Options   Help                                                       [Desktop Menu]  │
 ├────────────────────────────────────────┬───────────────────────────────────────────────────────────┤
@@ -78,7 +78,7 @@ graph TD
 ```
 
 #### Mobile View ($\le 768\text{ px}$)
-```
+```text
 ┌────────────────────────────────────────┐
 │ ☰  Checkers .NET                       │  <-- Header with Brand Title & Hamburger Button
 ├────────────────────────────────────────┤
@@ -131,7 +131,7 @@ The top navigation system exposes session lifecycle commands, opponent selection
 
 ### 3.1 Standard 4-Menu Desktop Hierarchy
 
-```
+```text
 File                     Game                          Options              Help
 ├── New Game (Ctrl+N)    ├── vs Computer (White)       ├── Analysis (Ctrl+A)├── User guide (F1)
 ├── Open...  (Ctrl+O)    ├── vs Computer (Black)       ├── Sound            ├── Rules & Documentation (Shift+F1)
@@ -216,7 +216,7 @@ The scoreboard sits directly adjacent to or above the game board, presenting rea
 
 ### 4.1 Visual Structure & Layout
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │ STATUS              [Variant Badge]                       5 min / game │  <-- Header Row
 ├────────────────────────────────────────────────────────────────────────┤
@@ -273,7 +273,7 @@ stateDiagram-v2
 
 Each player (White/Player 1 and Black/Player 2) has an identical, elevated card surface (`#FFFFFF`). The player whose turn it is to move receives the **Active Turn Highlight**: an elevated border stroke in sky-blue (`#3498DB`), a $2\text{ px}$ glow, and slightly raised card elevation.
 
-```
+```text
 ┌───────────────────────────────────────────────┐
 │ [Glyph] [Player Name]                 [Clock] │  <-- Layer 1: Identity & Time
 │                    [Role]                     │  <-- Layer 2: Player Role Subtitle
@@ -344,7 +344,7 @@ The AI Analysis panel displays live telemetry streamed from the engine during ca
 
 ### 6.1 Visual Card Layout
 
-```
+```text
 ┌────────────────────────────────────────────────────────┐
 │ ANALYSIS                                               │
 ├────────────────────────────┬───────────────────────────┤
@@ -421,7 +421,7 @@ The move history panel gives players a permanent, readable transcript of the mat
 
 ### 7.1 Visual Layout & Auto-Scroll
 
-```
+```text
 ┌────────────────────────────────────────────────────────┐
 │ MOVE HISTORY                                           │
 ├───────┬────────────────────────┬───────────────────────┤

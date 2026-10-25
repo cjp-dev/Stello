@@ -239,7 +239,7 @@ After Back, the computer gets back the time of the moves that were taken back, w
 - **Two tokens.** Move Now must play a move and cancel must not, so they are separate tokens instead of one token with a flag (chapter 09).
 - **Old progress reports.** The search id is needed because `Progress<T>` posts reports: one can arrive after the result, or after the next search has started. The order of reports and result relies on the UI thread's `SynchronizationContext`. Without one (for example in a console program), `Progress<T>` calls back on the thread pool, and a late report can overwrite the final analysis.
 - **Services behind interfaces.** Files and dialogs are behind `IBookStore`, `ISettingsStore` and `IDialogService`, so `MainViewModelTests` run the real view model and the real engine with fakes and a temporary file.
-- **Files in AppData.** C++ read and wrote `rev.cfg`, `OPENING` and `selfplay` in the current directory. The app keeps the shipped book read-only and writes only to `%AppData%\Stello`. See [Stello porting documentation.md](../../Stello%20porting%20documentation.md), phases 5 and 6.
+- **Files in AppData.** C++ read and wrote `rev.cfg`, `OPENING` and `selfplay` in the current directory. The app keeps the shipped book read-only and writes only to `%AppData%\Stello`. See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md), phases 5 and 6.
 - **Kept C++ behaviour.** Back re-enables the book (`BookTracker.Reset`), the human continues with the side to move after Open, and the clock is restored as with C++ `timesleft[]`, including the side effect in the worked example.
 
 ## Where in the code

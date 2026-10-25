@@ -230,7 +230,7 @@ It starts as the well-known "tiger" opening (f5 d6 c3 d3 c4). Up to g6 it is the
 - **The same moves as before.** The import keeps the order of the first line that reaches a position, as the old lookup did, so the computer plays the same book moves. The only exception is one of the 14 positions that C++ stored in two frames, where the first one in the file is now used.
 - **The same reply choice as C++.** C++ also played the first legal reply: code that picked the best value was overwritten right after, and random choice was disabled with `#if 0`.
 
-See [Stello porting documentation.md](../../Stello%20porting%20documentation.md), phases 4 and 10.
+See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md), phases 4 and 10.
 
 ## Where in the code
 

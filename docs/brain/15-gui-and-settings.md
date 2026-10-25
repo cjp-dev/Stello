@@ -4,7 +4,7 @@
 
 ## In short
 
-Stello features a unified, tournament-grade user interface across both **WPF desktop** and **Blazor WebAssembly** clients. Conforming to the modern light-theme game specification, the interface combines a warm wooden board aesthetic, a 4-layer dual-card player scoreboard, fixed board orientation, quick action controls, real-time AI telemetry, and synthesized procedural audio feedback.
+Stello features a unified, tournament-grade user interface across both **WPF desktop** and **Blazor WebAssembly** clients. Conforming to the universal tournament game GUI blueprint ([general-game-gui-specification.md](../../Plans/general-game-gui-specification.md)), the interface combines a warm wooden board aesthetic, a 4-layer dual-card player scoreboard, fixed board orientation, quick action controls, real-time AI telemetry, and synthesized procedural audio feedback.
 
 This chapter documents the visual layout, navigation menus, settings dialog, competitive integrity status system, opening book and transposition table memory configurations, real-time search telemetry streaming engine, and full keyboard shortcut mappings.
 
@@ -116,7 +116,7 @@ On mobile devices and narrow viewports ($\le 768\text{px}$), the horizontal desk
 
 Located above the game board, the status board displays real-time match conditions, player clocks, disc counts, and immediate action controls:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │ STATUS [Othello]                                     5 min / game
 │ Black's Turn — Click a square to place a disc                   │
@@ -219,7 +219,7 @@ The total entries per table equals $2^{\text{hashBits} + 1}$. Because Stello mai
 
 When enabled via **Options $\rightarrow$ Analysis** (`Ctrl+A`), the telemetry sidebar streams real-time search statistics while the computer thinks:
 
-```
+```text
 ┌─────────────────────────────────┐
 │ ANALYSIS                        │
 ├───────────────────┬─────────────┤
@@ -258,14 +258,14 @@ In Blazor WebAssembly (`Stello.Web`), running deep searches directly on the main
 
 Located below the analysis panel, the **Move History** card logs all played moves in chronological order:
 
-```
+```text
 MOVE HISTORY (6 plies)
-1. 1. d3
-2. 2. c5
-3. 3. c6
-4. 4. e3
-5. 5. f3
-6. 6. f4
+1. d3
+2. c5
+3. c6
+4. e3
+5. f3
+6. f4
 ```
 
 Each row displays the sequence number and standard algebraic coordinate notation. When moves are taken back via `[Undo]`, the history automatically trims back to the corresponding ply.

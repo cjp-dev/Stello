@@ -122,7 +122,7 @@ The four first moves in legacy numbers are d3 = 34, c4 = 43, f5 = 56 and e6 = 65
 
 ## Design notes
 
-- **Why bitboards.** The C++ version used a 10 × 10 array with a border, a list of empty squares next to discs, and tables of directions per square. Bitboards replace all three: the border is replaced by the two column masks, and "all empty squares next to a disc" is a few shifts. See [Stello porting documentation.md](../../Stello%20porting%20documentation.md), phase 1.
+- **Why bitboards.** The C++ version used a 10 × 10 array with a border, a list of empty squares next to discs, and tables of directions per square. Bitboards replace all three: the border is replaced by the two column masks, and "all empty squares next to a disc" is a few shifts. See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md), phase 1.
 - **Why immutable.** A `Board` is 16 bytes, the same size as two `long` values. Copying it is as cheap as passing a reference, so the search keeps the parent position in a local variable instead of undoing moves, and the game record stores every position ([chapter 13](13-game-record.md)).
 - **Value equality.** `Board` is a record struct, so two boards with the same discs are equal. The tests compare boards directly, and the hash table and the opening book use the two bitboards as keys.
 - **Side to move is not part of the board.** A position is a `Board` plus the `Player` to move. The search, the game record and the book always pass both.

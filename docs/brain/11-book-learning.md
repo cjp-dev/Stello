@@ -155,7 +155,7 @@ Adding the same game in another frame afterwards, `f5 d6 c3 d3 c4` (the tiger af
 - **An illegal game throws.** `AddGame` checks every move and throws an `ArgumentException` for an illegal one; the moves before it have then already been added. The app only adds games it has played itself, which are always legal.
 - **Not ported.** `extend_lib` (not reachable from the Windows menus) and `Mergelib.cpp` (merging a black and a white book, not in the C++ build).
 
-See [Stello porting documentation.md](../../Stello%20porting%20documentation.md), phases 7 and 10.
+See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md), phases 7 and 10.
 
 ## Where in the code
 

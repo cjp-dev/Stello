@@ -197,7 +197,7 @@ Two things are typical:
 - **Deterministic.** With the same position and limits the search gives the same result every time (no randomness, stable sorting). Only time limits make results differ between runs.
 - **Game-over scores** give the empty squares to the winner, the standard rule; C++ did not count them.
 
-See [Stello porting documentation.md](../../Stello%20porting%20documentation.md), section 3.6.
+See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md), section 3.6.
 
 ## Where in the code
 

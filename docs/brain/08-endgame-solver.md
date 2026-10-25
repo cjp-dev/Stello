@@ -151,8 +151,8 @@ Zebra needs about 20–30 M nodes for every position. Stello needs about the sam
 ## Design notes
 
 - **Two passes, as in C++.** The C++ solver also found win/loss/draw first and then the exact score, if there was time. After a win, C++ removed the root moves before the winning move; C# instead moves the winning move to the front.
-- **Better ordering than C++.** C++ ordered the endgame moves by two killer moves and the square values (`simsort`). Fastest-first, parity and the evaluation-based ordering were needed to solve the FFO positions in reasonable time. See [Stello porting documentation.md](../../Stello%20porting%20documentation.md), section 3.7.
-- **Phase 8.** Two entries per hash slot, the enhanced transposition cutoff and computing the flips only once brought FFO #40–#44 from 31.6 s to about 19–21 s. In round 2, `SolveLast2` saved about 3 % more. The target of under 10 s is not reached yet. These ideas were tried and rejected (the full tables are in [Tested and rejected](../../Stello%20porting%20documentation.md#tested-and-rejected) in the porting documentation):
+- **Better ordering than C++.** C++ ordered the endgame moves by two killer moves and the square values (`simsort`). Fastest-first, parity and the evaluation-based ordering were needed to solve the FFO positions in reasonable time. See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md), section 3.7.
+- **Phase 8.** Two entries per hash slot, the enhanced transposition cutoff and computing the flips only once brought FFO #40–#44 from 31.6 s to about 19–21 s. In round 2, `SolveLast2` saved about 3 % more. The target of under 10 s is not reached yet. These ideas were tried and rejected (the full tables are in [Tested and rejected](../../Plans/Stello%20porting%20documentation.md#tested-and-rejected) in the porting documentation):
   - round 1, FFO #40–#44 total time:
     - MTD(f) for pass 2, with null-window steps from the pass 1 bound: 38.0 s against 31.6 s, because #43 needed five steps from −2 to −12. Only worth another try with a good first guess;
     - one wide window (−65, 65) without pass 1: 32.8 s against 31.6 s;

@@ -169,7 +169,7 @@ These are the values in [PerftTests.cs](../../Stello.Net/Stello.Engine.Tests/Per
 
 - **One implementation.** The C++ version had many hand-optimised variants of move generation and move making (for the search, the endgame, the evaluation). The C# version has one legal-move generator and one flip routine, used everywhere.
 - **All moves at once, flips one move at a time.** Move generation is needed at every node and for mobility in the evaluation, so it is done without branches for all squares together. Flips are only needed for the move being played, so a short loop per direction is enough.
-- **Fill technique.** The six repeated shift-and-mask steps are a form of the "fill" algorithms described on the [Othello page of the Chess Programming Wiki](https://www.chessprogramming.org/Othello) (Dumb7Fill). Faster variants exist; they are candidates for later performance work, not needed for correctness.
+- **Fill technique and Edax lineage.** The six repeated shift-and-mask steps (`ScanLeft`/`ScanRight`) implement the broadword parallel prefix "fill" algorithm (Dumb7Fill) popularized by Richard Delorme's [Edax Reversi](https://github.com/abulmo/edax-reversi) (`board.c`, lines 750–760) and documented on the [Othello page of the Chess Programming Wiki](https://www.chessprogramming.org/Othello). Faster SIMD and Kogge-Stone variants exist; they are candidates for later performance work, not needed for correctness.
 - **Legality through flips.** `Play` throws on an illegal move, so callers cannot corrupt a position by mistake. The search, which only plays generated moves, uses `Bitboards.Flips` directly.
 
 ## Where in the code
@@ -192,6 +192,7 @@ These are the values in [PerftTests.cs](../../Stello.Net/Stello.Engine.Tests/Per
 
 ## Further reading
 
+- [Edax on GitHub](https://github.com/abulmo/edax-reversi): Richard Delorme's open-source bitboard Othello engine (`board.c` contains the ancestral sequential and parallel bitboard shift-and-mask move generators).
 - [Bitboards – Chess Programming Wiki](https://www.chessprogramming.org/Bitboards): shifts, masks and fill algorithms in general.
 - [Othello – Chess Programming Wiki](https://www.chessprogramming.org/Othello): the "Bitboards" section describes move generation for Othello.
 - [Perft for Reversi – Aart Bik](http://www.aartbik.com/MISC/reversi.html): perft numbers to depth 14 and how passes and finished games are counted.

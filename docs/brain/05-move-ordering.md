@@ -89,7 +89,7 @@ b8 is last: it is a C-square next to the empty corner a8.
   - ordering by a shallow midgame search (0 or 1 ply with this evaluation) from 12, 14 or 16 empty squares took 51–101 s, against about 17 s. The evaluation is a poor move orderer near the end, and fastest-first is better; only the evaluation-based ordering from 18 empty squares was kept;
   - adding potential mobility to the fastest-first key saved about 5 % of the nodes but no time (16.9 s against 17.1 s).
 
-  See [Tested and rejected](../../Stello%20porting%20documentation.md#tested-and-rejected) in the porting documentation.
+  See [Tested and rejected](../../Plans/Stello%20porting%20documentation.md#tested-and-rejected) in the porting documentation.
 
 ## Where in the code
 

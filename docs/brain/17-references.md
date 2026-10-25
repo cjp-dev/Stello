@@ -27,6 +27,7 @@ Articles, papers and source code on the internet that explain the techniques use
 | Link | What you find there |
 |---|---|
 | [Bitboards – Chess Programming Wiki](https://www.chessprogramming.org/Bitboards) | What bitboards are and the basic operations on them. |
+| [Edax on GitHub](https://github.com/abulmo/edax-reversi) | Richard Delorme's open-source bitboard Othello engine (`board.c` contains the ancestral sequential and parallel bitboard shift-and-mask move generators). |
 | [Perft for Reversi – Aart Bik](http://www.aartbik.com/MISC/reversi.html) | Perft numbers for Othello from the start position; Stello's perft test uses the same numbers up to depth 8. |
 
 ## 04 Evaluation

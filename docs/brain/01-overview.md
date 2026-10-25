@@ -233,7 +233,7 @@ Two tokens control a running search:
 - **No global state.** All state is in objects: the search engine owns its hash tables and move-ordering tables, the book owns its positions. Several engines could run side by side.
 - **The engine does not know the UI.** It reports progress through `IProgress<SearchInfo>` and is stopped with cancellation tokens. This is why it can be tested without a window.
 - **A synchronous engine.** `SearchEngine.Search` runs to the end on the calling thread. The app decides where it runs (a background task); the tests call it directly.
-- **Faithful where it matters.** The evaluation, the selective search and the book's moves and values are ported from the C++ original so the program plays in the same style. Data structures, the endgame solver and the book format were modernised. The details are in [Stello porting documentation.md](../../Stello%20porting%20documentation.md).
+- **Faithful where it matters.** The evaluation, the selective search and the book's moves and values are ported from the C++ original so the program plays in the same style. Data structures, the endgame solver and the book format were modernised. The details are in [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md).
 
 ## Some numbers
 

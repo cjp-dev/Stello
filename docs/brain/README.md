@@ -8,7 +8,7 @@ Stello is an Othello program. Its "brain" is the engine library `Stello.Engine`,
 - **the endgame solver**: perfect play near the end of the game;
 - **the opening book**: the known opening positions, which can learn from games.
 
-These documents explain how the parts work and how they fit together. They describe the current C# code in [Stello.Net](../../Stello.Net). How the C++ original was ported is described in [Stello porting documentation.md](../../Stello%20porting%20documentation.md).
+These documents explain how the parts work and how they fit together. They describe the current C# code in [Stello.Net](../../Stello.Net). How the C++ original was ported is described in [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md).
 
 ## The brain on one page
 
@@ -62,7 +62,7 @@ The time limit can stop the search at any point; the best move found so far is t
 - **Everything:** read the chapters in order.
 - **Just the search:** 01, 02, 03, 04, 05, 06, 07, 08, 09.
 - **Just the opening book:** 01, 02 (square numbers), 10, 11, 12.
-- **Tuning the engine:** 04, 05, 06, 07, 08, 09, and phase 8 in [Stello porting documentation.md](../../Stello%20porting%20documentation.md#phase-8--performance-tuning-rounds-1-and-2-paused) for what has already been tried, with measurements, and the remaining ideas.
+- **Tuning the engine:** 04, 05, 06, 07, 08, 09, and phase 8 in [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md#phase-8--performance-tuning-rounds-1-and-2-paused) for what has already been tried, with measurements, and the remaining ideas.
 - **UI & application architecture:** 01, 13, 14, 15.
 
 ## How to view these documents
