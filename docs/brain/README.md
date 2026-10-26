@@ -16,13 +16,13 @@ This is how the computer finds a move, from the position to the move that is pla
 
 ```mermaid
 flowchart TD
-    Start["Position, side to move and time limits"] --> Single{"Only one legal move?"}
-    Single -- "yes" --> Play["Play it at once"]
-    Single -- "no" --> Tracker{"Book still in use?<br/>(BookTracker)"}
+    Start["Position, side to move and time limits"] --> Tracker{"Book enabled and still in use?<br/>(UseOpeningBook, BookTracker)"}
     Tracker -- "yes" --> Book{"Position in the book?<br/>(OpeningBook)"}
     Book -- "yes" --> BookMove["Play the book move"]
-    Book -- "no" --> Next
-    Tracker -- "no" --> Next["Iterative deepening:<br/>next depth (1, 2, 3, ...)"]
+    Book -- "no" --> Single
+    Tracker -- "no" --> Single{"Only one legal move?"}
+    Single -- "yes" --> Play["Play it at once"]
+    Single -- "no" --> Next["Iterative deepening:<br/>next depth (1, 2, 3, ...)"]
     Next --> Near{"Would this depth reach<br/>within 7 plies of the end?"}
     Near -- "no" --> Midgame["Midgame search<br/>alpha-beta, move ordering,<br/>hash table, evaluation"]
     Midgame --> Limit{"Time or depth<br/>limit reached?"}

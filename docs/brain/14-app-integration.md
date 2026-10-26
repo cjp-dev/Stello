@@ -22,7 +22,7 @@ The state that matters for the engine:
 | `_cancel`, `_moveNow`, `_learningCancel` | The cancellation sources of the current search (two tokens, chapter 09) and of learning |
 | `_searchId` | A number that goes up with each computer move, to recognise old progress reports |
 | `Settings` | The `GameSettings`: mode, depth, seconds per move, minutes per game, opening book toggle, transposition table capacity |
-| `_blackTimeLeft`, `_whiteTimeLeft`, `_timeAtPly` | The player clocks, and their snapshot pairs before each ply so undo restores consumed time |
+| `_blackTimeLeft`, `_whiteTimeLeft`, `_timeLeftAtPly` | The player clocks, and their snapshot pairs before each ply so undo restores consumed time |
 | `IsStatusModified` | True when casual events void competitive match integrity (Undo, side switch, mid-game settings change, timeout continuation) |
 | `Analysis` | The `AnalysisViewModel` that shows `SearchInfo` and `SearchResult` (chapter 09) |
 
@@ -73,7 +73,7 @@ stateDiagram-v2
     Thinking --> Next: move played
     HumanToMove --> Next: New Game, Open, Back, Forward, Switch Sides
     Thinking --> Next: the same commands, after the search is cancelled
-    GameOver --> Next: New Game, Open, Back
+    GameOver --> Next: New Game, Open, Back (not after a loss on time)
     HumanToMove --> Learning: Evaluate Book, Self-play
     Thinking --> Learning: Evaluate Book, Self-play
     GameOver --> Learning: Evaluate Book, Self-play
@@ -84,7 +84,7 @@ stateDiagram-v2
     Learning: Book learning
 ```
 
-- **Pass** is never a command: when the side to move has no legal move, the loop passes for it and says so in the status panel ("You have no legal move and must pass.").
+- **Pass** is never a command: when the side to move has no legal move, the loop passes for it and says so in the status panel; the notice stays until the human's next turn ("You had no legal move and passed.", "The computer had no legal move and passed.", or "Black had no legal move and passed." with two players).
 - **Thinking** is `ComputerMoveAsync`: it asks the engine host for a move (`ChooseMoveAsync`, which runs `ComputerPlayer.ChooseMove` in the background) and plays the result. If the search is cancelled, it plays nothing and the loop ends with "Stopped."; the command that cancelled it then starts a new loop.
 - Every command that changes the game (New Game, Open, Back, Forward, Switch Sides, Add Game to Book, Evaluate Book, Self-play) first calls `StopAsync`, which cancels the search and waits for `Idle`. Then it changes the game and calls `Start()` again. So there is never more than one loop, and the game is never changed while the engine reads it.
 - Back goes back to the previous position where the human is to move, skipping the computer's moves and passes; Forward goes to the next such position or to the end. Switch Sides gives the human the other colour, so the computer moves at once. After Open the human plays the side to move.
@@ -94,8 +94,9 @@ stateDiagram-v2
 | Command | Human to move | Computer thinking | Game over | Book learning |
 |---|---|---|---|---|
 | Click on a square | Plays it if legal, otherwise beeps | Beeps | Beeps | Beeps |
-| New Game, Open, Switch Sides | Yes | Yes, stops the search first | Yes | No |
-| Back / Forward | If there is a move to go back / forward to | The same, stops the search first | The same | No |
+| New Game, Open | Yes | Yes, stops the search first | Yes | No |
+| Switch Sides | Yes, against the computer | No | No | No |
+| Back / Forward | If there is a move to go back / forward to | The same, stops the search first | The same, except after a loss on time (disabled) | No |
 | Move Now | No | Yes | No | No |
 | Settings | Yes | Yes; the new settings count from the next computer move | Yes | No |
 | Save, Save As | Yes | Yes | Yes | Yes |
@@ -111,7 +112,7 @@ An asynchronous command is also disabled while it runs, for example while New Ga
 The engine is synchronous (chapter 01). The desktop host, `LocalEngineHost`, runs it with `Task.Run`, and the view model awaits the task on the UI thread:
 
 - **Progress.** `ComputerMoveAsync` creates a `Progress<SearchInfo>` on the UI thread. `Progress<T>` posts every report to the thread where it was created, so the analysis panel is always updated on the UI thread. A report can be handled after its search has ended, so the callback first checks that the report's search id is still `_searchId` and that the computer is still thinking; if not, the report is dropped.
-- **Result.** After `await`, the code is back on the UI thread: it subtracts the time used from the clock, shows the result in the analysis panel and plays the move.
+- **Result.** After `await`, the code is back on the UI thread: it sets the computer's clock to its value at the start of the search minus the search time (so the time is charged once), shows the result in the analysis panel and plays the move.
 - **Stopping.** Move Now and cancel are the two tokens of chapter 09. This sequence shows Back while the computer thinks:
 
 ```mermaid
@@ -191,9 +192,9 @@ sequenceDiagram
 
 In timed games (`TimePerGame`):
 - Both Black and White start at `MinutesPerGame`. `ResetClock` sets both back to the full time on New Game, on Open, and when settings change.
-- A 250 ms heartbeat runs down the active player's clock (`_blackTimeLeft` or `_whiteTimeLeft`).
+- A 250 ms heartbeat runs down the active player's clock (`_blackTimeLeft` or `_whiteTimeLeft`). While the computer thinks this is only for display: after the search, `ComputerMoveAsync` sets its clock to the value at the start of the search minus the search time, so thinking time is charged once.
 - Before each ply, `_timeAtPly[ply]` stores `(Black, White)` remaining times. After `Undo` and `Redo`, `RestoreClock` restores both clocks to the stored snapshot.
-- If the human player runs out of time against the computer, a timeout continuation dialog offers casual continuation (setting `IsStatusModified = true`).
+- If the human runs out of time against the computer, a Yes/No dialog offers casual continuation: Yes freezes the human's clock at 0:00 and sets `IsGameModified` (so `IsStatusModified` is true). No ends the game, as does the computer's clock (or either clock with two players) running out. `_lostOnTime` then makes `IsGameOver` true: the status reads "Black ran out of time. Game over, White won on time.", moves, Undo, Redo and Switch Sides are blocked, and New Game starts without asking.
 
 ### Loading the book
 
@@ -271,7 +272,9 @@ After Back, the computer gets back the time of the moves that were taken back, w
   - Back and Forward move between the human's turns; Switch Sides makes the computer move at once;
   - Move Now and New Game stop the search;
   - saving and opening a game, the side to move after Open, a damaged file, an automatic pass after Open, a finished game;
-  - the settings change the clock, cancelling keeps them, the clock runs down in `TimePerGame` mode;
+  - the settings change the clock, cancelling keeps them, the clock runs down in `TimePerGame` mode, and the computer's thinking time is charged once;
+  - a timeout: declining to continue ends the game, continuing keeps it going, the computer's timeout ends it without asking, and New Game after a timeout starts without confirmation;
+  - the pass notice in the status line, the two-player game-over text that names the winner, and the move count ("N moves");
   - settings, the analysis panel and the window position are saved, and a save failure is shown;
   - the book commands (chapter 11).
 - [SettingsAndBookTests.cs](../../Stello.Net/Stello.Net.Tests/SettingsAndBookTests.cs): `JsonSettingsStore` (defaults, round trip, damaged file, values kept in range, write failure) and `BookLoader` (missing files skipped, fallback from a damaged user book, no book).

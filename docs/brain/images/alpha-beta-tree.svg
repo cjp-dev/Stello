@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 416" width="800" height="416" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 434" width="800" height="434" font-family="sans-serif">
 <title>Alpha-beta cutoffs in a real position</title>
 <desc>A two-ply search for Black in the test midgame position. Each row is a black move with the evaluated white replies. a3 is searched fully and gives alpha -105. For f3 the reply b4 = -124 is below alpha, so four replies are skipped. c6 gives 61, the new best. For a4 the first reply c1 = 45 is below 61, so eleven replies are skipped.</desc>
-<rect x="0" y="0" width="800" height="416" fill="#FFFFFF"/>
+<rect x="0" y="0" width="800" height="434" fill="#FFFFFF"/>
 <text x="20" y="26" font-size="16" font-weight="bold" fill="#000000">Alpha-beta at depth 2: Black moves, White replies, leaves evaluated for Black</text>
 <text x="39" y="65" font-size="12" text-anchor="middle" fill="#000000">a</text>
 <text x="25" y="83" font-size="12" text-anchor="end" fill="#000000">1</text>
@@ -206,5 +206,6 @@
 <text x="758" y="322" font-size="12" text-anchor="middle" fill="#9E9E9E">–</text>
 <text x="254" y="345" font-size="13" fill="#D32F2F">a4 ≤ 45: c1 = 45 ≤ alpha: cutoff</text>
 <text x="20" y="382" font-size="12" fill="#000000">Blue = the lowest reply (White picks it). Red = the reply that proves the move is not better than alpha; the grey replies are never evaluated.</text>
-<text x="20" y="400" font-size="12" fill="#000000">Over all 11 moves, plain minimax evaluates 124 leaves and alpha-beta in this order 45; Stello's depth-2 iteration, with its ordering, 21. Result: c6, 61.</text>
+<text x="20" y="400" font-size="12" fill="#000000">Over all 11 moves, plain minimax evaluates 124 leaves and alpha-beta in this order 45;</text>
+<text x="20" y="418" font-size="12" fill="#000000">Stello's depth-2 iteration, with its ordering, 21. Result: c6, 61.</text>
 </svg>

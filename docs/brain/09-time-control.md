@@ -21,7 +21,7 @@ In addition to the time mode, `SearchLimits` carries two engine configuration pr
 * `UseOpeningBook` (`bool`, default `true`): toggles whether the opening book is queried.
 * `HashBits` (`int`, default `19`): specifies the power-of-two capacity for transposition tables.
 
-In the app, the settings dialog gives a depth of 1–20 plies, 1–60 seconds per move or 1–60 minutes per game; the default is 5 minutes per game (`GameSettings.ToLimits`). In timed games (`TimePerGame`), both players have independent digital countdown clocks shown on the dual-card scoreboard. If time runs out against the computer, a timeout continuation safeguard dialog allows continuing the match casually while marking the match status modified (`#E74C3C`).
+In the app, the settings dialog gives a depth of 1–20 plies, 1–60 seconds per move or 1–60 minutes per game; the default is 5 minutes per game (`GameSettings.ToLimits`). In timed games (`TimePerGame`), both players have independent digital countdown clocks shown on the dual-card scoreboard. If the human's time runs out against the computer, a dialog lets the human continue casually (the clock stays at 0:00 and the status is marked modified, `#E74C3C`). Otherwise a clock reaching 0:00 ends the game: "Black ran out of time. Game over, White won on time." (chapter 14).
 
 ### `TimeBudget`
 
@@ -109,7 +109,7 @@ sequenceDiagram
     SE->>SE: CheckAbort sees moveNowToken, throws SearchAbortedException
     SE->>SE: Search catches it and builds the result from the best move so far
     SE-->>VM: SearchResult (awaited Task.Run completes)
-    VM->>VM: Game.Play(result.Move), subtract the time used from the clock
+    VM->>VM: Game.Play(result.Move), set the clock to its start value minus the search time
 ```
 
 New Game, Open, Back and the other commands that change the game use the other token: `StopAsync` cancels the search and waits for it, and `ComputerMoveAsync` catches the `OperationCanceledException` and plays nothing (chapter 14).
@@ -136,7 +136,7 @@ For the first move with 5 minutes: $s = 54$, $n = 27$, $t = 300\,000 / 27 = 11\,
 - **Seconds instead of levels.** C++ had levels 0–14 that mapped to times in the tables `tider` and `rtider`. C# uses seconds and plies directly; the formulas for the game clock are the same.
 - **Deadline checks instead of a timer and `longjmp`.** C++ used a Windows multimedia timer that set a flag, and jumped out of the search with `longjmp`. C# checks a `Stopwatch` every 1024 nodes and unwinds with an exception, which is safe in .NET.
 - **Two kinds of stop.** C++ had a "Træk nu" (Move Now) menu item without any code behind it. C# has both Move Now and cancel.
-- **The engine does not know the clock.** The app keeps the computer's clock, passes the time left in `TimePerGame`, subtracts the time used after each move, and restores it on Back and Forward (chapter 14).
+- **The engine does not know the clock.** The app keeps the computer's clock, passes the time left in `TimePerGame`, sets the clock after each move to its value at the start of the search minus the search time (charged once, although the display clock also ticks during the search), and restores it on Back and Forward (chapter 14).
 
 See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md), section 3.8.
 

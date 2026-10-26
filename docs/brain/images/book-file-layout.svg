@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 518" width="800" height="518" font-family="sans-serif">
 <title>Opening book file layout</title>
-<desc>The file starts with a 32-bit header, then the root chain: a 16-bit count followed by the nodes, each with a 16-bit move, value and flag and then its own reply chain. Below, the first 36 bytes of the master book with their meaning: header 23530, 3 root nodes, c5 with value -39 and 4 replies, f6 with value 39 and 4 replies, f5, e6.</desc>
+<desc>The file starts with a 32-bit header, then the root chain: a 16-bit count followed by the nodes, each with a 16-bit move, value and flag and then its own reply chain. Below, the first 38 bytes of the C++ master book with their meaning: header 23530, 3 root nodes, c5 with value -39 and 4 replies, f6 with value 39 and 4 replies, f5, e6.</desc>
 <rect x="0" y="0" width="800" height="518" fill="#FFFFFF"/>
 <text x="20" y="26" font-size="17" font-weight="bold" fill="#000000">The opening book file (little-endian)</text>
 <rect x="20" y="50" width="110" height="30" fill="#FFF3E0" stroke="#EF6C00" stroke-width="1.5"/>
@@ -31,7 +31,7 @@
 <text x="145" y="270" font-size="12" text-anchor="middle" fill="#000000">int16 count</text>
 <text x="210" y="270" font-size="12" fill="#333333">node 2's reply chain</text>
 <text x="40" y="296" font-size="12" fill="#555555">… up to node n</text>
-<text x="20" y="326" font-size="15" font-weight="bold" fill="#000000">The first 36 bytes of Data/OPENING</text>
+<text x="20" y="326" font-size="15" font-weight="bold" fill="#000000">The first 38 bytes of the C++ file Stello C++/OPENING</text>
 <rect x="20" y="340" width="92" height="26" fill="#FFF3E0" stroke="#EF6C00" stroke-width="1.2"/>
 <text x="66" y="358" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">EA 5B 00 00</text>
 <text x="66" y="384" font-size="12" text-anchor="middle" fill="#333333">23530</text>

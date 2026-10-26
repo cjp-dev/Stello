@@ -28,7 +28,7 @@ flowchart LR
 | [Stello.Engine](../../Stello.Net/Stello.Engine) | Rules, game record, evaluation, search, opening book, book learning. No UI code and no dependencies outside .NET. |
 | [Stello.App](../../Stello.Net/Stello.App) | The view models ([CommunityToolkit.Mvvm](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/)), the settings, and the interfaces for the engine host, dialogs, files and storage, shared by both apps (chapters 14 and 15). |
 | [Stello.Net](../../Stello.Net/Stello.Net) | The WPF desktop app: windows, dialogs, and files in `%AppData%\Stello`. It runs the engine on a background task. |
-| [Stello.Web](../../Stello.Net/Stello.Web) | The web app (Blazor WebAssembly): the same game in the browser. It runs the engine in a Web Worker. |
+| [Stello.Web](../../Stello.Net/Stello.Web) | The web app (Blazor WebAssembly): the same game in the browser. It runs the engine in a Web Worker. Its menus, panels, dialogs and documentation viewer come from the shared [GameShell](https://github.com/cjp-dev/GameShell) library, a git submodule in `external/GameShell` (clone with `--recurse-submodules`). |
 | [Stello.Engine.Tests](../../Stello.Net/Stello.Engine.Tests) | xUnit tests of the engine: perft, evaluation, search, endgame (FFO positions), book, book learning. |
 | [Stello.Net.Tests](../../Stello.Net/Stello.Net.Tests) | xUnit tests of the view models, with fake dialogs, settings and book storage. |
 | [Stello.BookTool](../../Stello.Net/tools/Stello.BookTool) | Console tool for the master opening book: import, format, build, verify, statistics, recalculating the leaves, comparing and matching books (chapter 12). |
@@ -243,7 +243,7 @@ Two tokens control a running search:
 | Edge tables | 8 tables of $3^8 = 6561$ values |
 | Hash tables | 2 tables (midgame, endgame), configurable from 65K to 16.7M entries ($3\text{ MB}$ to $768\text{ MB}$ total), default $2^{19}$ slots of 2 entries of 24 bytes ($48\text{ MB}$ total) |
 | Master opening book | 11 200 positions, 22 878 book moves, all leaves searched for 60 s; binary file 193 KB |
-| Engine tests / app tests | 195 / 70 |
+| Engine tests / app tests | 195 / 78 |
 
 ---
 

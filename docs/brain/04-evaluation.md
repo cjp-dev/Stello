@@ -106,7 +106,7 @@ where $m$ are the side to move's edge and corner moves and $r$ the opponent's. A
 
 **Possible corners** are weighted with a probability $p$ (per mille) that the corner can be taken later. It depends on the number of discs $n$ on the board (integer division):
 
-$$p = \frac{1}{2} \left\lfloor \frac{1000\,(64 - n)}{64} \right\rfloor + 500$$
+$$p = \left\lfloor \frac{1}{2} \left\lfloor \frac{1000\,(64 - n)}{64} \right\rfloor \right\rfloor + 500$$
 
 so $p$ falls from 968 at the start to 500 on a full board. The score with the corner taken, $s_{\text{with}}$, and without it, $s_{\text{without}}$, are blended:
 

@@ -84,7 +84,7 @@ The positions are written depth first from the position after d3, in book order.
 
 The C++ program's file `OPENING` (`Put_book`/`savebook` in [Book.cpp](../../Stello%20C++/BRAIN/Book.cpp)) is a tree of the lines after d3 (`LegacyBookFormat`):
 
-![The file layout: an int32 header, then the root chain, a 16-bit count followed by the nodes, each with a 16-bit move, value and flag and then its own reply chain. Below, the first 36 bytes of the master book with their meaning.](images/book-file-layout.svg)
+![The file layout: an int32 header, then the root chain, a 16-bit count followed by the nodes, each with a 16-bit move, value and flag and then its own reply chain. Below, the first 38 bytes of the C++ master book with their meaning.](images/book-file-layout.svg)
 
 - The header is the value of the C++ allocation counter when the book was saved (23 530 for the master file, which has 23 389 nodes); it is ignored.
 - Moves are legacy square numbers ([chapter 02](02-board-and-squares.md#legacy-square-numbers)), 0 for a pass. The flags are `CALCULATED`, `EXACT` and `INEXACT`.

@@ -4,7 +4,7 @@
 
 ## In short
 
-Stello features a unified, tournament-grade user interface across both **WPF desktop** and **Blazor WebAssembly** clients. Conforming to the universal tournament game GUI blueprint ([general-game-gui-specification.md](../../Plans/general-game-gui-specification.md)), the interface combines a warm wooden board aesthetic, a 4-layer dual-card player scoreboard, fixed board orientation, quick action controls, real-time AI telemetry, and synthesized procedural audio feedback.
+Stello features a unified, tournament-grade user interface across both **WPF desktop** and **Blazor WebAssembly** clients. Conforming to the universal tournament game GUI blueprint ([general-game-gui-specification.md](https://github.com/cjp-dev/GameShell/blob/main/docs/general-game-gui-specification.md), v1.1, kept in the shared GameShell library), the interface combines a warm wooden board aesthetic, a 4-layer dual-card player scoreboard, fixed board orientation, quick action controls, real-time AI telemetry, and synthesized procedural audio feedback.
 
 This chapter documents the visual layout, navigation menus, settings dialog, competitive integrity status system, opening book and transposition table memory configurations, real-time search telemetry streaming engine, and full keyboard shortcut mappings.
 
@@ -23,7 +23,7 @@ graph TD
         QuickActions["Quick Action Bar<br/>[Undo] • [Redo] • [Move Now]"]
         Board["Interactive Othello Board Canvas<br/>Fixed Orientation (a1–h8) • Wood Themes • 3D Discs • Flip Animations • Legal Hints • Last Move"]
         Analysis["Real-Time AI Analysis Panel<br/>Move • Depth • Score • Best Move • Nodes • Speed • Time (0:00.0)"]
-        History["Move History Panel<br/>Chronological Ply List (e.g. 1. d3, 2. c5, 3. c6...)"]
+        History["Move History Panel<br/>Paired rows: round • Black • White (e.g. 1. d3 c5, 2. c6 e3...)"]
     end
 
     MenuBar --> StatusPanel
@@ -85,7 +85,7 @@ The application header features a standardized 4-menu hierarchy providing struct
 * *(Separator)*
 * **Switch sides:** Switches player roles between Black and White mid-match without resetting or rotating the board. If a match is underway, prompts confirmation, marks the game status modified (`IsStatusModified = true`), and triggers AI thinking if it becomes the computer's turn.
 * *(Separator)*
-* **Settings...:** Opens the modal Game Settings dialog to configure engine thinking limits, opening book usage, and transposition table capacity.
+* **Settings... (`F2`):** Opens the modal Game Settings dialog to configure engine thinking limits, opening book usage, and transposition table capacity.
 
 ### 3. Options Menu
 * **Analysis (`Ctrl+A`):** Toggles the visibility of the real-time AI search analysis side panel.
@@ -108,7 +108,7 @@ The application header features a standardized 4-menu hierarchy providing struct
 > In accordance with the tournament GUI specification, Undo and Redo are provided via prominent **Quick Action buttons** beneath the scoreboard and via standard keyboard shortcuts (`Ctrl+Z` / `Ctrl+Y`), keeping the top menus streamlined and uncluttered.
 
 ### Responsive Mobile Navigation Drawer ($\le 768\text{px}$)
-On mobile devices and narrow viewports ($\le 768\text{px}$), the horizontal desktop menu bar collapses into a compact header featuring the title (`Stello`) and a hamburger button (`☰`). Tapping the hamburger slides out an off-canvas navigation drawer with touch targets $\ge 44\text{px}$, organizing all File, Game, Options, and Help actions cleanly.
+On mobile devices and narrow viewports ($\le 768\text{px}$), the horizontal desktop menu bar collapses into a compact header featuring the title (`Stello`) and a hamburger button (`☰`). Tapping the hamburger slides out an off-canvas navigation drawer on the right with touch targets $\ge 44\text{px}$, organizing all File, Game, Options, and Help actions cleanly. `Escape` or the 44 px `✕` button closes the drawer (`Escape` also closes an open desktop menu).
 
 ---
 
@@ -122,7 +122,7 @@ Located above the game board, the status board displays real-time match conditio
 │ Black's Turn — Click a square to place a disc                   │
 │                                                                 │
 │ ┌─────────────────────────────┐   ┌───────────────────────────┐ │
-│ │ ● Black            04:47    │   │ ○ White          04:40    │ │
+│ │ ● Black             4:47    │   │ ○ White           4:40    │ │
 │ │ Human                       │   │ Computer                  │ │
 │ │ 5                           │   │ 5                         │ │
 │ │ Moves: 6                    │   │ Moves: 8                  │ │
@@ -136,7 +136,7 @@ Located above the game board, the status board displays real-time match conditio
 * **Status Label (`STATUS`):** Normally displayed in neutral slate gray. When an unranked casual action occurs—such as taking back moves against the computer (`Undo`), switching sides mid-game, modifying engine settings during a match, or continuing past clock expiration—the `STATUS` text dynamically turns **crimson red (`#E74C3C`)**, visually indicating that competitive match integrity has been modified.
 * **Variant Badge:** A rounded teal badge displaying `[Othello]`.
 * **Thinking Limits Badge:** Summarizes the active AI constraint in the top-right corner (e.g., `5 min / game`, `5s / move`, or `8 plies`).
-* **Turn Subtitle:** Announces the active turn (e.g., `Black's Turn — Click a square to place a disc`) or terminal game outcome (`Black wins! 42 to 22`, `White wins!`, `Draw 32 to 32`).
+* **Turn Subtitle:** Announces the active turn (e.g., `Black's Turn — Click a square to place a disc`) or the end of the game (`Game over, you win: Black 42 – White 22.`, `Game over, the computer wins: …`, with two players `Game over, Black wins: Black 33 – White 31.`, `Game over, a draw: Black 32 – White 32.`, or on time `Black ran out of time. Game over, White won on time.`).
 
 ### 2. Dual-Card Player Scoreboard (4 Vertical Layers)
 In Othello, Black always moves first. In adherence to the first-mover specification, the Black player card is positioned on the left as Player 1, followed by White on the right as Player 2.
@@ -144,16 +144,16 @@ In Othello, Black always moves first. In adherence to the first-mover specificat
 Each player card is structured into 4 clear vertical layers:
 1. **Layer 1 (Identity & Digital Clock):**
    * High-contrast circular swatch (`● Black` / `○ White`).
-   * Digital countdown chess clock formatted as `m:ss` (e.g., `04:47`).
-   * The active player's card is highlighted with an elevated sky-blue border (`#3498DB`) and soft background tint (`#EFF6FF`).
+   * Digital countdown chess clock formatted as `m:ss` (e.g., `4:47`).
+   * The active player's card is highlighted with a sky-blue border (`#3498DB`), a 2 px glow and a light background tint (`#EFF6FF`).
 2. **Layer 2 (Role):** Identifies player controller type (`Human` or `Computer`).
 3. **Layer 3 (Primary Metric):** Displays the total disc count owned by the player in prominent bold numerals.
 4. **Layer 4 (Secondary Metric):** Real-time **Mobility** count (`Moves: 6`), displaying the exact number of legal moves currently available to this player.
 
 ### 3. Quick Action Buttons
 Positioned directly beneath the dual player cards:
-* **`[Undo]`:** Reverts the previous move (in human-vs-human) or rolls back both the computer and human move pair (in human-vs-computer). Clocks are refunded back to the exact snapshot recorded at that ply (`_timeLeftAtPly`). Disabled at Move 0 or while the AI is thinking.
-* **`[Redo]`:** Re-applies the most recently undone move.
+* **`[Undo]`:** Reverts the previous move (in human-vs-human) or rolls back both the computer and human move pair (in human-vs-computer). Clocks are refunded back to the exact snapshot recorded at that ply (`_timeLeftAtPly`). Disabled at Move 0, while the AI is thinking, and after a game lost on time.
+* **`[Redo]`:** Re-applies the most recently undone move. Disabled while the AI is thinking and after a game lost on time.
 * **`[Move Now]`:** Rendered when playing against the computer. While the AI is searching, pressing `[Move Now]` triggers cancellation and forces the engine to immediately play the best candidate evaluated up to that point.
 
 ### 4. Board Orientation (Fixed) & Visual Indicators
@@ -162,10 +162,10 @@ The $8 \times 8$ board orientation remains **strictly fixed** (`a1` in the top-l
 * **Last Move Marker:** A soft crimson central dot marks the exact square of the most recently placed disc.
 
 ### 5. Automatic Pass Handling
-Unlike games where passing is optional, Othello rules dictate that passing is mandatory when a player has no legal moves while the opponent can still play. The Stello game loop detects this condition automatically, executes the pass without requiring manual button clicks, displays a clear notification (`"You have no legal move and must pass."`), and yields the turn to the opponent.
+Unlike games where passing is optional, Othello rules dictate that passing is mandatory when a player has no legal moves while the opponent can still play. The Stello game loop detects this condition automatically, executes the pass without requiring manual button clicks, shows a notice in the status line that stays until the human's next turn (`"You had no legal move and passed."`, `"The computer had no legal move and passed."`, or in two-player games `"Black had no legal move and passed."`), and yields the turn to the opponent.
 
 ### 6. Timeout Continuation Safeguard
-In timed matches (`TimePerGame`), if the human player's clock reaches zero against the computer, an interactive confirmation dialog is presented: *"Your time has expired. Would you like to continue playing?"*. Accepting allows play to proceed casually while marking the match status modified (`#E74C3C`). Declining concludes the game as a loss on time.
+In timed matches (`TimePerGame`), if the human's clock reaches 0:00 against the computer, a Yes/No dialog asks *"You ran out of time! Do you want to continue playing?"*. **Yes** freezes the human's clock at 0:00 and lets play continue casually, marking the status modified (`#E74C3C`). **No** ends the game, and so does the computer's clock (or either clock in a two-player game) running out. The status then reads `Black ran out of time. Game over, White won on time.` (or vice versa); moves, Undo, Redo and Switch sides are blocked, and New Game starts without asking.
 
 ---
 
@@ -259,16 +259,13 @@ In Blazor WebAssembly (`Stello.Web`), running deep searches directly on the main
 Located below the analysis panel, the **Move History** card logs all played moves in chronological order:
 
 ```text
-MOVE HISTORY (6 plies)
-1. d3
-2. c5
-3. c6
-4. e3
-5. f3
-6. f4
+MOVE HISTORY (6 moves)
+1. d3   c5
+2. c6   e3
+3. f3   f4
 ```
 
-Each row displays the sequence number and standard algebraic coordinate notation. When moves are taken back via `[Undo]`, the history automatically trims back to the corresponding ply.
+Each row is one round: the round number, Black's move and White's move (a pass is shown as `pass`). The newest move is highlighted and the list scrolls itself to it. When moves are taken back via `[Undo]`, the history trims back to the corresponding move.
 
 ---
 
@@ -297,6 +294,8 @@ Because all audio waveforms are generated procedurally as 16-bit PCM WAV byte st
 | `Ctrl+M` | Engine | Force computer to play current best move (**Move Now**) |
 | `F1` | Global | Open **User guide** (this chapter) |
 | `Shift+F1` | Global | Open **Rules & Documentation** (full architectural manual) |
+| `F2` | Global (web) | Open **Settings** |
+| `Escape` | Global (web) | Close an open menu or the mobile drawer |
 
 ---
 
