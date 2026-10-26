@@ -37,6 +37,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private bool _hasHumanContinuedOnTime;
     private bool _isTimeoutPrompting;
 
+    // The side that lost on time; the board itself is not finished, so Game.IsGameOver stays false.
+    private Player? _lostOnTime;
+
     private CancellationTokenSource? _cancel;
     private CancellationTokenSource? _moveNow;
     private CancellationTokenSource? _learningCancel;
@@ -156,13 +159,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IsVsComputer &&
         !IsThinking &&
         !IsLearning &&
-        !_game.IsGameOver &&
+        !IsGameOver &&
         IsHumanTurn();
 
-    public bool CanUndo => _game.CanUndo && !IsLearning && !IsThinking;
-    public bool CanRedo => _game.CanRedo && !IsLearning && !IsThinking;
+    public bool CanUndo => _game.CanUndo && !IsLearning && !IsThinking && _lostOnTime is null;
+    public bool CanRedo => _game.CanRedo && !IsLearning && !IsThinking && _lostOnTime is null;
     public Player ToMove => _game.ToMove;
-    public bool IsGameOver => _game.IsGameOver;
+    public bool IsGameOver => _game.IsGameOver || _lostOnTime is not null;
 
     public MainViewModel(
         IEngineHost engine,
@@ -232,7 +235,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
-        if (_game.Ply > 0 && !_game.IsGameOver)
+        if (_game.Ply > 0 && !IsGameOver)
         {
             if (!await _dialogs.ConfirmAsync("Abandon current match and start a new game?"))
             {
@@ -245,6 +248,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Player human = mode == GameMode.ComputerVsHuman ? Player.White : Player.Black;
         _game = new Game(human);
         _fileName = null;
+        _lostOnTime = null;
         IsGameModified = false;
         ResetClock();
         _engine.ResetBookTracker();
@@ -284,7 +288,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void Play(SquareViewModel square)
     {
-        if (IsThinking || IsLearning || _game.IsGameOver || !IsHumanTurn() || !_game.Board.IsLegal(_game.ToMove, square.Square))
+        if (IsThinking || IsLearning || IsGameOver || !IsHumanTurn() || !_game.Board.IsLegal(_game.ToMove, square.Square))
         {
             _dialogs.Beep();
             return;
@@ -298,7 +302,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanChangeGame))]
     private async Task NewGame()
     {
-        if (_game.Ply > 0 && !_game.IsGameOver)
+        if (_game.Ply > 0 && !IsGameOver)
         {
             if (!await _dialogs.ConfirmAsync("Abandon current match and start a new game?"))
             {
@@ -315,6 +319,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Player human = GameMode == GameMode.ComputerVsHuman ? Player.White : Player.Black;
         _game = new Game(human);
         _fileName = null;
+        _lostOnTime = null;
         IsGameModified = false;
         ResetClock();
         _engine.ResetBookTracker();
@@ -352,6 +357,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         _game = loaded;
         _fileName = file.Name;
+        _lostOnTime = null;
         if (GameMode != GameMode.HumanVsHuman)
         {
             GameMode = loaded.Human == Player.Black ? GameMode.HumanVsComputer : GameMode.ComputerVsHuman;
@@ -599,10 +605,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             while (true)
             {
                 Refresh();
+                if (_lostOnTime is { } loser)
+                {
+                    SetStatus(TimeoutText(loser));
+                    return;
+                }
+
                 if (_game.IsGameOver)
                 {
-                    Status = WithNotice(GameOverText());
-                    StatusText = Status;
+                    SetStatus(GameOverText());
                     PlayGameOverSound();
                     return;
                 }
@@ -610,22 +621,23 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 if (_game.MustPass)
                 {
                     _soundService.Play(SoundType.Pass);
-                    _notice = IsHumanTurn()
-                        ? "You have no legal move and must pass."
-                        : "The computer has no legal move and passes.";
+                    _notice = !IsVsComputer
+                        ? $"{_game.ToMove} had no legal move and passed."
+                        : IsHumanTurn()
+                            ? "You had no legal move and passed."
+                            : "The computer had no legal move and passed.";
                     _game.Pass();
                     continue;
                 }
 
                 if (IsHumanTurn())
                 {
-                    Status = WithNotice("Your move.");
-                    StatusText = $"{_game.ToMove}'s Turn — Click a square to place a disc";
+                    SetStatus("Your move.", $"{_game.ToMove}'s Turn — Click a square to place a disc");
                     return;
                 }
 
-                Status = WithNotice("Thinking…");
-                StatusText = "Thinking…";
+                // Keep the notice for the human's next turn; a pass right before a search would otherwise flash by.
+                SetStatus("Thinking…", keepNotice: true);
                 if (!await ComputerMoveAsync())
                 {
                     Refresh();
@@ -674,6 +686,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Board board = _game.Board;
         Player player = _game.ToMove;
         _timeLeftAtPly[_game.Ply] = (_blackTimeLeft, _whiteTimeLeft);
+
+        // The clock timer keeps ticking down the computer's time while it thinks, for display.
+        // After the search the clock is set from this starting value, so the time is charged only once.
         TimeSpan computerTime = player == Player.Black ? _blackTimeLeft : _whiteTimeLeft;
         SearchLimits limits = Settings.ToLimits(computerTime);
 
@@ -692,13 +707,20 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             SearchResult result = await _engine.ChooseMoveAsync(board, player, limits, progress, cancel.Token, moveNow.Token);
 
             TimeSpan elapsed = stopwatch.Elapsed;
+            TimeSpan timeLeft = computerTime > elapsed ? computerTime - elapsed : TimeSpan.Zero;
             if (player == Player.Black)
             {
-                _blackTimeLeft = _blackTimeLeft > elapsed ? _blackTimeLeft - elapsed : TimeSpan.Zero;
+                _blackTimeLeft = timeLeft;
             }
             else
             {
-                _whiteTimeLeft = _whiteTimeLeft > elapsed ? _whiteTimeLeft - elapsed : TimeSpan.Zero;
+                _whiteTimeLeft = timeLeft;
+            }
+
+            if (_lastTickTimestamp != 0)
+            {
+                // Restart the tick interval so the opponent is not charged for the computer's last slice.
+                _lastTickTimestamp = Stopwatch.GetTimestamp();
             }
 
             Analysis.Update(result, elapsed);
@@ -721,7 +743,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void Refresh()
     {
         Board board = _game.Board;
-        bool isHumanTurn = IsHumanTurn() && !_game.IsGameOver;
+        bool isHumanTurn = IsHumanTurn() && !IsGameOver;
         ulong legal = isHumanTurn ? board.LegalMoves(_game.ToMove) : 0;
         Square? last = _game.LastMove?.Square;
 
@@ -776,16 +798,26 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return _game.Winner switch
         {
             null => $"Game over, a draw: {score}.",
+            Player winner when !IsVsComputer => $"Game over, {winner} wins: {score}.",
             Player winner when winner == _game.Human => $"Game over, you win: {score}.",
             _ => $"Game over, the computer wins: {score}.",
         };
     }
 
-    private string WithNotice(string status)
+    private static string TimeoutText(Player loser) =>
+        $"{loser} ran out of time. Game over, {loser.Opponent()} won on time.";
+
+    // Sets both the full status and the shorter status line, prefixed with any pending notice (e.g. a pass).
+    private void SetStatus(string status, string? statusText = null, bool keepNotice = false)
     {
-        string text = _notice is null ? status : $"{_notice} {status}";
-        _notice = null;
-        return text;
+        string prefix = _notice is null ? "" : $"{_notice} ";
+        if (!keepNotice)
+        {
+            _notice = null;
+        }
+
+        Status = prefix + status;
+        StatusText = prefix + (statusText ?? status);
     }
 
     private void ResetClock()
@@ -826,7 +858,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (_isTimeoutPrompting ||
             Settings.Mode != TimeControlMode.TimePerGame ||
-            _game.IsGameOver ||
+            IsGameOver ||
             _game.Ply == 0)
         {
             _lastTickTimestamp = 0;
@@ -891,9 +923,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ClockText));
     }
 
-    private async Task HandleTimeoutAsync(Player timedOut)
+    internal async Task HandleTimeoutAsync(Player timedOut)
     {
-        if (_game.IsGameOver)
+        if (IsGameOver || _isTimeoutPrompting)
         {
             return;
         }
@@ -923,10 +955,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             }
         }
 
+        // Ending the game here stops the clock ticks from firing the timeout again.
+        _lostOnTime = timedOut;
         await StopAsync();
-        Status = $"{timedOut} ran out of time. Game over.";
-        StatusText = Status;
-        PlayGameOverSound();
+        _soundService.Play(isHumanTimedOut ? SoundType.Loss : SoundType.Win);
+        Start();
     }
 
     private static string FormatClock(TimeSpan span) =>

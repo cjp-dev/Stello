@@ -283,6 +283,114 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task TimePerGame_ComputerTimeIsChargedOnce()
+    {
+        MainViewModel vm = Create(new GameSettings(TimeControlMode.TimePerGame, 8, 5, 1));
+        var total = System.Diagnostics.Stopwatch.StartNew();
+        Play(vm, "f5");
+        await WaitAsync(vm.Idle);
+        total.Stop();
+
+        // The computer cannot have used more than the whole move took (plus one clock tick of slack).
+        Assert.True(vm.ComputerTimeLeft >= TimeSpan.FromMinutes(1) - total.Elapsed - TimeSpan.FromMilliseconds(300),
+            $"Computer time left {vm.ComputerTimeLeft} after a move that took {total.Elapsed}.");
+    }
+
+    [Fact]
+    public async Task HumanTimeout_DecliningToContinueEndsTheGame()
+    {
+        MainViewModel vm = Create(new GameSettings(TimeControlMode.TimePerGame, 8, 5, 1));
+        Play(vm, "f5");
+        await WaitAsync(vm.Idle);
+        _dialogs.ConfirmAnswer = false;
+
+        await vm.HandleTimeoutAsync(Player.Black);
+        await vm.Idle;
+
+        Assert.True(vm.IsGameOver);
+        Assert.Equal("Black ran out of time. Game over, White won on time.", vm.StatusText);
+        Assert.DoesNotContain(vm.Squares, s => s.IsLegalMove);
+        Assert.False(vm.UndoCommand.CanExecute(null));
+        Assert.False(vm.SwitchSidesCommand.CanExecute(null));
+
+        int plies = vm.Game.Ply;
+        Play(vm, "d6");
+        Assert.Equal(plies, vm.Game.Ply);
+    }
+
+    [Fact]
+    public async Task HumanTimeout_ContinuingKeepsTheGameGoing()
+    {
+        MainViewModel vm = Create(new GameSettings(TimeControlMode.TimePerGame, 8, 5, 1));
+        Play(vm, "f5");
+        await WaitAsync(vm.Idle);
+
+        await vm.HandleTimeoutAsync(Player.Black);
+
+        Assert.False(vm.IsGameOver);
+        Assert.True(vm.IsGameModified);
+        Assert.Contains(vm.Squares, s => s.IsLegalMove);
+    }
+
+    [Fact]
+    public async Task ComputerTimeout_EndsTheGameWithoutAsking()
+    {
+        MainViewModel vm = Create(new GameSettings(TimeControlMode.TimePerGame, 8, 5, 1));
+        Play(vm, "f5");
+        await WaitAsync(vm.Idle);
+        int confirmations = _dialogs.Confirmations;
+
+        await vm.HandleTimeoutAsync(Player.White);
+        await vm.Idle;
+
+        Assert.Equal(confirmations, _dialogs.Confirmations);
+        Assert.True(vm.IsGameOver);
+        Assert.Equal("White ran out of time. Game over, Black won on time.", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task NewGame_AfterTimeoutStartsWithoutConfirmation()
+    {
+        MainViewModel vm = Create(new GameSettings(TimeControlMode.TimePerGame, 8, 5, 1));
+        Play(vm, "f5");
+        await WaitAsync(vm.Idle);
+        await vm.HandleTimeoutAsync(Player.White);
+        await vm.Idle;
+        int confirmations = _dialogs.Confirmations;
+
+        await vm.NewGameCommand.ExecuteAsync(null);
+
+        Assert.Equal(confirmations, _dialogs.Confirmations);
+        Assert.False(vm.IsGameOver);
+        Assert.Equal(0, vm.Game.Ply);
+    }
+
+    [Fact]
+    public async Task Pass_NoticeIsShownInTheStatusLine()
+    {
+        OpenFile(BlackMustPass);
+        MainViewModel vm = Create();
+
+        await vm.OpenCommand.ExecuteAsync(null);
+        await WaitAsync(vm.Idle);
+
+        Assert.StartsWith("You had no legal move and passed.", vm.StatusText);
+    }
+
+    [Fact]
+    public async Task GameOver_TwoPlayersNamesTheWinner()
+    {
+        MainViewModel vm = Create();
+        await vm.SetGameMode(GameMode.HumanVsHuman);
+        OpenFile(WhiteWipedOut);
+
+        await vm.OpenCommand.ExecuteAsync(null);
+        await vm.Idle;
+
+        Assert.Equal("Game over, Black wins: Black 13 – White 0.", vm.StatusText);
+    }
+
+    [Fact]
     public void ToggleAnalysis_HidesAndShowsThePanel()
     {
         MainViewModel vm = Create();

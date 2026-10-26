@@ -228,7 +228,7 @@
         [
             new("File",
             [
-                new("New Game", Vm.NewGameCommand),
+                new("New Game", Vm.NewGameCommand, "Ctrl+N"),
                 new("Open...", Vm.OpenCommand, "Ctrl+O"),
                 new("Save", Vm.SaveCommand, "Ctrl+S"),
                 new("Save As...", Vm.SaveAsCommand),
@@ -310,6 +310,7 @@
     [JSInvokable]
     public Task OnShortcut(string key) => Dialogs.Current is not null ? Task.CompletedTask : key switch
     {
+        "n" => RunAsync(Vm.NewGameCommand),
         "o" => RunAsync(Vm.OpenCommand),
         "s" => RunAsync(Vm.SaveCommand),
         "m" => RunAsync(Vm.MoveNowCommand),

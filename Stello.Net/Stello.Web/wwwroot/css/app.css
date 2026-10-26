@@ -904,12 +904,21 @@ button {
 
 .history-list ol {
     margin: 0;
-    padding-left: 1.25rem;
+    padding-left: 0;
+    list-style: none;
     font-size: 0.85rem;
 }
 
 .history-list li {
     padding: 0.15rem 0;
+}
+
+.move-num {
+    color: #64748B;
+    font-weight: 600;
+    margin-right: 0.4rem;
+    display: inline-block;
+    min-width: 1.5rem;
 }
 
 .move-notation {
