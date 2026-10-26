@@ -191,7 +191,7 @@ graph TD
 
 ### 2. Stello Opening Book & Transposition Table
 * **Stello Opening Book (11,200 canonical positions):** Checkbox controlling whether the engine queries the canonical opening book database before launching tree search. When checked, known book positions are played instantly. When unchecked, book lookups are bypassed and the engine searches every move from scratch.
-* **Transposition Table Capacity:** Selects the total memory capacity allocated across both the midgame heuristic table and the exact endgame solver table:
+* **Transposition Table Capacity:** Selects the number of entries in each of the two tables (the midgame heuristic table and the exact endgame solver table); the memory shown covers both:
 
 | Entries Option | Hash Bits | Entries / Table | Combined Memory | Description |
 |---|---|---|---|---|
@@ -211,7 +211,7 @@ Each transposition table slot holds 2 entries (primary and replacement). Each en
 * 1 byte for aging tag (`byte Tag`)
 * 2 bytes padding alignment
 
-The total entries per table equals $2^{\text{hashBits} + 1}$. Because Stello maintains two independent engines—one for heuristic midgame search and one for exact endgame solving—the combined memory equals $2 \times 2^{\text{hashBits} + 1} \times 24\text{ bytes}$. When the capacity setting changes, the engine host dynamically reinitializes the engine with the requested hash size.
+The total entries per table equals $2^{\text{hashBits} + 1}$ (the number in the option label). Because the search engine keeps two tables of that size—one for the heuristic midgame search and one for the exact endgame solver—the combined memory equals $2 \times 2^{\text{hashBits} + 1} \times 24\text{ bytes}$. The option labels give this in MiB ($2^{20}$ bytes); the Combined Memory column gives it in MB ($10^6$ bytes). When the capacity setting changes, the engine host dynamically reinitializes the engine with the requested hash size.
 
 ---
 
@@ -238,8 +238,8 @@ When enabled via **Options $\rightarrow$ Analysis** (`Ctrl+A`), the telemetry si
 | Field | Description & Formatting |
 |---|---|
 | **Move** | The coordinate currently being searched at the root (e.g., `f4`, `d3`). |
-| **Depth** | Current search depth in plies (e.g., `10 plies`). Displays `"Book"` when playing from the opening book. |
-| **Score** | Positional evaluation from the active player's perspective:<br/>• Positive (e.g. `+239`): Advantage for the engine.<br/>• Negative (e.g. `-150`): Advantage for the opponent.<br/>• Endgame disc difference (e.g. `+4`, `-2`, `Draw`). |
+| **Depth** | Current search depth in plies (e.g., `10 plies`), or `to the end (20 empty)` when the endgame is solved. Empty for a book move or when there is no search (a pass or a single legal move). |
+| **Score** | Positional evaluation from the active player's perspective:<br/>• Positive (e.g. `+239`): Advantage for the engine.<br/>• Negative (e.g. `-150`): Advantage for the opponent.<br/>• Solved endgame: the final disc difference (e.g. `+4 discs`, `-2 discs`), or only `Win`, `Loss` or `Draw` when just the result is known.<br/>• `Book`: the move comes from the opening book. |
 | **Best move** | Coordinate of the currently leading principal variation candidate (e.g., `f4`). |
 | **Nodes** | Total board states evaluated during the search, formatted with thousands separators (`226.269`). |
 | **Speed** | Search throughput in nodes per second (`nps`). |

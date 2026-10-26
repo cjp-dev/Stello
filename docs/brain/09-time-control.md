@@ -42,7 +42,7 @@ An internal `readonly record struct` with `SoftMs` and `HardMs`, in milliseconds
 | `Heuristic` | Evaluation units from the midgame search; beyond ±32 600 the game is won or lost | "+123", or "Win"/"Loss"; depth "8 plies" |
 | `WinLossDraw` | Only the sign is known | "Win", "Loss" or "Draw"; depth "to the end (20 empty)" |
 | `Exact` | The final disc difference with perfect play | "+12 discs" |
-| `Book` | The move comes from the opening book; the score is the book value | "Book" |
+| `Book` | The move comes from the opening book | Score "Book"; depth empty |
 
 ## Algorithm
 

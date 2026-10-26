@@ -33,7 +33,7 @@ $$2 \times \big(2^{19} \text{ slots} \times 2 \text{ entries} \times 24 \text{ b
 
 ### Configurable Capacity Options
 
-In the application settings dialog (chapter 15), players can configure the total transposition table capacity across 5 power-of-two tiers:
+In the Settings dialog (chapter 15), players choose the number of entries **per table** from 5 power-of-two tiers. The engine has two tables, so the memory is twice that of one table. The sizes in the option labels are in MiB ($2^{20}$ bytes); the Combined Memory column gives the same sizes in MB ($10^6$ bytes):
 
 | Option Label | `hashBits` | Entries / Table | Combined Memory | Target Environment |
 |---|---|---|---|---|
