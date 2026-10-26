@@ -24,6 +24,17 @@ window.stello = (() => {
                     return;
                 }
 
+                // F2 opens Settings; Escape closes an open menu or the mobile drawer (dialogs handle their own Escape).
+                if ((e.key === 'F2' || e.key === 'Escape') && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
+                    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) {
+                        return;
+                    }
+                    if (e.key === 'F2') {
+                        e.preventDefault();
+                    }
+                    dotnet.invokeMethodAsync('OnShortcut', e.key.toLowerCase());
+                    return;
+                }
                 if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.length !== 1) {
                     return;
                 }
@@ -41,6 +52,13 @@ window.stello = (() => {
             if (keydown) {
                 document.removeEventListener('keydown', keydown);
                 keydown = null;
+            }
+        },
+
+        // Keeps the newest move in view by scrolling only the history list, never the page.
+        scrollHistoryToEnd(list) {
+            if (list) {
+                list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' });
             }
         },
 

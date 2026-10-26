@@ -241,8 +241,8 @@ button {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 36px;
-        height: 36px;
+        width: 44px;
+        height: 44px;
         border-radius: 4px;
         touch-action: manipulation;
     }
@@ -909,21 +909,31 @@ button {
     font-size: 0.85rem;
 }
 
+/* One row per round: number, first player's move, second player's move */
 .history-list li {
-    padding: 0.15rem 0;
+    display: grid;
+    grid-template-columns: 2rem 1fr 1fr;
+    align-items: baseline;
+    padding: 0.1rem 0;
 }
 
 .move-num {
     color: #64748B;
     font-weight: 600;
-    margin-right: 0.4rem;
-    display: inline-block;
-    min-width: 1.5rem;
 }
 
-.move-notation {
+.move-ply {
+    justify-self: start;
+    padding: 0 0.35rem;
+    border-radius: 4px;
     font-weight: 600;
     color: #2C3E50;
+}
+
+/* The most recent move */
+.move-ply.latest {
+    background: #EBF5FB;
+    color: #1F618D;
 }
 
 /* Modal Dialogs (DialogHost) */

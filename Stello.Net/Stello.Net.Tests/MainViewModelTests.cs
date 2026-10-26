@@ -391,6 +391,18 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task MoveCountText_CountsIndividualMoves()
+    {
+        MainViewModel vm = Create();
+        Assert.Equal("0 moves", vm.MoveCountText);
+
+        Play(vm, "f5");
+        await WaitAsync(vm.Idle);
+
+        Assert.Equal("2 moves", vm.MoveCountText);
+    }
+
+    [Fact]
     public void ToggleAnalysis_HidesAndShowsThePanel()
     {
         MainViewModel vm = Create();

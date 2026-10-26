@@ -146,7 +146,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public string BlackClockText => FormatClock(_blackTimeLeft);
     public string WhiteClockText => FormatClock(_whiteTimeLeft);
 
-    public string MoveCountText => $"{_game.Ply} {(_game.Ply == 1 ? "ply" : "plies")}";
+    public string MoveCountText => $"{_game.Ply} {(_game.Ply == 1 ? "move" : "moves")}";
 
     public TimeSpan ComputerTimeLeft => GameMode switch
     {
