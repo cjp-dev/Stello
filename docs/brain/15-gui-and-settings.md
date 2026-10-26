@@ -304,9 +304,9 @@ Because all audio waveforms are generated procedurally as 16-bit PCM WAV byte st
 
 | File | Component | Description |
 |---|---|---|
-| [`Home.razor`](../../Stello.Net/Stello.Web/Pages/Home.razor) | `Home` | Master Blazor layout, desktop menu bar, mobile drawer, quick action controls, and shortcut routing |
+| [`Home.razor`](../../Stello.Net/Stello.Web/Pages/Home.razor) | `Home` | Web page: Stello's menus, board styles and shortcuts, built from the shared [GameShell](https://github.com/cjp-dev/GameShell) components (`ShellLayout` with menu bar and mobile drawer, `StatusPanel`, `AnalysisPanel`, `MoveHistoryPanel`) |
 | [`DialogHost.razor`](../../Stello.Net/Stello.Web/Components/DialogHost.razor) | `DialogHost` | Modal dialogs for Settings, About box, timeout confirmations, and game notices |
-| [`AnalysisPanel.razor`](../../Stello.Net/Stello.Web/Components/AnalysisPanel.razor) | `AnalysisPanel` | Real-time 7-field AI search telemetry display |
+| [`AnalysisAdapter.cs`](../../Stello.Net/Stello.Web/Services/AnalysisAdapter.cs) | `AnalysisAdapter` | Shows the `AnalysisViewModel` in GameShell's 7-field analysis panel |
 | [`MainViewModel.cs`](../../Stello.Net/Stello.App/ViewModels/MainViewModel.cs) | `MainViewModel` | Central orchestrator managing game flow, competitive integrity (`IsStatusModified`), clocks, and undo/redo |
 | [`SettingsViewModel.cs`](../../Stello.Net/Stello.App/ViewModels/SettingsViewModel.cs) | `SettingsViewModel` | Data backing for thinking limits, opening book toggle, and transposition table capacity |
 | [`AnalysisViewModel.cs`](../../Stello.Net/Stello.App/ViewModels/AnalysisViewModel.cs) | `AnalysisViewModel` | Observable ViewModel formatting depth, evaluation score, node counts, and elapsed search time |

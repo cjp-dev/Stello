@@ -258,7 +258,7 @@ After Back, the computer gets back the time of the moves that were taken back, w
 | [AppPaths.cs](../../Stello.Net/Stello.Net/Services/AppPaths.cs) | `DataDirectory`, `SettingsFile`, `UserBookFile`, `SelfPlayLogFile`, `DefaultBookFile`, `BookFiles` |
 | [FileBookStore.cs](../../Stello.Net/Stello.Net/Services/FileBookStore.cs) | `Save`, `AppendSelfPlayLog` |
 | [JsonSettingsStore.cs](../../Stello.Net/Stello.Net/Services/JsonSettingsStore.cs) | `Load`, `Save` |
-| [Home.razor](../../Stello.Net/Stello.Web/Pages/Home.razor) | Master Blazor UI with dual scoreboard, quick actions, responsive mobile drawer (chapter 15) |
+| [Home.razor](../../Stello.Net/Stello.Web/Pages/Home.razor) | Web page built from the shared GameShell components: menus, scoreboard, quick actions, mobile drawer (chapter 15) |
 | [App.xaml.cs](../../Stello.Net/Stello.Net/App.xaml.cs) | `OnStartup`: wiring the book, engine, services and view model |
 | [MainWindow.xaml.cs](../../Stello.Net/Stello.Net/MainWindow.xaml.cs) | `OnClosing`: stop and save the window position |
 | C++: [MainFrm.cpp](../../Stello%20C++/MainFrm.cpp), [Kontrol.cpp](../../Stello%20C++/BRAIN/Kontrol.cpp) | `OnTilbage`, `OnFrem` and the other menu handlers; `getcomputer` (stores `timesleft`) |

@@ -22,6 +22,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Stello.App\Stello.App.csproj" />
     <ProjectReference Include="..\Stello.Engine\Stello.Engine.csproj" />
+    <!-- The shared game GUI (git submodule). -->
+    <ProjectReference Include="..\..\external\GameShell\src\GameShell\GameShell.csproj" />
   </ItemGroup>
 
   <!-- A linked file is not served by the dev server, so the shipped book is copied into wwwroot (git-ignored). -->
