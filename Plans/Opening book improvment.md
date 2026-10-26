@@ -31,6 +31,7 @@ The current Stello book is described in [docs/brain/11-opening-book.md](docs/bra
 
 - **Phase 1: done (2026-10-07).** Described in [docs/brain chapter 11](docs/brain/11-opening-book.md), [chapter 12](docs/brain/12-book-learning.md), the new [chapter 13](docs/brain/13-book-tool.md) and [Stello porting documentation.md](Stello%20porting%20documentation.md), phase 10. Decisions taken while implementing it are marked *(phase 1)* below.
 - **Phase 2: done (2026-10-08).** `recalc`, `compare` and `match` are in the book tool ([chapter 13](docs/brain/13-book-tool.md#the-result-october-2026)) and in [Stello porting documentation.md](Stello%20porting%20documentation.md), phase 11. The master book was recalculated with 60 s per position (8 workers, about a day): 10 531 leaf values searched, exact values from 1 091 to 2 990, 2 163 positions with another first move. In the match from those positions the recalculated book scored 52.8 % (95 % interval 51.6–54.0 %) against the C++ book, so it is shipped.
+- **Phase 2b: Recalculation with fixed evaluation (2026-10-26).** Following the evaluation bugfix in `Evaluator.cs`, `OpeningBook.EngineVersion` was bumped to 2. All 8 623 leaves were recalculated with 60 s per position across 7 workers: 6 068 values changed, 622 first moves changed, and exact endgames increased by +226 to 3 216. In a 530-game match against book v1 at depth 10, book v2 scored 51.2 % (95 % interval 50.0–52.4 %), +0.3 discs/game, confirming it is stronger.
 
 ### Decisions (answers to the review questions)
 
@@ -198,7 +199,8 @@ Stello.BookTool match <book A> <book B> (--starts <report.txt> | --starts-ply N)
 ## Phases
 
 1. **Format**: in-memory DAG model, text and binary format, `import`/`build`/`verify`/`stats`, legacy conversion on load, port `BookLearner` and the app's book stores; the master book moves to `Stello.Net/Book/opening-book.txt` and the apps ship it converted. No change in play.
-2. **Recalc**: `recalc` with workers and resume, the end-of-run report and `match`; run it on all ~10 000 leaves of the master book (≈ 14 h with 12 workers, measured), compare the old and the new book with `match`, and ship the result. *(Done: 52.8 % for the recalculated book.)*
+2. **Recalc (v1)**: `recalc` with workers and resume, the end-of-run report and `match`; run it on all ~10 000 leaves of the master book (≈ 14 h with 12 workers, measured), compare the old and the new book with `match`, and ship the result. *(Done: 52.8 % for the recalculated book.)*
+3. **Recalc v2 (evaluation bugfix)**: Following the fix to `Evaluator.cs`, bump `EngineVersion` to 2 and recalculate all 8 623 non-exact leaves at 60 s/leaf with 7 workers (~18 h); 6 068 values and 622 first moves changed, exact endgames increased by +226 to 3 216; tournament match vs v1 scored 51.2 % (+0.3 discs/game), confirming it is stronger.
 
 ## Open questions (phases 1 and 2)
 

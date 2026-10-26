@@ -19,7 +19,7 @@ public readonly record struct BookMove(Square Square, int Value);
 public sealed class OpeningBook
 {
     /// <summary>Bumped by hand when a change to the evaluation or the search changes the values it finds.</summary>
-    internal const int EngineVersion = 1;
+    internal const int EngineVersion = 2;
 
     internal const Player RootPlayer = Player.White;
 

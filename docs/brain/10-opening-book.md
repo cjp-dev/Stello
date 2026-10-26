@@ -30,7 +30,7 @@ One book move (internal class):
 | `Exact` | A search that solved the position exactly, or a finished game |
 | `BackedUp` | Minus the value of the position after the move, which is itself in the book |
 
-`BookEffort(Kind, Amount, DepthReached, EngineVersion)` records the search limit (`Time` in milliseconds, `Depth` in plies, `Solve`, or `None` if unknown), the depth the search reached, and the engine version. `OpeningBook.EngineVersion` (now 1) is raised by hand when a change to the evaluation or the search changes the values it finds, so old values can be told apart and searched again. Values imported from the C++ book have no effort.
+`BookEffort(Kind, Amount, DepthReached, EngineVersion)` records the search limit (`Time` in milliseconds, `Depth` in plies, `Solve`, or `None` if unknown), the depth the search reached, and the engine version. `OpeningBook.EngineVersion` (now 2) is raised by hand when a change to the evaluation or the search changes the values it finds, so old values can be told apart and searched again. Version 2 was recalculated after fixing the leaf evaluation. Values imported from the original C++ book have no effort.
 
 ### `OpeningBook`
 
@@ -54,16 +54,16 @@ The master book is [Stello.Net/Book/opening-book.txt](../../Stello.Net/Book/open
 # 11200 positions, 22878 moves
 # <line> <move>:<value>:<origin>[:<limit>:d<depth reached>:v<engine version>] ...
 # origin: U unknown, H heuristic, W win/loss/draw, X exact, B backed up; limit: time per move (s, ms), depth (ply), solve, - unknown
-d3 c5:-10:B c3:-35:B e3:-126:B
-d3c3 c4:35:B e6:-18:W:60s:d18:v1
-d3c5 f6:10:B e6:10:B d6:-8:B c6:-56:W:60s:d18:v1
-d3e3 f4:126:B f3:35:W:60s:d18:v1
-d3c3c4 c5:-35:B e3:-35:B
+d3 c5:-10:B c3:-29:B e3:-150:B
+d3c3 c4:29:B e6:-18:W:60s:d18:v2
+d3c5 f6:10:B e6:10:B d6:-16:B c6:-56:W:60s:d18:v2
+d3e3 f4:150:B f3:35:W:60s:d18:v2
+d3c3c4 c5:-29:B e3:-29:B
 ```
 
 - The first line identifies the format; other lines starting with `#` are comments.
 - Each other line is one position. It starts with the **key**: the moves from the start that reach it, without spaces and beginning with d3 (`--` is a pass). Of the lines of book moves that reach the position, the shortest is used, and of those the alphabetically first.
-- Then follow the book moves in book order, in the frame of the key line, as `move:value:origin`. A searched value adds the effort, e.g. `c6:-56:W:60s:d18:v1` (a win/loss/draw result, 60 s per move, depth 18 reached, engine version 1). Only the 1 091 exact values from the C++ book have no effort.
+- Then follow the book moves in book order, in the frame of the key line, as `move:value:origin`. A searched value adds the effort, e.g. `c6:-56:W:60s:d18:v2` (a win/loss/draw result, 60 s per move, depth 18 reached, engine version 2). Only the 1 091 exact values from the original C++ book have no effort.
 - The lines are sorted by length, then alphabetically, and written with `\n` and invariant culture, so a change to the book only changes the lines of the positions that changed.
 - Reading checks that every line is a legal game from the start, every book move is legal, no position or move is given twice, and every position can be reached from d3 by book moves. Errors give an `InvalidDataException` with the line number.
 
@@ -190,14 +190,14 @@ The checkbox **Stello Opening Book (11,200 canonical positions)** in the setting
 |---|---|
 | Positions / book moves | 11 200 / 22 878 |
 | Leaf moves (the position after them is not in the book) | 11 622 |
-| White's replies to d3 | c5 (−10), c3 (−35), e3 (−126) |
+| White's replies to d3 | c5 (−10), c3 (−29), e3 (−150) |
 | Longest line | 57 plies |
-| Origins | 11 256 backed up, 5 645 heuristic, 2 987 win/loss/draw, 2 990 exact |
+| Origins | 11 256 backed up, 5 546 heuristic, 2 860 win/loss/draw, 3 216 exact |
 | Search effort | 10 531 values searched for 60 s per move (`recalc`, chapter 12); 1 091 exact values from the C++ book |
 | Pass moves | 4 |
 | Files | text 898 KB, binary 193 KB |
 
-Counting d3 as ply 1 and each position at its shortest line, the book has about 500 positions at plies 10–12, then 180–330 per ply up to ply 40; after that fewer and fewer lines continue, down to 26 positions at ply 55. The C++ tree had 23 389 nodes; the import has 511 fewer moves, because a move stored in two lines (or in two frames) is now stored once and moves that could not be played are left out. 14 positions were stored in two frames. After the import all leaves were searched again (chapter 12), and the book now plays another first move in 2 163 positions.
+Counting d3 as ply 1 and each position at its shortest line, the book has about 500 positions at plies 10–12, then 180–330 per ply up to ply 40; after that fewer and fewer lines continue, down to 26 positions at ply 55. The C++ tree had 23 389 nodes; the import has 511 fewer moves, because a move stored in two lines (or in two frames) is now stored once and moves that could not be played are left out. 14 positions were stored in two frames. After the import all leaves were searched again (version 1), and then recalculated with the fixed evaluation (version 2, chapter 12), upgrading 226 positions to exact solutions and changing the first move in 622 positions.
 
 ### The same reply for all four first moves
 

@@ -173,11 +173,11 @@ dotnet run -c Release --project Stello.Net/tools/Stello.BookTool -- verify Stell
 
 The report that `recalc` writes compares with the book at the start of the last run; after a run that was stopped and continued, `compare` against the book in git gives the report of the whole recalculation. Commit the text and the binary book if the match does not show that the old book is stronger.
 
-### The result (October 2026)
+### Initial recalculation: Version 1 (October 2026)
 
-The master book was recalculated with 60 s per position and 8 workers on an Intel i7-12850HX laptop, over about a day, with one restart after a reboot.
+The imported C++ master book was first recalculated with 60 s per position and 8 workers on an Intel i7-12850HX laptop, over about a day, with one restart after a reboot.
 
-| | Before (C++ book) | After |
+| | Before (C++ book) | After (Version 1) |
 |---|---|---|
 | Leaf values searched for 60 s | 0 | 10 531 |
 | Exact / win-loss-draw / heuristic values | 1 091 / 3 384 / 7 132 (and 15 unknown) | 2 990 / 2 987 / 5 645 |
@@ -186,7 +186,26 @@ The master book was recalculated with 60 s per position and 8 workers on an Inte
 | Main line from the start | 16 moves (±39) | 17 moves (±10), the same up to move 11 |
 | Binary file | 172 KB | 193 KB (the efforts are stored) |
 
-2 163 positions got another first move, the first one at ply 3 (after d3 c5 e6 the book now plays f5 instead of d2). In the match from those positions, the recalculated book won 387 pairs 2–0 and lost 292 pairs 0–2; 1 264 pairs were even, 136 ended 1½–½ and 84 ½–1½. In total it scored 52.8 % (95 % interval 51.6–54.0 %), so it is stronger.
+2 163 positions got another first move, the first one at ply 3 (after d3 c5 e6 the book now plays f5 instead of d2). In the match from those positions, the recalculated book won 387 pairs 2–0 and lost 292 pairs 0–2; 1 264 pairs were even, 136 ended 1½–½ and 84 ½–1½. In total it scored 52.8 % (95 % interval 51.6–54.0 %), so it was stronger.
+
+### Evaluation bugfix recalculation: Version 2 (October 2026)
+
+After correcting the leaf evaluation in `Evaluator.cs` (`EdgeContext.Reply`, chapter 04), `OpeningBook.EngineVersion` was bumped to 2 and all 8 623 non-exact leaves were recalculated with 60 s per position using 7 workers:
+
+| | Version 1 (legacy eval) | Version 2 (fixed eval) |
+|---|---|---|
+| Engine version tag | `v1` | `v2` |
+| Exact / win-loss-draw / heuristic values | 2 990 / 2 987 / 5 645 | 3 216 / 2 860 / 5 546 |
+| Newly solved exact endgames | — | +226 (+29 from heuristic, +197 from WLD) |
+| Newly solved win-loss-draw | — | +70 (from heuristic) |
+| Values changed | — | 6 068 (2 455 leaves, 3 334 backed-up) |
+| Positions with another first move | — | 622 |
+| White's replies to d3 | c5 −10, c3 −35, e3 −126 | c5 −10, c3 −29, e3 −150 |
+
+In a paired tournament match between Version 1 and Version 2 across all 265 ply-8 start positions (530 games) at depth 10:
+- Version 2 scored **271.5 of 530 (51.2 %, 95 % interval 50.0 % to 52.4 %)** with **+0.3 discs per game**.
+- Version 2 lost points on only 4 pairs out of 265 (246 tied, 15 won by Version 2, 4 lost).
+- Tool verdict: `Book B is stronger.`
 
 ## Worked example: `stats`
 
@@ -198,12 +217,12 @@ Moves:        22,878
 Leaf moves:   11,622
 Passes:       4
 Longest line: 57 plies
-Replies to d3: c5 (-10, BackedUp), c3 (-35, BackedUp), e3 (-126, BackedUp)
+Replies to d3: c5 (-10, BackedUp), c3 (-29, BackedUp), e3 (-150, BackedUp)
 
 Origin of the values:
-  Heuristic       5,645
-  WinLossDraw     2,987
-  Exact           2,990
+  Heuristic       5,546
+  WinLossDraw     2,860
+  Exact           3,216
   BackedUp       11,256
 
 Search limit of the searched values:

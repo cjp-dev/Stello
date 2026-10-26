@@ -822,7 +822,7 @@ The first step of the book improvement ([Opening book improvment.md](Opening%20b
 ### C# (`Stello.Engine`)
 
 - **`OpeningBook`:** a `Dictionary<BookKey, List<BookEntry>>` from a position in **canonical form** (the smallest bitboards of the four symmetries that keep the start position) to its book moves, stored in that frame. `TryGetMove` makes one lookup instead of trying four symmetries against a position index. `NodeCount` is the number of book moves, `PositionCount` the number of positions. The book starts after d3, as before.
-- **`BookEntry`** (replaces `BookNode`): move, value, `BookOrigin` (`Unknown`, `Heuristic`, `WinLossDraw`, `Exact`, `BackedUp`) and `BookEffort` (search limit, depth reached, engine version; `OpeningBook.EngineVersion` = 1).
+- **`BookEntry`** (replaces `BookNode`): move, value, `BookOrigin` (`Unknown`, `Heuristic`, `WinLossDraw`, `Exact`, `BackedUp`) and `BookEffort` (search limit, depth reached, engine version; `OpeningBook.EngineVersion` starts at 1, bumped to 2 for the evaluation bugfix recalculation).
 - **Files:**
   - `BookTextFormat`: the master book in git, `Stello.Net/Book/opening-book.txt`. One line per position, keyed by its shortest line of book moves from d3 (alphabetically first), with `move:value:origin[:limit:dN:vN]` per book move; deterministic order, so a git diff shows what changed.
   - `BookBinaryFormat`: `"STBK"`, version 2, counts, then the positions depth first from d3 with moves only (positions are found by playing them) and back-references for transpositions. 172 KB for the master book. Used for `Data/OPENING`, `wwwroot/data/OPENING.bin` and the user's book.
@@ -886,9 +886,18 @@ The second step of the book improvement ([Opening book improvment.md](Opening%20
 | Comparison and match | New | |
 | `getvalue`, `mmlib`, `sort_lib` | Moved | Shared by book learning and the book tool; unchanged behaviour. |
 
-### The recalculated master book
+### The recalculated master book: Version 1 (October 2026)
 
 - Run with 60 s per position and 8 workers on an i7-12850HX, about a day including a restart after a reboot. All 10 531 leaf values that were not exact were searched again; exact values went from 1 091 to 2 990, and 0 moves are left not backed up or not sorted.
 - 2 163 positions got another first move. The reply value after the first move went from −39 to −10, and the main line from the start is now 17 moves (`f5 d6 c3 d3 c4 f4 f6 g5 e6 f7 g6 c5 f3 e7 h6 g4 g3`), the same as before up to move 11.
 - Match from the 2 163 changed positions, depth 10, the C++ book as imported against the recalculated book: the recalculated book scored 52.8 % (95 % interval 51.6–54.0 %), +1.1 discs per game; 387 pairs won 2–0, 292 lost 0–2.
 - The binary book grew from 172 to 193 KB (the search effort of each value is stored). Three tests were changed to the new book: the reply value (−10), the main line, and the import test, which now only compares the text and binary books (the C++ book is no longer the same book).
+
+### Version 2 recalculation: leaf evaluation bugfix (October 2026)
+
+- After fixing the leaf evaluation bug in `Evaluator.cs` (`EdgeContext.Reply`, where diagonal threat discounting overwrote the candidate move score instead of penalizing only the candidate reply), `OpeningBook.EngineVersion` was bumped to 2.
+- Recalculated all 8 623 non-exact leaf positions with 60 s per position using 7 workers on an 8-core CPU (~18 hours runtime).
+- 6 068 values changed across the book (2 455 leaves and 3 334 backed-up positions), and 622 positions got another first move.
+- Exact endgame solutions increased by +226 from 2 990 to 3 216 (+29 from heuristic, +197 from win/loss/draw), while 70 heuristic values were upgraded to win/loss/draw.
+- Final master book statistics: 11 200 positions, 22 878 moves (3 216 Exact, 2 860 WinLossDraw, 5 546 Heuristic, 11 256 BackedUp). White's replies to d3: c5 (−10), c3 (−29), e3 (−150).
+- Tournament match between Version 1 and Version 2 across all 265 ply-8 start positions (530 paired games) at depth 10: Version 2 scored 51.2 % (271.5 / 530, 95 % CI [50.0 %, 52.4 %]), +0.3 discs/game, losing points on only 4 pairs out of 265 (246 tied 1–1, 15 won by Version 2, 4 lost). Tool verdict confirmed: `Book B is stronger.`
