@@ -61,6 +61,49 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task Play_InstantReply_WaitsForTheDelay()
+    {
+        MainViewModel vm = Create(engineDelayMs: 0);
+        vm.ComputerDelayMs = 400;
+
+        Play(vm, "f5");
+        await Task.Delay(150);
+        Assert.Equal(1, vm.Game.Ply);
+
+        await vm.Idle.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(2, vm.Game.Ply);
+    }
+
+    [Fact]
+    public async Task Play_SlowReply_IsPlayedWithoutTheDelay()
+    {
+        MainViewModel vm = Create(engineDelayMs: 1200);
+        vm.ComputerDelayMs = 1000;
+
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        Play(vm, "f5");
+        await vm.Idle.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(2, vm.Game.Ply);
+        Assert.True(clock.ElapsedMilliseconds < 1900, $"The search took longer than the delay, so no delay is added ({clock.ElapsedMilliseconds} ms).");
+    }
+
+    [Fact]
+    public async Task MoveNow_SkipsTheDelay()
+    {
+        MainViewModel vm = Create(engineDelayMs: 0);
+        vm.ComputerDelayMs = 10_000;
+
+        Play(vm, "f5");
+        await Task.Delay(100);
+        Assert.True(vm.IsThinking);
+
+        vm.MoveNowCommand.Execute(null);
+        await vm.Idle.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.Equal(2, vm.Game.Ply);
+    }
+
+    [Fact]
     public void Play_IllegalMoveBeeps()
     {
         MainViewModel vm = Create();
@@ -588,11 +631,14 @@ public sealed class MainViewModelTests
         Assert.True(_bookStore.Saves >= 1);
     }
 
+    private static IEngineHost WithDelay(IEngineHost engine, int? delayMs) =>
+        delayMs is { } ms ? new DelayedEngineHost(engine, ms) : engine;
+
     private static Board TestBoard(string moves) => GameRecordFormat.Parse(moves).Board;
 
-    private MainViewModel Create(GameSettings? settings = null, string? notice = null, FakeSettingsStore? store = null) =>
+    private MainViewModel Create(GameSettings? settings = null, string? notice = null, FakeSettingsStore? store = null, int? engineDelayMs = null) =>
         new(
-            new LocalEngineHost(new ComputerPlayer(new SearchEngine(hashBits: 12), _book, new Random(0)), _book, _bookStore),
+            WithDelay(new LocalEngineHost(new ComputerPlayer(new SearchEngine(hashBits: 12), _book, new Random(0)), _book, _bookStore), engineDelayMs),
             _dialogs,
             _files,
             store ?? new FakeSettingsStore(new AppSettings(settings ?? QuickSettings, ShowAnalysis: true, Window: null)),

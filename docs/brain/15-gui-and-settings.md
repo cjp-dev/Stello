@@ -245,6 +245,9 @@ When enabled via **Options $\rightarrow$ Analysis** (`Ctrl+A`), the telemetry si
 | **Speed** | Search throughput in nodes per second (`nps`). |
 | **Time** | Elapsed thinking duration in stopwatch format (`m\:ss\.f`, e.g. `0:05.0`). |
 
+### Natural Feel Delay ($250\text{ ms}$)
+Instant moves, such as opening-book moves and single legal moves, would otherwise appear the moment the human has moved. `MainViewModel` therefore plays a computer move no sooner than $250\text{ ms}$ (`ComputerDelayMs`) after the search started: a search that took $40\text{ ms}$ waits another $210\text{ ms}$, while a search that took longer than $250\text{ ms}$ is played at once. **Move Now** skips the wait. The Analysis panel shows the time of the search itself.
+
 ### Web Worker Engine Host in the Browser
 In Blazor WebAssembly (`Stello.Web`), running deep searches directly on the main UI thread would block JavaScript execution and cause interface stutter. Stello isolates the entire engine within a dedicated **Web Worker**:
 1. `WebEngineHost` transmits move requests as compact JSON messages to `engine-worker.js`.
