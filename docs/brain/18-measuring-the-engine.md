@@ -101,11 +101,12 @@ Measured on 29 October 2026 with the engine as ported from C++, Release build, o
 |---|---:|---:|---:|---:|---:|---:|
 | A 100 ms/move, B 100 ms/move (check of the match itself) | 600 | 49.7 % (46.4–53.1 %) | −2 (−25 to +21) | 0.0 ± 1.0 | 10.47 / 10.47 | 18.7 / 18.7 |
 | A 100 ms/move, B **200 ms/move** | 1 180 | **62.8 %** (60.2–65.3 %) | **+91** (+72 to +110) | +4.3 ± 0.7 | 10.45 / 11.35 | 18.6 / 19.5 |
+| A 500 ms/move, B **1 000 ms/move** | 1 180 | **59.2 %** (56.7–61.6 %) | **+64** (+47 to +82) | +2.5 ± 0.6 | 12.39 / 13.14 | 20.4 / 21.1 |
 
 - **The match is fair:** the same settings on both sides score 50 % within the interval.
-- **Twice the time is worth about +90 Elo** at 100 ms per move: almost one ply deeper in the midgame and the solver taking over about one empty square earlier. So any change that makes the engine twice as fast (a faster evaluation, a faster solver, more threads) is worth roughly this much at this time control. The value of more time usually falls with longer thinking times, so it should be measured again at the time control a change is aimed at.
+- **Twice the time is worth about +90 Elo at 100 ms per move and about +65 Elo at 500 ms per move**: almost one ply deeper in the midgame (0.9 and 0.75 plies) and the solver taking over about one empty square earlier. So any change that makes the engine twice as fast (a faster evaluation, a faster solver, more threads) is worth roughly this much. The value falls with longer thinking times, as in other games, but slowly: five times more time still leaves two thirds of it.
 - About 6 % of the games are drawn, and the 95 % interval of 1 180 games is about ±2.5 % of score (±19 Elo).
-- The reports are in `Plans/benchmark-results/match_100ms_vs_100ms` and `match_100ms_vs_200ms`.
+- The reports are in `Plans/benchmark-results/match_100ms_vs_100ms`, `match_100ms_vs_200ms` and `match_500ms_vs_1000ms` (35 minutes for 1 180 games).
 
 ### Endgame: `solve-bench --to 49`
 
