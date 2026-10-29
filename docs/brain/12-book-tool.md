@@ -137,7 +137,7 @@ Everything except the changed positions is a comment, so the report can be given
 
 ## Playing the books against each other: `match`
 
-`match` (`BookMatch`) plays book A against book B with the same engine and the same search limits, so only the books differ.
+`match` (`BookMatch`) plays book A against book B with the same engine and the same search limits, so only the books differ. It is the engine match of [chapter 18](18-measuring-the-engine.md) (`EngineMatch`) with a book on each side.
 
 - **Start positions:** the lines in a file (`--starts`, normally the report: the positions where the first book move changed, the only places where the books can play differently), or every book position at a ply (`--starts-ply`). `--max-starts` takes the first N.
 - **A pair of games** is played from each start position: first book A plays the side to move and book B the other side, then the other way round. Each side is a `ComputerPlayer` with its own `SearchEngine` (with a cleared hash table) and its own book, used as in a real game. The games are played to the end.
@@ -258,7 +258,7 @@ Only the 1 091 exact values from the C++ book have no known effort; all other le
 | [Options.cs](../../Stello.Net/tools/Stello.BookTool/Options.cs) | `Parse`, `Allow`, `Number`, `Limits` |
 | [BookRecalculator.cs](../../Stello.Net/Stello.Engine/BookRecalculator.cs) | `LeafPositions`, `ToSearch`, `Run` |
 | [BookComparison.cs](../../Stello.Net/Stello.Engine/BookComparison.cs) | `Of`, `Write` |
-| [BookMatch.cs](../../Stello.Net/Stello.Engine/BookMatch.cs) | `Play`, `ReadStarts`, `StartsAtPly`, `MatchSummary.Of` |
+| [BookMatch.cs](../../Stello.Net/Stello.Engine/BookMatch.cs) | `BookMatch.Play`, `ReadStarts`, `StartsAtPly`, `EngineMatch.Play`, `MatchSummary.Of` |
 | [BookSearch.cs](../../Stello.Net/Stello.Engine/BookSearch.cs), [BookMinimax.cs](../../Stello.Net/Stello.Engine/BookMinimax.cs) | `PositionValue`, `Search`; `Run` (shared with book learning) |
 | [ParallelWork.cs](../../Stello.Net/Stello.Engine/ParallelWork.cs) | `Run` (the worker threads) |
 | [BookAnalysis.cs](../../Stello.Net/Stello.Engine/BookAnalysis.cs) | `Statistics`, `Consistency` |

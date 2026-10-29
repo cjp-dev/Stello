@@ -88,7 +88,7 @@ internal static class SearchCommands
                 MatchSummary sofar = MatchSummary.Of(pairs);
                 Console.WriteLine(
                     $"[{pairs.Count,5:N0}/{starts.Count:N0}] {pair.Start} B {pair.PointsB:0.0} " +
-                    $"(discs for B: {pair.BookAFirst.DiscsB:+0;-0;0} and {pair.BookBFirst.DiscsB:+0;-0;0}), " +
+                    $"(discs for B: {pair.AFirst.DiscsB:+0;-0;0} and {pair.BFirst.DiscsB:+0;-0;0}), " +
                     $"B so far {sofar.Score:P1}");
             },
             token));

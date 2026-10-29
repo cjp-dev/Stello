@@ -1,0 +1,110 @@
+{
+  "Command": "solve-bench",
+  "Date": "2026-10-29 14:46",
+  "ProcessorCount": 24,
+  "Limits": "solve",
+  "HashBits": 19,
+  "Passes": 1,
+  "Results": [
+    {
+      "Id": "40",
+      "Empties": 20,
+      "Move": "a2",
+      "Score": 38,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 18003998,
+      "Ms": 1097.2752
+    },
+    {
+      "Id": "41",
+      "Empties": 22,
+      "Move": "h4",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 43973573,
+      "Ms": 2325.2834
+    },
+    {
+      "Id": "42",
+      "Empties": 22,
+      "Move": "g2",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 55502230,
+      "Ms": 2933.8
+    },
+    {
+      "Id": "43",
+      "Empties": 23,
+      "Move": "g3",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 168848898,
+      "Ms": 10230.0337
+    },
+    {
+      "Id": "44",
+      "Empties": 23,
+      "Move": "d2",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 43206934,
+      "Ms": 2618.1433
+    },
+    {
+      "Id": "45",
+      "Empties": 24,
+      "Move": "b2",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 921423413,
+      "Ms": 50370.9539
+    },
+    {
+      "Id": "46",
+      "Empties": 24,
+      "Move": "b3",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 745781507,
+      "Ms": 37735.3013
+    },
+    {
+      "Id": "47",
+      "Empties": 25,
+      "Move": "g2",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 25,
+      "Nodes": 152401503,
+      "Ms": 8354.0856
+    },
+    {
+      "Id": "48",
+      "Empties": 25,
+      "Move": "f6",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 25,
+      "Nodes": 3538801785,
+      "Ms": 165947.6788
+    },
+    {
+      "Id": "49",
+      "Empties": 26,
+      "Move": "e1",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 26,
+      "Nodes": 1720545278,
+      "Ms": 87647.7906
+    }
+  ]
+}

@@ -132,9 +132,9 @@ public class BookRecalculatorTests
         foreach (MatchPair pair in pairs)
         {
             Assert.Equal(1, pair.PointsB);
-            Assert.NotEqual(pair.BookAFirst.BookB, pair.BookBFirst.BookB);
-            AssertFinishedGame(pair.Start, pair.BookAFirst.Moves);
-            AssertFinishedGame(pair.Start, pair.BookBFirst.Moves);
+            Assert.NotEqual(pair.AFirst.ColourB, pair.BFirst.ColourB);
+            AssertFinishedGame(pair.Start, pair.AFirst.Moves);
+            AssertFinishedGame(pair.Start, pair.BFirst.Moves);
         }
 
         Assert.Equal(0.5, MatchSummary.Of(pairs).Score);

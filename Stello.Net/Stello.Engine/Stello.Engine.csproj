@@ -9,6 +9,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Stello.Engine.Tests" />
     <InternalsVisibleTo Include="Stello.BookTool" />
+    <InternalsVisibleTo Include="Stello.Benchmark" />
   </ItemGroup>
 
 </Project>

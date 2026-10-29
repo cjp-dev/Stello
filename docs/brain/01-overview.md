@@ -17,6 +17,7 @@ flowchart LR
     AppTests --> Shared
     EngineTests["Stello.Engine.Tests<br/>engine tests"] --> Engine
     Tool["Stello.BookTool<br/>book tool<br/>net10.0"] --> Engine
+    Bench["Stello.Benchmark<br/>matches and benchmarks<br/>net10.0"] --> Engine
     Text[("Stello.Net/Book/opening-book.txt<br/>master opening book")] -. "build" .-> Tool
     Tool -. "build" .-> Book[("Stello.Net/Book/opening-book.bin")]
     Book -. "copied as Data/OPENING" .-> Wpf
@@ -32,6 +33,7 @@ flowchart LR
 | [Stello.Engine.Tests](../../Stello.Net/Stello.Engine.Tests) | xUnit tests of the engine: perft, evaluation, search, endgame (FFO positions), book, book learning. |
 | [Stello.Net.Tests](../../Stello.Net/Stello.Net.Tests) | xUnit tests of the view models, with fake dialogs, settings and book storage. |
 | [Stello.BookTool](../../Stello.Net/tools/Stello.BookTool) | Console tool for the master opening book: import, format, build, verify, statistics, recalculating the leaves, comparing and matching books (chapter 12). |
+| [Stello.Benchmark](../../Stello.Net/tools/Stello.Benchmark) | Console tool that measures the engine: matches between engine settings, the FFO endgame benchmark and a midgame speed benchmark that also checks that a change kept the search unchanged (chapter 18). |
 
 The master opening book is the text file [Stello.Net/Book/opening-book.txt](../../Stello.Net/Book/opening-book.txt). The book tool builds [opening-book.bin](../../Stello.Net/Book/opening-book.bin) from it, which the WPF app links as `Data/OPENING` and the web app copies to `wwwroot/data/OPENING.bin` when it is built. The engine tests use both files, and the C++ file [Stello C++/OPENING](../../Stello%20C++/OPENING) to test the import (chapter 10).
 

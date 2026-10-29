@@ -56,13 +56,14 @@ The time limit can stop the search at any point; the best move found so far is t
 | 15 | [GUI and settings](15-gui-and-settings.md) | Interface layout, menu commands, settings dialog, opening book and TT memory, real-time analysis |
 | 16 | [Glossary](16-glossary.md) | The terms used in these documents |
 | 17 | [References](17-references.md) | Articles, papers and source code on the internet |
+| 18 | [Measuring the engine](18-measuring-the-engine.md) | Engine matches, the FFO endgame benchmark, the midgame benchmark, and the baseline numbers |
 
 ## Reading paths
 
 - **Everything:** read the chapters in order.
 - **Just the search:** 01, 02, 03, 04, 05, 06, 07, 08, 09.
 - **Just the opening book:** 01, 02 (square numbers), 10, 11, 12.
-- **Tuning the engine:** 04, 05, 06, 07, 08, 09, and phase 8 in [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md#phase-8--performance-tuning-rounds-1-and-2-paused) for what has already been tried, with measurements, and the remaining ideas.
+- **Tuning the engine:** 18 (how to measure a change), 04, 05, 06, 07, 08, 09, and phase 8 in [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md#phase-8--performance-tuning-rounds-1-and-2-paused) for what has already been tried, with measurements, and the remaining ideas.
 - **UI & application architecture:** 01, 13, 14, 15.
 
 ## How to view these documents
