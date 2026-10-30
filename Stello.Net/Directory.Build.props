@@ -1,0 +1,9 @@
+<Project>
+  <!-- Shared by every project under Stello.Net. Stello is licensed under GPL-3.0-only (see LICENSE at the repo root). -->
+  <PropertyGroup>
+    <Authors>Claus Pedersen</Authors>
+    <Copyright>Copyright © 1992–2026 Claus Pedersen</Copyright>
+    <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/cjp-dev/Stello</PackageProjectUrl>
+  </PropertyGroup>
+</Project>

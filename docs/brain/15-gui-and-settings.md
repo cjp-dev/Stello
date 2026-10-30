@@ -102,7 +102,7 @@ The application header features a standardized 4-menu hierarchy providing struct
 * **User guide (`F1`):** Opens this chapter directly, providing immediate access to interface instructions, settings explanations, and shortcut tables.
 * **Rules & Documentation (`Shift+F1`):** Opens the complete Stello Architecture and Rules manual (at `/docs` in the web client, or online documentation for desktop).
 * *(Separator)*
-* **About Stello...:** Displays engine version, author photograph (Claus Pedersen), history of the C++ and C# implementations, and license details.
+* **About Stello...:** Displays engine version, author photograph (Claus Pedersen), history of the C++ and C# implementations, the licence (GPL-3.0-only) and the address of the source code.
 
 > [!NOTE] Dedicated Quick Action Buttons for Undo & Redo
 > In accordance with the tournament GUI specification, Undo and Redo are provided via prominent **Quick Action buttons** beneath the scoreboard and via standard keyboard shortcuts (`Ctrl+Z` / `Ctrl+Y`), keeping the top menus streamlined and uncluttered.

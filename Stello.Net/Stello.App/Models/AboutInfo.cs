@@ -17,5 +17,7 @@ public static class AboutInfo
         "result and plays perfectly.",
         "The C++ original from 1992 was ported to C# and .NET 10 in 2026. The same brain now runs as a Windows program (WPF) and " +
         "in the browser (Blazor WebAssembly).",
+        "Stello is free software under the GNU General Public License version 3 (GPL-3.0-only). The source code is at " +
+        "https://github.com/cjp-dev/Stello.",
     ];
 }
