@@ -247,4 +247,12 @@ All of this lives in `tools/Stello.Benchmark`, which references `Egaroucid.Engin
 | P7 | Docs, report and memory updated; deploy checked |
 
 ## Status
-- (filled in during execution)
+- **Phase 0: done (2026-10-30)**, commit f8b2d01 on main. Pushed; the deploy succeeded. GitHub detects the licence as GPL-3.0. The live About box shows the licence line. Build: 0 warnings, 0 errors. Engine tests: 206/206 green.
+- **Phase 1: done (2026-10-30).** `Stello.Net/tools/Egaroucid.Reference`: `build.sh` (Generic build, `-ffp-contract=off`, about 35 s), the driver `reference.cpp` and `make-fixtures.sh`. Fixtures are in `Stello.Net/Egaroucid.Engine.Tests/Data/egaroucid`:
+  - eval and features for 2,150 positions;
+  - perft;
+  - the MPC table checksum;
+  - book values for 221 positions;
+  - searches of the 100 `midgame.txt` positions at levels 1/5/11/15/21 and FFO #40–44 at level 60, with per-iteration node logs.
+
+  Two runs give identical files once times are dropped from the logs. Reference checks: perft 9 = 3,005,288, and FFO #40–44 give +38/0/+6/−12/−14. Fixture positions come from seeded random games, book walks, `midgame.txt` and FFO, not from the training data.
