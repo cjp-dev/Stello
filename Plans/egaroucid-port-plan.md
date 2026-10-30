@@ -280,3 +280,14 @@ All of this lives in `tools/Stello.Benchmark`, which references `Egaroucid.Engin
   - **Not ported:** the extra pondering of `ai_time_limit` (`ai_get_values`, `ai_align_move_levels`, `request_more_time`).
   - **Recorded in the findings:** the clog search and the book exit can take longer than a short time limit.
   - **Tests:** 22 tests, all green.
+- **Phase 5: done (2026-10-30).** In `tools/Stello.Benchmark`:
+  - **Matches:** `IMatchPlayer` in `EngineMatch` (Stello: `StelloMatchPlayer`; the port: `EgaroucidPlayer`, which reverses the bit order and passes itself). New side keys `engine=`, `level=`, `book=` (both engines), `book-acc=` and `seed=`. An Egaroucid side's `hash-bits` is its table size; the default 21 takes Stello's memory. Match reports measure wall time per move, with the longest move.
+  - **Benchmarks:** `solve-bench` and `mid-bench` take `--engine egaroucid` (`mid-bench` also `--mpc` and `--level`).
+  - **New commands:** `eval-compare` (training data, MAE and correlation per group of empty squares, Stello's scale fitted); `make-exact` (300 positions at 28/26/24 empty squares with every move solved exactly, committed as `Data/midgame-exact.txt`); `mid-quality` (disc loss at 50/200/1000 ms).
+  - **Tests:** 11 adapter tests in `Egaroucid.Engine.Tests` (33 in all).
+  - **Results:** [egaroucid-comparison-report.md](egaroucid-comparison-report.md).
+    - Egaroucid scores 87.1 % at 100 ms (+331 Elo) and 94.6 % at 500 ms (+497), and 94.4 % with both books.
+    - Evaluation error 4.0 against 11.1 discs.
+    - `mid-quality`: Egaroucid's loss falls from 1.23 to 0.51 discs from 50 to 1000 ms, Stello's from 1.61 to 1.38.
+    - FFO #40–49: 25.6 s against 369 s.
+  - **Not done:** hybrids (deferred to the improved-engine step, as planned).

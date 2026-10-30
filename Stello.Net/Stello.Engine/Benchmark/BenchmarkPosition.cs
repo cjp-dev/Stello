@@ -9,6 +9,9 @@ namespace Stello.Engine.Benchmark;
 /// <param name="BestMoves">The moves that reach <paramref name="Score"/>.</param>
 internal sealed record BenchmarkPosition(string Id, Board Board, Player Player, int? Score, IReadOnlyList<Square> BestMoves)
 {
+    /// <summary>The moves with an exact score in the line, in the order given.</summary>
+    public IReadOnlyList<(Square Move, int Score)> MoveScores { get; init; } = [];
+
     /// <exception cref="FormatException">A line is not a position in the format above.</exception>
     public static List<BenchmarkPosition> Read(TextReader reader)
     {
@@ -63,10 +66,11 @@ internal sealed record BenchmarkPosition(string Id, Board Board, Player Player, 
 
         int? best = scored.Count > 0 ? scored.Max(s => s.Score) : null;
         Square[] bestMoves = scored.Where(s => s.Score == best).Select(s => s.Move).ToArray();
-        return new BenchmarkPosition(head[0], board, player, best, bestMoves);
+        return new BenchmarkPosition(head[0], board, player, best, bestMoves) { MoveScores = scored };
     }
 
-    /// <summary>The line for this position, without scores.</summary>
+    /// <summary>The line for this position, with <see cref="MoveScores"/> if there are any.</summary>
     public string Format() =>
-        $"{Id} {Board.ToString().Replace("\n", "", StringComparison.Ordinal)} {(Player == Player.Black ? 'X' : 'O')}";
+        $"{Id} {Board.ToString().Replace("\n", "", StringComparison.Ordinal)} {(Player == Player.Black ? 'X' : 'O')}" +
+        string.Concat(MoveScores.Select(m => $"; {m.Move.ToString().ToUpperInvariant()}:{m.Score:+0;-0;0}"));
 }

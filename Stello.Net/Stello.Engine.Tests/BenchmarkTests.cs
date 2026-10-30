@@ -132,8 +132,10 @@ public class BenchmarkTests
         var midgame = new SearchResult(Move.Pass, 5, ScoreKind.Heuristic, 8, 1000, 900, TimeSpan.FromMilliseconds(3));
         var solved = new SearchResult(Move.Pass, 2, ScoreKind.Exact, 18, 5000, 4000, TimeSpan.FromMilliseconds(7));
 
-        SideStats stats = default(SideStats).Add(book, 50).Add(single, 40).Add(midgame, 30).Add(solved, 18).Add(solved, 16);
+        SideStats stats = default(SideStats)
+            .Add(book, 50, TimeSpan.FromMilliseconds(1)).Add(single, 40, TimeSpan.FromMilliseconds(1))
+            .Add(midgame, 30, midgame.Elapsed).Add(solved, 18, solved.Elapsed).Add(solved, 16, TimeSpan.FromMilliseconds(8));
 
-        Assert.Equal(new SideStats(3, 11_000, TimeSpan.FromMilliseconds(17), 1, 8, 18), stats);
+        Assert.Equal(new SideStats(3, 11_000, TimeSpan.FromMilliseconds(18), 1, 8, 18, TimeSpan.FromMilliseconds(8)), stats);
     }
 }

@@ -3,7 +3,9 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Stello.BookTool;
+using Stello.Egaroucid;
 using Stello.Engine;
+using Board = Stello.Engine.Board;
 
 namespace Stello.Benchmark;
 
@@ -19,15 +21,15 @@ internal static class MatchCommands
     public static int Match(Options options)
     {
         options.Allow("a", "b", "starts", "max-starts", "workers", "name");
-        MatchSide a = ParseSide(options.Text("a") ?? throw new ArgumentException("Give side A with --a, e.g. --a time-ms=100."), "A");
-        MatchSide b = ParseSide(options.Text("b") ?? throw new ArgumentException("Give side B with --b, e.g. --b time-ms=200."), "B");
+        MatchSide a = ParseSide(options.Text("a") ?? throw new ArgumentException("Give side A with --a, e.g. --a time-ms=100."));
+        MatchSide b = ParseSide(options.Text("b") ?? throw new ArgumentException("Give side B with --b, e.g. --b time-ms=200."));
         List<string> starts = LoadStarts(options.Text("starts"));
         starts = starts.Take(options.Number("max-starts", starts.Count, 1, int.MaxValue)).ToList();
         int workers = options.Number("workers", Math.Max(1, Environment.ProcessorCount / 2), 1, 256);
         string name = options.Text("name") ?? $"{FileName(a.Name)}_vs_{FileName(b.Name)}";
 
         Console.WriteLine($"match: A = {a.Name} ({Describe(a)}), B = {b.Name} ({Describe(b)})");
-        Console.WriteLine($"{starts.Count:N0} start positions, 2 games each, {workers} games at a time, no opening book.");
+        Console.WriteLine($"{starts.Count:N0} start positions, 2 games each, {workers} games at a time, 1 thread per engine.");
 
         var pairs = new List<MatchPair>();
         var clock = Stopwatch.StartNew();
@@ -107,32 +109,63 @@ internal static class MatchCommands
     }
 
     /// <summary>
-    /// A side such as <c>time-ms=100</c>, <c>depth=8</c> or <c>game-s=60,hash-bits=20,name=new</c>.
+    /// A side such as <c>time-ms=100</c>, <c>depth=8</c>, <c>game-s=60,hash-bits=20,name=new</c> or
+    /// <c>engine=egaroucid,time-ms=100,book=on</c>.
     /// </summary>
     /// <exception cref="ArgumentException">The text is not a valid side.</exception>
-    public static MatchSide ParseSide(string text, string defaultName)
+    public static MatchSide ParseSide(string text)
     {
-        SearchLimits? limits = null;
-        int hashBits = SearchLimits.DefaultHashBits;
+        TimeControlMode? mode = null;
+        int amount = 0;
+        bool egaroucid = false;
+        bool useBook = false;
+        int? hashBits = null;
+        int bookAccuracy = 0;
+        int seed = 1;
         string? name = null;
+        var keys = new HashSet<string>();
         foreach (string part in text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
             string[] keyValue = part.Split('=', 2, StringSplitOptions.TrimEntries);
             string key = keyValue[0];
             string value = keyValue.Length == 2 ? keyValue[1] : throw new ArgumentException($"Expected key=value in the side \"{text}\": {part}");
+            keys.Add(key);
             switch (key)
             {
+                case "engine":
+                    egaroucid = value switch
+                    {
+                        "stello" => false,
+                        "egaroucid" => true,
+                        _ => throw new ArgumentException($"engine must be stello or egaroucid in the side \"{text}\"."),
+                    };
+                    break;
                 case "time-ms":
-                    SetLimits(SearchLimits.TimePerMove(TimeSpan.FromMilliseconds(Number(key, value, 1, 3_600_000)), useOpeningBook: false));
+                    SetLimit(TimeControlMode.TimePerMove, Number(key, value, 1, 3_600_000));
                     break;
                 case "game-s":
-                    SetLimits(SearchLimits.TimePerGame(TimeSpan.FromSeconds(Number(key, value, 1, 36_000)), useOpeningBook: false));
+                    SetLimit(TimeControlMode.TimePerGame, Number(key, value, 1, 36_000));
                     break;
                 case "depth":
-                    SetLimits(SearchLimits.FixedDepth(Number(key, value, 1, 60), useOpeningBook: false));
+                case "level":
+                    SetLimit(TimeControlMode.FixedDepth, Number(key, value, 1, 60));
                     break;
                 case "hash-bits":
                     hashBits = Number(key, value, 10, 26);
+                    break;
+                case "book":
+                    useBook = value switch
+                    {
+                        "on" => true,
+                        "off" => false,
+                        _ => throw new ArgumentException($"book must be on or off in the side \"{text}\"."),
+                    };
+                    break;
+                case "book-acc":
+                    bookAccuracy = Number(key, value, 0, 10);
+                    break;
+                case "seed":
+                    seed = Number(key, value, 0, int.MaxValue);
                     break;
                 case "name":
                     name = value;
@@ -142,18 +175,92 @@ internal static class MatchCommands
             }
         }
 
-        if (limits is null)
+        if (mode is null)
         {
-            throw new ArgumentException($"The side \"{text}\" needs time-ms, game-s or depth.");
+            throw new ArgumentException($"The side \"{text}\" needs time-ms, game-s, {(egaroucid ? "level" : "depth")}.");
         }
 
-        return new MatchSide(name ?? text, limits, hashBits);
+        foreach ((string key, bool allowed) in new[]
+        {
+            ("depth", !egaroucid), ("level", egaroucid), ("book-acc", egaroucid), ("seed", egaroucid),
+        })
+        {
+            if (keys.Contains(key) && !allowed)
+            {
+                throw new ArgumentException($"{key} is only for {(egaroucid ? "engine=stello" : "engine=egaroucid")} (side \"{text}\").");
+            }
+        }
 
-        void SetLimits(SearchLimits value) =>
-            limits = limits is null ? value : throw new ArgumentException($"Give only one of time-ms, game-s and depth in the side \"{text}\".");
+        SearchLimits limits = mode switch
+        {
+            TimeControlMode.TimePerMove => SearchLimits.TimePerMove(TimeSpan.FromMilliseconds(amount), useBook),
+            TimeControlMode.TimePerGame => SearchLimits.TimePerGame(TimeSpan.FromSeconds(amount), useBook),
+            _ => SearchLimits.FixedDepth(amount, useBook),
+        };
+        string limitText = mode switch
+        {
+            TimeControlMode.TimePerMove => $"{amount} ms/move",
+            TimeControlMode.TimePerGame => $"{amount} s/game",
+            _ => egaroucid ? $"level {amount}" : $"depth {amount}",
+        };
+
+        if (!egaroucid)
+        {
+            int bits = hashBits ?? SearchLimits.DefaultHashBits;
+            OpeningBook? book = useBook ? OpeningBook.Load(Program.DataFile("opening-book.txt")) : null;
+            return new MatchSide(name ?? text, limits, bits, book,
+                Description: $"Stello, {limitText}, hash bits {bits}, {(useBook ? "book" : "no book")}");
+        }
+
+        // 2^21 slots of 24 bytes take as much memory as Stello's default: two tables of 2^19 slots of two 24-byte entries.
+        int tableBits = hashBits ?? EgaroucidDefaultTableBits;
+        if (tableBits > HashTables.DefaultHashLevel)
+        {
+            throw new ArgumentException($"hash-bits for engine=egaroucid is at most {HashTables.DefaultHashLevel} (side \"{text}\").");
+        }
+
+        LoadEgaroucid();
+        Book? egaroucidBook = useBook ? EgaroucidResources.Book : null;
+        if (useBook && egaroucidBook!.Count == 0)
+        {
+            throw new ArgumentException($"Egaroucid's book.egbk3 is not in {EgaroucidResources.LoadedDirectory}.");
+        }
+
+        return new MatchSide(name ?? text, limits, tableBits,
+            CreatePlayer: () => new EgaroucidPlayer(tableBits, egaroucidBook, bookAccuracy, seed),
+            Description: $"Egaroucid port, {limitText}, table bits {tableBits}, " +
+                (useBook ? $"book (accuracy {bookAccuracy}, seed {seed})" : "no book"));
+
+        void SetLimit(TimeControlMode value, int number)
+        {
+            if (mode is not null)
+            {
+                throw new ArgumentException($"Give only one of time-ms, game-s and depth/level in the side \"{text}\".");
+            }
+
+            mode = value;
+            amount = number;
+        }
     }
 
-    public static string Describe(MatchSide side) => (side.Limits.Mode switch
+    /// <summary>The transposition table size of an Egaroucid side: as much memory as Stello's default hash size.</summary>
+    public const int EgaroucidDefaultTableBits = 21;
+
+    /// <summary>Loads Egaroucid's resources (see <see cref="EgaroucidResources.FindDirectory"/>) before the first Egaroucid search.</summary>
+    /// <exception cref="ArgumentException">They were not found.</exception>
+    public static void LoadEgaroucid()
+    {
+        try
+        {
+            EgaroucidResources.Load();
+        }
+        catch (DirectoryNotFoundException exception)
+        {
+            throw new ArgumentException(exception.Message, exception);
+        }
+    }
+
+    public static string Describe(MatchSide side) => side.Description ?? (side.Limits.Mode switch
     {
         TimeControlMode.FixedDepth => $"depth {side.Limits.Depth}",
         TimeControlMode.TimePerMove => $"{side.Limits.Time.TotalMilliseconds:0} ms/move",

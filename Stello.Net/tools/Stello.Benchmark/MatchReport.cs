@@ -7,7 +7,11 @@ namespace Stello.Benchmark;
 /// <summary>How one side played over the whole match.</summary>
 /// <param name="MidgameDepth">The average depth of the moves that ended in the midgame search.</param>
 /// <param name="FirstSolve">The average number of empty squares at which the side first solved a game, over the games it solved.</param>
-internal sealed record SideSummary(string Name, string Settings, int SearchedMoves, double NodesPerSecond, double MidgameDepth, double FirstSolve, double SecondsPerGame)
+/// <param name="MsPerSearchedMove">The average wall time of a searched move.</param>
+/// <param name="LongestMoveMs">The longest wall time of a move in the match.</param>
+internal sealed record SideSummary(
+    string Name, string Settings, int SearchedMoves, double NodesPerSecond, double MidgameDepth, double FirstSolve, double SecondsPerGame,
+    double MsPerSearchedMove = 0, double LongestMoveMs = 0)
 {
     public static SideSummary Of(MatchSide side, IEnumerable<SideStats> games)
     {
@@ -23,7 +27,9 @@ internal sealed record SideSummary(string Name, string Settings, int SearchedMov
             seconds > 0 ? nodes / seconds : 0,
             midgameMoves > 0 ? (double)list.Sum(s => s.MidgameDepth) / midgameMoves : 0,
             solved.Count > 0 ? solved.Average(s => s.FirstSolve) : 0,
-            list.Count > 0 ? seconds / list.Count : 0);
+            list.Count > 0 ? seconds / list.Count : 0,
+            list.Sum(s => s.Searched) > 0 ? 1000 * seconds / list.Sum(s => s.Searched) : 0,
+            list.Count > 0 ? list.Max(s => s.Longest.TotalMilliseconds) : 0);
     }
 }
 
@@ -95,6 +101,7 @@ internal sealed record MatchReport(
         text.AppendLine(CultureInfo.InvariantCulture, $"| First solve (empty squares, average) | {A.FirstSolve:0.0} | {B.FirstSolve:0.0} |");
         text.AppendLine(CultureInfo.InvariantCulture, $"| Nodes per second | {A.NodesPerSecond / 1e6:0.00}M | {B.NodesPerSecond / 1e6:0.00}M |");
         text.AppendLine(CultureInfo.InvariantCulture, $"| Thinking time per game | {A.SecondsPerGame:0.0} s | {B.SecondsPerGame:0.0} s |");
+        text.AppendLine(CultureInfo.InvariantCulture, $"| Time per searched move (average / longest) | {A.MsPerSearchedMove:0} / {A.LongestMoveMs:0} ms | {B.MsPerSearchedMove:0} / {B.LongestMoveMs:0} ms |");
         text.AppendLine();
         text.AppendLine(CultureInfo.InvariantCulture,
             $"B scored **{Score:P1}** (95 % interval {ScoreLow:P1} to {ScoreHigh:P1}), Elo **{Signed(Elo)}** ({Signed(EloLow)} to {Signed(EloHigh)}), " +

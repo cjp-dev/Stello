@@ -18,8 +18,8 @@ What porting the Egaroucid engine to C# has taught us, written down as we go: ho
 | 2 Foundations | done | Board, flips, hash, stability and evaluation are exactly equal to C++ |
 | 3 Single-threaded search | done | All reference searches are exactly equal, node for node |
 | 4 Time management and book | done | Book values exactly equal to C++; the time mode works, but at short times the unlimited clog search and the book exit can take longer than the limit |
-| 5 Comparison with Stello | next | |
-| 6 Multi-threading (YBWC) | | |
+| 5 Comparison with Stello | done | Egaroucid is 330–500 Elo stronger on 1 thread. Mostly its evaluation: its moves get better with time, Stello's hardly do ([report](egaroucid-comparison-report.md)) |
+| 6 Multi-threading (YBWC) | next | |
 | 7 Docs | | |
 
 ## Egaroucid compared with Stello
@@ -106,7 +106,7 @@ Some behaviour of the C++ code is surprising. Exact parity needs it reproduced, 
 
 None of these changes a result; the parity tests check that.
 
-- **Bit order:** the port keeps Egaroucid's (a1 = bit 63), so the C# can be read next to the C++. The conversion to Stello's board happens in the match adapter (phase 5).
+- **Bit order:** the port keeps Egaroucid's (a1 = bit 63), so the C# can be read next to the C++. The match adapter (`EgaroucidPlayer`) converts Stello's board by reversing the 64 bits: a1 = bit 0 becomes bit 63, and a move `policy` is Stello's square 63 − policy. A test plays 50 random games on both boards side by side.
 - **Flips:** computed along rays with bit scans instead of the C++ lookup tables. The flipped discs are given by the rules.
 - **Flips of the last move** (`count_last_flip`): computed with the flip code instead of the tables. These are the same numbers.
 - **Weights:** one table (73.5 MB) and a second, colour-swapped view of the features, instead of a second, colour-swapped copy of every table (147 MB). The Generic build does not clamp weights to ±4092, and neither does the port.
@@ -119,6 +119,9 @@ None of these changes a result; the parity tests check that.
 - **Time mode, stopping:** a stop from outside (Move Now) also ends the current iteration, because the iteration's flag has the outer flag as its parent.
 - **Time mode, always a move:** if a stop comes before the first iteration has finished (for example during the clog search), a level-1 search gives the move. C++ can return no move then.
 - **Time per game, extra pondering left out:** with 38 or more empty squares and at least 2 s for the move, C++ first runs `ai_get_values` (600 ms), then `ai_align_move_levels` and possibly `request_more_time`, to decide whether a move deserves extra time. These are left out (about 400 C++ lines of ponder and self-play machinery). Phase 5 uses mostly time per move; if time-per-game matches matter, this can be ported then.
+
+- **The match adapter passes itself** (because of the pass quirk above). It also keeps the transposition table through a game, as Egaroucid's GUI does, and clears it before the next.
+- **How the adapter reports a search:** a book move is `Book` (even when the out-of-book check searched); an exact endgame at 100 % is `Exact`; everything else is `Heuristic`, including selective endgame searches. Match reports therefore count those in Egaroucid's "midgame depth".
 
 ## Measurements
 
@@ -136,23 +139,34 @@ All on 1 thread, on an Intel i7-12850HX laptop VM; timings vary by up to about 8
 | Loading the book (1,302,322 positions) | 0.22 s | — | — | about 50 MB in a `Dictionary` |
 | 200 ms per move, `midgame.txt` | depth 10 at 100 %, clog search 23–90 ms | — | — | |
 | Smoke match: port vs port, 100 ms per move, book on, 20 games | no illegal moves, 54 book moves, 1,146 searched | — | — | 1 m 21 s; slowest moves about 200 ms (book exit, clog search) |
+| FFO #40–49, exact, table 2^21 slots (Stello's memory) | 25.6 s (518,943,586 nodes) | — | 369 s | 2^25 slots: 25.9 s; the table size does not matter here |
+| `mid-bench`, depth 10, 100 positions | 4.92 s at 100 %, 4.08 s at 74 % | — | 6.81 s | port 33.1 M nodes (6.7 M/s), Stello 23.5 M (3.5 M/s) |
+| `eval-compare`, 267,174 training positions, mean error against the final score | 3.96 discs (r 0.969) | — | 11.07 discs (r 0.764) | Stello's scale fitted: 75 units per disc overall, 20 → 113 over the game |
+| Evaluations per second from scratch | 0.33 M | — | 2.14 M | the port updates features incrementally in search |
+| `mid-quality`, 300 positions at 28–24 empty squares, discs lost per move at 50 / 200 / 1000 ms | 1.23 / 0.95 / 0.51 | — | 1.61 / 1.65 / 1.38 | best move 73 / 76 / 87 % against 66 / 65 / 69 % |
+| Match, 100 ms per move, no books, 1,180 games | **87.1 %** (85.3–88.8), +331 Elo | — | 12.9 % | port thinks 20 % longer per game; its longest move 488 ms (clog search) |
+| Match, 500 ms per move, no books | **94.6 %** (93.4–95.7), +497 Elo | — | 5.4 % | the same thinking time within 3 % |
+| Match, 500 ms per move, both books | **94.4 %** (93.2–95.6), +490 Elo | — | 5.6 % | the books change nothing |
+| Solving every move of 300 positions at 28–24 empty squares (`make-exact`) | 1 h 23 m on 12 threads | — | — | Stello agrees on the 4 positions checked (Stello took 251 s for those 4 at 24 empty squares) |
 
-- **What counts as a node differs:** the two engines count nodes differently, so their node rates can't be compared. Stello's mid-bench gives 3.3 M nodes/s; time to a given strength is what phase 5 measures.
-- **The 13× endgame gap:** Stello solves exactly, while Egaroucid at level 60 steps up through the selectivities. Part of the gap may be that staging.
+- **What counts as a node differs:** the two engines count nodes differently, so their node rates can't be compared. Time to a given strength is what counts; phase 5 measured it with matches and `mid-quality`.
+- **The 13–14× endgame gap:** Stello solves exactly, while Egaroucid at level 60 steps up through the selectivities. Part of the gap may be that staging. In games at 500 ms both engines still first solve at about 20 empty squares, because Egaroucid's time mode solves at 74 % and spends its time on the midgame.
+- **Depth says little across engines:** at 100 ms Stello searches deeper (10.4 against 8.8 plies) and scores 13 %.
 
 ## Ideas for the improved engine
 
-These are hypotheses until phase 5 has measured them.
+Phase 5 measured where the strength difference comes from ([report](egaroucid-comparison-report.md)). The order below follows the expected gain.
 
-- **The endgame solver is the clearest gap:** 13× on FFO #40–49. The candidate causes, to be tested one by one:
+- **The endgame solver:** 14× on FFO #40–49, but in games at 500 ms it decides less than that suggests (both first solve at about 20 empty squares). It matters most for analysis and long time controls. The candidate causes, to be tested one by one:
   - the selectivity staging that fills the transposition table;
   - ordering by a small trained evaluation from 11 to 13 empty squares;
   - the local table;
   - stability cutoffs;
   - neighbour checks in the last 4 squares.
-- **Pattern evaluation with incremental features:** a stronger evaluation, and 64 lookups per leaf instead of Stello's mailbox and mobility counts.
+- **Pattern evaluation with incremental features — measured as the main gap.** Its error is 4.0 discs against Stello's 11.1, flat over the game, while Stello's scale drifts 5-fold. In `mid-quality`, Stello's moves hardly improve with 20× more time. Searching deeper with a biased evaluation does not remove the bias. It costs 64 lookups per leaf instead of Stello's mailbox and mobility counts.
 - **Multi-ProbCut with a fitted error model,** instead of Stello's fixed margin.
 - **Scores in discs everywhere:** midgame and endgame values then share one scale, and the book can mix them.
 - **The transposition table:** bounds plus two moves per slot, and clearing importance instead of having two separate tables.
-- **The clog search:** a cheap guard against missing a quick wipe-out in a selective search. On one thread at short time controls it is not cheap, though, so it needs a depth or time limit there.
+- **The clog search:** a cheap guard against missing a quick wipe-out in a selective search. On one thread at short time controls it is not cheap, though: at 100 ms the port thinks 20 % longer per game, with moves up to 488 ms. It needs a depth or time limit there.
+- **Stello's time use:** it starts no new iteration after 2/3 of the move's time, so at 500 ms it uses 313 ms on average. A better estimate of the next iteration's cost gives free strength.
 - **Leaving the book:** checking the moves outside the book against the best book value, as Egaroucid does, guards against weak book lines. It needs its own time budget.

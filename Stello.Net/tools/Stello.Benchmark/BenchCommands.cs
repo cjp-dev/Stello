@@ -11,7 +11,11 @@ namespace Stello.Benchmark;
 internal sealed record BenchResult(string Id, int Empties, string Move, int Score, string Kind, int Depth, long Nodes, double Ms);
 
 /// <summary>A benchmark run as saved by --out and read by --compare.</summary>
-internal sealed record BenchRun(string Command, string Date, int ProcessorCount, string Limits, int HashBits, int Passes, IReadOnlyList<BenchResult> Results);
+internal sealed record BenchRun(string Command, string Date, int ProcessorCount, string Limits, int HashBits, int Passes, IReadOnlyList<BenchResult> Results)
+{
+    /// <summary>stello or egaroucid; runs saved before the Egaroucid port have no engine and are Stello's.</summary>
+    public string Engine { get; init; } = "stello";
+}
 
 /// <summary>The speed benchmarks: solve-bench, mid-bench, and make-positions for the mid-bench positions.</summary>
 internal static class BenchCommands
@@ -20,7 +24,7 @@ internal static class BenchCommands
 
     public static int SolveBench(Options options)
     {
-        options.Allow("positions", "from", "to", "passes", "hash-bits", "out", "compare");
+        options.Allow("positions", "from", "to", "passes", "hash-bits", "out", "compare", "engine");
         List<BenchmarkPosition> all = BenchmarkPosition.Load(options.Text("positions") ?? Program.DataFile("ffo-40-59.txt"));
         int from = options.Number("from", 40, 0, int.MaxValue);
         int to = options.Number("to", 44, 0, int.MaxValue);
@@ -28,7 +32,7 @@ internal static class BenchCommands
             .Where(p => !int.TryParse(p.Id, out int id) || (id >= from && id <= to))
             .ToList();
 
-        BenchRun run = Run("solve-bench", positions, SearchLimits.Solve, "solve", options);
+        BenchRun run = Run("solve-bench", positions, BenchSearcher.Create(options, SearchLimits.Solve, "solve"), options);
         int wrong = 0;
         Console.WriteLine();
         Console.WriteLine("| # | Empty | Score | Move | Nodes | Time | Nodes/s |");
@@ -55,11 +59,11 @@ internal static class BenchCommands
 
     public static int MidBench(Options options)
     {
-        options.Allow("positions", "depth", "passes", "hash-bits", "out", "compare");
+        options.Allow("positions", "depth", "passes", "hash-bits", "out", "compare", "engine", "mpc", "level");
         List<BenchmarkPosition> positions = BenchmarkPosition.Load(options.Text("positions") ?? Program.DataFile("midgame.txt"));
         int depth = options.Number("depth", 10, 1, 60);
 
-        BenchRun run = Run("mid-bench", positions, SearchLimits.FixedDepth(depth), $"depth {depth}", options);
+        BenchRun run = Run("mid-bench", positions, BenchSearcher.Create(options, SearchLimits.FixedDepth(depth), $"depth {depth}"), options);
         Console.WriteLine();
         Console.WriteLine("| Empty squares | Positions | Nodes | Time | Nodes/s |");
         Console.WriteLine("|---:|---:|---:|---:|---:|");
@@ -81,21 +85,41 @@ internal static class BenchCommands
         List<string> starts = MatchCommands.LoadStarts(options.Text("starts"));
         int games = options.Number("games", 20, 1, starts.Count);
         int depth = options.Number("depth", 6, 1, 20);
-        int[] empties = (options.Text("empties") ?? "48,42,36,30,26")
-            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .Select(text => int.TryParse(text, out int e) && e is >= 1 and <= 59 ? e : throw new ArgumentException("--empties must be numbers from 1 to 59."))
-            .ToArray();
+        int[] empties = NumberList(options, "empties", "48,42,36,30,26", 1, 59);
         string path = options.Text("out") ?? Program.DataFile("midgame.txt");
 
-        var engine = new SearchEngine(16);
         var lines = new List<string>
         {
             $"# Midgame positions for mid-bench: from the first {games} start positions in starts.txt, the engine played itself at",
             $"# depth {depth} without the book; a position was taken when {string.Join(", ", empties)} squares were empty",
             "# (or the first position after that with at least two legal moves).",
         };
+        lines.AddRange(SelfPlayPositions(starts, 0, games, depth, empties).Select(p => p.Format()));
 
-        for (int game = 0; game < games; game++)
+        File.WriteAllLines(path, lines);
+        Console.WriteLine($"Wrote {lines.Count(l => !l.StartsWith('#'))} positions to {path}.");
+        return 0;
+    }
+
+    /// <summary>A comma-separated list of whole numbers from <paramref name="min"/> to <paramref name="max"/>.</summary>
+    /// <exception cref="ArgumentException">The option is not such a list.</exception>
+    public static int[] NumberList(Options options, string name, string defaultValue, int min, int max) =>
+        (options.Text(name) ?? defaultValue)
+            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Select(text => int.TryParse(text, out int n) && n >= min && n <= max ? n : throw new ArgumentException($"--{name} must be numbers from {min} to {max}."))
+            .ToArray();
+
+    /// <summary>
+    /// Positions from games Stello plays against itself at <paramref name="depth"/> without the book, from the start
+    /// positions <paramref name="first"/> to <paramref name="first"/> + <paramref name="games"/> − 1: one when each of
+    /// <paramref name="empties"/> squares are empty, or the first position after that with at least two legal moves.
+    /// The ids are g&lt;game&gt;e&lt;empties&gt;, the game counted from 1.
+    /// </summary>
+    public static List<BenchmarkPosition> SelfPlayPositions(List<string> starts, int first, int games, int depth, int[] empties)
+    {
+        var engine = new SearchEngine(16);
+        var positions = new List<BenchmarkPosition>();
+        for (int game = first; game < first + games; game++)
         {
             (Board board, Player player) = BookTextFormat.Replay(starts[game]);
             var wanted = new Queue<int>(empties.OrderDescending());
@@ -109,7 +133,7 @@ internal static class BenchCommands
 
                 if (board.EmptyCount <= wanted.Peek() && BitOperations.PopCount(board.LegalMoves(player)) >= 2)
                 {
-                    lines.Add(new BenchmarkPosition($"g{game + 1:00}e{wanted.Dequeue()}", board, player, null, []).Format());
+                    positions.Add(new BenchmarkPosition($"g{game + 1:00}e{wanted.Dequeue()}", board, player, null, []));
                     while (wanted.Count > 0 && wanted.Peek() >= board.EmptyCount)
                     {
                         wanted.Dequeue();
@@ -123,14 +147,12 @@ internal static class BenchCommands
             }
         }
 
-        File.WriteAllLines(path, lines);
-        Console.WriteLine($"Wrote {lines.Count(l => !l.StartsWith('#'))} positions to {path}.");
-        return 0;
+        return positions;
     }
 
     // Interleaved passes (every position once, then again), so a slow moment of the machine does not hit one position
     // in every pass; the fastest time of each position counts. Each search starts with empty hash tables.
-    private static BenchRun Run(string command, List<BenchmarkPosition> positions, SearchLimits limits, string limitText, Options options)
+    private static BenchRun Run(string command, List<BenchmarkPosition> positions, BenchSearcher searcher, Options options)
     {
         if (positions.Count == 0)
         {
@@ -138,10 +160,8 @@ internal static class BenchCommands
         }
 
         int passes = options.Number("passes", command == "solve-bench" ? 1 : 3, 1, 100);
-        int hashBits = options.Number("hash-bits", SearchLimits.DefaultHashBits, 10, 26);
-        var engine = new SearchEngine(hashBits);
         var best = new BenchResult[positions.Count];
-        Console.WriteLine($"{command}: {positions.Count} positions, {limitText}, hash bits {hashBits}, {passes} pass(es).");
+        Console.WriteLine($"{command}: {positions.Count} positions, {searcher.Description}, {passes} pass(es).");
 
         for (int pass = 1; pass <= passes; pass++)
         {
@@ -150,8 +170,7 @@ internal static class BenchCommands
             for (int i = 0; i < positions.Count; i++)
             {
                 BenchmarkPosition position = positions[i];
-                engine.ClearHash();
-                SearchResult result = engine.Search(position.Board, position.Player, limits);
+                SearchResult result = searcher.Search(position);
                 var current = new BenchResult(
                     position.Id, position.Board.EmptyCount, result.Move.ToString(), result.Score, result.Kind.ToString(),
                     result.Depth, result.Nodes, result.Elapsed.TotalMilliseconds);
@@ -172,7 +191,10 @@ internal static class BenchCommands
             Console.WriteLine($"  pass {pass}: {nodes:N0} nodes in {clock.Elapsed.TotalSeconds:0.00} s");
         }
 
-        return new BenchRun(command, DateTime.Now.ToString("yyyy-MM-dd HH:mm"), Environment.ProcessorCount, limitText, hashBits, passes, best);
+        return new BenchRun(command, DateTime.Now.ToString("yyyy-MM-dd HH:mm"), Environment.ProcessorCount, searcher.Limits, searcher.HashBits, passes, best)
+        {
+            Engine = searcher.Engine,
+        };
     }
 
     private static void WriteTotal(BenchRun run, string firstColumns)

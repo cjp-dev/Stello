@@ -10,6 +10,7 @@
     <InternalsVisibleTo Include="Stello.Engine.Tests" />
     <InternalsVisibleTo Include="Stello.BookTool" />
     <InternalsVisibleTo Include="Stello.Benchmark" />
+    <InternalsVisibleTo Include="Egaroucid.Engine.Tests" />
   </ItemGroup>
 
 </Project>

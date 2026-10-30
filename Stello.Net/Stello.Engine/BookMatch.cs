@@ -2,12 +2,14 @@ namespace Stello.Engine;
 
 /// <summary>What one side did in a game: the moves it searched, their nodes and time, and how deep it got.</summary>
 /// <param name="Searched">Moves that needed a search (not book moves, passes or single legal moves).</param>
+/// <param name="Time">The wall time of the searched moves, as the match measured it.</param>
 /// <param name="MidgameMoves">Searched moves that ended in the midgame search (a heuristic score).</param>
 /// <param name="MidgameDepth">The depths of those moves added up.</param>
 /// <param name="FirstSolve">The most empty squares at which this side solved the game (win/loss/draw or exact), or 0.</param>
-internal readonly record struct SideStats(int Searched, long Nodes, TimeSpan Time, int MidgameMoves, long MidgameDepth, int FirstSolve)
+/// <param name="Longest">The longest wall time of a move.</param>
+internal readonly record struct SideStats(int Searched, long Nodes, TimeSpan Time, int MidgameMoves, long MidgameDepth, int FirstSolve, TimeSpan Longest = default)
 {
-    public SideStats Add(SearchResult result, int empties)
+    public SideStats Add(SearchResult result, int empties, TimeSpan used)
     {
         if (result.Nodes == 0 && result.Kind is ScoreKind.None or ScoreKind.Book)
         {
@@ -19,10 +21,11 @@ internal readonly record struct SideStats(int Searched, long Nodes, TimeSpan Tim
         return new SideStats(
             Searched + 1,
             Nodes + result.Nodes,
-            Time + result.Elapsed,
+            Time + used,
             MidgameMoves + (midgame ? 1 : 0),
             MidgameDepth + (midgame ? result.Depth : 0),
-            solved ? Math.Max(FirstSolve, empties) : FirstSolve);
+            solved ? Math.Max(FirstSolve, empties) : FirstSolve,
+            used > Longest ? used : Longest);
     }
 }
 
@@ -65,17 +68,56 @@ internal sealed record MatchSummary(int Pairs, double PointsB, double Score, dou
     }
 }
 
+/// <summary>An engine that plays one side of a match. Each match worker has its own player for each side.</summary>
+internal interface IMatchPlayer
+{
+    /// <summary>Called before every game: clears the hash tables and the book state.</summary>
+    void NewGame();
+
+    /// <summary>The move for <paramref name="player"/>, who has a legal move.</summary>
+    /// <param name="limits">The side's limits; with time per game, <see cref="SearchLimits.Time"/> is the time left.</param>
+    SearchResult ChooseMove(Board board, Player player, SearchLimits limits, CancellationToken cancellationToken);
+}
+
+/// <summary>Stello's engine with its opening book as a match player.</summary>
+internal sealed class StelloMatchPlayer(int hashBits, OpeningBook? book) : IMatchPlayer
+{
+    private readonly SearchEngine _engine = new(hashBits);
+    private ComputerPlayer? _player;
+
+    public void NewGame()
+    {
+        _engine.ClearHash();
+        _player = new ComputerPlayer(_engine, book, new Random(0));
+    }
+
+    public SearchResult ChooseMove(Board board, Player player, SearchLimits limits, CancellationToken cancellationToken) =>
+        (_player ?? throw new InvalidOperationException("Call NewGame before the first move."))
+            .ChooseMove(board, player, limits, cancellationToken: cancellationToken);
+}
+
 /// <summary>One side of a match: its search limits, hash table size and opening book.</summary>
 /// <param name="Limits">
 /// The limits for every move. With <see cref="TimeControlMode.TimePerGame"/>, <see cref="SearchLimits.Time"/> is the time
 /// for the whole game and the side's clock runs down during the game.
 /// </param>
 /// <param name="Book">The book to play from, or null to search every move.</param>
-internal sealed record MatchSide(string Name, SearchLimits Limits, int HashBits = SearchLimits.DefaultHashBits, OpeningBook? Book = null);
+/// <param name="CreatePlayer">Makes the engine of the side; null for Stello's engine with <paramref name="Book"/>.</param>
+/// <param name="Description">What the side is, for the report; null for Stello's limits and hash size.</param>
+internal sealed record MatchSide(
+    string Name,
+    SearchLimits Limits,
+    int HashBits = SearchLimits.DefaultHashBits,
+    OpeningBook? Book = null,
+    Func<IMatchPlayer>? CreatePlayer = null,
+    string? Description = null)
+{
+    public IMatchPlayer NewPlayer() => CreatePlayer?.Invoke() ?? new StelloMatchPlayer(HashBits, Book);
+}
 
 /// <summary>
 /// Plays two sides against each other. From each start position a pair of games is played with the colours swapped.
-/// Every game starts with fresh hash tables and book trackers, so a game does not depend on the games before it.
+/// Every game starts with fresh hash tables and book state, so a game does not depend on the games before it.
 /// </summary>
 internal sealed class EngineMatch(MatchSide a, MatchSide b, int workers)
 {
@@ -100,14 +142,14 @@ internal sealed class EngineMatch(MatchSide a, MatchSide b, int workers)
 
         void Work()
         {
-            var engineA = new SearchEngine(A.HashBits);
-            var engineB = new SearchEngine(B.HashBits);
+            IMatchPlayer playerA = A.NewPlayer();
+            IMatchPlayer playerB = B.NewPlayer();
             int index;
             while ((index = Interlocked.Increment(ref next)) < starts.Count)
             {
                 (Board board, Player toMove) = BookTextFormat.Replay(starts[index]);
-                MatchGame first = PlayGame(board, toMove, toMove.Opponent(), engineA, engineB, cancellationToken);
-                MatchGame second = PlayGame(board, toMove, toMove, engineA, engineB, cancellationToken);
+                MatchGame first = PlayGame(board, toMove, toMove.Opponent(), playerA, playerB, cancellationToken);
+                MatchGame second = PlayGame(board, toMove, toMove, playerA, playerB, cancellationToken);
                 var pair = new MatchPair(starts[index], first, second);
                 lock (gate)
                 {
@@ -122,12 +164,10 @@ internal sealed class EngineMatch(MatchSide a, MatchSide b, int workers)
     }
 
     private MatchGame PlayGame(
-        Board board, Player toMove, Player colourB, SearchEngine engineA, SearchEngine engineB, CancellationToken cancellationToken)
+        Board board, Player toMove, Player colourB, IMatchPlayer playerA, IMatchPlayer playerB, CancellationToken cancellationToken)
     {
-        engineA.ClearHash();
-        engineB.ClearHash();
-        var playerA = new ComputerPlayer(engineA, A.Book, new Random(0));
-        var playerB = new ComputerPlayer(engineB, B.Book, new Random(0));
+        playerA.NewGame();
+        playerB.NewGame();
         var moves = new List<Move>();
         SideStats statsA = default;
         SideStats statsB = default;
@@ -152,17 +192,17 @@ internal sealed class EngineMatch(MatchSide a, MatchSide b, int workers)
 
             int empties = board.EmptyCount;
             long started = System.Diagnostics.Stopwatch.GetTimestamp();
-            SearchResult result = (isB ? playerB : playerA).ChooseMove(board, toMove, limits, cancellationToken: cancellationToken);
+            SearchResult result = (isB ? playerB : playerA).ChooseMove(board, toMove, limits, cancellationToken);
             TimeSpan used = System.Diagnostics.Stopwatch.GetElapsedTime(started);
             if (isB)
             {
                 usedB += used;
-                statsB = statsB.Add(result, empties);
+                statsB = statsB.Add(result, empties, used);
             }
             else
             {
                 usedA += used;
-                statsA = statsA.Add(result, empties);
+                statsA = statsA.Add(result, empties, used);
             }
 
             board = board.Play(toMove, result.Move.Square!.Value);
