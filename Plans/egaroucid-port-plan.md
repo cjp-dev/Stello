@@ -265,3 +265,9 @@ All of this lives in `tools/Stello.Benchmark`, which references `Egaroucid.Engin
   - perft 11 (212,258,800): 0.61 s in C#, 1.35 s in C++ Generic;
   - incremental move + evaluate + undo: about 2.2 M/s;
   - from scratch (root only): about 0.4 M/s.
+- **Phase 3: done (2026-10-30).** New files: Search, Level, TranspositionTable (+ the endgame's local table), MoveOrdering, MultiProbCut, EndSearch, MidSearch, ClogSearch and Ai (the fixed-level path without book, lazy SMP or YBWC).
+  - **Parity:** all 500 midgame searches (levels 1/5/11/15/21) and FFO #40–44 at level 60 give exactly the C++ move, value, depth, selectivity, nodes and clog nodes, first time. The MPC table checksum matches. Running with `EGAROUCID_FULL_PARITY=1` covers every fixture in 4 minutes; the normal tests run 12 positions per level.
+  - **FFO #40–49, level 60, 1 thread:** all correct, with the same 520,296,918 nodes as C++. C# takes 28.2 s, C++ Generic about 19.4 s (1.45×). Stello takes 369 s.
+  - **100 `midgame.txt` positions at level 21:** the same 1,449,749,430 nodes. C# takes 180 s, C++ about 161.5 s (1.12×); about 8 M nodes/s.
+  - **Lesson:** copy every C++ table (for example `bit_around`, which leaves out neighbours that can never flip anything) instead of recomputing it.
+  - **Transposition table:** parity needs the C++ size, 2^25 + 2 slots (about 800 MB). Smaller tables mask the hash, for matches.
