@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A C# port of the Egaroucid engine (Takuto Yamana, GPL-3.0-or-later), used by the tools and tests to compare
+       engines with Stello. See Plans/egaroucid-port-plan.md and docs/brain. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Stello.Egaroucid</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Egaroucid.Engine.Tests" />
+    <InternalsVisibleTo Include="Stello.Benchmark" />
+  </ItemGroup>
+
+</Project>

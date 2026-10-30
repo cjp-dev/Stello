@@ -1,4 +1,6 @@
 <Solution>
+  <Project Path="Egaroucid.Engine.Tests/Egaroucid.Engine.Tests.csproj" />
+  <Project Path="Egaroucid.Engine/Egaroucid.Engine.csproj" />
   <Project Path="Stello.App/Stello.App.csproj" />
   <Project Path="Stello.Engine.Tests/Stello.Engine.Tests.csproj" />
   <Project Path="Stello.Engine/Stello.Engine.csproj" />

@@ -256,3 +256,12 @@ All of this lives in `tools/Stello.Benchmark`, which references `Egaroucid.Engin
   - searches of the 100 `midgame.txt` positions at levels 1/5/11/15/21 and FFO #40–44 at level 60, with per-iteration node logs.
 
   Two runs give identical files once times are dropped from the logs. Reference checks: perft 9 = 3,005,288, and FFO #40–44 give +38/0/+6/−12/−14. Fixture positions come from seeded random games, book walks, `midgame.txt` and FFO, not from the training data.
+- **Phase 2: done (2026-10-30).** `Stello.Net/Egaroucid.Engine` (Common, Bits, Board, Flip incl. `calc_legal`, HashTables, Stability, Patterns, Evaluate with `EvalSearch`, EgaroucidResources) and `Egaroucid.Engine.Tests` (8 tests). Exactly equal to the reference:
+  - perft (start position to depth 9, plus 30 positions at depth 5);
+  - hash codes, `mid_evaluate`, the move-ordering-end evaluation, stable discs and the 64 feature indices for all 2,150 fixture positions;
+  - incremental features equal from-scratch ones along 200 random games, with passes and undos.
+
+  Flips use rays and bit scans instead of the C++ lookup tables; the result is the same by definition. There is one weight table (73.5 MB) plus a second, colour-swapped feature view instead of the colour-swapped table copy. Speed:
+  - perft 11 (212,258,800): 0.61 s in C#, 1.35 s in C++ Generic;
+  - incremental move + evaluate + undo: about 2.2 M/s;
+  - from scratch (root only): about 0.4 M/s.
