@@ -17,6 +17,26 @@ internal static class EgaroucidResources
 
     public static string? LoadedDirectory { get; private set; }
 
+    private static Book? _book;
+
+    /// <summary>Egaroucid's book (<c>book.egbk3</c> in the resource directory), read once on first use; empty if it is missing.</summary>
+    public static Book Book
+    {
+        get
+        {
+            lock (Gate)
+            {
+                if (_book is null)
+                {
+                    string? path = LoadedDirectory is null ? null : Path.Combine(LoadedDirectory, "book.egbk3");
+                    _book = path is not null && File.Exists(path) ? Book.Load(path) : Book.Empty;
+                }
+
+                return _book;
+            }
+        }
+    }
+
     /// <summary>
     /// The resource directory: <see cref="EnvironmentVariable"/> if set, otherwise <c>Egaroucid-main/bin/resources</c> in
     /// the first parent of the application directory that has it; null when there is none.

@@ -125,10 +125,37 @@ internal sealed class SearchResult
     public int Probability;
 }
 
-/// <summary>A flag that a running search polls; clearing it stops the search (C++ <c>bool *searching</c>).</summary>
-internal sealed class SearchingFlag
+/// <summary>
+/// A flag that a running search polls; clearing it stops the search (C++ <c>bool *searching</c>). A flag with a parent
+/// is also cleared when the parent is, so a stop from outside ends an inner, timed search too. A flag with a deadline
+/// clears itself when the deadline has passed; it looks at the clock on every 256th read, so a busy machine cannot
+/// delay the stop the way it delays a timer thread.
+/// </summary>
+internal sealed class SearchingFlag(SearchingFlag? parent = null, long deadlineTimestamp = 0)
 {
-    public volatile bool Value = true;
+    private volatile bool _value = true;
+    private int _reads;
+
+    public bool Value
+    {
+        get
+        {
+            if (!_value)
+            {
+                return false;
+            }
+
+            if (deadlineTimestamp != 0 && (++_reads & 255) == 0 && System.Diagnostics.Stopwatch.GetTimestamp() >= deadlineTimestamp)
+            {
+                _value = false;
+                return false;
+            }
+
+            return parent is null || parent.Value;
+        }
+
+        set => _value = value;
+    }
 }
 
 /// <summary>A move found by the clog search: a move after which the game ends soon, with its exact value.</summary>

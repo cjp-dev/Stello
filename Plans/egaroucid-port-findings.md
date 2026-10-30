@@ -17,8 +17,8 @@ What porting the Egaroucid engine to C# has taught us, written down as we go: ho
 | 1 C++ reference | done | Egaroucid builds with plain g++ in 35 s; its results are deterministic once times are left out |
 | 2 Foundations | done | Board, flips, hash, stability and evaluation are exactly equal to C++ |
 | 3 Single-threaded search | done | All reference searches are exactly equal, node for node |
-| 4 Time management and book | next | |
-| 5 Comparison with Stello | | |
+| 4 Time management and book | done | Book values exactly equal to C++; the time mode works, but at short times the unlimited clog search and the book exit can take longer than the limit |
+| 5 Comparison with Stello | next | |
 | 6 Multi-threading (YBWC) | | |
 | 7 Docs | | |
 
@@ -73,6 +73,15 @@ This section compares how the two engines are built. Phase 5 measures what each 
 | Last 4 squares | special code (`last4` … `last1`), checking neighbours before computing flips | `SolveShallow`, `SolveLast2`, `SolveLast` |
 | Stability cutoff | in every endgame node, with thresholds per number of discs | — |
 
+### Opening book and time
+
+| | Egaroucid | Stello |
+|---|---|---|
+| Book | 1,302,322 positions (`book.egbk3`, 32 MB), each stored in its canonical orientation (the smallest of the 8 symmetries) with the value in discs and the level it was searched at | about 11,200 positions with values in evaluation units; learns from games |
+| Choosing a book move | among the children in the book: the best, drawn at random if several are equal (accuracy 0), or weighted towards the best at higher accuracies. A child is skipped if its value is more than 8 below the position's own | the best book move, with variation |
+| Leaving the book | with accuracy 0, the moves that are not in the book get a null-window search against the best book value, and a full search if one of them beats it | — |
+| Time | per game: `calc_time_limit_ply` keeps a margin, plans the midgame moves, and gives up to 90 % of the clock when the endgame looks solvable (its speed constants assume a many-threaded build). In time mode, selectivity is 100 % up to depth 13, then 74 % | per move or per game |
+
 ## C++ quirks the port reproduces
 
 Some behaviour of the C++ code is surprising. Exact parity needs it reproduced, and the port comments each case.
@@ -88,7 +97,10 @@ Some behaviour of the C++ code is surprising. Exact parity needs it reproduced, 
 - **The endgame's local table is never cleared** (`thread_local` in C++). The reference driver clears it before each position.
 - **The value smoothing uses C's `round`**, which rounds halves away from zero. .NET must use `MidpointRounding.AwayFromZero`.
 - **The Multi-ProbCut table is computed with doubles.** A compiler may fuse multiply and add, so the reference is built with `-ffp-contract=off`; a checksum of the whole table matches.
-- **Read in the code, not yet tested:** `ai()` computes the legal moves before it handles a pass. For a position where the side to move must pass, it searches nothing and returns no move. This is to be checked in phase 4.
+- **`ai()` gives no move when the side to move must pass.** It computes the legal moves before it handles the pass, so it searches nothing: no move, value 126, depth −1. This is confirmed with the C++ reference. Egaroucid's own callers pass first, and so does the port's match adapter.
+- **The clog search has no time limit.** In time mode it always searches 5 moves deep. On 1 thread that takes 25–190 ms, sometimes more than a whole 100 ms move. The iterative deepening then gets only what is left, at least one iteration. C++ hides this cost by searching the clog moves in parallel.
+- **Leaving the book can take twice the time.** With accuracy 0, both the null-window search of the moves outside the book and the full search that may follow it get the whole time limit. In the smoke match, the move after the book took about 200 ms of a 100 ms limit.
+- **An outer stop does not end the current iteration.** In time mode, C++ gives each iteration its own flag, which only the iteration's own timer clears.
 
 ## Where the port deliberately differs
 
@@ -101,6 +113,12 @@ None of these changes a result; the parity tests check that.
 - **Globals:** the transposition table, the local table and the stop flag live in a `SearchContext` object, one per engine.
 - **Transposition table size:** exact parity needs the C++ size, 2^25 + 2 slots, about 800 MB per context in C#. A smaller table uses the lower bits of the hash code. It searches differently, but is fine for matches, where every game needs its own table.
 - **No locks yet:** the single-threaded port has none. The parallel paths throw `NotSupportedException` until phase 6.
+- **The book reads value and level only**, since only they are used in play. The leaf data, line counts, editing, expansion and the older file formats (`.egbk2`, `.egbk`, Edax) are left out.
+- **The book draws from a seeded `Random`.** C++ seeds its generator from the clock. With a seed, games and matches can be repeated.
+- **Time mode, iterations:** C++ runs each iteration in its own thread and stops waiting when its time is up. The port runs it on the calling thread, with a flag that checks its deadline every 256 reads. A timer thread was tried first: under load, its callback came up to 260 ms late.
+- **Time mode, stopping:** a stop from outside (Move Now) also ends the current iteration, because the iteration's flag has the outer flag as its parent.
+- **Time mode, always a move:** if a stop comes before the first iteration has finished (for example during the clog search), a level-1 search gives the move. C++ can return no move then.
+- **Time per game, extra pondering left out:** with 38 or more empty squares and at least 2 s for the move, C++ first runs `ai_get_values` (600 ms), then `ai_align_move_levels` and possibly `request_more_time`, to decide whether a move deserves extra time. These are left out (about 400 C++ lines of ponder and self-play machinery). Phase 5 uses mostly time per move; if time-per-game matches matter, this can be ported then.
 
 ## Measurements
 
@@ -114,6 +132,10 @@ All on 1 thread, on an Intel i7-12850HX laptop VM; timings vary by up to about 8
 | FFO #40–44, exact | 4.3 s | — | 19.2 s | the same nodes as C++ |
 | FFO #40–49, exact (520,296,918 nodes) | 28.2 s | about 19.4 s | 369 s | port 1.45× slower than C++, 13× faster than Stello |
 | 100 `midgame.txt` positions, level 21 (1,449,749,430 nodes) | 180 s | about 161.5 s | — | 1.12×; about 8 M nodes/s |
+| Loading the evaluation and hash numbers | 0.11 s | about 1.4 s (start-up incl. other tables) | — | |
+| Loading the book (1,302,322 positions) | 0.22 s | — | — | about 50 MB in a `Dictionary` |
+| 200 ms per move, `midgame.txt` | depth 10 at 100 %, clog search 23–90 ms | — | — | |
+| Smoke match: port vs port, 100 ms per move, book on, 20 games | no illegal moves, 54 book moves, 1,146 searched | — | — | 1 m 21 s; slowest moves about 200 ms (book exit, clog search) |
 
 - **What counts as a node differs:** the two engines count nodes differently, so their node rates can't be compared. Stello's mid-bench gives 3.3 M nodes/s; time to a given strength is what phase 5 measures.
 - **The 13× endgame gap:** Stello solves exactly, while Egaroucid at level 60 steps up through the selectivities. Part of the gap may be that staging.
@@ -132,4 +154,5 @@ These are hypotheses until phase 5 has measured them.
 - **Multi-ProbCut with a fitted error model,** instead of Stello's fixed margin.
 - **Scores in discs everywhere:** midgame and endgame values then share one scale, and the book can mix them.
 - **The transposition table:** bounds plus two moves per slot, and clearing importance instead of having two separate tables.
-- **The clog search:** a cheap guard against missing a quick wipe-out in a selective search.
+- **The clog search:** a cheap guard against missing a quick wipe-out in a selective search. On one thread at short time controls it is not cheap, though, so it needs a depth or time limit there.
+- **Leaving the book:** checking the moves outside the book against the best book value, as Egaroucid does, guards against weak book lines. It needs its own time budget.

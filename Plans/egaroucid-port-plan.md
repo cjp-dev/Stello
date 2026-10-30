@@ -272,3 +272,11 @@ All of this lives in `tools/Stello.Benchmark`, which references `Egaroucid.Engin
   - **100 `midgame.txt` positions at level 21:** the same 1,449,749,430 nodes. C# takes 180 s, C++ about 161.5 s (1.12×); about 8 M nodes/s.
   - **Lesson:** copy every C++ table (for example `bit_around`, which leaves out neighbours that can never flip anything) instead of recomputing it.
   - **Transposition table:** parity needs the C++ size, 2^25 + 2 slots (about 800 MB). Smaller tables mask the hash, for matches.
+- **Phase 4: done (2026-10-30).** `Book.cs` (`.egbk3` reader, canonical board, `get_value`, `get_all_moves_with_value`, `get_random` with a seeded `Random`), the book and time paths of `ai_common` in `Ai.cs`, `iterative_deepening_search_time_limit` and `calc_time_limit_ply`, and a `SearchingFlag` with parent and deadline.
+  - **Book:** all 221 book fixture positions give the position's value and every child value exactly as C++.
+  - **Pass quirk:** confirmed (no move when the side to move must pass).
+  - **Time:** a 200 ms move takes 200–210 ms (timing tests run alone).
+  - **Smoke match:** port vs port, 100 ms per move, book on, 20 games: no illegal moves.
+  - **Not ported:** the extra pondering of `ai_time_limit` (`ai_get_values`, `ai_align_move_levels`, `request_more_time`).
+  - **Recorded in the findings:** the clog search and the book exit can take longer than a short time limit.
+  - **Tests:** 22 tests, all green.
