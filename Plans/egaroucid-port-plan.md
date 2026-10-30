@@ -211,7 +211,7 @@ All of this lives in `tools/Stello.Benchmark`, which references `Egaroucid.Engin
 - **Commit:** "Add YBWC multi-threading to the Egaroucid port".
 
 ## Phase 7: Docs, report and memory
-- **New chapters:**
+- **New chapters**, built from `Plans/egaroucid-port-findings.md`:
   - `docs/brain/19-the-egaroucid-port.md`: architecture, a map from C++ files to C# files, the parity method and fixtures, the differences from the original (bit order at the adapter, one weight table, seeded book), and how to run it;
   - `docs/brain/20-engine-comparison.md`: the comparison results per component, linking the report.
 - **Updated chapters:**
@@ -223,6 +223,7 @@ All of this lives in `tools/Stello.Benchmark`, which references `Egaroucid.Engin
 - **Push:** push main after fetch and rebase, then check the deploy run. Docs changes trigger the deploy.
 
 ## Working rules
+- **Findings:** after every phase, add what was learnt to [egaroucid-port-findings.md](egaroucid-port-findings.md): differences from Stello, C++ quirks, deliberate deviations, measurements and ideas for the improved engine. Phase 7 builds the docs chapters from it.
 - **Branch:** `feature/egaroucid-port`, one commit per phase. After each green gate, fast-forward main and push.
 - **Commits:**
   - identity: `git -c user.name=cjp-dev -c user.email=cjp230364@gmail.com commit`;
