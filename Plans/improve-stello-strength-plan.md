@@ -189,3 +189,8 @@ Each change is a separate commit behind a `SearchOptions` flag and is measured o
   - `SearchOptions` and `opt=` moved to phase 2, where the first alternative appears.
   - Port closed: phase 6 postponed, chapters 19 and 20 written (README, 01, 17 and 18 updated).
   - Tests: Stello.Engine.Tests 238, Egaroucid.Engine.Tests 34, all green.
+- **Phase 1: done (2026-10-31).**
+  - `tools/Stello.Trainer` with `convert`, `train` and `report`; `Stello.Engine/Evaluation/Symmetry.cs`, `Patterns.cs` (pattern shapes, places, folding, the `classic11` set) and `EvalWeights.cs` (the gzip file, version 1). Tests: `PatternTests` (7).
+  - `convert`: 52 M games and 25.5 M positions → 499.5 M positions (8 GB, git-ignored) in 1 m 53 s; deterministic (the same hash with 24 and 7 workers).
+  - First model, `classic11` × 15 stages, 1.5 MB: 5.55 discs error on the test split, against Stello 1's 12.14 and Egaroucid's 5.05; 4.8 M evaluations per second.
+

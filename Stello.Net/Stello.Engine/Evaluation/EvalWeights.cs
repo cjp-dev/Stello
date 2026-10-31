@@ -1,0 +1,167 @@
+using System.IO.Compression;
+using System.Runtime.CompilerServices;
+using System.Text;
+
+namespace Stello.Engine.Evaluation;
+
+/// <summary>
+/// Trained pattern weights: for every stage of the game (a range of disc counts), one weight per raw index of every
+/// pattern, in 1/<see cref="UnitsPerDisc"/> discs, for the side to move.
+/// </summary>
+/// <remarks>
+/// The file (made by tools/Stello.Trainer) is gzip-compressed. Inside, all numbers are little-endian:
+/// <c>"STELLOEV"</c>, version (u16, 1), pattern set name (u8 length and ASCII), number of stages (u8), the stage of
+/// every disc count 0–64 (65 × u8), units per disc (u16), then for every stage and every pattern its folded weights
+/// (i16, one per <see cref="PatternShape.Representatives"/> entry).
+/// </remarks>
+internal sealed class EvalWeights
+{
+    private const string Magic = "STELLOEV";
+    private const int Version = 1;
+
+    private readonly short[][] _weights;
+    private readonly byte[] _stageOfDiscs;
+
+    public EvalWeights(PatternSet set, byte[] stageOfDiscs, int unitsPerDisc, short[][] weights)
+    {
+        if (stageOfDiscs.Length != 65 || weights.Length == 0 || weights.Any(w => w.Length != set.RawSize)
+            || stageOfDiscs.Any(s => s >= weights.Length) || unitsPerDisc is < 1 or > 1024)
+        {
+            throw new ArgumentException("The weights do not fit the pattern set.");
+        }
+
+        Set = set;
+        _stageOfDiscs = stageOfDiscs;
+        UnitsPerDisc = unitsPerDisc;
+        _weights = weights;
+    }
+
+    public PatternSet Set { get; }
+
+    public int Stages => _weights.Length;
+
+    public int UnitsPerDisc { get; }
+
+    public int StageOf(int discs) => _stageOfDiscs[discs];
+
+    /// <summary>The weights of one stage, by raw index plus the shape's offset (<see cref="PatternSet.Offsets"/>).</summary>
+    public ReadOnlySpan<short> StageWeights(int stage) => _weights[stage];
+
+    /// <summary>The evaluation for the side to move, in 1/<see cref="UnitsPerDisc"/> discs.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int Evaluate(ulong own, ulong opponent)
+    {
+        Span<int> indices = stackalloc int[Set.FeatureCount];
+        Set.Indices(own, opponent, indices);
+        short[] weights = _weights[_stageOfDiscs[System.Numerics.BitOperations.PopCount(own | opponent)]];
+        int sum = 0;
+        foreach (int index in indices)
+        {
+            sum += weights[index];
+        }
+
+        return sum;
+    }
+
+    /// <summary>The stage of each disc count when the game (4 to 64 discs) is cut into <paramref name="stages"/> equal parts.</summary>
+    public static byte[] EvenStages(int stages)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(stages, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(stages, 61);
+        var stageOf = new byte[65];
+        for (int discs = 0; discs <= 64; discs++)
+        {
+            stageOf[discs] = (byte)Math.Clamp((discs - 4) * stages / 61, 0, stages - 1);
+        }
+
+        return stageOf;
+    }
+
+    public static EvalWeights Load(string path)
+    {
+        using FileStream file = File.OpenRead(path);
+        return Read(file);
+    }
+
+    /// <exception cref="InvalidDataException">The stream is not an evaluation file.</exception>
+    public static EvalWeights Read(Stream stream)
+    {
+        using var gzip = new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true);
+        using var reader = new BinaryReader(gzip, Encoding.ASCII, leaveOpen: true);
+        try
+        {
+            if (Encoding.ASCII.GetString(reader.ReadBytes(Magic.Length)) != Magic || reader.ReadUInt16() != Version)
+            {
+                throw new InvalidDataException("Not a Stello evaluation file (version 1).");
+            }
+
+            PatternSet set;
+            try
+            {
+                set = PatternSet.ByName(Encoding.ASCII.GetString(reader.ReadBytes(reader.ReadByte())));
+            }
+            catch (ArgumentException exception)
+            {
+                throw new InvalidDataException(exception.Message, exception);
+            }
+
+            int stages = reader.ReadByte();
+            byte[] stageOfDiscs = reader.ReadBytes(65);
+            int unitsPerDisc = reader.ReadUInt16();
+            var weights = new short[stages][];
+            for (int stage = 0; stage < stages; stage++)
+            {
+                weights[stage] = new short[set.RawSize];
+                for (int s = 0; s < set.Shapes.Count; s++)
+                {
+                    PatternShape shape = set.Shapes[s];
+                    var folded = new short[shape.Size];
+                    foreach (int representative in shape.Representatives)
+                    {
+                        folded[representative] = reader.ReadInt16();
+                    }
+
+                    Span<short> table = weights[stage].AsSpan(set.Offsets[s], shape.Size);
+                    for (int raw = 0; raw < shape.Size; raw++)
+                    {
+                        table[raw] = folded[shape.Fold[raw]];
+                    }
+                }
+            }
+
+            return new EvalWeights(set, stageOfDiscs, unitsPerDisc, weights);
+        }
+        catch (EndOfStreamException exception)
+        {
+            throw new InvalidDataException("The evaluation file is cut short.", exception);
+        }
+        catch (ArgumentException exception)
+        {
+            throw new InvalidDataException(exception.Message, exception);
+        }
+    }
+
+    public void Write(Stream stream)
+    {
+        using var gzip = new GZipStream(stream, CompressionLevel.SmallestSize, leaveOpen: true);
+        using var writer = new BinaryWriter(gzip, Encoding.ASCII, leaveOpen: true);
+        writer.Write(Encoding.ASCII.GetBytes(Magic));
+        writer.Write((ushort)Version);
+        writer.Write((byte)Set.Name.Length);
+        writer.Write(Encoding.ASCII.GetBytes(Set.Name));
+        writer.Write((byte)Stages);
+        writer.Write(_stageOfDiscs);
+        writer.Write((ushort)UnitsPerDisc);
+        for (int stage = 0; stage < Stages; stage++)
+        {
+            for (int s = 0; s < Set.Shapes.Count; s++)
+            {
+                PatternShape shape = Set.Shapes[s];
+                foreach (int representative in shape.Representatives)
+                {
+                    writer.Write(_weights[stage][Set.Offsets[s] + representative]);
+                }
+            }
+        }
+    }
+}

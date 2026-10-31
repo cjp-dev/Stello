@@ -10,4 +10,5 @@
   <Project Path="Stello.Web/Stello.Web.csproj" />
   <Project Path="tools/Stello.Benchmark/Stello.Benchmark.csproj" />
   <Project Path="tools/Stello.BookTool/Stello.BookTool.csproj" />
+  <Project Path="tools/Stello.Trainer/Stello.Trainer.csproj" />
 </Solution>

@@ -12,6 +12,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Egaroucid.Engine.Tests" />
     <InternalsVisibleTo Include="Stello.Benchmark" />
+    <InternalsVisibleTo Include="Stello.Trainer" />
   </ItemGroup>
 
 </Project>
