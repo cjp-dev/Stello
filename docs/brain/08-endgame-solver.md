@@ -2,6 +2,8 @@
 
 [Back to the index](README.md)
 
+> **Stello 1.** This chapter describes the endgame solver of Stello 1, the engine before version 2.0. Stello 2.0 replaced it with a solver adapted from Egaroucid ([chapter 21](21-stello-2-evaluation-and-solver.md)). The `Solve` routine below now lives in [Stello.Engine.V1](../../Stello.Net/Stello.Engine.V1), the frozen baseline. Stello 2 still starts with the win/loss/draw pass, and still uses `SolveShallow`, `SolveLast2` and `SolveLast` for the last few squares of its principal-variation nodes.
+
 ## In short
 
 Near the end of the game the engine stops guessing. The **endgame solver** searches every line to the end of the game and computes the true result with perfect play by both sides, as a final disc difference. It works in two passes: first it only finds out whether the side to move **wins, loses or draws**, which is much faster, and then, if there is time, the **exact score**. Because the solver searches to the end, move ordering decides almost everything; it uses the hash table, "fastest-first" ordering, parity and an enhanced transposition cutoff.
@@ -168,12 +170,12 @@ Zebra needs about 20–30 M nodes for every position. Stello needs about the sam
 
 | File | Main members |
 |---|---|
-| [SearchEngine.cs](../../Stello.Net/Stello.Engine/SearchEngine.cs) | The endgame part of `Search`, `SolveRoot`, `Solve`, `SolveShallow`, `SolveLast2`, `SolveLast`, `FinalScore`, `SortDescending` (with flips) |
+| [SearchEngine.cs](../../Stello.Net/Stello.Engine.V1/SearchEngine.cs) (Stello 1) | The endgame part of `Search`, `SolveRoot`, `Solve`, `SolveShallow`, `SolveLast2`, `SolveLast`, `FinalScore`, `SortDescending` (with flips) |
 | C++: [Minmax.cpp](../../Stello%20C++/BRAIN/Minmax.cpp) | `slutmax`, `slutmax1`, `slutmax2`, `slutmax3`, `zero_slutmax` |
 
 ## Tests
 
-[EndgameTests.cs](../../Stello.Net/Stello.Engine.Tests/EndgameTests.cs):
+[EndgameTests.cs](../../Stello.Net/Stello.Engine.Tests/EndgameTests.cs) (they now run on Stello 2's solver and compare with Stello 1's, [chapter 21](21-stello-2-evaluation-and-solver.md#tests)):
 
 - FFO #40–#44: exact score and one of the correct best moves;
 - the 112 test positions from endgame.c ([Data/endgame-c-positions.txt](../../Stello.Net/Stello.Engine.Tests/Data/endgame-c-positions.txt), 100 of them with 12 empty squares): the exact scores, checked once with a plain alpha-beta search;

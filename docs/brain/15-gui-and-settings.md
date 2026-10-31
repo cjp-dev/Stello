@@ -46,7 +46,7 @@ Both desktop and web clients share a consistent palette designed for high contra
 | **Primary Typography** | `#0F172A` / `#334155` | Deep slate gray text ensuring high readability |
 | **Active Turn Highlight** | `#3498DB` / `#EFF6FF` | Sky-blue border and light tint highlighting the active player card |
 | **Status Modified Notice** | `#E74C3C` | Crimson red text for `STATUS` indicating unranked/casual state |
-| **Evaluation Score** | `#B45309` | Warm amber text displaying centipawn advantages and disc differentials |
+| **Evaluation Score** | `#B45309` | Warm amber text displaying the score in discs |
 | **Best Move Coordinate** | `#0284C7` | Blue accent text displaying the engine's current candidate move |
 | **Legal Move Hints** | `#27AE60` | Soft translucent green circular markers indicating valid placement squares |
 | **Last Move Indicator** | `#E74C3C` | Crimson central pip marking the most recently placed disc |
@@ -102,7 +102,7 @@ The application header features a standardized 4-menu hierarchy providing struct
 * **User guide (`F1`):** Opens this chapter directly, providing immediate access to interface instructions, settings explanations, and shortcut tables.
 * **Rules & Documentation (`Shift+F1`):** Opens the complete Stello Architecture and Rules manual (at `/docs` in the web client, or online documentation for desktop).
 * *(Separator)*
-* **About Stello...:** Displays engine version, author photograph (Claus Pedersen), history of the C++ and C# implementations, the licence (GPL-3.0-only) and the address of the source code.
+* **About Stello...:** Displays engine version, author photograph (Claus Pedersen), history of the C++ and C# implementations, the Stello 2.0 brain (the pattern evaluation trained on Egaroucid's data and the endgame solver adapted from Egaroucid, with credit to Egaroucid), the licence (GPL-3.0-only) and the address of the source code.
 
 > [!NOTE] Dedicated Quick Action Buttons for Undo & Redo
 > In accordance with the tournament GUI specification, Undo and Redo are provided via prominent **Quick Action buttons** beneath the scoreboard and via standard keyboard shortcuts (`Ctrl+Z` / `Ctrl+Y`), keeping the top menus streamlined and uncluttered.
@@ -225,7 +225,7 @@ When enabled via **Options $\rightarrow$ Analysis** (`Ctrl+A`), the telemetry si
 ├───────────────────┬─────────────┤
 │ Move:             │ f4          │
 │ Depth:            │ 10 plies    │
-│ Score:            │ +239        │
+│ Score:            │ +2.4 discs  │
 │ Best move:        │ f4          │
 │ Nodes:            │ 226.269     │
 │ Speed:            │ 45.085 nps  │
@@ -239,7 +239,7 @@ When enabled via **Options $\rightarrow$ Analysis** (`Ctrl+A`), the telemetry si
 |---|---|
 | **Move** | The coordinate currently being searched at the root (e.g., `f4`, `d3`). |
 | **Depth** | Current search depth in plies (e.g., `10 plies`), or `to the end (20 empty)` when the endgame is solved. Empty for a book move or when there is no search (a pass or a single legal move). |
-| **Score** | Positional evaluation from the active player's perspective:<br/>• Positive (e.g. `+239`): Advantage for the engine.<br/>• Negative (e.g. `-150`): Advantage for the opponent.<br/>• Solved endgame: the final disc difference (e.g. `+4 discs`, `-2 discs`), or only `Win`, `Loss` or `Draw` when just the result is known.<br/>• `Book`: the move comes from the opening book. |
+| **Score** | Positional evaluation from the active player's perspective, in discs with one decimal (the search scores in 1/100 disc, [chapter 21](21-stello-2-evaluation-and-solver.md#how-the-search-uses-it)):<br/>• Positive (e.g. `+2.4 discs`): Advantage for the engine.<br/>• Negative (e.g. `-1.5 discs`): Advantage for the opponent.<br/>• Solved endgame: the final disc difference (e.g. `+4 discs`, `-2 discs`), or only `Win`, `Loss` or `Draw` when just the result is known.<br/>• `Book`: the move comes from the opening book. |
 | **Best move** | Coordinate of the currently leading principal variation candidate (e.g., `f4`). |
 | **Nodes** | Total board states evaluated during the search, formatted with thousands separators (`226.269`). |
 | **Speed** | Search throughput in nodes per second (`nps`). |

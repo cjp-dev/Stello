@@ -16,21 +16,24 @@ The terms used in these documents. The last column gives the chapter that explai
 | Calculated | The C++ book flag of a move whose value comes from a search; now a book move with a search origin (`IsSearched`), which book learning does not search again. | [11](11-book-learning.md#values-origin-and-effort) |
 | Competitive integrity | The unranked status of a game; taking back moves, switching sides, or modifying settings mid-match turns STATUS crimson red (#E74C3C). | [15](15-gui-and-settings.md#1-status-header--competitive-integrity) |
 | Cutoff | Stopping the search of a position because one move already reaches beta. | [06](06-midgame-search.md#negamax-with-alpha-beta) |
-| Dangerous corner move | A corner move that the edge tables mark as risky; the search looks one ply deeper instead of evaluating it. | [04](04-evaluation.md#dangerous-corner-moves) |
+| Dangerous corner move | Stello 1: a corner move that the edge tables mark as risky; the search looks one ply deeper instead of evaluating it. Stello 2 dropped it. | [04](04-evaluation.md#dangerous-corner-moves) |
 | Dropout expansion | Book learning step: the best move that is not yet in the book is searched and added to it. | [11](11-book-learning.md#evaluating-the-book-evaluatepositions) |
 | Dumb7Fill | Broadword parallel bitboard fill technique (Delorme, Edax) used for directional ray casting in move generation. | [03](03-rules-and-move-generation.md#algorithm) |
 | Edge index | The eight squares of an edge read as a base-3 number (0 to 6560); it selects the entry in the edge tables. | [04](04-evaluation.md#the-edge-index) |
-| Edge tables | Eight precomputed tables with one value per possible edge: its worth and the best edge moves. | [04](04-evaluation.md#the-edge-tables) |
+| Edge tables | Stello 1's eight precomputed tables with one value per possible edge: its worth and the best edge moves. | [04](04-evaluation.md#the-edge-tables) |
 | Empties | The number of empty squares; the endgame code uses it instead of a depth. | [08](08-endgame-solver.md#which-routine-at-how-many-empty-squares) |
 | Engine host | `IEngineHost`: runs the searches and owns the book for the view model; in-process in the desktop app, in a Web Worker in the browser. | [14](14-app-integration.md#services) |
-| Enhanced transposition cutoff | Before searching the moves of a position, looking up the positions after each move in the hash table to find a cutoff at once. | [08](08-endgame-solver.md#solve-7-or-more-empty-squares) |
-| Evaluation | A heuristic score of a position for the side to move, used at the leaves of the midgame search. | [04](04-evaluation.md) |
+| Enhanced transposition cutoff | Before searching the moves of a position, looking up the positions after each move in the hash table to find a cutoff at once. | [08](08-endgame-solver.md#solve-7-or-more-empty-squares), [21](21-stello-2-evaluation-and-solver.md#above-13-empty-squares-new-shaped-like-egaroucids) |
+| ETC | Short for enhanced transposition cutoff. | [21](21-stello-2-evaluation-and-solver.md#above-13-empty-squares-new-shaped-like-egaroucids) |
+| Evaluation | A heuristic score of a position for the side to move, used at the leaves of the midgame search. Stello 2 uses a trained pattern evaluation, in 1/100 disc. | [21](21-stello-2-evaluation-and-solver.md#the-pattern-evaluation), [04](04-evaluation.md) (Stello 1) |
 | Exact score | A search result that is the true value of the position, not just a bound. | [07](07-transposition-table.md#data-structures) |
 | Extension | Searching a move deeper than the normal depth, for example when there is only one legal reply. | [06](06-midgame-search.md#one-node) |
 | Fail high / fail low | A search result at or above beta / at or below alpha. | [06](06-midgame-search.md#negamax-with-alpha-beta) |
-| Fail-soft | A search that may return a score outside the (alpha, beta) window, which gives a tighter bound. | [06](06-midgame-search.md#negamax-with-alpha-beta) |
+| Fail-soft | A search that may return a score outside the (alpha, beta) window, which gives a tighter bound. | [06](06-midgame-search.md#negamax-with-alpha-beta), [21](21-stello-2-evaluation-and-solver.md#the-layers) |
 | Fastest-first | Endgame move ordering: try first the moves that leave the opponent the fewest replies. | [08](08-endgame-solver.md#solve-7-or-more-empty-squares) |
+| Feature | One pattern in one of its places on the board. Stello 2's evaluation has 62. | [21](21-stello-2-evaluation-and-solver.md#what-a-pattern-is) |
 | FFO test suite | A standard set of endgame test positions (#40–#59) from the French Othello Federation. | [08](08-endgame-solver.md#worked-example-the-ffo-positions) |
+| Folding | Giving two pattern indices one weight when a symmetry maps the pattern onto itself, such as a row read backwards. | [21](21-stello-2-evaluation-and-solver.md#places-symmetries-and-folding) |
 | Frontier disc | A disc adjacent to at least one empty square; potential mobility measures empty squares bordering opponent frontier discs. | [04](04-evaluation.md#mobility-m-and-potential-mobility-p) |
 | Game loop | The app's `RunAsync`: plays passes and computer moves until the human is to move or the game is over. | [14](14-app-integration.md#the-game-loop) |
 | Hard limit | The time after which the search is stopped in the middle and the best move so far is played. | [09](09-time-control.md#how-the-search-uses-the-limits) |
@@ -44,9 +47,10 @@ The terms used in these documents. The last column gives the chapter that explai
 | Move Now | The command that stops the search at once and plays the best move found so far. | [09](09-time-control.md#move-now) |
 | Negamax | A way to write minimax where the score is always from the point of view of the side to move; a child's score is negated. | [06](06-midgame-search.md#negamax-with-alpha-beta) |
 | Normalisation | Turning a position into the form stored in the book, its canonical form: the smallest of its four mirror images that keep the start position. | [10](10-opening-book.md#canonical-form) |
-| Null window | A window with beta = alpha + 1. The search only tells whether the score is above or below alpha, which is fast. | [06](06-midgame-search.md#the-root-principal-variation-search) |
+| Null window | A window with beta = alpha + 1. The search only tells whether the score is above or below alpha, which is fast. Stello 2's endgame solver is built from null-window searches. | [06](06-midgame-search.md#the-root-principal-variation-search), [21](21-stello-2-evaluation-and-solver.md#the-layers) |
 | Parity | Endgame move ordering: prefer the regions of the board with an odd number of empty squares. | [08](08-endgame-solver.md#solveshallow-3-to-6-empty-squares) |
 | Pass | A turn without a move, when the player has no legal move. It is stored in the game record like a move. | [03](03-rules-and-move-generation.md#pass-and-game-over) |
+| Pattern | A fixed list of squares whose filling (empty, own, opponent's) selects one trained weight; the evaluation sums the weights of all patterns in all their places. | [21](21-stello-2-evaluation-and-solver.md#what-a-pattern-is) |
 | Perft | Counting all positions reachable in n plies; used to test move generation. | [03](03-rules-and-move-generation.md#worked-example-perft) |
 | Ply | One move by one side. | [06](06-midgame-search.md#data-structures) |
 | Potential mobility | The number of (empty square, direction) pairs next to an opponent disc: places where moves may appear later. | [04](04-evaluation.md#mobility-m-and-potential-mobility-p) |
@@ -58,6 +62,8 @@ The terms used in these documents. The last column gives the chapter that explai
 | Self-play | Book learning where the engine plays games against itself with the book and adds them to it. | [11](11-book-learning.md#self-play-playgame-and-selfplay) |
 | Soft limit | The time after which no new iteration of the search is started. | [09](09-time-control.md#how-the-search-uses-the-limits) |
 | Stable disc | A disc that can never be flipped again. | [04](04-evaluation.md#corner-stability-t) |
+| Stage | A range of disc counts with its own pattern weights; Stello 2's evaluation has 10. | [21](21-stello-2-evaluation-and-solver.md#stages) |
+| Stello 1, Stello 2 | Stello 1 is the engine before version 2.0, frozen in `Stello.Engine.V1` as the baseline; Stello 2 is the engine of the apps, in `Stello.Engine`. | [21](21-stello-2-evaluation-and-solver.md#the-engines) |
 | Transposition | The same position reached by different move orders. | [07](07-transposition-table.md#a-transposition) |
 | Transposition table | A table that remembers search results for positions, so a transposition is not searched twice. | [07](07-transposition-table.md) |
 | Transposition table capacity | The configurable memory size across midgame and endgame tables (65K to 16.7M entries, 3 MB to 768 MB). | [07](07-transposition-table.md#configurable-capacity-options) |

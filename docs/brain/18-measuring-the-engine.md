@@ -10,7 +10,7 @@ Before the engine is changed, there must be a way to tell whether a change helps
 - **`solve-bench`** solves FFO endgame positions with known scores. This measures the **endgame solver**: correct scores, nodes and time to solve.
 - **`mid-bench`** searches 100 midgame positions to a fixed depth. This measures **midgame speed** and records the nodes, move and score of every search, so a later run can check that a change kept the search **unchanged**.
 
-The numbers at the end of this chapter are the baseline: the engine as it was ported from C++.
+The numbers at the end of this chapter are the baseline: the engine as it was ported from C++, now frozen as Stello 1. The tool also plays Stello 1 against Stello 2 and the Egaroucid port ([Comparing engines](#comparing-engines)); the results of Stello 2.0 are in [chapter 21](21-stello-2-evaluation-and-solver.md#measurements).
 
 ## Running the tool
 
@@ -21,8 +21,8 @@ dotnet run -c Release --project Stello.Net/tools/Stello.Benchmark -- <command> [
 | Command | What it does |
 |---|---|
 | `match --a <side> --b <side> [--starts <file>] [--max-starts N] [--workers N] [--name <name>]` | Plays side A against side B. Writes a Markdown and a JSON report to `Plans/benchmark-results/match_<name>`. |
-| `solve-bench [--from 40] [--to 44] [--passes 1] [--hash-bits 19] [--out <file.json>] [--compare <file.json>]` | Solves FFO positions #40 to #44 (or another range of #40–#59) exactly. |
-| `mid-bench [--depth 10] [--passes 3] [--hash-bits 19] [--out <file.json>] [--compare <file.json>]` | Searches the midgame positions to a fixed depth. |
+| `solve-bench [--engine stello] [--eval <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits 19] [--out <file.json>] [--compare <file.json>]` | Solves FFO positions #40 to #44 (or another range of #40–#59) exactly. |
+| `mid-bench [--engine stello] [--eval <file>] [--depth 10] [--passes 3] [--hash-bits 19] [--out <file.json>] [--compare <file.json>]` | Searches the midgame positions to a fixed depth. |
 | `make-starts [--plies 10-12] [--max-value 40]` | Writes the start positions for `match` from the opening book. |
 | `make-positions [--games 20] [--depth 6] [--empties 48,42,36,30,26]` | Writes the midgame positions for `mid-bench`. |
 
@@ -41,12 +41,16 @@ A side is a short list of settings:
 | `depth=8` | 8 plies per move (`FixedDepth`) |
 | `hash-bits=19` | the size of each hash table: 2<sup>19</sup> slots (the app's default) |
 | `name=new` | the name in the report |
+| `book=on` | use the opening book (off by default) |
+| `engine=stello-v1` | the engine: `stello` (Stello 2, the default), `stello-v1` (Stello 1) or `egaroucid` ([below](#comparing-engines)) |
+| `eval=<file>` | Stello 2 with another evaluation file; `default` is the built-in one ([chapter 21](21-stello-2-evaluation-and-solver.md)) |
+| `sel-margin=50`, `sel-percent=50` | Stello 2's selective-search margin: \|β\| × percent / 100 + margin, in 1/100 disc ([chapter 06](06-midgame-search.md#selective-search)) |
 
-For example `--a time-ms=100,name=old --b time-ms=200,name=new`. Neither side uses the opening book unless it has `book=on`, so the games test the search and the evaluation. When later steps add settings to the engine (another evaluation, threads), they become new keys.
+For example `--a time-ms=100,name=old --b time-ms=200,name=new`. Neither side uses the opening book unless it has `book=on`, so the games test the search and the evaluation. When later steps add settings to the engine (threads, the phase 5 search switches), they become new keys. The keys `eval=classic`, `danger=` and `endgame=` of the Stello 2.0 work are gone: the old evaluation and solver are only in Stello 1 now.
 
 ### Start positions
 
-[starts.txt](../../Stello.Net/tools/Stello.Benchmark/Data/starts.txt) holds 590 positions from the master opening book: every book position 10 to 12 plies from the start whose best book move has a value of at most 40 evaluation units either way. The book's values come from deep searches, so these are openings that real games reach and that neither side has clearly won. They are in a fixed shuffled order, so the first N positions (`--max-starts N`) mix the plies and the openings.
+[starts.txt](../../Stello.Net/tools/Stello.Benchmark/Data/starts.txt) holds 590 positions from the master opening book: every book position 10 to 12 plies from the start whose best book move has a value of at most 40 evaluation units either way (Stello 1's units: the file was made from the book before Stello 2). The book's values come from deep searches, so these are openings that real games reach and that neither side has clearly won. They are in a fixed shuffled order, so the first N positions (`--max-starts N`) mix the plies and the openings.
 
 From each start position a **pair** of games is played: first side A plays the side to move, then side B. A start position that favours one colour is played once with each colour, so its effect cancels out. Every game starts with empty hash tables and fresh book trackers.
 
@@ -97,25 +101,37 @@ Since the Egaroucid port ([chapter 19](19-the-egaroucid-port.md)), the tool can 
 
 | Value | Engine |
 |---|---|
-| `stello` (the default) | the engine in `Stello.Engine`, which becomes Stello 2.0 |
+| `stello` (the default) | Stello 2, the engine in `Stello.Engine` that the apps use ([chapter 21](21-stello-2-evaluation-and-solver.md)) |
 | `stello-v1` | Stello 1: the engine before Stello 2.0, frozen in `Stello.Engine.V1` as the baseline |
 | `egaroucid` | the C# port of Egaroucid in `Egaroucid.Engine`; it needs Egaroucid's resources |
 
-For example `--a engine=stello-v1,time-ms=100 --b engine=egaroucid,time-ms=100`. An Egaroucid side takes `level=` instead of `depth=`, and also `book-acc=` and `seed=`. `book=on` turns on the opening book of either engine.
+For example `--a engine=stello-v1,time-ms=100 --b engine=egaroucid,time-ms=100`. An Egaroucid side takes `level=` instead of `depth=`, and also `book-acc=` and `seed=`. `book=on` turns on the opening book of any engine; Stello 1 then plays from its own book, `Book/opening-book-stello1.txt`. `--eval <file>` gives `solve-bench` and `mid-bench` another Stello 2 evaluation.
 
 Three commands compare the engines part by part:
 
 | Command | What it does |
 |---|---|
-| `eval-compare [--data <folder>] [--per-empties 5000]` | Scores both evaluations against the final scores of Egaroucid's training games (not in the repository). |
+| `eval-compare [--data <folder>] [--per-empties 5000]` | Scores Stello 1's and Egaroucid's evaluations against the final scores of Egaroucid's training games (not in the repository). Stello 2's evaluation is measured with `Stello.Trainer report` ([chapter 21](21-stello-2-evaluation-and-solver.md#training)). |
 | `make-exact [--games 100] [--empties 28,26,24]` | Writes midgame positions with every move solved exactly by the port, to `Data/midgame-exact.txt`. |
-| `mid-quality [--times 50,200,1000] [--engines stello,stello-v1,egaroucid]` | Measures the discs each engine's move loses against perfect play, at a fixed time per move. |
+| `mid-quality [--times 50,200,1000] [--engines stello,stello-v1,egaroucid \| --sides "<side>;<side>"]` | Measures the discs each engine's move loses against perfect play, at a fixed time per move, with paired differences for every pair. `--sides` takes match sides, for example with `eval=`. |
 
-[Chapter 20](20-engine-comparison.md) gives the results and the exact commands.
+[Chapter 20](20-engine-comparison.md) gives the results for Stello 1 against Egaroucid and the exact commands.
+
+### Stello 1 against Stello 2
+
+Stello 2.0 was measured the same way: every step as a 1,180-game match against Stello 1 (`engine=stello-v1`) and against Egaroucid at 100 and 500 ms, plus `mid-quality` for all three engines and `solve-bench --to 49` for the solver. For example:
+
+```text
+Stello.Benchmark match --a engine=stello-v1,time-ms=100,name=stello1 --b time-ms=100,name=stello2
+Stello.Benchmark mid-quality --engines stello,stello-v1,egaroucid
+Stello.Benchmark solve-bench --engine stello-v1 --to 49
+```
+
+The results are in [chapter 21](21-stello-2-evaluation-and-solver.md#measurements) and in [improve-stello-strength-findings.md](../../Plans/improve-stello-strength-findings.md); the reports are the `v2-*` and `match_v2-*` files in [Plans/benchmark-results](../../Plans/benchmark-results).
 
 ## Baseline
 
-Measured on 29 October 2026 with the engine as ported from C++, Release build, on a 12th Gen Intel Core i7-12850HX (24 logical processors; Linux VM).
+Measured on 29 October 2026 with the engine as ported from C++ (now Stello 1, `engine=stello-v1`), Release build, on a 12th Gen Intel Core i7-12850HX (24 logical processors; Linux VM).
 
 ### Strength: what more time is worth
 
@@ -161,7 +177,7 @@ All scores and moves are correct. #40–#44 take 19.2 s, with about the node cou
 
 Saved as `Plans/benchmark-results/baseline-mid-bench.json`, for `--compare`.
 
-The midgame search visits about **3.3 million nodes per second**, the solver about **20 million**. Most midgame nodes are leaves, which are evaluated, and the evaluation (the edge tables, the two-ply edge search, corner stability and mobility, [chapter 04](04-evaluation.md)) costs much more than the solver's work per node.
+The midgame search visits about **3.3 million nodes per second**, the solver about **20 million**. Most midgame nodes are leaves, which are evaluated, and Stello 1's evaluation (the edge tables, the two-ply edge search, corner stability and mobility, [chapter 04](04-evaluation.md)) costs much more than the solver's work per node.
 
 **Timing noise.** Times on this machine vary by up to about 8 % between runs (a single pass against the best of three in the example above), so a speed change of a few per cent needs several passes, and the same number of passes on both sides.
 

@@ -2,9 +2,11 @@
 
 [Back to the index](README.md)
 
+> **Stello 1.** This chapter describes the evaluation of Stello 1, the engine before version 2.0. Stello 2.0 replaced it with a trained pattern evaluation ([chapter 21](21-stello-2-evaluation-and-solver.md)). The code below now lives in [Stello.Engine.V1](../../Stello.Net/Stello.Engine.V1), the frozen baseline that the tools and tests use for comparison; `Stello.Engine` no longer has the edge tables.
+
 ## In short
 
-At the leaves of the midgame search the engine cannot look further ahead, so it estimates how good the position is for the side to move. Stello's evaluation is built around the **edges**: corners and edges decide most Othello games, and a disc on an edge is hard to flip. Each of the four edges is looked up in precomputed tables, and a small two-ply search on the edges alone checks which edge and corner moves each side has. **Stable discs** grown out of the corners add a bonus. **Mobility** (how many moves each side has) and **potential mobility** (how many empty squares border the opponent's discs) make up the rest. The score is in "evaluation units"; a won game is worth more than 32 600.
+At the leaves of the midgame search the engine cannot look further ahead, so it estimates how good the position is for the side to move. Stello 1's evaluation is built around the **edges**: corners and edges decide most Othello games, and a disc on an edge is hard to flip. Each of the four edges is looked up in precomputed tables, and a small two-ply search on the edges alone checks which edge and corner moves each side has. **Stable discs** grown out of the corners add a bonus. **Mobility** (how many moves each side has) and **potential mobility** (how many empty squares border the opponent's discs) make up the rest. The score is in "evaluation units"; a won game is worth more than 32 600.
 
 The evaluation is a faithful port of the C++ `eval()` in [Eval.cpp](../../Stello%20C++/BRAIN/Eval.cpp).
 
@@ -30,7 +32,7 @@ so there are $3^8 = 6561$ possible edges, numbered 0 to 6560. An empty edge has 
 
 ### The edge tables
 
-[EdgeTables.cs](../../Stello.Net/Stello.Engine/Evaluation/EdgeTables.cs) holds eight tables of 6561 `short` values, one entry per edge index. They were computed once, long ago, by the C++ program [BORDERS.C](../../Stello%20C++/BORDERS/BORDERS.C), stored in [Kanter.cpp](../../Stello%20C++/BRAIN/Kanter.cpp), and copied unchanged into C#. All values are from **White's point of view**.
+[EdgeTables.cs](../../Stello.Net/Stello.Engine.V1/Evaluation/EdgeTables.cs) holds eight tables of 6561 `short` values, one entry per edge index. They were computed once, long ago, by the C++ program [BORDERS.C](../../Stello%20C++/BORDERS/BORDERS.C), stored in [Kanter.cpp](../../Stello%20C++/BRAIN/Kanter.cpp), and copied unchanged into C#. All values are from **White's point of view**.
 
 | C# table | C++ name | For each edge index |
 |---|---|---|
@@ -145,7 +147,7 @@ The "+ 2" keeps the fraction defined when both counts are 0, and the fraction ke
 
 ### Dangerous corner moves
 
-`Evaluator.IsDangerous(after, mover, move)` is called by the search before a leaf is evaluated. If the move just played is a corner, and the edge tables mark that corner as dangerous for the mover on the edges after the move, the leaf is **not evaluated**: the search looks one ply deeper instead (chapter 06). A corner that looks good but is dangerous is thus checked by a real search.
+`Evaluator.IsDangerous(after, mover, move)` is called by Stello 1's search before a leaf is evaluated. If the move just played is a corner, and the edge tables mark that corner as dangerous for the mover on the edges after the move, the leaf is **not evaluated**: the search looks one ply deeper instead (chapter 06). A corner that looks good but is dangerous is thus checked by a real search.
 
 ### Game over
 
@@ -217,21 +219,21 @@ Here $p = 734$ (34 discs), but no corner is only "possible", so it is not used.
 - **Edge knowledge in tables.** The tables turn a lot of Othello edge knowledge (stable discs, unbalanced edges, dangerous C-squares, corner fights) into one array lookup per edge. The two-ply look-ahead on the tables adds tactics on the edges at a small cost.
 - **A faithful port.** The four corner blocks, written out four times in C++ (about 1000 lines), are written once in C# and driven by a table of corners (`Corners`: the two edges, first or last square, the diagonal). The globals `sindex1..4` that C++ computed in `dangerous()` are now computed inside `Evaluate`. The unused `pbonus` was dropped. Everything else gives the same results as C++, with edge candidate reply penalization properly isolated. See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md), sections 3.1–3.3.
 - **Cost.** Building the 10 × 10 array for every call is the price of the line-by-line port. The evaluation is only called at the leaves of the midgame search and for move ordering far from the end (chapter 08), so it has not been a bottleneck so far.
-- **The weights are old.** 400, 600, 60 and the edge values were tuned by hand for the C++ program. They are not learned from games, as in modern pattern-based programs (see Gunnar Andersson's page below).
+- **The weights are old.** 400, 600, 60 and the edge values were tuned by hand for the C++ program. They are not learned from games, as in modern pattern-based programs (see Gunnar Andersson's page below). Stello 2.0 made that step ([chapter 21](21-stello-2-evaluation-and-solver.md)); the comparison that led to it is in [chapter 20](20-engine-comparison.md).
 
 ## Where in the code
 
 | File | Main members |
 |---|---|
-| [Evaluator.cs](../../Stello.Net/Stello.Engine/Evaluation/Evaluator.cs) | `Evaluate`, `IsDangerous`, `EdgeIndices`, `FillMailbox`, `EdgeScore`, `DiagonalReaches`, `CornerStability`, `EdgeContext` (`Score`, `Blend`, `Reply`), the flag sets `WhiteFlags` and `BlackFlags`, `Corners` |
-| [EdgeTables.cs](../../Stello.Net/Stello.Engine/Evaluation/EdgeTables.cs) | The eight generated tables |
+| [Evaluator.cs](../../Stello.Net/Stello.Engine.V1/Evaluation/Evaluator.cs) | `Evaluate`, `IsDangerous`, `EdgeIndices`, `FillMailbox`, `EdgeScore`, `DiagonalReaches`, `CornerStability`, `EdgeContext` (`Score`, `Blend`, `Reply`), the flag sets `WhiteFlags` and `BlackFlags`, `Corners` |
+| [EdgeTables.cs](../../Stello.Net/Stello.Engine.V1/Evaluation/EdgeTables.cs) | The eight generated tables |
 | [Bitboards.cs](../../Stello.Net/Stello.Engine/Bitboards.cs) | `LegalMoves`, `PotentialMobility` |
-| [SearchEngine.cs](../../Stello.Net/Stello.Engine/SearchEngine.cs) | `EvaluateLeaf` (the call from the search) |
+| [SearchEngine.cs](../../Stello.Net/Stello.Engine.V1/SearchEngine.cs) (Stello 1) | `EvaluateLeaf` (the call from the search) |
 | C++: [Eval.cpp](../../Stello%20C++/BRAIN/Eval.cpp), [Kanter.cpp](../../Stello%20C++/BRAIN/Kanter.cpp), [BORDERS.C](../../Stello%20C++/BORDERS/BORDERS.C), [Minmax.cpp](../../Stello%20C++/BRAIN/Minmax.cpp) (`dangerous`) | The original code and the table generator |
 
 ## Tests
 
-[EvaluatorTests.cs](../../Stello.Net/Stello.Engine.Tests/EvaluatorTests.cs):
+[EvaluatorTests.cs](../../Stello.Net/Stello.Engine.Tests/EvaluatorTests.cs) (on Stello 1's evaluator in `Stello.Engine.V1`):
 
 - the tables have 6561 entries each, and corner moves on an empty edge change the corner square;
 - the edge indices of the start position (all empty), and the order of the squares inside an edge;

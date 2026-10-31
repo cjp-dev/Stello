@@ -1,0 +1,405 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 808 724" width="808" height="724" font-family="sans-serif">
+<title>The 15 patterns of Stello 2's evaluation (plus15)</title>
+<desc>Fifteen small boards, a1 at the top left. Each shows one pattern in its canonical place. Green: the 11 classic patterns: rows 2, 3 and 4, the diagonals of 4 to 8 squares, the edge with both X-squares, the 2 by 5 corner and the 3 by 3 corner. Orange: the four shapes taken from Egaroucid 7.9: triangle, corner plus block, cross, and edge plus y. Under each board: the number of squares, the number of places on the board, and the number of weights per stage after folding. Together the patterns have 62 places (features).</desc>
+<rect x="0" y="0" width="808" height="724" fill="#FFFFFF"/>
+<text x="24" y="30" font-size="16" font-weight="bold" fill="#000000">Stello 2's evaluation: 15 patterns (plus15), 62 features</text>
+<text x="24" y="54" font-size="12" fill="#555555">Each board shows a pattern in its canonical place (a1 top left). Its other places are the same squares turned by a symmetry of the board.</text>
+<text x="24" y="78" font-size="13" font-weight="bold" fill="#000000">row2</text>
+<rect x="24" y="84" width="128" height="128" fill="#DCEFD9" stroke="#0B4D22" stroke-width="2"/>
+<rect x="24" y="100" width="16" height="16" fill="#81C784"/>
+<rect x="40" y="100" width="16" height="16" fill="#81C784"/>
+<rect x="56" y="100" width="16" height="16" fill="#81C784"/>
+<rect x="72" y="100" width="16" height="16" fill="#81C784"/>
+<rect x="88" y="100" width="16" height="16" fill="#81C784"/>
+<rect x="104" y="100" width="16" height="16" fill="#81C784"/>
+<rect x="120" y="100" width="16" height="16" fill="#81C784"/>
+<rect x="136" y="100" width="16" height="16" fill="#81C784"/>
+<line x1="40" y1="84" x2="40" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="100" x2="152" y2="100" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="56" y1="84" x2="56" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="116" x2="152" y2="116" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="72" y1="84" x2="72" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="132" x2="152" y2="132" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="88" y1="84" x2="88" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="148" x2="152" y2="148" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="104" y1="84" x2="104" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="164" x2="152" y2="164" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="120" y1="84" x2="120" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="180" x2="152" y2="180" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="136" y1="84" x2="136" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="196" x2="152" y2="196" stroke="#0B4D22" stroke-width="0.5"/>
+<text x="24" y="230" font-size="12" fill="#000000">8 squares, 4 places</text>
+<text x="24" y="246" font-size="12" fill="#555555">3,321 weights</text>
+<text x="180" y="78" font-size="13" font-weight="bold" fill="#000000">row3</text>
+<rect x="180" y="84" width="128" height="128" fill="#DCEFD9" stroke="#0B4D22" stroke-width="2"/>
+<rect x="180" y="116" width="16" height="16" fill="#81C784"/>
+<rect x="196" y="116" width="16" height="16" fill="#81C784"/>
+<rect x="212" y="116" width="16" height="16" fill="#81C784"/>
+<rect x="228" y="116" width="16" height="16" fill="#81C784"/>
+<rect x="244" y="116" width="16" height="16" fill="#81C784"/>
+<rect x="260" y="116" width="16" height="16" fill="#81C784"/>
+<rect x="276" y="116" width="16" height="16" fill="#81C784"/>
+<rect x="292" y="116" width="16" height="16" fill="#81C784"/>
+<line x1="196" y1="84" x2="196" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="100" x2="308" y2="100" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="212" y1="84" x2="212" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="116" x2="308" y2="116" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="228" y1="84" x2="228" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="132" x2="308" y2="132" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="244" y1="84" x2="244" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="148" x2="308" y2="148" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="260" y1="84" x2="260" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="164" x2="308" y2="164" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="276" y1="84" x2="276" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="180" x2="308" y2="180" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="292" y1="84" x2="292" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="196" x2="308" y2="196" stroke="#0B4D22" stroke-width="0.5"/>
+<text x="180" y="230" font-size="12" fill="#000000">8 squares, 4 places</text>
+<text x="180" y="246" font-size="12" fill="#555555">3,321 weights</text>
+<text x="336" y="78" font-size="13" font-weight="bold" fill="#000000">row4</text>
+<rect x="336" y="84" width="128" height="128" fill="#DCEFD9" stroke="#0B4D22" stroke-width="2"/>
+<rect x="336" y="132" width="16" height="16" fill="#81C784"/>
+<rect x="352" y="132" width="16" height="16" fill="#81C784"/>
+<rect x="368" y="132" width="16" height="16" fill="#81C784"/>
+<rect x="384" y="132" width="16" height="16" fill="#81C784"/>
+<rect x="400" y="132" width="16" height="16" fill="#81C784"/>
+<rect x="416" y="132" width="16" height="16" fill="#81C784"/>
+<rect x="432" y="132" width="16" height="16" fill="#81C784"/>
+<rect x="448" y="132" width="16" height="16" fill="#81C784"/>
+<line x1="352" y1="84" x2="352" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="100" x2="464" y2="100" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="368" y1="84" x2="368" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="116" x2="464" y2="116" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="384" y1="84" x2="384" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="132" x2="464" y2="132" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="400" y1="84" x2="400" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="148" x2="464" y2="148" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="416" y1="84" x2="416" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="164" x2="464" y2="164" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="432" y1="84" x2="432" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="180" x2="464" y2="180" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="448" y1="84" x2="448" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="196" x2="464" y2="196" stroke="#0B4D22" stroke-width="0.5"/>
+<text x="336" y="230" font-size="12" fill="#000000">8 squares, 4 places</text>
+<text x="336" y="246" font-size="12" fill="#555555">3,321 weights</text>
+<text x="492" y="78" font-size="13" font-weight="bold" fill="#000000">diagonal4</text>
+<rect x="492" y="84" width="128" height="128" fill="#DCEFD9" stroke="#0B4D22" stroke-width="2"/>
+<rect x="540" y="84" width="16" height="16" fill="#81C784"/>
+<rect x="524" y="100" width="16" height="16" fill="#81C784"/>
+<rect x="508" y="116" width="16" height="16" fill="#81C784"/>
+<rect x="492" y="132" width="16" height="16" fill="#81C784"/>
+<line x1="508" y1="84" x2="508" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="100" x2="620" y2="100" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="524" y1="84" x2="524" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="116" x2="620" y2="116" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="540" y1="84" x2="540" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="132" x2="620" y2="132" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="556" y1="84" x2="556" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="148" x2="620" y2="148" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="572" y1="84" x2="572" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="164" x2="620" y2="164" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="588" y1="84" x2="588" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="180" x2="620" y2="180" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="604" y1="84" x2="604" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="196" x2="620" y2="196" stroke="#0B4D22" stroke-width="0.5"/>
+<text x="492" y="230" font-size="12" fill="#000000">4 squares, 4 places</text>
+<text x="492" y="246" font-size="12" fill="#555555">45 weights</text>
+<text x="648" y="78" font-size="13" font-weight="bold" fill="#000000">diagonal5</text>
+<rect x="648" y="84" width="128" height="128" fill="#DCEFD9" stroke="#0B4D22" stroke-width="2"/>
+<rect x="712" y="84" width="16" height="16" fill="#81C784"/>
+<rect x="696" y="100" width="16" height="16" fill="#81C784"/>
+<rect x="680" y="116" width="16" height="16" fill="#81C784"/>
+<rect x="664" y="132" width="16" height="16" fill="#81C784"/>
+<rect x="648" y="148" width="16" height="16" fill="#81C784"/>
+<line x1="664" y1="84" x2="664" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="100" x2="776" y2="100" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="680" y1="84" x2="680" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="116" x2="776" y2="116" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="696" y1="84" x2="696" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="132" x2="776" y2="132" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="712" y1="84" x2="712" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="148" x2="776" y2="148" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="728" y1="84" x2="728" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="164" x2="776" y2="164" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="744" y1="84" x2="744" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="180" x2="776" y2="180" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="760" y1="84" x2="760" y2="212" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="196" x2="776" y2="196" stroke="#0B4D22" stroke-width="0.5"/>
+<text x="648" y="230" font-size="12" fill="#000000">5 squares, 4 places</text>
+<text x="648" y="246" font-size="12" fill="#555555">135 weights</text>
+<text x="24" y="278" font-size="13" font-weight="bold" fill="#000000">diagonal6</text>
+<rect x="24" y="284" width="128" height="128" fill="#DCEFD9" stroke="#0B4D22" stroke-width="2"/>
+<rect x="104" y="284" width="16" height="16" fill="#81C784"/>
+<rect x="88" y="300" width="16" height="16" fill="#81C784"/>
+<rect x="72" y="316" width="16" height="16" fill="#81C784"/>
+<rect x="56" y="332" width="16" height="16" fill="#81C784"/>
+<rect x="40" y="348" width="16" height="16" fill="#81C784"/>
+<rect x="24" y="364" width="16" height="16" fill="#81C784"/>
+<line x1="40" y1="284" x2="40" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="300" x2="152" y2="300" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="56" y1="284" x2="56" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="316" x2="152" y2="316" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="72" y1="284" x2="72" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="332" x2="152" y2="332" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="88" y1="284" x2="88" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="348" x2="152" y2="348" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="104" y1="284" x2="104" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="364" x2="152" y2="364" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="120" y1="284" x2="120" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="380" x2="152" y2="380" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="136" y1="284" x2="136" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="396" x2="152" y2="396" stroke="#0B4D22" stroke-width="0.5"/>
+<text x="24" y="430" font-size="12" fill="#000000">6 squares, 4 places</text>
+<text x="24" y="446" font-size="12" fill="#555555">378 weights</text>
+<text x="180" y="278" font-size="13" font-weight="bold" fill="#000000">diagonal7</text>
+<rect x="180" y="284" width="128" height="128" fill="#DCEFD9" stroke="#0B4D22" stroke-width="2"/>
+<rect x="276" y="284" width="16" height="16" fill="#81C784"/>
+<rect x="260" y="300" width="16" height="16" fill="#81C784"/>
+<rect x="244" y="316" width="16" height="16" fill="#81C784"/>
+<rect x="228" y="332" width="16" height="16" fill="#81C784"/>
+<rect x="212" y="348" width="16" height="16" fill="#81C784"/>
+<rect x="196" y="364" width="16" height="16" fill="#81C784"/>
+<rect x="180" y="380" width="16" height="16" fill="#81C784"/>
+<line x1="196" y1="284" x2="196" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="300" x2="308" y2="300" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="212" y1="284" x2="212" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="316" x2="308" y2="316" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="228" y1="284" x2="228" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="332" x2="308" y2="332" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="244" y1="284" x2="244" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="348" x2="308" y2="348" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="260" y1="284" x2="260" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="364" x2="308" y2="364" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="276" y1="284" x2="276" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="380" x2="308" y2="380" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="292" y1="284" x2="292" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="396" x2="308" y2="396" stroke="#0B4D22" stroke-width="0.5"/>
+<text x="180" y="430" font-size="12" fill="#000000">7 squares, 4 places</text>
+<text x="180" y="446" font-size="12" fill="#555555">1,134 weights</text>
+<text x="336" y="278" font-size="13" font-weight="bold" fill="#000000">diagonal8</text>
+<rect x="336" y="284" width="128" height="128" fill="#DCEFD9" stroke="#0B4D22" stroke-width="2"/>
+<rect x="448" y="284" width="16" height="16" fill="#81C784"/>
+<rect x="432" y="300" width="16" height="16" fill="#81C784"/>
+<rect x="416" y="316" width="16" height="16" fill="#81C784"/>
+<rect x="400" y="332" width="16" height="16" fill="#81C784"/>
+<rect x="384" y="348" width="16" height="16" fill="#81C784"/>
+<rect x="368" y="364" width="16" height="16" fill="#81C784"/>
+<rect x="352" y="380" width="16" height="16" fill="#81C784"/>
+<rect x="336" y="396" width="16" height="16" fill="#81C784"/>
+<line x1="352" y1="284" x2="352" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="300" x2="464" y2="300" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="368" y1="284" x2="368" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="316" x2="464" y2="316" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="384" y1="284" x2="384" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="332" x2="464" y2="332" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="400" y1="284" x2="400" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="348" x2="464" y2="348" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="416" y1="284" x2="416" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="364" x2="464" y2="364" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="432" y1="284" x2="432" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="380" x2="464" y2="380" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="448" y1="284" x2="448" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="396" x2="464" y2="396" stroke="#0B4D22" stroke-width="0.5"/>
+<text x="336" y="430" font-size="12" fill="#000000">8 squares, 2 places</text>
+<text x="336" y="446" font-size="12" fill="#555555">3,321 weights</text>
+<text x="492" y="278" font-size="13" font-weight="bold" fill="#000000">edge+2x</text>
+<rect x="492" y="284" width="128" height="128" fill="#DCEFD9" stroke="#0B4D22" stroke-width="2"/>
+<rect x="492" y="284" width="16" height="16" fill="#81C784"/>
+<rect x="508" y="284" width="16" height="16" fill="#81C784"/>
+<rect x="524" y="284" width="16" height="16" fill="#81C784"/>
+<rect x="540" y="284" width="16" height="16" fill="#81C784"/>
+<rect x="556" y="284" width="16" height="16" fill="#81C784"/>
+<rect x="572" y="284" width="16" height="16" fill="#81C784"/>
+<rect x="588" y="284" width="16" height="16" fill="#81C784"/>
+<rect x="604" y="284" width="16" height="16" fill="#81C784"/>
+<rect x="508" y="300" width="16" height="16" fill="#81C784"/>
+<rect x="588" y="300" width="16" height="16" fill="#81C784"/>
+<line x1="508" y1="284" x2="508" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="300" x2="620" y2="300" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="524" y1="284" x2="524" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="316" x2="620" y2="316" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="540" y1="284" x2="540" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="332" x2="620" y2="332" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="556" y1="284" x2="556" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="348" x2="620" y2="348" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="572" y1="284" x2="572" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="364" x2="620" y2="364" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="588" y1="284" x2="588" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="380" x2="620" y2="380" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="604" y1="284" x2="604" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="396" x2="620" y2="396" stroke="#0B4D22" stroke-width="0.5"/>
+<text x="492" y="430" font-size="12" fill="#000000">10 squares, 4 places</text>
+<text x="492" y="446" font-size="12" fill="#555555">29,646 weights</text>
+<text x="648" y="278" font-size="13" font-weight="bold" fill="#000000">corner2x5</text>
+<rect x="648" y="284" width="128" height="128" fill="#DCEFD9" stroke="#0B4D22" stroke-width="2"/>
+<rect x="648" y="284" width="16" height="16" fill="#81C784"/>
+<rect x="664" y="284" width="16" height="16" fill="#81C784"/>
+<rect x="680" y="284" width="16" height="16" fill="#81C784"/>
+<rect x="696" y="284" width="16" height="16" fill="#81C784"/>
+<rect x="712" y="284" width="16" height="16" fill="#81C784"/>
+<rect x="648" y="300" width="16" height="16" fill="#81C784"/>
+<rect x="664" y="300" width="16" height="16" fill="#81C784"/>
+<rect x="680" y="300" width="16" height="16" fill="#81C784"/>
+<rect x="696" y="300" width="16" height="16" fill="#81C784"/>
+<rect x="712" y="300" width="16" height="16" fill="#81C784"/>
+<line x1="664" y1="284" x2="664" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="300" x2="776" y2="300" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="680" y1="284" x2="680" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="316" x2="776" y2="316" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="696" y1="284" x2="696" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="332" x2="776" y2="332" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="712" y1="284" x2="712" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="348" x2="776" y2="348" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="728" y1="284" x2="728" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="364" x2="776" y2="364" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="744" y1="284" x2="744" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="380" x2="776" y2="380" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="760" y1="284" x2="760" y2="412" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="396" x2="776" y2="396" stroke="#0B4D22" stroke-width="0.5"/>
+<text x="648" y="430" font-size="12" fill="#000000">10 squares, 8 places</text>
+<text x="648" y="446" font-size="12" fill="#555555">59,049 weights</text>
+<text x="24" y="478" font-size="13" font-weight="bold" fill="#000000">corner3x3</text>
+<rect x="24" y="484" width="128" height="128" fill="#DCEFD9" stroke="#0B4D22" stroke-width="2"/>
+<rect x="24" y="484" width="16" height="16" fill="#81C784"/>
+<rect x="40" y="484" width="16" height="16" fill="#81C784"/>
+<rect x="56" y="484" width="16" height="16" fill="#81C784"/>
+<rect x="24" y="500" width="16" height="16" fill="#81C784"/>
+<rect x="40" y="500" width="16" height="16" fill="#81C784"/>
+<rect x="56" y="500" width="16" height="16" fill="#81C784"/>
+<rect x="24" y="516" width="16" height="16" fill="#81C784"/>
+<rect x="40" y="516" width="16" height="16" fill="#81C784"/>
+<rect x="56" y="516" width="16" height="16" fill="#81C784"/>
+<line x1="40" y1="484" x2="40" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="500" x2="152" y2="500" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="56" y1="484" x2="56" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="516" x2="152" y2="516" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="72" y1="484" x2="72" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="532" x2="152" y2="532" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="88" y1="484" x2="88" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="548" x2="152" y2="548" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="104" y1="484" x2="104" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="564" x2="152" y2="564" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="120" y1="484" x2="120" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="580" x2="152" y2="580" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="136" y1="484" x2="136" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="24" y1="596" x2="152" y2="596" stroke="#0B4D22" stroke-width="0.5"/>
+<text x="24" y="630" font-size="12" fill="#000000">9 squares, 4 places</text>
+<text x="24" y="646" font-size="12" fill="#555555">10,206 weights</text>
+<text x="180" y="478" font-size="13" font-weight="bold" fill="#000000">triangle</text>
+<rect x="180" y="484" width="128" height="128" fill="#DCEFD9" stroke="#0B4D22" stroke-width="2"/>
+<rect x="180" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="196" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="212" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="228" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="180" y="500" width="16" height="16" fill="#FFCC80"/>
+<rect x="196" y="500" width="16" height="16" fill="#FFCC80"/>
+<rect x="212" y="500" width="16" height="16" fill="#FFCC80"/>
+<rect x="180" y="516" width="16" height="16" fill="#FFCC80"/>
+<rect x="196" y="516" width="16" height="16" fill="#FFCC80"/>
+<rect x="180" y="532" width="16" height="16" fill="#FFCC80"/>
+<line x1="196" y1="484" x2="196" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="500" x2="308" y2="500" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="212" y1="484" x2="212" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="516" x2="308" y2="516" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="228" y1="484" x2="228" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="532" x2="308" y2="532" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="244" y1="484" x2="244" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="548" x2="308" y2="548" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="260" y1="484" x2="260" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="564" x2="308" y2="564" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="276" y1="484" x2="276" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="580" x2="308" y2="580" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="292" y1="484" x2="292" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="180" y1="596" x2="308" y2="596" stroke="#0B4D22" stroke-width="0.5"/>
+<text x="180" y="630" font-size="12" fill="#000000">10 squares, 4 places</text>
+<text x="180" y="646" font-size="12" fill="#555555">29,889 weights</text>
+<text x="336" y="478" font-size="13" font-weight="bold" fill="#000000">corner+block</text>
+<rect x="336" y="484" width="128" height="128" fill="#DCEFD9" stroke="#0B4D22" stroke-width="2"/>
+<rect x="336" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="368" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="384" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="400" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="416" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="448" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="368" y="500" width="16" height="16" fill="#FFCC80"/>
+<rect x="384" y="500" width="16" height="16" fill="#FFCC80"/>
+<rect x="400" y="500" width="16" height="16" fill="#FFCC80"/>
+<rect x="416" y="500" width="16" height="16" fill="#FFCC80"/>
+<line x1="352" y1="484" x2="352" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="500" x2="464" y2="500" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="368" y1="484" x2="368" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="516" x2="464" y2="516" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="384" y1="484" x2="384" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="532" x2="464" y2="532" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="400" y1="484" x2="400" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="548" x2="464" y2="548" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="416" y1="484" x2="416" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="564" x2="464" y2="564" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="432" y1="484" x2="432" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="580" x2="464" y2="580" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="448" y1="484" x2="448" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="336" y1="596" x2="464" y2="596" stroke="#0B4D22" stroke-width="0.5"/>
+<text x="336" y="630" font-size="12" fill="#000000">10 squares, 4 places</text>
+<text x="336" y="646" font-size="12" fill="#555555">29,646 weights</text>
+<text x="492" y="478" font-size="13" font-weight="bold" fill="#000000">cross</text>
+<rect x="492" y="484" width="128" height="128" fill="#DCEFD9" stroke="#0B4D22" stroke-width="2"/>
+<rect x="492" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="508" y="500" width="16" height="16" fill="#FFCC80"/>
+<rect x="524" y="516" width="16" height="16" fill="#FFCC80"/>
+<rect x="540" y="532" width="16" height="16" fill="#FFCC80"/>
+<rect x="508" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="524" y="500" width="16" height="16" fill="#FFCC80"/>
+<rect x="540" y="516" width="16" height="16" fill="#FFCC80"/>
+<rect x="492" y="500" width="16" height="16" fill="#FFCC80"/>
+<rect x="508" y="516" width="16" height="16" fill="#FFCC80"/>
+<rect x="524" y="532" width="16" height="16" fill="#FFCC80"/>
+<line x1="508" y1="484" x2="508" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="500" x2="620" y2="500" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="524" y1="484" x2="524" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="516" x2="620" y2="516" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="540" y1="484" x2="540" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="532" x2="620" y2="532" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="556" y1="484" x2="556" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="548" x2="620" y2="548" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="572" y1="484" x2="572" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="564" x2="620" y2="564" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="588" y1="484" x2="588" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="580" x2="620" y2="580" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="604" y1="484" x2="604" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="492" y1="596" x2="620" y2="596" stroke="#0B4D22" stroke-width="0.5"/>
+<text x="492" y="630" font-size="12" fill="#000000">10 squares, 4 places</text>
+<text x="492" y="646" font-size="12" fill="#555555">30,618 weights</text>
+<text x="648" y="478" font-size="13" font-weight="bold" fill="#000000">edge+y</text>
+<rect x="648" y="484" width="128" height="128" fill="#DCEFD9" stroke="#0B4D22" stroke-width="2"/>
+<rect x="680" y="500" width="16" height="16" fill="#FFCC80"/>
+<rect x="648" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="664" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="680" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="696" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="712" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="728" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="744" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="760" y="484" width="16" height="16" fill="#FFCC80"/>
+<rect x="728" y="500" width="16" height="16" fill="#FFCC80"/>
+<line x1="664" y1="484" x2="664" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="500" x2="776" y2="500" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="680" y1="484" x2="680" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="516" x2="776" y2="516" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="696" y1="484" x2="696" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="532" x2="776" y2="532" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="712" y1="484" x2="712" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="548" x2="776" y2="548" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="728" y1="484" x2="728" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="564" x2="776" y2="564" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="744" y1="484" x2="744" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="580" x2="776" y2="580" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="760" y1="484" x2="760" y2="612" stroke="#0B4D22" stroke-width="0.5"/>
+<line x1="648" y1="596" x2="776" y2="596" stroke="#0B4D22" stroke-width="0.5"/>
+<text x="648" y="630" font-size="12" fill="#000000">10 squares, 4 places</text>
+<text x="648" y="646" font-size="12" fill="#555555">29,646 weights</text>
+<rect x="24" y="678" width="14" height="14" fill="#81C784" stroke="#0B4D22" stroke-width="0.5"/>
+<text x="44" y="690" font-size="12" fill="#000000">classic11 (Logistello / Edax-like): 46 features</text>
+<rect x="360" y="678" width="14" height="14" fill="#FFCC80" stroke="#0B4D22" stroke-width="0.5"/>
+<text x="380" y="690" font-size="12" fill="#000000">from Egaroucid 7.9: 16 more features</text>
+<text x="24" y="710" font-size="12" fill="#000000">Weights per stage after folding: 233,676 in all.</text>
+</svg>

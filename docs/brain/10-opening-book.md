@@ -30,7 +30,7 @@ One book move (internal class):
 | `Exact` | A search that solved the position exactly, or a finished game |
 | `BackedUp` | Minus the value of the position after the move, which is itself in the book |
 
-`BookEffort(Kind, Amount, DepthReached, EngineVersion)` records the search limit (`Time` in milliseconds, `Depth` in plies, `Solve`, or `None` if unknown), the depth the search reached, and the engine version. `OpeningBook.EngineVersion` (now 2) is raised by hand when a change to the evaluation or the search changes the values it finds, so old values can be told apart and searched again. Version 2 was recalculated after fixing the leaf evaluation. Values imported from the original C++ book have no effort.
+`BookEffort(Kind, Amount, DepthReached, EngineVersion)` records the search limit (`Time` in milliseconds, `Depth` in plies, `Solve`, or `None` if unknown), the depth the search reached, and the engine version. `OpeningBook.EngineVersion` (now 3) is raised by hand when a change to the evaluation or the search changes the values it finds, so old values can be told apart and searched again. Version 2 was recalculated after fixing the leaf evaluation. Version 3 is Stello 2.0, whose heuristic values are in 1/100 disc; the book is being recalculated with it ([chapter 21](21-stello-2-evaluation-and-solver.md#the-opening-book)). Values imported from the original C++ book have no effort.
 
 ### `OpeningBook`
 

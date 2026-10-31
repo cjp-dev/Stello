@@ -123,6 +123,17 @@ Articles, papers and source code on the internet that explain the techniques use
 | [Training data – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/train-data/) | Egaroucid's self-play and match data. Stello's `eval-compare` uses it to measure evaluations; it may not be redistributed. As its terms ask: *Stello used Egaroucid's self-play data for training and testing its Othello AI.* |
 | [ProbCut – Chess Programming Wiki](https://www.chessprogramming.org/ProbCut) | Multi-ProbCut, the selective search Egaroucid uses. |
 
+## 21 Stello 2: the pattern evaluation and the new endgame solver
+
+| Link | What you find there |
+|---|---|
+| [Technical explanation – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/explanation/) | Egaroucid's pattern evaluation and its training with Adam, move ordering, the endgame search and the code for the last empty squares, which Stello 2's solver adapts. |
+| [Training data – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/train-data/) | The data Stello 2's evaluation was trained on (`Stello.Trainer`). It may not be redistributed, so it is not in the repository; the trained weights are. As its terms ask: *Stello used Egaroucid's self-play data for training and testing its Othello AI.* |
+| [Kingma and Ba (2014): Adam: A Method for Stochastic Optimization – arXiv](https://arxiv.org/abs/1412.6980) | The optimiser of the trainer. |
+| [Logistello – Michael Buro](https://skatgame.net/mburo/log.html) | The program that brought trained pattern evaluation to Othello. |
+| [Enhanced Transposition Cutoff – Chess Programming Wiki](https://www.chessprogramming.org/Enhanced_Transposition_Cutoff) | ETC, used by the new solver from 12 empty squares. |
+| [Null Window – Chess Programming Wiki](https://www.chessprogramming.org/Null_Window) | Null-window searches, which the new solver is built from. |
+
 ## Writing these documents
 
 | Link | What you find there |

@@ -6,7 +6,7 @@ This chapter shows the big picture: the projects, the main types, and what happe
 
 ## The projects
 
-The solution [Stello.Net.slnx](../../Stello.Net/Stello.Net.slnx) has eleven projects. The arrows show which project uses which; the apps and the app tests also use the engine's types directly. The projects for comparing engines (Stello 1, the Egaroucid port and the port's tests) are used only by the tools and tests, never by the apps ([chapter 19](19-the-egaroucid-port.md)).
+The solution [Stello.Net.slnx](../../Stello.Net/Stello.Net.slnx) has twelve projects. The arrows show which project uses which; the apps and the app tests also use the engine's types directly. The projects for comparing engines (Stello 1, the Egaroucid port and the port's tests) and the evaluation trainer are used only by the tools and tests, never by the apps ([chapters 19](19-the-egaroucid-port.md) and [21](21-stello-2-evaluation-and-solver.md)).
 
 ```mermaid
 flowchart LR
@@ -21,6 +21,10 @@ flowchart LR
     V1["Stello.Engine.V1<br/>Stello 1, frozen<br/>net10.0"] --> Engine
     Bench --> V1
     Bench --> Egaroucid["Egaroucid.Engine<br/>C# port of Egaroucid<br/>net10.0"]
+    EngineTests --> V1
+    Trainer["Stello.Trainer<br/>evaluation trainer<br/>net10.0"] --> Engine
+    Trainer --> V1
+    Trainer --> Egaroucid
     EgaroucidTests["Egaroucid.Engine.Tests<br/>port tests"] --> Egaroucid
     EgaroucidTests --> Bench
     Reference["tools/Egaroucid.Reference<br/>C++ reference, outside the solution"] -. "fixtures" .-> EgaroucidTests
@@ -28,24 +32,27 @@ flowchart LR
     Tool -. "build" .-> Book[("Stello.Net/Book/opening-book.bin")]
     Book -. "copied as Data/OPENING" .-> Wpf
     Book -. "copied as wwwroot/data/OPENING.bin" .-> Web
+    Trainer -. "train" .-> Eval[("Stello.Net/Book/stello-eval.bin<br/>trained evaluation")]
+    Eval -. "embedded resource" .-> Engine
 ```
 
 | Project | Contents |
 |---|---|
-| [Stello.Engine](../../Stello.Net/Stello.Engine) | Rules, game record, evaluation, search, opening book, book learning. No UI code and no dependencies outside .NET. |
+| [Stello.Engine](../../Stello.Net/Stello.Engine) | Stello 2: rules, game record, the pattern evaluation (with the trained weights built in), search, endgame solver, opening book, book learning. No UI code and no dependencies outside .NET. |
 | [Stello.App](../../Stello.Net/Stello.App) | The view models ([CommunityToolkit.Mvvm](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/)), the settings, and the interfaces for the engine host, dialogs, files and storage, shared by both apps (chapters 14 and 15). |
 | [Stello.Net](../../Stello.Net/Stello.Net) | The WPF desktop app: windows, dialogs, and files in `%AppData%\Stello`. It runs the engine on a background task. |
 | [Stello.Web](../../Stello.Net/Stello.Web) | The web app (Blazor WebAssembly): the same game in the browser. It runs the engine in a Web Worker. Its menus, panels, dialogs and documentation viewer come from the shared [GameShell](https://github.com/cjp-dev/GameShell) library, a git submodule in `external/GameShell` (clone with `--recurse-submodules`). |
-| [Stello.Engine.Tests](../../Stello.Net/Stello.Engine.Tests) | xUnit tests of the engine: perft, evaluation, search, endgame (FFO positions), book, book learning. |
+| [Stello.Engine.Tests](../../Stello.Net/Stello.Engine.Tests) | xUnit tests of the engine: perft, patterns, search, endgame (FFO positions), book, book learning, and Stello 1. |
 | [Stello.Net.Tests](../../Stello.Net/Stello.Net.Tests) | xUnit tests of the view models, with fake dialogs, settings and book storage. |
 | [Stello.BookTool](../../Stello.Net/tools/Stello.BookTool) | Console tool for the master opening book: import, format, build, verify, statistics, recalculating the leaves, comparing and matching books (chapter 12). |
 | [Stello.Benchmark](../../Stello.Net/tools/Stello.Benchmark) | Console tool that measures the engine: matches between engine settings, the FFO endgame benchmark and a midgame speed benchmark that also checks that a change kept the search unchanged (chapter 18). It also plays and measures Stello 1 and the Egaroucid port (chapter 20). |
-| [Stello.Engine.V1](../../Stello.Net/Stello.Engine.V1) | Stello 1: the engine as it was before Stello 2.0, frozen as the baseline for matches and benchmarks (`engine=stello-v1`). Tools and tests only. |
+| [Stello.Engine.V1](../../Stello.Net/Stello.Engine.V1) | Stello 1: the engine as it was before Stello 2.0, with its evaluation (chapter 04) and solver (chapter 08), frozen as the baseline for matches and benchmarks (`engine=stello-v1`). Tools and tests only. |
+| [Stello.Trainer](../../Stello.Net/tools/Stello.Trainer) | Console tool that trains Stello 2's pattern evaluation from Egaroucid's training data (not in the repository): `convert`, `train`, `report`, `size` (chapter 21). |
 | [Egaroucid.Engine](../../Stello.Net/Egaroucid.Engine) | A C# port of the Egaroucid engine (© Takuto Yamana, GPL-3.0-or-later), exact node for node on 1 thread, for comparing engines (chapter 19). Tools and tests only. |
 | [Egaroucid.Engine.Tests](../../Stello.Net/Egaroucid.Engine.Tests) | xUnit tests that compare the port with the C++ original, and the match adapter. Skipped when Egaroucid's resources are missing (chapter 19). |
 | [tools/Egaroucid.Reference](../../Stello.Net/tools/Egaroucid.Reference) | Not a .NET project: the C++ reference harness that builds the original Egaroucid and writes the port's test fixtures (chapter 19). |
 
-The master opening book is the text file [Stello.Net/Book/opening-book.txt](../../Stello.Net/Book/opening-book.txt). The book tool builds [opening-book.bin](../../Stello.Net/Book/opening-book.bin) from it, which the WPF app links as `Data/OPENING` and the web app copies to `wwwroot/data/OPENING.bin` when it is built. The engine tests use both files, and the C++ file [Stello C++/OPENING](../../Stello%20C++/OPENING) to test the import (chapter 10).
+Stello 2's trained evaluation is [Stello.Net/Book/stello-eval.bin](../../Stello.Net/Book/stello-eval.bin) (0.99 MB). `Stello.Engine` embeds it as a resource, so the apps need no extra file ([chapter 21](21-stello-2-evaluation-and-solver.md#the-file)). The master opening book is the text file [Stello.Net/Book/opening-book.txt](../../Stello.Net/Book/opening-book.txt). The book tool builds [opening-book.bin](../../Stello.Net/Book/opening-book.bin) from it, which the WPF app links as `Data/OPENING` and the web app copies to `wwwroot/data/OPENING.bin` when it is built. The engine tests use both files, and the C++ file [Stello C++/OPENING](../../Stello%20C++/OPENING) to test the import (chapter 10).
 
 ## The engine at a glance
 
@@ -60,9 +67,10 @@ The engine types fall into five groups. "Internal" types are only visible inside
 | Game record | [`Move`](../../Stello.Net/Stello.Engine/Move.cs) | public | A square or a pass. |
 | | [`Game`](../../Stello.Net/Stello.Engine/Game.cs) | public | The moves and positions of a game, with undo and redo. |
 | | [`GameRecordFormat`](../../Stello.Net/Stello.Engine/GameRecordFormat.cs) | public | Reads and writes a game as a text move list. |
-| Evaluation | [`Evaluator`](../../Stello.Net/Stello.Engine/Evaluation/Evaluator.cs) | internal | Scores a position: edges, corners, stability, mobility. |
-| | [`EdgeTables`](../../Stello.Net/Stello.Engine/Evaluation/EdgeTables.cs) | internal | Eight precomputed tables of 6561 values, one entry per possible edge. |
-| Search | [`SearchEngine`](../../Stello.Net/Stello.Engine/SearchEngine.cs) | public | Iterative deepening alpha-beta search and the endgame solver. |
+| Evaluation | [`PatternShape`, `PatternSet`](../../Stello.Net/Stello.Engine/Evaluation/Patterns.cs) | internal | The patterns of squares, their places on the board and their base-3 indices. |
+| | [`Symmetry`](../../Stello.Net/Stello.Engine/Evaluation/Symmetry.cs) | internal | The 8 symmetries of the board on bitboards. |
+| | [`EvalWeights`](../../Stello.Net/Stello.Engine/Evaluation/EvalWeights.cs) | internal | The trained weights per stage, the file format, and the evaluation of a position; `Default` is the built-in file. |
+| Search | [`SearchEngine`](../../Stello.Net/Stello.Engine/SearchEngine.cs) | public | Iterative deepening alpha-beta search and, in [Endgame/](../../Stello.Net/Stello.Engine/Endgame), the endgame solver. |
 | | [`MoveOrdering`](../../Stello.Net/Stello.Engine/Search/MoveOrdering.cs) | internal | Sorts moves so the best ones are searched first. |
 | | [`TranspositionTable`](../../Stello.Net/Stello.Engine/Search/TranspositionTable.cs) | internal | Remembers results for positions already searched. |
 | | [`TimeControl`](../../Stello.Net/Stello.Engine/Search/TimeControl.cs) | internal | Turns the time settings into a soft and a hard time limit. |
@@ -167,13 +175,14 @@ classDiagram
         <<internal>>
         +Order(moves, hashMove, previousMove, player, board)
     }
-    class Evaluator {
-        <<internal static>>
-        +Evaluate(board, player, alpha, beta, opponentMobility) int
-        +IsDangerous(after, mover, move) bool
+    class EvalWeights {
+        <<internal>>
+        +Default EvalWeights
+        +Evaluate(own, opponent) int
     }
-    class EdgeTables {
-        <<internal static>>
+    class PatternSet {
+        <<internal>>
+        +Indices(own, opponent, indices)
     }
     class TimeControl {
         <<internal static>>
@@ -190,9 +199,9 @@ classDiagram
     OpeningBook *-- BookEntry : moves of each position
     SearchEngine *-- TranspositionTable : midgame and endgame
     SearchEngine *-- MoveOrdering
-    SearchEngine ..> Evaluator
+    SearchEngine ..> EvalWeights
     SearchEngine ..> TimeControl
-    Evaluator ..> EdgeTables
+    EvalWeights ..> PatternSet
     BookLearner --> OpeningBook : changes
     BookLearner --> SearchEngine : evaluates positions
     BookLearner ..> ComputerPlayer : self-play games
@@ -245,17 +254,18 @@ Two tokens control a running search:
 - **No global state.** All state is in objects: the search engine owns its hash tables and move-ordering tables, the book owns its positions. Several engines could run side by side.
 - **The engine does not know the UI.** It reports progress through `IProgress<SearchInfo>` and is stopped with cancellation tokens. This is why it can be tested without a window.
 - **A synchronous engine.** `SearchEngine.Search` runs to the end on the calling thread. The app decides where it runs (a background task); the tests call it directly.
-- **Faithful where it matters.** The evaluation, the selective search and the book's moves and values are ported from the C++ original so the program plays in the same style. Data structures, the endgame solver and the book format were modernised. The details are in [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md).
+- **Faithful where it matters, then measured.** The midgame search, the selective search and the book's moves are ported from the C++ original. Data structures and the book format were modernised. The details are in [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md). Stello 2.0 then replaced the evaluation and the endgame solver, because matches against the frozen Stello 1 showed the gain ([chapter 21](21-stello-2-evaluation-and-solver.md)).
+- **A frozen baseline.** Stello 1 stays in `Stello.Engine.V1`, unchanged and checked by recorded searches, so every later change is measured against the same engine.
 
 ## Some numbers
 
 | Item | Value |
 |---|---|
 | Size of a `Board` | 16 bytes (two `ulong`) |
-| Edge tables | 8 tables of $3^8 = 6561$ values |
+| Pattern evaluation | 15 patterns in 62 places, 10 stages, 233,676 weights per stage; file 0.99 MB |
 | Hash tables | 2 tables (midgame, endgame), configurable from 65K to 16.7M entries ($3\text{ MB}$ to $768\text{ MB}$ total), default $2^{19}$ slots of 2 entries of 24 bytes ($48\text{ MB}$ total) |
 | Master opening book | 11 200 positions, 22 878 book moves, all leaves searched for 60 s; binary file 193 KB |
-| Engine tests / app tests | 195 / 78 |
+| Engine tests / app tests | 255 / 83 (and 34 for the Egaroucid port) |
 
 ---
 

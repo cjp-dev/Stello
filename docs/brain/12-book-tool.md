@@ -207,6 +207,10 @@ In a paired tournament match between Version 1 and Version 2 across all 265 ply-
 - Version 2 lost points on only 4 pairs out of 265 (246 tied, 15 won by Version 2, 4 lost).
 - Tool verdict: `Book B is stronger.`
 
+### Stello 2 recalculation: Version 3 (in progress)
+
+Stello 2.0 raised `OpeningBook.EngineVersion` to 3, so `recalc` searches the 8,397 leaves that are not exact (of 11,613) again with Stello 2, 60 s per position; the 3,216 exact values are kept. The new values are in 1/100 disc; solved values stay ±(32 600 + discs). The run is in progress, so its numbers are not here yet. The old book is kept as `Book/opening-book-stello1.txt` for Stello 1's match sides ([chapter 21](21-stello-2-evaluation-and-solver.md#the-opening-book)).
+
 ## Worked example: `stats`
 
 `stats Stello.Net/Book/opening-book.bin` (shortened):

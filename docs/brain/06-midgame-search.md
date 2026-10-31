@@ -4,7 +4,7 @@
 
 ## In short
 
-To choose a move, the engine looks ahead: it tries its moves, the opponent's replies, its answers to those, and so on, and evaluates the positions at the end of each line (chapter 04). The best move is the one that leads to the best position when both sides play their best. This is **minimax**; Stello writes it as **negamax** with **alpha-beta pruning**, which skips lines that cannot change the result. The search runs **iteratively deeper**: first 1 ply, then 2, then 3, until the time is used. It is helped by the hash table (chapter 07), move ordering (chapter 05), a few **extensions** and a **selective search** that cuts off positions that are clearly outside the interesting range. When the end of the game is near enough, the endgame solver takes over (chapter 08).
+To choose a move, the engine looks ahead: it tries its moves, the opponent's replies, its answers to those, and so on, and evaluates the positions at the end of each line (chapter 21; Stello 1: chapter 04). The best move is the one that leads to the best position when both sides play their best. This is **minimax**; Stello writes it as **negamax** with **alpha-beta pruning**, which skips lines that cannot change the result. The search runs **iteratively deeper**: first 1 ply, then 2, then 3, until the time is used. It is helped by the hash table (chapter 07), move ordering (chapter 05), a few **extensions** and a **selective search** that cuts off positions that are clearly outside the interesting range. When the end of the game is near enough, the endgame solver takes over (chapter 21; Stello 1: chapter 08).
 
 ## Data structures
 
@@ -29,7 +29,7 @@ To choose a move, the engine looks ahead: it tries its moves, the opponent's rep
 | `SelectiveMargin` | 50 | Added to the margin of the selective search |
 | `SelectiveScoreLimit` | 32 000 | No selective search near won or lost scores |
 
-**Scores** are in evaluation units from the point of view of the side to move. A finished game scores ±(32 600 + disc difference), with the empty squares given to the winner, so every won game is better than any evaluation.
+**Scores** are in 1/100 disc from the point of view of the side to move (Stello 2's pattern evaluation, [chapter 21](21-stello-2-evaluation-and-solver.md#how-the-search-uses-it); Stello 1 used its own evaluation units). A finished game scores ±(32 600 + disc difference), with the empty squares given to the winner, so every won game is better than any evaluation.
 
 **Depth.** The code uses the C++ convention `look`: the remaining depth *after* the current move. A search with `look` = *n* looks *n* + 1 plies ahead, and the leaves are evaluated in the move loop of the node with `look` = 0.
 
@@ -48,7 +48,7 @@ where $p \cdot m$ is the position after move $m$, and a position at the depth li
 
 A child is searched with the window (−β, −α). Stello's search is **fail-soft**: it returns the best score it found even when that is outside the window, which gives the hash table tighter bounds.
 
-The picture shows a real depth-2 search for Black in the midgame test position (the one used in [SearchEngineTests.cs](../../Stello.Net/Stello.Engine.Tests/SearchEngineTests.cs)). Each row is a black move with White's replies; the leaves are evaluated for Black, and White picks the lowest.
+The examples in this chapter were measured with Stello 1, whose scores are in its own evaluation units; Stello 2 gives other numbers, but the search works the same way. The picture shows a real depth-2 search for Black in the midgame test position (the one used in [SearchEngineTests.cs](../../Stello.Net/Stello.Engine.Tests/SearchEngineTests.cs)). Each row is a black move with White's replies; the leaves are evaluated for Black, and White picks the lowest.
 
 ![Four rows, one per black move a3, f3, c6 and a4, each with the evaluated white replies. a3 gives −105. f3 is cut off after b4 = −124, skipping four replies. c6 gives 61, the new best. a4 is cut off after its first reply c1 = 45, skipping eleven.](images/alpha-beta-tree.svg)
 
@@ -107,7 +107,7 @@ flowchart TD
     Hash -- "yes" --> HashCut["Return the stored value"]
     Hash -- "no" --> Ext["Single reply at look 0: look = 1"]
     Ext --> Order["Order the moves<br/>(hash move, responses, square values)"]
-    Order --> Loop["For each move:<br/>look = 0 and not a dangerous corner: evaluate the child<br/>otherwise: search the child with look − 1"]
+    Order --> Loop["For each move:<br/>look = 0: evaluate the child<br/>otherwise: search the child with look − 1"]
     Loop --> Cut{"score ≥ beta?"}
     Cut -- "yes" --> Store
     Cut -- "no, more moves" --> Loop
@@ -117,9 +117,9 @@ flowchart TD
 
 Some details:
 
-- **Leaves are evaluated in the parent's loop.** When `look` is 0, the positions after each move are evaluated directly with `Evaluator.Evaluate`, passing the number of moves in the current position as the opponent's mobility $m'$ (chapter 04). This saves a function call per leaf, as in C++.
+- **Leaves are evaluated in the parent's loop.** When `look` is 0, the positions after each move are evaluated directly with the pattern evaluation (`EvaluateLeaf`, [chapter 21](21-stello-2-evaluation-and-solver.md#how-the-search-uses-it)). This saves a function call per leaf, as in C++. (Stello 1 called `Evaluator.Evaluate` here and passed the number of moves in the current position as the opponent's mobility $m'$, chapter 04.)
 - **Passes** do not use up depth: the opponent is searched with the same `look`.
-- **Extensions.** A position with only one legal move at the horizon is searched one ply deeper. A corner move that the edge tables mark as dangerous (`Evaluator.IsDangerous`) is searched instead of evaluated.
+- **Extensions.** A position with only one legal move at the horizon is searched one ply deeper. Stello 1 also searched a corner move that its edge tables mark as dangerous (`Evaluator.IsDangerous`) instead of evaluating it; with the pattern evaluation this was worth nothing, and Stello 2 dropped it.
 - **The response table** is updated after every searched child (chapter 05).
 - **The hash table** is read only at plies ≤ `look` − 1 and written only at plies ≤ `look` of the current iteration, the same heights as in C++; so it is used in the upper part of the tree, where each entry saves the most work. A hash move is only used if it is legal in the position (chapter 07).
 - Inside the tree the midgame search is plain alpha-beta; PVS is only used at the root.

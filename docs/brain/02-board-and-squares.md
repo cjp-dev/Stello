@@ -4,7 +4,7 @@
 
 ## In short
 
-A position is stored as two 64-bit numbers, one for the black discs and one for the white discs, with one bit per square. This is called a *bitboard*. With bitboards, the engine can work on all 64 squares at once with a few machine instructions, and a whole position is only 16 bytes. This chapter explains how squares are numbered, how the bits map to squares, and the older "legacy" square numbers that are still used by the opening book and the edge tables.
+A position is stored as two 64-bit numbers, one for the black discs and one for the white discs, with one bit per square. This is called a *bitboard*. With bitboards, the engine can work on all 64 squares at once with a few machine instructions, and a whole position is only 16 bytes. This chapter explains how squares are numbered, how the bits map to squares, and the older "legacy" square numbers that are still used by the opening book and Stello 1's edge tables.
 
 ## Data structures
 

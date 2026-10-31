@@ -108,7 +108,7 @@ In `Solve` (chapter 08), with 7 or more empty squares and tag 0:
 
 ### Two tables
 
-Midgame values (evaluation units, depending on the search depth) and endgame values (final disc differences) mean different things, so they are kept in separate tables. The tables are never cleared during a game: `SearchEngine.ClearHash` exists, but the app does not call it, so results from the previous move are still there when the next search starts.
+Midgame values (heuristic scores in 1/100 disc, depending on the search depth) and endgame values (final disc differences) mean different things, so they are kept in separate tables. The tables are never cleared during a game: `SearchEngine.ClearHash` exists, but the app does not call it, so results from the previous move are still there when the next search starts.
 
 ## Worked examples
 

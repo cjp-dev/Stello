@@ -207,8 +207,8 @@ The chosen model is `Stello.Net/Book/stello-eval.bin` ([report](benchmark-result
   - the match keys `eval=classic`, `danger=` and `endgame=` are gone.
 - **The evaluation is built into `Stello.Engine`** as an embedded resource (`EvalWeights.Default`), instead of a separate file that WPF links and the web app fetches, as the plan said. Every app and tool gets it without loading code, and the browser downloads the same bytes inside the engine assembly. That assembly is now 1.15 MB, 1.03 MB compressed.
 - **The book:**
-  - `OpeningBook.EngineVersion` is 3, so `recalc` searches every heuristic leaf again (8,397 of 11,613 leaves; the 3,216 exact ones are kept). The heuristic values are in 1/100 disc and the solved ones stay ±(32600 + discs). Stello 2 reaches depth 17–18 in 30 s per position, where Stello 1 needed 60 s.
-  - The recalculation runs on a second computer (Ryzen 7 7800X3D, 8 workers, about 8 hours), so it does not disturb timed matches here. It can be stopped and continued: values already searched by version 3 are skipped.
+  - `OpeningBook.EngineVersion` is 3, so `recalc` searches every heuristic leaf again (8,397 of 11,613 leaves; the 3,216 exact ones are kept). The heuristic values are in 1/100 disc and the solved ones stay ±(32600 + discs). A first try with 30 s per position already reached depth 17–18, as deep as Stello 1's last recalculation in 60 s; the run uses 60 s, like Stello 1's.
+  - The recalculation runs on a second computer (Ryzen 7 7800X3D, 8 workers, about 16 hours), so it does not disturb timed matches here. It can be stopped and continued: values already searched by version 3 are skipped.
   - `Book/opening-book-stello1.txt` keeps the old book for Stello 1's match sides (`engine=stello-v1,book=on`).
 - **The GUI** shows heuristic scores in discs with one decimal ("+1.2 discs"). The About box describes the new evaluation and solver and credits Egaroucid. Its version text already said "Stello Version 2.0" (from the C# port) and is unchanged.
 - **The book-learning worked example** (chapter 11, `BookLearnerTests`) has new values: with Stello 2, c5 (−62) stays ahead of e3 (−275) at the root.

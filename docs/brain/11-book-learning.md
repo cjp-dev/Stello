@@ -16,7 +16,7 @@ The opening book can grow and improve itself. **Adding a game** stores its moves
 | Origin | Value |
 |---|---|
 | A move in an added game | +32 665 for the winner's moves, −32 665 for the loser's, 0 in a draw (`WinValue`) |
-| A search with a heuristic score | The evaluation score (chapter 04) |
+| A search with a heuristic score | The search score in 1/100 disc (Stello 2's pattern evaluation, [chapter 21](21-stello-2-evaluation-and-solver.md)); a book searched by Stello 1 holds its evaluation units (chapter 04) |
 | A search that solved the position | ±(32 600 + disc difference), 0 for a draw |
 | A move to a position that is in the book | −(value of the best move there), backed up by minimax |
 
@@ -135,15 +135,17 @@ The Book menu has four commands ([chapter 14](14-app-integration.md#threading)):
 
 ## Worked example: learning on an empty book
 
-Starting from `OpeningBook.CreateEmpty()`, with `SearchLimits.FixedDepth(4)`: the tiger line d3 c5 f6 f5 e6 (in the book's d3 frame) is added as a win for Black, then the book is evaluated and minimaxed.
+Starting from `OpeningBook.CreateEmpty()`, with `SearchLimits.FixedDepth(4)` and an engine with `hashBits: 12`: the tiger line d3 c5 f6 f5 e6 (in the book's d3 frame) is added as a win for Black, then the book is evaluated and minimaxed.
 
-![Three trees. After AddGame the four moves have values ±32665. After EvaluatePositions the leaf e6 and four dropout moves (e3 at the root, e6 after c5, e3 after f6, d6 after f5) are searched and the values are backed up, c5 −100 and e3 17 at the root. After minimax and sorting, e3 comes first at the root and e6 before f6 after c5.](images/book-minimax-example.svg)
+![Three trees. After AddGame the four moves have values ±32665. After EvaluatePositions the leaf e6 and four dropout moves (e3 at the root, e6 after c5, e3 after f6, c6 after f5) are searched and the values are backed up, c5 −62 and e3 −275 at the root. After minimax and sorting, c5 stays first at the root and e6 comes before f6 after c5.](images/book-minimax-example.svg)
 
 - **AddGame** creates 4 book moves with ±32 665.
-- **EvaluatePositions** searches 5 positions: the leaf e6, and one dropout move in each of the four positions (e3 as White's reply to d3, e6 after c5, e3 after f6, d6 after f5). The book now has 8 book moves, and the values are backed up: the game move c5 is worth −100 for White, the new move e3 +17.
-- **Minimax** sorts the moves: the book now answers d3 with e3, and after d3 c5 it plays e6 (100) instead of the game move f6 (−54).
+- **EvaluatePositions** searches 5 positions: the leaf e6, and one dropout move in each of the four positions (e3 as White's reply to d3, e6 after c5, e3 after f6, c6 after f5). The book now has 8 book moves, and the values are backed up: the game move c5 is worth −62 for White, the new move e3 −275.
+- **Minimax** sorts the moves: the book still answers d3 with c5, the better of the two, and after d3 c5 it plays e6 (+62) instead of the game move f6 (−100).
 
-Adding the same game in another frame afterwards, `f5 d6 c3 d3 c4` (the tiger after f5), adds no moves: the book still has 8. The test `Learning_WorkedExampleOfChapter12` checks these numbers.
+The values are Stello 2's, in 1/100 disc: c5 is worth −0.62 discs for White. (With Stello 1's evaluation, e3 came out better than c5 and moved to the front.)
+
+Adding the same game in another frame afterwards, `f5 d6 c3 d3 c4` (the tiger after f5), adds no moves: the book still has 8. The test `Learning_WorkedExampleOfChapter12` checks the counts, the values of c5, e3, e6 and f6, and the order of the moves.
 
 ## Design notes
 

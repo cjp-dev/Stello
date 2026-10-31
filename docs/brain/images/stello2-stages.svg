@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 210" width="800" height="210" font-family="sans-serif">
+<title>The 10 stages of Stello 2's evaluation</title>
+<desc>A bar from 4 to 64 discs on the board, cut into 10 stages: 4 to 10 discs (stage 0), then 11 to 16, 17 to 22, 23 to 28, 29 to 34, 35 to 40, 41 to 46, 47 to 52, 53 to 58 and 59 to 64. Each stage has its own weights. A stage is trained on its own disc counts and two more on each side. Stage 0 has almost no training data, so it is a copy of stage 1.</desc>
+<rect x="0" y="0" width="800" height="210" fill="#FFFFFF"/>
+<text x="40" y="28" font-size="16" font-weight="bold" fill="#000000">10 stages by the number of discs on the board</text>
+<rect x="40.0" y="60" width="82.6" height="44" fill="#E0E0E0" stroke="#0B4D22" stroke-width="1"/>
+<text x="81.3" y="87" font-size="13" text-anchor="middle" fill="#000000">0</text>
+<text x="81.3" y="122" font-size="11" text-anchor="middle" fill="#555555">4–10</text>
+<rect x="122.6" y="60" width="70.8" height="44" fill="#C8E6C9" stroke="#0B4D22" stroke-width="1"/>
+<text x="158.0" y="87" font-size="13" text-anchor="middle" fill="#000000">1</text>
+<text x="158.0" y="122" font-size="11" text-anchor="middle" fill="#555555">11–16</text>
+<rect x="193.4" y="60" width="70.8" height="44" fill="#81C784" stroke="#0B4D22" stroke-width="1"/>
+<text x="228.9" y="87" font-size="13" text-anchor="middle" fill="#000000">2</text>
+<text x="228.9" y="122" font-size="11" text-anchor="middle" fill="#555555">17–22</text>
+<rect x="264.3" y="60" width="70.8" height="44" fill="#C8E6C9" stroke="#0B4D22" stroke-width="1"/>
+<text x="299.7" y="87" font-size="13" text-anchor="middle" fill="#000000">3</text>
+<text x="299.7" y="122" font-size="11" text-anchor="middle" fill="#555555">23–28</text>
+<rect x="335.1" y="60" width="70.8" height="44" fill="#81C784" stroke="#0B4D22" stroke-width="1"/>
+<text x="370.5" y="87" font-size="13" text-anchor="middle" fill="#000000">4</text>
+<text x="370.5" y="122" font-size="11" text-anchor="middle" fill="#555555">29–34</text>
+<rect x="405.9" y="60" width="70.8" height="44" fill="#C8E6C9" stroke="#0B4D22" stroke-width="1"/>
+<text x="441.3" y="87" font-size="13" text-anchor="middle" fill="#000000">5</text>
+<text x="441.3" y="122" font-size="11" text-anchor="middle" fill="#555555">35–40</text>
+<rect x="476.7" y="60" width="70.8" height="44" fill="#81C784" stroke="#0B4D22" stroke-width="1"/>
+<text x="512.1" y="87" font-size="13" text-anchor="middle" fill="#000000">6</text>
+<text x="512.1" y="122" font-size="11" text-anchor="middle" fill="#555555">41–46</text>
+<rect x="547.5" y="60" width="70.8" height="44" fill="#C8E6C9" stroke="#0B4D22" stroke-width="1"/>
+<text x="583.0" y="87" font-size="13" text-anchor="middle" fill="#000000">7</text>
+<text x="583.0" y="122" font-size="11" text-anchor="middle" fill="#555555">47–52</text>
+<rect x="618.4" y="60" width="70.8" height="44" fill="#81C784" stroke="#0B4D22" stroke-width="1"/>
+<text x="653.8" y="87" font-size="13" text-anchor="middle" fill="#000000">8</text>
+<text x="653.8" y="122" font-size="11" text-anchor="middle" fill="#555555">53–58</text>
+<rect x="689.2" y="60" width="70.8" height="44" fill="#C8E6C9" stroke="#0B4D22" stroke-width="1"/>
+<text x="724.6" y="87" font-size="13" text-anchor="middle" fill="#000000">9</text>
+<text x="724.6" y="122" font-size="11" text-anchor="middle" fill="#555555">59–64</text>
+<text x="40" y="52" font-size="12" fill="#555555">stage</text>
+<text x="40" y="140" font-size="12" fill="#555555">discs on the board</text>
+<line x1="311.5" y1="162" x2="429.5" y2="162" stroke="#1565C0" stroke-width="3"/>
+<line x1="311.5" y1="156" x2="311.5" y2="168" stroke="#1565C0" stroke-width="2"/>
+<line x1="429.5" y1="156" x2="429.5" y2="168" stroke="#1565C0" stroke-width="2"/>
+<text x="303.5" y="166" font-size="12" text-anchor="end" fill="#1565C0">stage 4 trains on 27–36 discs</text>
+<text x="437.5" y="166" font-size="12" fill="#1565C0">(its own 29–34 and 2 more on each side)</text>
+<text x="40" y="192" font-size="12" fill="#000000">Grey: stage 0 (4–10 discs) has almost no training data; it is a copy of stage 1. The opening book covers these positions.</text>
+</svg>
