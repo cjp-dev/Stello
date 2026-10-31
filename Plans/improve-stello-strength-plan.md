@@ -201,3 +201,10 @@ Each change is a separate commit behind a `SearchOptions` flag and is measured o
   - The search uses the pattern score in 1/100 disc, for leaves and for the solver's ordering from 18 empties. Tuning the selective margin and the corner extension gave nothing significant, so they stay until phase 5.
   - Gate: against Stello 1, 90.9 % (+400 Elo) at 100 ms and 90.6 % (+393) at 500 ms. `mid-quality` loss 1.33 / 0.91 / 0.68 discs against Stello 1's 1.59 / 1.59 / 1.39 at 50 / 200 / 1000 ms; the gap at 50 ms is within its margin. Against Egaroucid: 59.5 % (+67) at 100 ms, 38.2 % (−84) at 500 ms.
   - Tests: Stello.Engine.Tests 250, Egaroucid.Engine.Tests 34, all green.
+- **Phase 3: done (2026-10-31).**
+  - `Stello.Engine/Endgame/`: the last 13 empty squares are adapted from Egaroucid's `EndSearch.cs` on Stello's bitboards (no bit conversion). Above that a new null-window/PVS search runs on Stello's endgame table, with ETC from 12 empty squares and ordering by mobility and the pattern evaluation.
+  - In solve mode a 4-ply midgame search orders the root moves first. Solving still starts with win/loss/draw.
+  - Switches: `SearchOptions.NewEndgame`, `endgame=new|classic` on match sides, `--endgame` for the benchmarks.
+  - Gate: FFO #40–49 are all correct in 47.1 s (port 25.6 s, Stello 1 369 s). Move Now answers within 100 ms during a solve. Against the old solver: 49.7 % at 100 ms and 51.1 % (49.2–53.0) at 500 ms, not worse.
+  - The time to solve in the browser moves to phase 4, where the apps get the solver.
+  - Tests: Stello.Engine.Tests 264 (`EndgameTests` on both solvers, `EndgameBitsTests`), Egaroucid.Engine.Tests 34, all green.

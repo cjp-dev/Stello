@@ -4,6 +4,7 @@ using System.Diagnostics;
 using Stello.BookTool;
 using Stello.Egaroucid;
 using Stello.Engine;
+using Stello.Engine.Search;
 using Stello.Engine.Benchmark;
 using SearchResult = Stello.Engine.SearchResult;
 
@@ -39,10 +40,25 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
 
                 int bits = options.Number("hash-bits", SearchLimits.DefaultHashBits, 10, 26);
                 string? evalFile = options.Text("eval");
-                var stello = evalFile is null ? new SearchEngine(bits) : new SearchEngine(bits, MatchCommands.PatternOptions(evalFile));
+                bool newEndgame = options.Text("endgame") switch
+                {
+                    null or "classic" => false,
+                    "new" => true,
+                    _ => throw new ArgumentException("--endgame must be new or classic."),
+                };
+                SearchOptions searchOptions = (evalFile is null ? SearchOptions.Classic : MatchCommands.PatternOptions(evalFile)) with
+                {
+                    NewEndgame = newEndgame,
+                };
+                var stello = new SearchEngine(bits, searchOptions);
                 if (evalFile is not null)
                 {
                     limitText += $", evaluation {Path.GetFileName(evalFile)}";
+                }
+
+                if (newEndgame)
+                {
+                    limitText += ", new endgame solver";
                 }
 
                 return new BenchSearcher(engine, limitText, bits, position =>
@@ -52,9 +68,10 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                 });
 
             case "stello-v1":
-                if (options.Text("mpc") is not null || options.Text("level") is not null || options.Text("eval") is not null)
+                if (options.Text("mpc") is not null || options.Text("level") is not null || options.Text("eval") is not null
+                    || options.Text("endgame") is not null)
                 {
-                    throw new ArgumentException("--mpc and --level are only for --engine egaroucid, --eval only for --engine stello.");
+                    throw new ArgumentException("--mpc and --level are only for --engine egaroucid, --eval and --endgame only for --engine stello.");
                 }
 
                 int v1Bits = options.Number("hash-bits", SearchLimits.DefaultHashBits, 10, 26);

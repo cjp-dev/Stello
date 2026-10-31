@@ -28,4 +28,9 @@ internal sealed record SearchOptions
     /// being evaluated.
     /// </summary>
     public bool DangerousCorners { get; init; } = true;
+
+    /// <summary>
+    /// Stello 2's endgame solver (Endgame/SearchEngine.Endgame.cs, adapted from Egaroucid) instead of Stello 1's.
+    /// </summary>
+    public bool NewEndgame { get; init; }
 }

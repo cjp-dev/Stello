@@ -19,7 +19,7 @@ What the work on Stello 2.0 teaches us, written down as we go: the decisions, th
 | 0 Set-up and the frozen baseline | done | Stello 1 searches node for node like the engine it was copied from; a match against it is even |
 | 1 Training data and trainer | done | 500 M positions in 2 minutes; a first model (11 patterns × 15 stages, 1.5 MB) has 5.55 discs error on held-out games, against Stello 1's 12.14 and Egaroucid's 5.05 |
 | 2 Evaluation 2.0 | done | 15 patterns × 10 stages in 0.99 MB: 5.47 discs error; +400 Elo against Stello 1 at 100 and 500 ms, +67 against Egaroucid at 100 ms, −84 at 500 ms |
-| 3 Endgame solver | | |
+| 3 Endgame solver | done | FFO #40–49 in 47.1 s (Stello 1 369 s, Egaroucid port 25.6 s); in games as strong as the old solver (51.1 % at 500 ms) |
 | 4 Release 2.0 in the apps | | |
 | 5 Search improvements (2.x) | | |
 
@@ -144,6 +144,61 @@ The chosen model is `Stello.Net/Book/stello-eval.bin` ([report](benchmark-result
 - **At 100 ms Stello 2 beats the Egaroucid port.** Egaroucid's 38 MB evaluation is slow to compute, and at 100 ms it only reaches depth 8.6. At 500 ms the depths are equal, and Egaroucid's better evaluation and search are worth about 84 Elo. Phases 3 and 5 go after that gap.
 - `plus15` against `classic11` at 500 ms: 53.2 % (50.6–55.8), +22 Elo. At 100 ms it was even (50.7 %): the bigger set is 20 % slower and only pays off with more time.
 
+## The new endgame solver (phase 3)
+
+`Stello.Engine/Endgame/` (`SearchEngine.Endgame.cs`, `EndgameBits.cs`, `StableDiscs.cs`, `LocalTable.cs`). It is switched on with `SearchOptions.NewEndgame`, `endgame=new` on a match side and `--endgame new` in `solve-bench`/`mid-bench`.
+
+- **The last 13 empty squares are Egaroucid's.** This part is adapted from the port's `EndSearch.cs`:
+  - `Last4` … `Last1`, and the fast search at 5–6 squares, which plays squares alone in their region first;
+  - at 7–10 squares, parity and the opponent's mobility, with the local table;
+  - at 11–13 squares, mobility only;
+  - the stable-disc cutoff, the 4 empty-square tricks and the wipe-out test.
+- **It uses Stello's bitboards as they are.** Egaroucid numbers the squares the other way round. Reversing 64 bits turns the board half a turn, and every table in the solver is the same after that turn, so nothing is converted.
+- **Above 13 empty squares the search is new, but shaped like Egaroucid's:**
+  - null-window searches with fail-soft bounds, stored in Stello's endgame transposition table;
+  - the stored best move is searched first, before the others are ordered;
+  - ETC (enhanced transposition cutoff) from 12 empty squares;
+  - move ordering by the opponent's weighted mobility and the pattern evaluation of the child, after a 1-ply search from 16 empty squares;
+  - at principal-variation nodes, also potential mobility and a 2-ply search.
+- **Solving still starts with win/loss/draw.** Solving exactly at once with a full window was slower (50.0 s against 45.6 s on FFO #40–49).
+
+### What made it fast (`solve-bench`, FFO #40–44, all correct)
+
+| Version | Nodes | Time |
+|---|---:|---:|
+| First working version | 151 M | 10.5 s |
+| No pattern evaluation in the ordering at 11–13 empty squares | 179 M | 7.9 s |
+| … and ETC from 12 instead of 16 empty squares | 173 M | 7.6 s |
+| … and in solve mode a 4-ply midgame search first, to order the root moves | 94 M | 4.1 s |
+| Egaroucid port, for comparison | 84 M | 4.0 s |
+
+- **The root order matters most.** Without the short midgame search, #43 took 94 M nodes instead of 33 M. In games the midgame iterations come first anyway, so this only changes solve mode (`SearchLimits.Solve`).
+- **The pattern evaluation is too slow for the ordering at 11–13 empty squares.** It saves about 20 % of the nodes, but each node becomes about 40 % slower. Egaroucid uses a small 4-pattern table updated move by move there instead.
+- **The midgame table's best moves hurt deeper in the solver.** Used as the hash move where the endgame table has none, they made FFO #40–44 take 6.9–10.6 s instead of 4.1 s. The endgame ordering is better than a shallow midgame search's choice.
+- **Little else mattered.** The depth of the ordering search (1 ply from 14, 16, 18 or 20 empty squares) changed the time by under 15 %.
+
+### The phase 3 gate
+
+- **FFO #40–49: all correct, 47.1 s, 1.10 G nodes, 23 M nodes/s** ([result](benchmark-results/v2-p3-solve-bench-40-49.json)). That is 1.8× the Egaroucid port's 25.6 s, within the gate of about 2×, and 7.8× faster than Stello 1's 369 s. The slow ones are #45 (11.1 s), #48 (12.0 s) and #49 (16.3 s).
+- **Tests:** `EndgameTests` run on both solvers:
+  - FFO #40–44;
+  - minimax on small endgames and the last 1–4 squares;
+  - the endgame-C suite.
+
+  New tests check that:
+  - the new solver agrees with Stello 1's on 30 positions with 14–18 empty squares;
+  - Move Now during a solve of FFO #49 answers within 100 ms;
+  - the flips, the legal moves and the final score equal Stello's own, and stable discs are never flipped in random games (`EndgameBitsTests`).
+- **Matches, new against Stello 1's solver, both with `stello-eval.bin`, 1,180 games:**
+
+  | Time per move | Score | Elo | First solve (empty squares, old → new) |
+  |---:|---:|---:|---:|
+  | 100 ms | 49.7 % (47.5–51.9) | −2 | 18.8 → 19.4 |
+  | 500 ms | 51.1 % (49.2–53.0) | +8 | 20.7 → 21.2 |
+
+  The solver is much faster, but the games hardly change. The search only solves after the midgame search reaches empty squares − 8 (`EndgameDistance`), so the faster solver starts only about half a square earlier. Egaroucid instead solves selectively (Multi-ProbCut at 74 %, then 88 … 100 %) from 24–28 empty squares; that is phase 5, item 5.
+- **Not measured yet:** the time to solve 20–22 empty squares in the browser. The apps get the new solver in phase 4, so it is measured there.
+
 ## Measurements
 
 All on 1 thread, on the same Intel i7-12850HX laptop VM as the port's measurements.
@@ -155,6 +210,8 @@ All on 1 thread, on the same Intel i7-12850HX laptop VM as the port's measuremen
 | Evaluation error on the test split (1.04 M positions), all | 12.14 discs (scale fitted) | 5.55 discs (`classic11`, 15 stages) | 5.05 discs | phase 1 ([report](benchmark-results/v2-p1-eval-c11-s15.md)) |
 | Evaluations per second from scratch, 1 thread | 2.14 M | 4.80 M | 0.33 M | phase 1; Stello 1 and Egaroucid from `eval-compare` |
 | Match against Stello 1, 100 ms per move, no books | — | 90.7 % (89.2–92.2), +395 Elo | 87.1 % (phase 5 of the port) | phase 2, `classic11` × 10 stages ([result](benchmark-results/match_v2-p2-c11-s10-vs-v1-100ms.md)) |
+| FFO #40–49, exact | 369 s | 47.1 s, 1.10 G nodes (new solver) | 25.6 s | phase 3 ([result](benchmark-results/v2-p3-solve-bench-40-49.json)) |
+| New against Stello 1's solver, both with the pattern evaluation, 100 / 500 ms | — | 49.7 % (−2) / 51.1 % (+8) | — | phase 3 ([100 ms](benchmark-results/match_v2-p3-endgame-new-vs-classic-100ms.md), [500 ms](benchmark-results/match_v2-p3-endgame-new-vs-classic-500ms.md)) |
 | Match Stello 2 (= Stello 1 so far) against Stello 1, 100 ms per move, 1,180 games | — | 51.8 % (49.5–54.1), +13 Elo | — | phase 0: no significant difference; depth 10.36 / 10.35, 2.5M nodes/s both ([result](benchmark-results/match_v2-p0-v1-vs-current-100ms.md)) |
 | Evaluation error on the test split, chosen model | — | 5.47 discs (RMSE 7.31), `plus15` × 10 stages, 0.99 MB | 5.05 discs | phase 2 ([report](benchmark-results/v2-p2-eval-p15-s10-m30-u8.md)); 3.3 M evaluations per second |
 | Match against Stello 1, 100 / 500 ms per move, no books | — | 90.9 % (+400) / 90.6 % (+393) | — | phase 2, `stello-eval.bin` ([100 ms](benchmark-results/match_v2-p2-eval-vs-v1-100ms.md), [500 ms](benchmark-results/match_v2-p2-eval-vs-v1-500ms.md)) |
@@ -163,4 +220,5 @@ All on 1 thread, on the same Intel i7-12850HX laptop VM as the port's measuremen
 
 ## Ideas for later
 
-- (filled in as the work goes on)
+- **A small move-ordering table for 11–13 empty squares** (phase 3), like Egaroucid's 4-pattern table updated move by move. The full pattern evaluation saves 20 % of the nodes there but is too slow.
+- **When to start solving** (phase 5, items 1 and 5): start from an estimate of the solve time instead of the fixed "midgame depth reaches empty squares − 8". Then solve selectively, as Egaroucid does.

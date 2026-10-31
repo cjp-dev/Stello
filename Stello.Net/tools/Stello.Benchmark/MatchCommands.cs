@@ -131,6 +131,7 @@ internal static class MatchCommands
         int? selectiveMargin = null;
         int? selectivePercent = null;
         bool dangerousCorners = true;
+        bool newEndgame = false;
         var keys = new HashSet<string>();
         foreach (string part in text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
@@ -196,6 +197,14 @@ internal static class MatchCommands
                         _ => throw new ArgumentException($"danger must be on or off in the side \"{text}\"."),
                     };
                     break;
+                case "endgame":
+                    newEndgame = value switch
+                    {
+                        "new" => true,
+                        "classic" => false,
+                        _ => throw new ArgumentException($"endgame must be new or classic in the side \"{text}\"."),
+                    };
+                    break;
                 default:
                     throw new ArgumentException($"Unknown key in the side \"{text}\": {key}");
             }
@@ -211,6 +220,7 @@ internal static class MatchCommands
         {
             ("depth", !egaroucid), ("level", egaroucid), ("book-acc", egaroucid), ("seed", egaroucid), ("eval", engine == EngineKind.Stello), ("sel-margin", engine == EngineKind.Stello),
             ("sel-percent", engine == EngineKind.Stello), ("danger", engine == EngineKind.Stello),
+            ("endgame", engine == EngineKind.Stello),
         })
         {
             if (keys.Contains(key) && !allowed)
@@ -239,7 +249,7 @@ internal static class MatchCommands
             string description = $"{limitText}, hash bits {bits}, {(useBook ? "book" : "no book")}";
             return engine == EngineKind.StelloV1
                 ? new MatchSide(name ?? text, limits, bits, CreatePlayer: () => new V1MatchPlayer(bits, book), Description: $"Stello 1, {description}")
-                : StelloSide(name ?? text, limits, bits, book, description, evalFile, selectiveMargin, selectivePercent, dangerousCorners);
+                : StelloSide(name ?? text, limits, bits, book, description, evalFile, selectiveMargin, selectivePercent, dangerousCorners, newEndgame);
         }
 
         // 2^21 slots of 24 bytes take as much memory as Stello's default: two tables of 2^19 slots of two 24-byte entries.
@@ -275,13 +285,14 @@ internal static class MatchCommands
 
     /// <summary>A Stello side with its search options: the evaluation file and the switches of Stello 2's work.</summary>
     private static MatchSide StelloSide(string name, SearchLimits limits, int bits, OpeningBook? book, string description,
-        string? evalFile, int? selectiveMargin, int? selectivePercent, bool dangerousCorners)
+        string? evalFile, int? selectiveMargin, int? selectivePercent, bool dangerousCorners, bool newEndgame)
     {
         SearchOptions options = (evalFile is null or "classic" ? SearchOptions.Classic : PatternOptions(evalFile)) with
         {
             SelectiveMargin = selectiveMargin,
             SelectivePercent = selectivePercent,
             DangerousCorners = dangerousCorners,
+            NewEndgame = newEndgame,
         };
         if (options == SearchOptions.Classic)
         {
@@ -290,7 +301,8 @@ internal static class MatchCommands
 
         string extra = (evalFile is null or "classic" ? "" : $", evaluation {Path.GetFileName(evalFile)}")
             + (selectiveMargin is null && selectivePercent is null ? "" : $", selective margin {selectivePercent ?? 50} % + {selectiveMargin ?? 50}")
-            + (dangerousCorners ? "" : ", no corner extension");
+            + (dangerousCorners ? "" : ", no corner extension")
+            + (newEndgame ? ", new endgame solver" : "");
         return new MatchSide(name, limits, bits, book, CreatePlayer: () => new StelloMatchPlayer(bits, book, options),
             Description: $"Stello, {description}{extra}");
     }

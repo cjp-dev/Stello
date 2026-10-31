@@ -10,6 +10,7 @@ Stello is licensed under the GNU General Public License version 3 only (GPL-3.0-
 
 What Stello takes from it:
 - **The engine port.** `Stello.Net/Egaroucid.Engine` is a C# port of the Egaroucid engine: board, evaluation, search, endgame search, time management and opening book lookup. The port is in progress; see [Plans/egaroucid-port-plan.md](Plans/egaroucid-port-plan.md). Each ported file names its C++ original and carries its licence header.
+- **Stello 2's endgame solver.** `Stello.Net/Stello.Engine/Endgame/` adapts Egaroucid's endgame search of the last 13 empty squares, its stable-disc calculation and its move-ordering weights, through the port. Each file names its C++ original.
 - **Resource files.** The port reads Egaroucid's evaluation weights, hash tables and opening book from a local copy of Egaroucid. These files are not included in this repository.
 - **Ideas and methods.** Some come from its source code and its technology pages.
 

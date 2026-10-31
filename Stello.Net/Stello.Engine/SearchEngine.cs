@@ -9,7 +9,7 @@ namespace Stello.Engine;
 /// Alpha-beta search ported from Minmax.cpp and Kontrol.cpp: iterative deepening with a hash table, response
 /// killers, selective search, and an exact endgame solver. An instance runs one search at a time.
 /// </summary>
-public sealed class SearchEngine
+public sealed partial class SearchEngine
 {
     private const int Infinity = 32767;
     private const int RootWindow = 32664;
@@ -70,6 +70,7 @@ public sealed class SearchEngine
     private readonly int _selectiveMargin;
     private readonly int _selectivePercent;
     private readonly bool _dangerousCorners;
+    private readonly bool _newEndgame;
 
     /// <param name="hashBits">Each of the two hash tables gets 2^hashBits slots of two entries (C++: HASHSIZE 19, one entry).</param>
     public SearchEngine(int hashBits = 19)
@@ -88,6 +89,7 @@ public sealed class SearchEngine
         _selectiveMargin = options.SelectiveMargin ?? SelectiveMargin;
         _selectivePercent = options.SelectivePercent ?? 50;
         _dangerousCorners = options.DangerousCorners;
+        _newEndgame = options.NewEndgame;
         _midgameTable = new TranspositionTable(hashBits);
         _endgameTable = new TranspositionTable(hashBits);
     }
@@ -96,6 +98,7 @@ public sealed class SearchEngine
     {
         _midgameTable.Clear();
         _endgameTable.Clear();
+        _localTable.Clear();
     }
 
     /// <summary>Finds the best move for <paramref name="player"/> (C++: getcomputer).</summary>
@@ -120,6 +123,7 @@ public sealed class SearchEngine
         _lastHeartbeatMs = 0;
         _reportMove = -1;
         _nodes = 0;
+        _nextAbortCheck = 1024;
         _evaluations = 0;
         _cancel = cancellationToken;
         _moveNow = moveNowToken;
@@ -169,6 +173,15 @@ public sealed class SearchEngine
                     {
                         return Result(best);
                     }
+                }
+            }
+            else if (_newEndgame)
+            {
+                for (int look = 0; look < SolveOrderingLooks && empties - 1 - look > EndgameDistance; look++)
+                {
+                    _hashGetHeight = look - 1;
+                    _hashPutHeight = look;
+                    SearchRoot(board, player, look, rootMoves, ref best);
                 }
             }
 
@@ -406,14 +419,14 @@ public sealed class SearchEngine
 
             if (i == 0)
             {
-                score = -Solve(childOpponent, childOwn, -beta, -alpha, empties - 1);
+                score = -SolveChild(childOpponent, childOwn, -beta, -alpha, empties - 1);
             }
             else
             {
-                score = -Solve(childOpponent, childOwn, -alpha - 1, -alpha, empties - 1);
+                score = -SolveChild(childOpponent, childOwn, -alpha - 1, -alpha, empties - 1);
                 if (score > alpha && score < beta)
                 {
-                    score = -Solve(childOpponent, childOwn, -beta, -alpha, empties - 1);
+                    score = -SolveChild(childOpponent, childOwn, -beta, -alpha, empties - 1);
                 }
             }
 

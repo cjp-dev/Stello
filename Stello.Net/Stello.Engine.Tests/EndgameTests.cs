@@ -1,7 +1,38 @@
+using System.Diagnostics;
+using Stello.Engine.Evaluation;
+using Stello.Engine.Search;
+
 namespace Stello.Engine.Tests;
 
 public class EndgameTests
 {
+    private static readonly Lazy<EvalWeights> Weights =
+        new(() => EvalWeights.Load(Path.Combine(AppContext.BaseDirectory, "Data", "stello-eval.bin")));
+
+    public static TheoryData<string> Solvers => ["classic", "new"];
+
+    // Stello 1's solver, or Stello 2's (Endgame/SearchEngine.Endgame.cs) with the pattern evaluation.
+    private static SearchEngine Engine(string solver, int hashBits = 19) => solver == "new"
+        ? new SearchEngine(hashBits, new SearchOptions { Pattern = Weights.Value, NewEndgame = true })
+        : new SearchEngine(hashBits);
+
+    public static TheoryData<string, string, string, Player, int, string[]> FfoPositionsBySolver
+    {
+        get
+        {
+            var data = new TheoryData<string, string, string, Player, int, string[]>();
+            foreach (string solver in new[] { "classic", "new" })
+            {
+                foreach (object[] row in FfoPositions)
+                {
+                    data.Add(solver, (string)row[0], (string)row[1], (Player)row[2], (int)row[3], (string[])row[4]);
+                }
+            }
+
+            return data;
+        }
+    }
+
     public static TheoryData<string, string, Player, int, string[]> FfoPositions => new()
     {
         { "#40", "O--OOOOX-OOOOOOXOOXXOOOXOOXOOOXXOOOOOOXX---OOOOX----O--X--------", Player.Black, 38, ["a2"] },
@@ -12,10 +43,10 @@ public class EndgameTests
     };
 
     [Theory]
-    [MemberData(nameof(FfoPositions))]
-    public void Solve_FindsExactScoreOfFfoPosition(string name, string position, Player player, int score, string[] bestMoves)
+    [MemberData(nameof(FfoPositionsBySolver))]
+    public void Solve_FindsExactScoreOfFfoPosition(string solver, string name, string position, Player player, int score, string[] bestMoves)
     {
-        var engine = new SearchEngine();
+        SearchEngine engine = Engine(solver);
 
         SearchResult result = engine.Search(Board.Parse(position), player, SearchLimits.Solve);
 
@@ -24,10 +55,11 @@ public class EndgameTests
         Assert.Contains(result.Move.ToString(), bestMoves);
     }
 
-    [Fact]
-    public void Solve_MatchesMinimaxOnSmallEndgames()
+    [Theory]
+    [MemberData(nameof(Solvers))]
+    public void Solve_MatchesMinimaxOnSmallEndgames(string solver)
     {
-        var engine = new SearchEngine(hashBits: 16);
+        SearchEngine engine = Engine(solver, hashBits: 16);
 
         foreach ((Board board, Player player) in TestPositions.RandomPositions(seed: 7, count: 40, plies: 52))
         {
@@ -39,10 +71,11 @@ public class EndgameTests
         }
     }
 
-    [Fact]
-    public void Solve_MatchesMinimaxOnTheLastFewSquares()
+    [Theory]
+    [MemberData(nameof(Solvers))]
+    public void Solve_MatchesMinimaxOnTheLastFewSquares(string solver)
     {
-        var engine = new SearchEngine(hashBits: 10);
+        SearchEngine engine = Engine(solver, hashBits: 10);
 
         for (int plies = 57; plies <= 60; plies++)
         {
@@ -55,10 +88,11 @@ public class EndgameTests
         }
     }
 
-    [Fact]
-    public void Solve_MatchesTheEndgameCSuite()
+    [Theory]
+    [MemberData(nameof(Solvers))]
+    public void Solve_MatchesTheEndgameCSuite(string solver)
     {
-        var engine = new SearchEngine(hashBits: 16);
+        SearchEngine engine = Engine(solver, hashBits: 16);
         string[] lines = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Data", "endgame-c-positions.txt"))
             .Where(line => !line.StartsWith('#'))
             .ToArray();
@@ -80,15 +114,55 @@ public class EndgameTests
         }
     }
 
-    [Fact]
-    public void FixedDepth_SolvesTheEndgameWhenItIsNear()
+    [Theory]
+    [MemberData(nameof(Solvers))]
+    public void FixedDepth_SolvesTheEndgameWhenItIsNear(string solver)
     {
         (Board board, Player player) = TestPositions.RandomPositions(seed: 3, count: 1, plies: 50).Single();
 
-        SearchResult result = new SearchEngine().Search(board, player, SearchLimits.FixedDepth(4));
+        SearchResult result = Engine(solver).Search(board, player, SearchLimits.FixedDepth(4));
 
         Assert.Equal(ScoreKind.Exact, result.Kind);
         Assert.Equal(Minimax(board, player), result.Score);
+    }
+
+    [Fact]
+    public void NewSolver_AgreesWithTheClassicSolverAboveThirteenEmptySquares()
+    {
+        // 14 to 18 empty squares: the null-window search above the local table, its transposition table and ETC.
+        SearchEngine classic = Engine("classic", hashBits: 16);
+        SearchEngine solver = Engine("new", hashBits: 16);
+        for (int plies = 42; plies <= 46; plies++)
+        {
+            foreach ((Board board, Player player) in TestPositions.RandomPositions(seed: 100 + plies, count: 6, plies: plies))
+            {
+                SearchResult expected = classic.Search(board, player, SearchLimits.Solve);
+                SearchResult result = solver.Search(board, player, SearchLimits.Solve);
+
+                Assert.Equal(ScoreKind.Exact, result.Kind);
+                Assert.Equal(expected.Score, result.Score);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task NewSolver_MoveNowReturnsQuickly()
+    {
+        // FFO #49, 26 empty squares: far more than a second to solve.
+        Board board = Board.Parse("--OX-O----XXOO--OOOOOXX-OOOOOX--OOOXOXX-OOOOXX-----OOX----X-O---");
+        using var moveNow = new CancellationTokenSource();
+        SearchEngine engine = Engine("new");
+        Task<SearchResult> search = Task.Run(() =>
+            engine.Search(board, Player.Black, SearchLimits.Solve, moveNowToken: moveNow.Token));
+
+        await Task.Delay(500);
+        Assert.False(search.IsCompleted);
+        var stopwatch = Stopwatch.StartNew();
+        await moveNow.CancelAsync();
+        SearchResult result = await search;
+
+        Assert.InRange(stopwatch.ElapsedMilliseconds, 0, 100);
+        Assert.True(board.IsLegal(Player.Black, result.Move.Square!.Value));
     }
 
     // Plain negamax to the end of the game; empty squares go to the winner.
