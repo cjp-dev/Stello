@@ -284,12 +284,46 @@ internal sealed class PatternSet
         new PatternShape("corner2x5", 0, 1, 2, 3, 4, 8, 9, 10, 11, 12),
         new PatternShape("corner3x3", 0, 1, 2, 8, 9, 10, 16, 17, 18));
 
+    /// <summary>
+    /// <see cref="Classic11"/> plus four 10-square corner and edge patterns of Egaroucid 7.9 (triangle, corner + block,
+    /// cross, edge + y); 62 features.
+    /// </summary>
+    public static PatternSet Plus15 { get; } = new("plus15", [.. Classic11.Shapes,
+        Shape("triangle", "a1 b1 c1 d1 a2 b2 c2 a3 b3 a4"),
+        Shape("corner+block", "a1 c1 d1 e1 f1 h1 c2 d2 e2 f2"),
+        Shape("cross", "a1 b2 c3 d4 b1 c2 d3 a2 b3 c4"),
+        Shape("edge+y", "c2 a1 b1 c1 d1 e1 f1 g1 h1 f2")]);
+
+    /// <summary>The 16 patterns of Egaroucid 7.9 (evaluate_generic.hpp), in their first place; 64 features.</summary>
+    public static PatternSet Egaroucid16 { get; } = new("egaroucid16",
+        Shape("hv2", "a2 b2 c2 d2 e2 f2 g2 h2"),
+        Shape("d6+2c+x", "b1 c1 d2 e3 g2 f4 g5 h6 h7"),
+        Shape("hv3", "a3 b3 c3 d3 e3 f3 g3 h3"),
+        Shape("d7+2corner", "a1 b1 c2 d3 e4 f5 g6 h7 h8"),
+        Shape("hv4", "a4 b4 c4 d4 e4 f4 g4 h4"),
+        Shape("corner9", "a1 b1 c1 a2 b2 c2 a3 b3 c3"),
+        Shape("d5+2x", "b2 d1 e2 f3 g4 h5 g7"),
+        Shape("d8+2c", "a1 b2 c3 d4 e5 f6 g7 h8 a2 b1"),
+        Shape("edge+2x", "b2 a1 b1 c1 d1 e1 f1 g1 h1 g2"),
+        Shape("triangle", "a1 b1 c1 d1 a2 b2 c2 a3 b3 a4"),
+        Shape("corner+block", "a1 c1 d1 e1 f1 h1 c2 d2 e2 f2"),
+        Shape("cross", "a1 b2 c3 d4 b1 c2 d3 a2 b3 c4"),
+        Shape("edge+y", "c2 a1 b1 c1 d1 e1 f1 g1 h1 f2"),
+        Shape("narrow-triangle", "a1 b1 c1 d1 e1 a2 b2 a3 a4 a5"),
+        Shape("fish", "a1 b1 a2 b2 c2 d2 b3 c3 b4 d4"),
+        Shape("anvil", "c6 d6 d7 d8 c8 f8 e8 e7 e6 f6"));
+
     /// <summary>The pattern sets by name, for files and the trainer.</summary>
     public static PatternSet ByName(string name) => name switch
     {
         "classic11" => Classic11,
+        "plus15" => Plus15,
+        "egaroucid16" => Egaroucid16,
         _ => throw new ArgumentException($"Unknown pattern set {name}."),
     };
+
+    private static PatternShape Shape(string name, string squares) =>
+        new(name, squares.Split(' ').Select(text => Square.Parse(text).Index).ToArray());
 
     /// <summary>
     /// Writes the raw index of every feature into <paramref name="indices"/>, each plus its shape's offset in

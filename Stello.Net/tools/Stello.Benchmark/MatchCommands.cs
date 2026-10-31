@@ -5,6 +5,8 @@ using System.Text.Json;
 using Stello.BookTool;
 using Stello.Egaroucid;
 using Stello.Engine;
+using Stello.Engine.Evaluation;
+using Stello.Engine.Search;
 using Stello.Engine.V1;
 using Board = Stello.Engine.Board;
 
@@ -125,6 +127,10 @@ internal static class MatchCommands
         int bookAccuracy = 0;
         int seed = 1;
         string? name = null;
+        string? evalFile = null;
+        int? selectiveMargin = null;
+        int? selectivePercent = null;
+        bool dangerousCorners = true;
         var keys = new HashSet<string>();
         foreach (string part in text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
@@ -173,6 +179,23 @@ internal static class MatchCommands
                 case "name":
                     name = value;
                     break;
+                case "eval":
+                    evalFile = value;
+                    break;
+                case "sel-margin":
+                    selectiveMargin = Number(key, value, -10_000, 10_000);
+                    break;
+                case "sel-percent":
+                    selectivePercent = Number(key, value, 0, 1000);
+                    break;
+                case "danger":
+                    dangerousCorners = value switch
+                    {
+                        "on" => true,
+                        "off" => false,
+                        _ => throw new ArgumentException($"danger must be on or off in the side \"{text}\"."),
+                    };
+                    break;
                 default:
                     throw new ArgumentException($"Unknown key in the side \"{text}\": {key}");
             }
@@ -186,7 +209,8 @@ internal static class MatchCommands
 
         foreach ((string key, bool allowed) in new[]
         {
-            ("depth", !egaroucid), ("level", egaroucid), ("book-acc", egaroucid), ("seed", egaroucid),
+            ("depth", !egaroucid), ("level", egaroucid), ("book-acc", egaroucid), ("seed", egaroucid), ("eval", engine == EngineKind.Stello), ("sel-margin", engine == EngineKind.Stello),
+            ("sel-percent", engine == EngineKind.Stello), ("danger", engine == EngineKind.Stello),
         })
         {
             if (keys.Contains(key) && !allowed)
@@ -215,7 +239,7 @@ internal static class MatchCommands
             string description = $"{limitText}, hash bits {bits}, {(useBook ? "book" : "no book")}";
             return engine == EngineKind.StelloV1
                 ? new MatchSide(name ?? text, limits, bits, CreatePlayer: () => new V1MatchPlayer(bits, book), Description: $"Stello 1, {description}")
-                : new MatchSide(name ?? text, limits, bits, book, Description: $"Stello, {description}");
+                : StelloSide(name ?? text, limits, bits, book, description, evalFile, selectiveMargin, selectivePercent, dangerousCorners);
         }
 
         // 2^21 slots of 24 bytes take as much memory as Stello's default: two tables of 2^19 slots of two 24-byte entries.
@@ -246,6 +270,56 @@ internal static class MatchCommands
 
             mode = value;
             amount = number;
+        }
+    }
+
+    /// <summary>A Stello side with its search options: the evaluation file and the switches of Stello 2's work.</summary>
+    private static MatchSide StelloSide(string name, SearchLimits limits, int bits, OpeningBook? book, string description,
+        string? evalFile, int? selectiveMargin, int? selectivePercent, bool dangerousCorners)
+    {
+        SearchOptions options = (evalFile is null or "classic" ? SearchOptions.Classic : PatternOptions(evalFile)) with
+        {
+            SelectiveMargin = selectiveMargin,
+            SelectivePercent = selectivePercent,
+            DangerousCorners = dangerousCorners,
+        };
+        if (options == SearchOptions.Classic)
+        {
+            return new MatchSide(name, limits, bits, book, Description: $"Stello, {description}");
+        }
+
+        string extra = (evalFile is null or "classic" ? "" : $", evaluation {Path.GetFileName(evalFile)}")
+            + (selectiveMargin is null && selectivePercent is null ? "" : $", selective margin {selectivePercent ?? 50} % + {selectiveMargin ?? 50}")
+            + (dangerousCorners ? "" : ", no corner extension");
+        return new MatchSide(name, limits, bits, book, CreatePlayer: () => new StelloMatchPlayer(bits, book, options),
+            Description: $"Stello, {description}{extra}");
+    }
+
+    private static readonly Dictionary<string, SearchOptions> LoadedOptions = [];
+
+    /// <summary>The search options with the pattern evaluation in <paramref name="evalFile"/>, loaded once per file.</summary>
+    /// <exception cref="ArgumentException">The file does not exist or is not an evaluation file.</exception>
+    /// <remarks><c>default</c> is Stello 2's evaluation, <c>Book/stello-eval.bin</c> (copied to the tool's Data folder).</remarks>
+    public static SearchOptions PatternOptions(string evalFile)
+    {
+        string path = Path.GetFullPath(evalFile == "default" ? Program.DataFile("stello-eval.bin") : evalFile);
+        lock (LoadedOptions)
+        {
+            if (!LoadedOptions.TryGetValue(path, out SearchOptions? options))
+            {
+                try
+                {
+                    options = new SearchOptions { Pattern = EvalWeights.Load(path) };
+                }
+                catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException)
+                {
+                    throw new ArgumentException($"Cannot read the evaluation file {evalFile}: {exception.Message}", exception);
+                }
+
+                LoadedOptions.Add(path, options);
+            }
+
+            return options;
         }
     }
 

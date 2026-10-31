@@ -194,3 +194,10 @@ Each change is a separate commit behind a `SearchOptions` flag and is measured o
   - `convert`: 52 M games and 25.5 M positions → 499.5 M positions (8 GB, git-ignored) in 1 m 53 s; deterministic (the same hash with 24 and 7 workers).
   - First model, `classic11` × 15 stages, 1.5 MB: 5.55 discs error on the test split, against Stello 1's 12.14 and Egaroucid's 5.05; 4.8 M evaluations per second.
 
+- **Phase 2: done (2026-10-31).**
+  - Pattern sets `plus15` (62 features) and `egaroucid16` (64) beside `classic11`. `EvalWeights` version 2 stores each stage as the difference from the previous one, which compresses better.
+  - Chosen model `Stello.Net/Book/stello-eval.bin`: `plus15` × 10 stages, rare weights (seen < 30 times) zeroed, 1/8-disc units, 0.99 MB. Test error 5.47 discs (Stello 1 12.14, Egaroucid 5.05). 3.3 M evaluations per second.
+  - `SearchOptions` (internal): `Pattern`, `SelectiveMargin`, `SelectivePercent`, `DangerousCorners`. Match sides: `eval=<file>|default|classic`, `sel-margin=`, `sel-percent=`, `danger=on|off`; `--eval` for the benchmarks; `mid-quality --sides`.
+  - The search uses the pattern score in 1/100 disc, for leaves and for the solver's ordering from 18 empties. Tuning the selective margin and the corner extension gave nothing significant, so they stay until phase 5.
+  - Gate: against Stello 1, 90.9 % (+400 Elo) at 100 ms and 90.6 % (+393) at 500 ms. `mid-quality` loss 1.33 / 0.91 / 0.68 discs against Stello 1's 1.59 / 1.59 / 1.39 at 50 / 200 / 1000 ms; the gap at 50 ms is within its margin. Against Egaroucid: 59.5 % (+67) at 100 ms, 38.2 % (−84) at 500 ms.
+  - Tests: Stello.Engine.Tests 250, Egaroucid.Engine.Tests 34, all green.

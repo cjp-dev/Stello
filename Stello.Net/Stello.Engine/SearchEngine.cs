@@ -39,6 +39,9 @@ public sealed class SearchEngine
 
     private const ulong Corners = 0x8100_0000_0000_0081UL;
 
+    // The pattern evaluation's scores in the search: 1/100 disc, close to the classic evaluation's scale.
+    private const int PatternUnitsPerDisc = 100;
+
     private readonly TranspositionTable _midgameTable;
     private readonly TranspositionTable _endgameTable;
     private readonly MoveOrdering _ordering = new();
@@ -61,12 +64,30 @@ public sealed class SearchEngine
 
     public int HashBits { get; }
 
+    internal SearchOptions Options { get; }
+
+    private readonly EvalWeights? _pattern;
+    private readonly int _selectiveMargin;
+    private readonly int _selectivePercent;
+    private readonly bool _dangerousCorners;
+
     /// <param name="hashBits">Each of the two hash tables gets 2^hashBits slots of two entries (C++: HASHSIZE 19, one entry).</param>
     public SearchEngine(int hashBits = 19)
+        : this(hashBits, SearchOptions.Classic)
+    {
+    }
+
+    internal SearchEngine(int hashBits, SearchOptions options)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(hashBits, 10);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(hashBits, 26);
+        ArgumentNullException.ThrowIfNull(options);
         HashBits = hashBits;
+        Options = options;
+        _pattern = options.Pattern;
+        _selectiveMargin = options.SelectiveMargin ?? SelectiveMargin;
+        _selectivePercent = options.SelectivePercent ?? 50;
+        _dangerousCorners = options.DangerousCorners;
         _midgameTable = new TranspositionTable(hashBits);
         _endgameTable = new TranspositionTable(hashBits);
     }
@@ -197,7 +218,7 @@ public sealed class SearchEngine
             Board child = Play(board, player, move);
             int score;
 
-            if (look == 0 && !Evaluator.IsDangerous(child, player, move))
+            if (look == 0 && !IsDangerous(child, player, move))
             {
                 score = -EvaluateLeaf(child, opponent, -beta, -alpha, rootMoves.Length);
             }
@@ -268,7 +289,7 @@ public sealed class SearchEngine
         {
             if (beta is < SelectiveScoreLimit and > -SelectiveScoreLimit)
             {
-                int threshold = beta + Math.Abs(beta) * 5 / 10 + SelectiveMargin;
+                int threshold = beta + Math.Abs(beta) * _selectivePercent / 100 + _selectiveMargin;
                 if (Search(board, player, SelectiveShallowLook, ply, previousMove, threshold - 1, threshold, out bestMove) >= threshold)
                 {
                     return beta;
@@ -277,7 +298,7 @@ public sealed class SearchEngine
 
             if (alpha is < SelectiveScoreLimit and > -SelectiveScoreLimit)
             {
-                int threshold = alpha - Math.Abs(alpha) * 5 / 10 - SelectiveMargin;
+                int threshold = alpha - Math.Abs(alpha) * _selectivePercent / 100 - _selectiveMargin;
                 if (Search(board, player, SelectiveShallowLook, ply, previousMove, threshold, threshold + 1, out bestMove) <= threshold)
                 {
                     return alpha;
@@ -328,7 +349,7 @@ public sealed class SearchEngine
             Board child = Play(board, player, move);
             int score;
 
-            if (look == 0 && !Evaluator.IsDangerous(child, player, move))
+            if (look == 0 && !IsDangerous(child, player, move))
             {
                 score = -EvaluateLeaf(child, opponent, -beta, -alpha, moveCount);
             }
@@ -509,7 +530,9 @@ public sealed class SearchEngine
                 {
                     // Far from the end the evaluation orders better; colours do not matter for the solver.
                     var child = new Board(opponent & ~flips, own | flips | (1UL << square));
-                    keys[i] = -Evaluator.Evaluate(child, Player.Black, -Infinity, Infinity, count);
+                    keys[i] = _pattern is null
+                        ? -Evaluator.Evaluate(child, Player.Black, -Infinity, Infinity, count)
+                        : -PatternScore(child, Player.Black);
                 }
                 else if (empties >= FastestFirstMinEmpties)
                 {
@@ -713,8 +736,15 @@ public sealed class SearchEngine
     {
         _nodes++;
         _evaluations++;
-        return Evaluator.Evaluate(board, player, alpha, beta, opponentMobility);
+        return _pattern is null
+            ? Evaluator.Evaluate(board, player, alpha, beta, opponentMobility)
+            : PatternScore(board, player);
     }
+
+    private bool IsDangerous(in Board child, Player player, int move) => _dangerousCorners && Evaluator.IsDangerous(child, player, move);
+
+    private int PatternScore(in Board board, Player player) =>
+        _pattern!.Evaluate(board.Discs(player), board.Discs(player.Opponent())) * PatternUnitsPerDisc / _pattern.UnitsPerDisc;
 
     private bool StopIterating(SearchLimits limits, TimeBudget budget, int nextLook) => limits.Mode switch
     {

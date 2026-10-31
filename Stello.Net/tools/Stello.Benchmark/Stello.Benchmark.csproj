@@ -21,6 +21,7 @@
     <Compile Include="..\Stello.BookTool\Options.cs" Link="Options.cs" />
     <None Update="Data\*.txt" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Book\opening-book.txt" Link="Data\opening-book.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Book\stello-eval.bin" Link="Data\stello-eval.bin" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

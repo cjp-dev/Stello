@@ -25,7 +25,7 @@ internal static class TrainCommand
     public static int Run(Options options)
     {
         options.Allow("out", "set", "stages", "data", "max-per-discs", "smooth", "loops", "rate", "patience", "workers",
-            "only-stage", "units", "prior");
+            "only-stage", "units", "prior", "min-appear");
         string output = options.Text("out") ?? throw new ArgumentException("train needs --out <file>.");
         PatternSet set = PatternSet.ByName(options.Text("set") ?? "classic11");
         int stages = options.Number("stages", 15, 1, 61);
@@ -39,6 +39,7 @@ internal static class TrainCommand
         int workers = options.Number("workers", Environment.ProcessorCount, 1, 256);
         int units = options.Number("units", 32, 1, 1024);
         int onlyStage = options.Number("only-stage", -1, -1, stages - 1);
+        int minAppear = options.Number("min-appear", 0, 0, 1_000_000);
         if (!Directory.Exists(data))
         {
             throw new ArgumentException($"The training data folder {data} does not exist (make it with convert).");
@@ -71,7 +72,7 @@ internal static class TrainCommand
                 continue;
             }
 
-            (double[] weights, Fit fit) = Fit1(folded, train, validation, loops, rate, prior, patience, workers);
+            (double[] weights, Fit fit) = Fit1(folded, train, validation, loops, rate, prior, patience, workers, minAppear);
             trained[stage] = weights;
             Console.WriteLine($"stage {stage} (discs {own[0]}–{own[^1]}): {train.Count:N0} train, {validation.Count:N0} validation, " +
                 $"{fit.Loops} loops, train MAE {fit.TrainMae:0.000}, validation MAE {fit.ValidationMae:0.000} (RMSE {Math.Sqrt(fit.ValidationMse):0.000}), {clock.Elapsed:h\\:mm\\:ss}");
@@ -146,7 +147,7 @@ internal static class TrainCommand
     private sealed record Fit(int Loops, double TrainMae, double ValidationMae, double ValidationMse);
 
     private static (double[] Weights, Fit Fit) Fit1(FoldedIndex folded, Encoded train, Encoded validation, int loops, double rate,
-        double prior, int patience, int workers)
+        double prior, int patience, int workers, int minAppear)
     {
         int count = folded.Count;
         var weights = new double[count];
@@ -245,6 +246,20 @@ internal static class TrainCommand
                 sinceBest = 0;
                 Array.Copy(best, weights, count);
             }
+        }
+
+        // Weights seen fewer than minAppear times are noise: zero them (they also compress better), and measure again.
+        if (minAppear > 0)
+        {
+            for (int index = 0; index < count; index++)
+            {
+                if (appear[index] < minAppear)
+                {
+                    best[index] = 0;
+                }
+            }
+
+            (bestMse, bestMae) = Error(best, validation);
         }
 
         return (best, new Fit(loop - 1, bestTrainMae, bestMae, bestMse));

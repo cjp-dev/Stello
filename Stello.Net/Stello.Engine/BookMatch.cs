@@ -1,3 +1,5 @@
+using Stello.Engine.Search;
+
 namespace Stello.Engine;
 
 /// <summary>What one side did in a game: the moves it searched, their nodes and time, and how deep it got.</summary>
@@ -80,9 +82,9 @@ internal interface IMatchPlayer
 }
 
 /// <summary>Stello's engine with its opening book as a match player.</summary>
-internal sealed class StelloMatchPlayer(int hashBits, OpeningBook? book) : IMatchPlayer
+internal sealed class StelloMatchPlayer(int hashBits, OpeningBook? book, SearchOptions? options = null) : IMatchPlayer
 {
-    private readonly SearchEngine _engine = new(hashBits);
+    private readonly SearchEngine _engine = new(hashBits, options ?? SearchOptions.Classic);
     private ComputerPlayer? _player;
 
     public void NewGame()

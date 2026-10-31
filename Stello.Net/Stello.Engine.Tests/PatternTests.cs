@@ -53,13 +53,23 @@ public class PatternTests
     }
 
     [Fact]
-    public void Index_EqualsReadingSquareBySquare()
+    public void LargerSets_HaveTheExpectedFeatures()
+    {
+        Assert.Equal(62, PatternSet.Plus15.FeatureCount);
+        Assert.Equal(64, PatternSet.Egaroucid16.FeatureCount);
+    }
+
+    [Theory]
+    [InlineData("classic11")]
+    [InlineData("plus15")]
+    [InlineData("egaroucid16")]
+    public void Index_EqualsReadingSquareBySquare(string setName)
     {
         foreach ((Board board, Player player) in TestPositions.RandomPositions(seed: 11, count: 300, plies: 30))
         {
             ulong own = board.Discs(player);
             ulong opponent = board.Discs(player.Opponent());
-            foreach (PatternShape shape in PatternSet.Classic11.Shapes)
+            foreach (PatternShape shape in PatternSet.ByName(setName).Shapes)
             {
                 for (int symmetry = 0; symmetry < Symmetry.Count; symmetry++)
                 {
@@ -71,10 +81,13 @@ public class PatternTests
         }
     }
 
-    [Fact]
-    public void FoldedWeights_GiveTheSameSumForAllSymmetricPositions()
+    [Theory]
+    [InlineData("classic11")]
+    [InlineData("plus15")]
+    [InlineData("egaroucid16")]
+    public void FoldedWeights_GiveTheSameSumForAllSymmetricPositions(string setName)
     {
-        PatternSet set = PatternSet.Classic11;
+        PatternSet set = PatternSet.ByName(setName);
         var random = new Random(5);
         var weights = new double[set.RawSize];
         for (int s = 0; s < set.Shapes.Count; s++)

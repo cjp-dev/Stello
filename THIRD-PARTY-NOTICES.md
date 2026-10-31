@@ -18,7 +18,7 @@ What Stello takes from it:
 - **Author:** Takuto Yamana
 - **Link:** [training data](https://www.egaroucid.nyanyan.dev/en/technology/train-data/)
 
-The engine comparison tools use Egaroucid's self-play and match data to measure how accurate an evaluation is. The data's terms forbid redistribution, so it is not part of this repository. As the terms ask: *Stello used Egaroucid's self-play data for training and testing its Othello AI.*
+Stello 2's evaluation, `Stello.Net/Book/stello-eval.bin`, was trained on this data by `Stello.Net/tools/Stello.Trainer`. The file holds only the trained pattern weights, not the data. The engine comparison tools also use the data to measure how accurate an evaluation is. The data's terms forbid redistribution, so it is not part of this repository. As the terms ask: *Stello used Egaroucid's self-play data for training and testing its Othello AI.*
 
 ## Edax
 

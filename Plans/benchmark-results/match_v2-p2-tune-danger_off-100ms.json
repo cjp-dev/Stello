@@ -1,0 +1,2991 @@
+{
+  "A": {
+    "Name": "base",
+    "Settings": "Stello, 100 ms/move, hash bits 19, no book, evaluation default",
+    "SearchedMoves": 27707,
+    "NodesPerSecond": 3015538.8036789554,
+    "MidgameDepth": 11.540264801971686,
+    "FirstSolve": 18.822033898305083,
+    "SecondsPerGame": 1.487177240084747,
+    "MsPerSearchedMove": 63.33667099649914,
+    "LongestMoveMs": 118.8302
+  },
+  "B": {
+    "Name": "variant",
+    "Settings": "Stello, 100 ms/move, hash bits 19, no book, evaluation default, no corner extension",
+    "SearchedMoves": 27738,
+    "NodesPerSecond": 3101391.9647415476,
+    "MidgameDepth": 11.588876772082878,
+    "FirstSolve": 18.866101694915255,
+    "SecondsPerGame": 1.4870414221186452,
+    "MsPerSearchedMove": 63.26010808637974,
+    "LongestMoveMs": 119.5111
+  },
+  "Games": 1180,
+  "WinsB": 521,
+  "DrawsB": 124,
+  "LossesB": 535,
+  "PointsB": 583,
+  "Score": 0.4940677966101695,
+  "ScoreLow": 0.47211262857681446,
+  "ScoreHigh": 0.5160229646435245,
+  "Elo": -4.122310548142034,
+  "EloLow": -19.398261998105657,
+  "EloHigh": 11.137709842568475,
+  "LikelihoodOfSuperiority": 0.29819997378901275,
+  "DiscsB": -0.1,
+  "DiscsMargin": 0.3731338142964448,
+  "Duration": "4m 56s",
+  "Pairs": [
+    {
+      "Start": "d3c3c4c5b3f3b5e3c6d2f4a3",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3d2g3f2e2f4",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": 12
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3b4f5f4g5",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5e6d2c3e3c2b3c6c1c4",
+      "DiscsBWhenAFirst": -20,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4g3d6c6",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -16
+    },
+    {
+      "Start": "d3c3c4c5b3e3d6e6b5d7c6",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5b3e3d6c6b5e6f3e2",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7f6f4f3b4",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c3c4c5f6f3f4e2d2c2",
+      "DiscsBWhenAFirst": 16,
+      "DiscsBWhenBFirst": 12
+    },
+    {
+      "Start": "d3c3c4c5d6f4b4b6b5c6b3",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c3c4c5b3c2b4a5b6d6",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5b4e3c6b3f2f3",
+      "DiscsBWhenAFirst": -16,
+      "DiscsBWhenBFirst": 12
+    },
+    {
+      "Start": "d3c3c4c5b3f3b5e3d6c6e6b4",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": -16
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3c6e1f4",
+      "DiscsBWhenAFirst": -14,
+      "DiscsBWhenBFirst": -12
+    },
+    {
+      "Start": "d3c3c4c5b4f3e6c6d6b5f5",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3f2c4c6f3",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c3c4c5b4e3d2b5c6a4a3a2",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5b4f3c6e3e6d6f4b6",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3f4f5f2f3",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": 28
+    },
+    {
+      "Start": "d3c5f6e3c3f5f3e2f2c4d2",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4e3d2e2c4g5",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5d6c3c4e3f4b5b3a3a6",
+      "DiscsBWhenAFirst": 26,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6f7g6e7",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5f3e2c3",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5f3e2c3g4g3",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5c3c4b5f2e6",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c3c4c5b4f3e6c6d6b5f5a3",
+      "DiscsBWhenAFirst": 18,
+      "DiscsBWhenBFirst": -14
+    },
+    {
+      "Start": "d3c5f6d2c6d6c7f3c4b4e3",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5e6f5f6d7e7e3c4c3f4d6",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3b4f5",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5d6e3b5e6d2e2b4c1",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5b4f3e6c6f5d2e2",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5e6d2c3e3c2f3e1f5f4g3",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4g3d6c3e6e3",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5d6e3f5e6f6c6c4d7f4f3",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5d6e3b5e6f2e2",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c6f6c2e3c4d6d1b5",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4g3d6c6e6g6",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5c3c4b5",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c5d6e3f4f5c4d2b4f3e6",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7f7e7f6f4",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6f7c6c4b6c7b4f5c8",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3c6b3",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c3c4c5b4e3c6b3f4a5f2f5",
+      "DiscsBWhenAFirst": -14,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6f7g6e7c6",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5b4e3d2b3f4f5c2",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 12
+    },
+    {
+      "Start": "d3c3c4c5b4e3c6b3f4b6e6a4",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 14
+    },
+    {
+      "Start": "d3c5e6e3d6c3d2c1d1e1b6",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3f4f3g4",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3b6f5f4",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5b4f3e6c6f5d2e2e3",
+      "DiscsBWhenAFirst": -14,
+      "DiscsBWhenBFirst": 14
+    },
+    {
+      "Start": "d3c5d6c3c4e3f4b5b3a3c2",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c5e6d2c6d6b5f5c3f4d7",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5f6e3c3f3f4g5e2f5",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c4c6f4f5f6",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5d6c3c4e3c6b4b3a3a4",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5f6e3c3d2f3b4c1f4",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5f6e3c3d2c4c2d6f5d1c1",
+      "DiscsBWhenAFirst": -16,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5e6e3d6c3c2f6f5c6",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6e7d7c4f3",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": -12
+    },
+    {
+      "Start": "d3c3c4c5b4d2c2e3e1a3f3b3",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3c6b6f3",
+      "DiscsBWhenAFirst": 13,
+      "DiscsBWhenBFirst": -14
+    },
+    {
+      "Start": "d3c5e6f5f6d7e7e3c4c3c8f4",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5e6d2c6d6b5f5e7f6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -18
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3f2f3",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4g3d6e3c4c6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5f6d2c6d6e6c7c2d7c3",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3d2b3e2c2",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5f6e3c6f5f4g5h4",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3f3c4b4",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5d6e3f5e6f6c6c4d7f4f7",
+      "DiscsBWhenAFirst": -18,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5b4e3c6b3c2a4a3",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5f6d2c6d6c7f4b5e6f5c4",
+      "DiscsBWhenAFirst": -3,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c3c4c5b3f3b6c6e6e3f4",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5d2c4c3f2e6",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6d2c6f6f5g5c2d6e7",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3f2c4",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5e6d2c6f5c4d6e7b3c3",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -20
+    },
+    {
+      "Start": "d3c5e6f7e7e3c3f3d6c4f6",
+      "DiscsBWhenAFirst": 16,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5f6e3c3f3f4g5d6c4",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c3c4c5f6e2c6e3b4d6",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5d6c3c4e3f4b5b3f6d2",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c3c4c5b4e3c2b5c6a4",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5d6e3b5e6d2b6",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5e6d2c6d6b5f5c3f4e7",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7f7e7f6b4",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5e6d2c6f5e3f4f3f6e2f1",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": 20
+    },
+    {
+      "Start": "d3c5e6d2c6d6c3f4c4e3f6",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7f6f4f3",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": 12
+    },
+    {
+      "Start": "d3c5e6e3d6c3c2f6c4c6b6f3",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5f3e2f2c4b3",
+      "DiscsBWhenAFirst": 14,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c3c4c5f6e3c6f5f4g5",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2c4b5",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5f6e3c3d2f3b4b3f5",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2f3c2e1f2",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5d6e3b5e6d2e2f5",
+      "DiscsBWhenAFirst": -18,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2c4b3c2d6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c5d6c3c4e3f4b5b3f6f5",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3b4f5f3",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5b3f3b5e3c6b4e6",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c3c4c5b3f3b5e3d6c6e6",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 16
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3b5f6c4",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5f3e2f2c4",
+      "DiscsBWhenAFirst": 16,
+      "DiscsBWhenBFirst": -12
+    },
+    {
+      "Start": "d3c5e6e3d6c3c2f6c4c6",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4e3d2e2g3",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5d6e3f4f5f3g3e6f6",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5f6e3c3d2f3b4d1f4",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5b4e3c6b3f2f3d6",
+      "DiscsBWhenAFirst": 12,
+      "DiscsBWhenBFirst": -16
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3e2d2d1c6",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5c3c4b5e2e6",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6f7g6c4c6",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5b4f3c6e3e6d6f4",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3c6e1f1",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 12
+    },
+    {
+      "Start": "d3c5f6e3c3f5f3e2f2c4d1f1",
+      "DiscsBWhenAFirst": -18,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5d6e2b3b5c2e3d2c6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6d2c6d6b5f5e3d7",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5e6e3d6c3c2f6f5d2b5f4",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5e6d2c6d6c3f4c4e3",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5d6c3c4e3f4b5c2e2",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": 3
+    },
+    {
+      "Start": "d3c3c4c5f6e3c6f4b5b6d2c2",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": 16
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3f2f3f4g3",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5f6d2c6c7b4e3d1e6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5e6e3d6c3d2c1d1e1",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c3c4c5b4f3e6c6f5d2c2",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5f6d2c6d6e6c7c2d7",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 20
+    },
+    {
+      "Start": "d3c3c4c5b4e3c6b3d2a4d6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c3e3f3f5f6c2f4",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5b3f3b5e3d6c6b4",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c3c4c5b3f4b5b4a5a6a7",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c3c4c5f6e2c6e3b4b5d6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5f6e3c3d2c4f3d6f5",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 20
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3b4f5f4f6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5f6d2c6d6e6c7b6d7c3",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6d2c6f5e3f6c3f4e1c2",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6f7g6f4",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -14
+    },
+    {
+      "Start": "d3c5e6e3d6c3c2f6f5d2b4e7",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c3c4c5f6e3c6f5f4g5h4h6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c3c4c5b4f3e6c6f5d2",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6f7c6c4b6c7b4f5c8e3",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": -12
+    },
+    {
+      "Start": "d3c3c4c5b3f3b5e3f4d2c2",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5e6d2c6f5c4d6e7b3f4",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3d2g3f2f1",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5f6e2c6e3b4d6b5",
+      "DiscsBWhenAFirst": 16,
+      "DiscsBWhenBFirst": 14
+    },
+    {
+      "Start": "d3c3c4c5b4e3c6b3c2a4",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3f4f5f2",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6f7e7e3c3f3d6c4",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5d6e3b5e6c2c6e2b6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -12
+    },
+    {
+      "Start": "d3c5d6e3f4f5f3g3e6f6c6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5f3e2d2c4",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 3
+    },
+    {
+      "Start": "d3c3c4c5b4d2c2e3e1a3f3d1",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5f6d2c6d6b5f5e6f7",
+      "DiscsBWhenAFirst": -14,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5b4e3c6b3f4f5e6d6",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c3c4c5f6d2c6c7b4e3",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5c3c4b5e2",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c3c4c5b4e3c2b5f4a3a6a5",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3e2d2d1b3",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3d2b3e2c2b4",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c6f6c2e3c4d6f4",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2c4b5b4",
+      "DiscsBWhenAFirst": 20,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2f4f3c4d6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4g3d6e3c4c2",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": -12
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3e2d2d1e1",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5d6c3c4e3f4b5b3a3f2f5",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5b4e3c6b3f4a5f2",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5e6e3d6c3c2f5c4d7f4g5",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5b3d2e3f3e1f2",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3f3c4b4b3",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5e6e3d6c3c2f6f5d2b4",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2c4b5b4d6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3f3c4b4b3d6",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5f6e3c3f5f3e2f2c4d1",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5b3f3b4e3c6d2f4",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5d6e3f4f5f3g3e6f6c6e2",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c6f5c4d6e7b3f4f6",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5e6d2c6f5c4d6e7b3c3b4",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5d6e3f5e6f6c6c4d7f4b3",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5b3f3b4e3f4c2e2d2",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3b5f5f4",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c3c4c5d6e3f5c6b6f6f4",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5f6e3c6f5f4g3",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 16
+    },
+    {
+      "Start": "d3c5f6d2c6d6b5f5e6f7g4",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6f7g6h5f8c6",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5d6e2b3b5c2e3d2",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5f6d2c6d6e6c7b6d7e8a6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 12
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7f7c3f3",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5e6d2c6f5e3f4g5d6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5b3f3b4e3f4c2e2",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3f3c4b4b5d6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5f6e3c6f4b5a6f3f5",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5b3f3b5e3c6d2",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5f6e3c3f3f4f5e6c4d6",
+      "DiscsBWhenAFirst": -16,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3c6b5f4f3",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5e6f7e7d2c6f5e3f4f3",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5f6d2c6d6c7f4b5e6f5",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6f7g6c4c6e7",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c5d6c3c4e3f4b5c2e2b3d7",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6f7g6h5f8",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6f7g6f4g5",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 24
+    },
+    {
+      "Start": "d3c3c4c5b3f3f4f5b4e3c6",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7f7e7f6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5f6e3c3f3f4g5e2f5h6g3",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5e6f7c6c4b6b5c3f5d6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5f6d2c6d6e6c7b6d7c4",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5f6d2c6d6c7f4b5e6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5d6c3c4e3f4b5b3a3c6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5f6d2c6d6e6c7b4c4b5b6",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c3c4c5b4d2c2e3e1a3",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5e6d2c6f5e3f6c3f4c4e7",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 14
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3c6b3b5",
+      "DiscsBWhenAFirst": 14,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7f6f4f3b5",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6e3d6c3d2c1b6e7f5",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -12
+    },
+    {
+      "Start": "d3c5e6f7c6c4b6c7e7a6",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 16
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4g3d6e3c4",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 12
+    },
+    {
+      "Start": "d3c3c4c5e6f5d6f4e3f2f3",
+      "DiscsBWhenAFirst": 14,
+      "DiscsBWhenBFirst": 12
+    },
+    {
+      "Start": "d3c5e6d2c6d6c3e3c4b3d1",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3f2e2d1",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5d6e3b5e6d2e2b4",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7d7c8f5c4",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3c6b3f2f4",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c3c4c5d6e3f5c6b6f6",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c3c4c5b3f3b4a4d6e3c6a3",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 16
+    },
+    {
+      "Start": "d3c3c4c5b3f3b4e3c6d2f4b5",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c3c4c5d6e6c6f4f5d7",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5d6e3f4c6f3f6f5e6e7g4",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5b4e3d2b3f4f5",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5f6d2c6d6c7f4f3f5c4b3",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5f6d2c6d6c7f4b5e6f7e7",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5f6e3c3d2f3b4b3f5c4",
+      "DiscsBWhenAFirst": -22,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5c3c4b5f2",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3f4f5",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": -14
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4g3f2e3c4",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c5e6d2c6d6c3e3c4f4f5",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5b4e3c2b5c6a4a5",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5f6e3c3d2f3b4d1f4f5",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5f6d2c6f5f4g5d6",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c3c4c5b4e3d2b3f4f5c2c1",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5d6e3f5e6f6c6c4d2b6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5f6f3f4e2d2c2f1f5",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c3c4c5f6e2c6e3b4b5",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5d6c3c4e3f4b5b3a3f2",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c5f6f3f4f5e6d6c4e7g6",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c3c4c5b3f3b4a4d6e3c6",
+      "DiscsBWhenAFirst": -3,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5c3c4b3f2e6",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2f4f3c2",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 32
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3f2f3f4",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3e2d2d1e1f1",
+      "DiscsBWhenAFirst": -16,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5f6d2c6d6e6c7b4c4b6",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5e6f5f6f7d6e7c7c6d7",
+      "DiscsBWhenAFirst": -16,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3d2b4b5b3e2",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -12
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2f4f3",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -12
+    },
+    {
+      "Start": "d3c3c4c5d6e3f4c6b5d7e7",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2c6f4b5",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5f6e3c6f5f4g3f3g4",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c5f6e3c3e6f4f3f5g4c6",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5e6d2c6d6c3f4c4e3f6b3",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c6d6b5f5e7f6f4d7",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5e6f5f6f3b6d2",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6f5f6d7e7e3c4c3c8",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 12
+    },
+    {
+      "Start": "d3c5f6d2c6d6c7f4c4f5e6f7",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2c4b5f4",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5e6e3d6c3c2f6f5d2b5",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 12
+    },
+    {
+      "Start": "d3c5e6d2c3e3f3f2d1f5c4",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c3c4c5b3f3b4e3f4c2",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3f3c4b4b5",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 18
+    },
+    {
+      "Start": "d3c3c4c5d6f4b4c6b5b3b6",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -16
+    },
+    {
+      "Start": "d3c5e6d2c3e3c2b3c6c1c4f5",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 5
+    },
+    {
+      "Start": "d3c3c4c5b3e3d6c6b5e6b6",
+      "DiscsBWhenAFirst": -14,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3c6b3b5c2",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5b3f3b6c6e6a6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -12
+    },
+    {
+      "Start": "d3c3c4c5d6e3f5d7e2f3c2d1",
+      "DiscsBWhenAFirst": -9,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5e6d2c6f6c2e3c4c3f4",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5e6e3d6c3c2f5c4d7f4",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5f3c4c3",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5b3f3b4e3c6d2",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c3e3c2b3c6c1d1",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5e6d2c6f5e3f6c3f4c4",
+      "DiscsBWhenAFirst": -20,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6d2c6f6f5g5c2d6",
+      "DiscsBWhenAFirst": -22,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2f4f3c2g4",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c3c4c5b4f3e6c6d6b5",
+      "DiscsBWhenAFirst": 12,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5c3c4b5b4a5",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3c6b5f4",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5d6e3f4f5c4d2e6c3g5f6",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c3c4c5b3e3d6c6b5e6b6d2",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5e6d2c3e3f3f5f6c2f4f2",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6e7d7c4",
+      "DiscsBWhenAFirst": -20,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5f6e3c3d2c4c2d6f5d1",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c3c4c5f6e2c6e3b4d6b5b6",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5b3f3b6c6e6e3f4f5",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2f4f3c4",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c3c4c5b4e3c6b3f2f3d6e6",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": -14
+    },
+    {
+      "Start": "d3c5f6d2c6d6e6c7b6d7e3",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c3c4c5d6e3b5e6d2e2b4c7",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5d6c3c4e3f4b5b3a3c6b6",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5e6d2c6f6f5g5c2d6c4",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": 1
+    },
+    {
+      "Start": "d3c5f6f3f4f5e6d6c4e7d8",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c3c4c5b4e3d2b5c6a4a3",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 14
+    },
+    {
+      "Start": "d3c5f6d2c6d6e6c7b6d7b5",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5d6f4b4e3b3c6d2e2",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": -16
+    },
+    {
+      "Start": "d3c5f6d2c6d6c7f4c4f5",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5f6d2c6d6e6c7b6d7c4b4",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6e3d6c3d2c1d1e1b6e7",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3b4f5f4f3",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c5e6d2c6d6c3e3c4b3d1b4",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6e7d7c6f3d8",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c3c4c5b3f3b6c6e6a6e3f2",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5f6d2c6d6c7f4b5e6f7",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c6f5c4d6e7b3g4",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c6f5e3f4f3f6",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7f7e7f6f4f3",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5f6e3c3f3f4g5e2f5h6",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6f5f6f7d6e7c7c6",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5f6e3c3e6f4f3f5g4d2",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5d6f4b4c6b5b3",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5d6c3c4e3f4b5b3e7a6f6",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5b4f3e6c6f5d2c2b3",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5b3d2e3f3d1e2",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c3e3c2b3c6c1",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": -16
+    },
+    {
+      "Start": "d3c3c4c5d6e3b5e6f5b6",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2f4f3c2b3",
+      "DiscsBWhenAFirst": 12,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5f6e3c6f4b5b6d2e2",
+      "DiscsBWhenAFirst": -13,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5c3c4b3f2",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c6f5e3f4f3f6b5",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5d6e3b5e6d2e2b3",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c3c4c5d6f4f5d2f3d7c6e6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3d2g3f2",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5d2c4c3f2",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5f6d2c6d6c4b6e6c3b5",
+      "DiscsBWhenAFirst": 12,
+      "DiscsBWhenBFirst": -18
+    },
+    {
+      "Start": "d3c3c4c5f6f3f4e2b5g4",
+      "DiscsBWhenAFirst": 22,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6f7e7e3c3f3d6c4f6d2",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5b4e3c2b5c6a4a5a6",
+      "DiscsBWhenAFirst": 16,
+      "DiscsBWhenBFirst": -16
+    },
+    {
+      "Start": "d3c3c4c5d6e3b4b5d2e6a6",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4g3d6c3",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5b4d2d6b3f4c6",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3b5f5f4f6",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c3c4c5d6e3f4c6b5b6b4f5",
+      "DiscsBWhenAFirst": 11,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2c4b5b6c2",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -12
+    },
+    {
+      "Start": "d3c5f6d2c6d6e6c7b4c4b6f5",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4g3f2e3",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5e6d2c6f6c2e3c4d6d1",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6d2c3e3c2b3c6c1c4d6",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c3c4c5b4f3e6c6b6d2",
+      "DiscsBWhenAFirst": 18,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c5d6e3f4c3f3e6f5c4c6",
+      "DiscsBWhenAFirst": 14,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c5e6d2c6d6b5f5e7f6f4",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5e6e3d6c3c2f6c4c6b6",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c3c4c5b4f3e6c6b6d2d6",
+      "DiscsBWhenAFirst": -14,
+      "DiscsBWhenBFirst": 18
+    },
+    {
+      "Start": "d3c3c4c5b3f4b5b4a5a6a7a3",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6d2c3e3f3f5f6c2",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5e6e3d6c3d2c1d1e1b5",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 14
+    },
+    {
+      "Start": "d3c5f6e3c3f3f4g5d6c4f5c6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5e6d2c6d6b5f5c3f4e7c4",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c3c4c5d6f4b4b6b5c6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c3c4c5e6e3c6d6e2f2b4b3",
+      "DiscsBWhenAFirst": 12,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5f6d2c6d6e6c7b6d7e8",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5b4e3c6b3f4f5e6",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -14
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6e7d7c4f3c6",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c3c4c5f6d2c6f5c2b5",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3c6b5a4",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5b4e3c6b3f4a5f2f3",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5d6c3c4e3f4b5b3e7a6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6f7g6g5c4",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3e2d2d1c2f2",
+      "DiscsBWhenAFirst": -22,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5e6d2c6d6c3e3c4f4f5g6",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5b4e3d2b3f4f5c6a4",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5e6d2c6f5e3f6c3f4d1",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5d6e3b5e6d2b6b3c6",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3b6f5",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c3c4c5b4e3d2b3f4f5e2c2",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c5d6e3f4f5c4d2b4f3",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 14
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6e7d7c6f3",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5f6d2c6d6c7f4c4f5e6",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4g3f2e3c4h5",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5c3c4b5e2f2",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5b3f3b5e3d6c6b4e6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5f6d2c6d6c7f4f3f5c4",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c3c4c5d6e3f4c6b5d7",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": -14
+    },
+    {
+      "Start": "d3c3c4c5f6d2c6c7b4e3d6",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c4c6f4f5",
+      "DiscsBWhenAFirst": -24,
+      "DiscsBWhenBFirst": 48
+    },
+    {
+      "Start": "d3c3c4c5b4f3e6c6b6d2d6b3",
+      "DiscsBWhenAFirst": 18,
+      "DiscsBWhenBFirst": -14
+    },
+    {
+      "Start": "d3c3c4c5f6e3c6f4b5b6",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c5e6d2c6d6c3e3c4b3c2",
+      "DiscsBWhenAFirst": 12,
+      "DiscsBWhenBFirst": -12
+    },
+    {
+      "Start": "d3c3c4c5b4d2d6c6e6f6",
+      "DiscsBWhenAFirst": 1,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5e6d2c6d6c3e3c4f4",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5b4d2d6c6e6f6c2e2",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3c6b6a6",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -14
+    },
+    {
+      "Start": "d3c5f6e3c3d2f3b4b3f5f4",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5b3e3d6c6b5b4a5a6",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5d6e3f4c6c4b3b5a4",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 14
+    },
+    {
+      "Start": "d3c5e6d2c6f6f5g5c4e7",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 16
+    },
+    {
+      "Start": "d3c3c4c5d6e3b4b5d2c6a6",
+      "DiscsBWhenAFirst": 12,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5f6d2c6d6e6c7c2d7d1",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c3c4c5b3f4b5b4c6d6",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5f6d2c6d6c7f4f3f5",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5e6d2c6d6c3e3c4b3c2f4",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5f6e3c3f3f4f5e6c4d6c6",
+      "DiscsBWhenAFirst": 16,
+      "DiscsBWhenBFirst": 12
+    },
+    {
+      "Start": "d3c3c4c5b4e3c6b3d2a4",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c3c4c5b3f3c6d2f6f5",
+      "DiscsBWhenAFirst": 5,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c6f6f5g5c2d6c4b4",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5e6f7c6c4b6b5c3f5d6a6",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 17
+    },
+    {
+      "Start": "d3c3c4c5b3c2b4a5a4a3",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5e6e3d6c3c2f6c4c6f5",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5e6f5f6f3f4e2",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2c4b3",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5b4e3c6b3f4f5",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5e6d2c6f5e3f6c3f4e1",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5d6e3b5e6d2e2b3d1",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5f6e3c3d2f3b4d6f4g3",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -26
+    },
+    {
+      "Start": "d3c3c4c5d6e3f4c6b5b6f3",
+      "DiscsBWhenAFirst": 12,
+      "DiscsBWhenBFirst": -1
+    },
+    {
+      "Start": "d3c3c4c5f6e3c6f5f4g3f3",
+      "DiscsBWhenAFirst": 16,
+      "DiscsBWhenBFirst": -16
+    },
+    {
+      "Start": "d3c5f6e3c3f3f4f5e6c4",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5e6d2c6f5e3f6c2f3",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5d6e3f4c6b5b6b4",
+      "DiscsBWhenAFirst": -24,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6f7g6e7f4",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5f3e2c3g4",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5f6d2c6f5c4b3g5d6e3",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5f6e3c3d2c4c2d6f5",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5e6e3c6d6e2f2b4",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5f6e3c3d2f3b4d1f4f5g4",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6e3d6c3c2f6f5d2",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4e3d2e2c4",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c3c4c5b4e3d2b3f4f5e2",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6e3d6c3d2c1b6e7f5c4",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4g3d6c6e6",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c6f5e3f4f3f6e2",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -14
+    },
+    {
+      "Start": "d3c5e6d2c3e3c2f3e1f5c4b3",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6d2c6f6c2e3c4d6f4f3",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7f4b4b5a4f5",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c3c4c5b3f3c6d2f6f5d6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5d6e3f4c6f3f6f5e6e7g5",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3f4f3",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3f4f3g4b5",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5d6e2b3b5c2e3",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c3c4c5d6f4f5d2f3d7",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3b4f5f3c4",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5b3f3b5e3f4d2",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5f6d2c6d6e6c7b4c4b5",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6f7g6h5",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3b5f5f4f3",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6d2c3e3c2f3d1f5f4g4",
+      "DiscsBWhenAFirst": 12,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5e6d2c3e3c2b3c6c1d1e2",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5d6e3b5e6d2e2",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5d6e3f4c6b5d7e7b6",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3e2f6",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3b4f5f3b6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5f6f3f4e2d2c2d6",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5f6e3c3d2f3b4c1f4f5",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2c4b5f4d6",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6e3d6c3d2c1d1e1b5e7",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6d2c6f6f5g5g4e3",
+      "DiscsBWhenAFirst": -20,
+      "DiscsBWhenBFirst": 20
+    },
+    {
+      "Start": "d3c3c4c5d6e2b3b5b4c6",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6f7g6f4g5c6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3b5f6c4f5",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7d7c8f5",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5e6f5d6f4e3f2",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2c4b5b6",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7d7c8f5c4f6",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c3c4c5d6f4f5d2f3d7c6",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c3c4c5d6f4b4e3b3c6d2",
+      "DiscsBWhenAFirst": 12,
+      "DiscsBWhenBFirst": -12
+    },
+    {
+      "Start": "d3c3c4c5b3f3b6c6e6e3",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5e6d2c6f5c4d6e7b3g4g5",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5f6d2c6d6c4b6e6c3b5a6",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4g3d6c2",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5d6e3b5e6d2e2b4c6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c3c4c5f6f3f4e2d2c2f1",
+      "DiscsBWhenAFirst": 12,
+      "DiscsBWhenBFirst": -24
+    },
+    {
+      "Start": "d3c3c4c5d6e2b3b5b6e3",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 12
+    },
+    {
+      "Start": "d3c5d6e3f4f5c4d2e6c3g5",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 28
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7f7c3f3e3",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3b5f5",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5b3f3b6c6b5e3c7d2",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5f6e2c6e3b4b5d6a4",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5b3f3c6d2f6f5d6b4",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5d6e3b5e6d2e2f5d7",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5e6d2c6f6c2e3c4d6f4b5",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": 14
+    },
+    {
+      "Start": "d3c3c4c5b4f3c6e3e6d6c2",
+      "DiscsBWhenAFirst": 20,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3e2d2d1c2",
+      "DiscsBWhenAFirst": 24,
+      "DiscsBWhenBFirst": -24
+    },
+    {
+      "Start": "d3c3c4c5d6e3b4b5d2c6a6a4",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c5e6f5f6e3c4f7g6f4g5",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5f6e3c6f4b5b6d2",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3c6f1c2a4",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6d2c3e3c2f3c4b3d1",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7f4b4b5e3",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6f5f6d7e7e3c4c3f4",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7f4b4b5a4",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2c4b3c2",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5f6e3c3f3f4g5d6c4f5",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c3c4c5b3d2e3f3b6c2",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7f6f4f3b4f7",
+      "DiscsBWhenAFirst": -26,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6e7d7c6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5b4e3c6b3c2a4a3a2",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5b3c2b4a5b6d6a4",
+      "DiscsBWhenAFirst": -18,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2c6f4c4b3",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c6d6b5f5c3f4",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3d2g3f2f1e6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c3c4c5d6e3f5d7e2f3",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c3c4c5d6e3b5e6d2b6b3",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5f3e2d2c4c3",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5f6e3c3f5f3e2f2c4f4",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5b4e3c2b5f4a3a6",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5b3f3b5e3c6b4e6d6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5c3c4b3",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5d6e3b4b5d2e6a6a5",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5f6d2c6d6e6c7b4c4",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c5f6d2c6d6c7c8b6f5c4",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": 20
+    },
+    {
+      "Start": "d3c3c4c5b4e3d2b3f4f5c6",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6d2c3e3c2f3c4b3",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5e6f5f6d7e7e3c3f3d6",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5f6d2c6d6e6c7b6d7",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3c6b3f2",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c3c4c5e6e3c6d6e2f2",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": -12
+    },
+    {
+      "Start": "d3c5e6d2c6d6b5b6c3b3",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5e6e3d6c3c2f6c4c6b6b5",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -20
+    },
+    {
+      "Start": "d3c5e6f5f6f7d6e7d7c7",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c3c4c5b3f3b6c6e6a6e3",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c3c4c5f6e2c6e3b4d6b5f5",
+      "DiscsBWhenAFirst": 12,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5b3e3d6c6b5b4a5",
+      "DiscsBWhenAFirst": -18,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5d6e3b4b5d2c6",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c3c4c5b4e3c2b5b6a4b3",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -12
+    },
+    {
+      "Start": "d3c5e6f5f6f7d6e7c7c6d7e8",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6d2c6d6b5f5c3f4d7e7",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6d2c6f6c2e3c4d6f5",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5d6e3f4f5c4d2b4f3e6c6",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3d2b4b5b3",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5e6f7e7d2c6f5e3f4f3f6",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5b4e3c2b5f4a3",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c3c4c5b4f3c6e3e6d6",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3d2g3f2e2",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5f6d2c6d6c7c8b6f5c4c3",
+      "DiscsBWhenAFirst": 16,
+      "DiscsBWhenBFirst": -24
+    },
+    {
+      "Start": "d3c3c4c5d6f4b4c6b5b3b6e3",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5f6d2c6c7b4e3d1",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 10
+    },
+    {
+      "Start": "d3c5e6d2c6d6b5b6c3b3d7e3",
+      "DiscsBWhenAFirst": -8,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5b3f3b5e3d6c6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c3c4c5b3f3b4e3c6d2e6a4",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 22
+    },
+    {
+      "Start": "d3c3c4c5b3f3b4e3c6d2e6d6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3b6f5g5",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": 15
+    },
+    {
+      "Start": "d3c3c4c5b4e3c2b5c6a4f6b6",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5e6d2c3e3c2f3c4b4",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7f6f4f3e3",
+      "DiscsBWhenAFirst": 24,
+      "DiscsBWhenBFirst": -14
+    },
+    {
+      "Start": "d3c5f6e3c3d2f3b4b5f2",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c3c4c5b4e3c6b3f4b6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5e6d2c3e3c2f3d1f5f4",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5f6d2c6f5c2b5e3",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5f6e3c3d2f3b4c1f4f5g4",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3d2b4b5",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -14
+    },
+    {
+      "Start": "d3c5e6d2c6d6b5b6c3b3d7",
+      "DiscsBWhenAFirst": 12,
+      "DiscsBWhenBFirst": -12
+    },
+    {
+      "Start": "d3c5e6f5f6f7d6e7c7c6d7c4",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c3c4c5b4d2e2e3c6f1c2",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2c6f4c4",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6f7g6e7f4c4",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2c6f4",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": -28
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4g3d6e3",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5d6e3f5d7e2f3c2",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5d6c3c4e3f4b5b3a3a6f6",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3d2g3f2c2e2",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5e6d2c6d6c3f4c4e3f5",
+      "DiscsBWhenAFirst": -1,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5e6f5f6e3c4f7g6f4g5e7",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5d6c3c4e3f4b5b3a3c2e2",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5b3f3b4e3c6d2e6",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4e3d2e2",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5d6c3c4e3f4b5b3a3",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 26
+    },
+    {
+      "Start": "d3c5e6e3d6c3c2f5c4d7",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5f6f3f4f5e6d6c4e7d8f7",
+      "DiscsBWhenAFirst": 7,
+      "DiscsBWhenBFirst": 22
+    },
+    {
+      "Start": "d3c5e6d2c6f6c2e3c4d6f5c3",
+      "DiscsBWhenAFirst": 14,
+      "DiscsBWhenBFirst": -10
+    },
+    {
+      "Start": "d3c3c4c5b4d2c2e3e1a3f3",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c5f6f3f4f5g4g3d6c3e6",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5f6e3c6f4b5a6f3",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3d2b3e2",
+      "DiscsBWhenAFirst": 14,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c3c4c5b3e3d6c6b5e6",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6d2c3e3f3f2d1f5c4f4",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5b3f3b5e3c6d2f4",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -12
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7f6b4f7",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c3c4c5b3e3d6c6b5e6b6a6",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5e6d2c6f6c2e3c4d6",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5f6e3c6f4b5a6",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5e6d2c3e3c2f3d1f5",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5b3f3b5e3f4d2c2a3",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5e6e3d6c3c2f6c4c6f5g4",
+      "DiscsBWhenAFirst": -4,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c5e6f5f6e3d6f7g6e7c6g5",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -8
+    },
+    {
+      "Start": "d3c5f6e3c3d2c4f3d6f5e6",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c4c6f4",
+      "DiscsBWhenAFirst": 24,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6d2c3e3c2f3c4b3d1b4",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5d6c3c4e3f4b5b3f6d2f2",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 14
+    },
+    {
+      "Start": "d3c3c4c5b4e3c2b5b6a4",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c3c4c5b4d2d6c6e6f6c2",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5f6e3c3d2c4f3d6f5e6c6",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": 12
+    },
+    {
+      "Start": "d3c3c4c5b3e3d6c6b5b4d7",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5f6d2c6d6b5f5e6f7g4g6",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -4
+    },
+    {
+      "Start": "d3c5e6f5f6e3c3d2c6f4b5d6",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": -11
+    },
+    {
+      "Start": "d3c3c4c5b3e3d6c6b5e6f3",
+      "DiscsBWhenAFirst": 6,
+      "DiscsBWhenBFirst": 8
+    },
+    {
+      "Start": "d3c3c4c5d6f4b4b6b5c6b3e6",
+      "DiscsBWhenAFirst": -10,
+      "DiscsBWhenBFirst": 0
+    },
+    {
+      "Start": "d3c5e6f5f6e3c4f7g6f4",
+      "DiscsBWhenAFirst": 10,
+      "DiscsBWhenBFirst": -6
+    },
+    {
+      "Start": "d3c5d6e3f4c6f5d2c4c3",
+      "DiscsBWhenAFirst": -2,
+      "DiscsBWhenBFirst": 0
+    }
+  ]
+}

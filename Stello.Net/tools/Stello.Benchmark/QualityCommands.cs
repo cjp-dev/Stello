@@ -127,12 +127,19 @@ internal static class QualityCommands
 
     public static int MidQuality(Options options)
     {
-        options.Allow("positions", "times", "engines", "workers", "max-positions", "name");
+        options.Allow("positions", "times", "engines", "sides", "workers", "max-positions", "name");
         string path = options.Text("positions") ?? Program.DataFile("midgame-exact.txt");
         List<BenchmarkPosition> positions = BenchmarkPosition.Load(path).Where(p => p.MoveScores.Count > 0).ToList();
         positions = positions.Take(options.Number("max-positions", positions.Count, 1, int.MaxValue)).ToList();
         int[] times = BenchCommands.NumberList(options, "times", "50,200,1000", 1, 600_000);
-        string[] engines = (options.Text("engines") ?? "stello,egaroucid").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        // --sides: match sides separated by ';' (their time is replaced), named by their name= key; --engines: plain engines.
+        string[] sideTexts = options.Text("sides") is { } sidesText
+            ? sidesText.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            : (options.Text("engines") ?? "stello,egaroucid").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .Select(engine => engine is "stello" or "stello-v1" or "egaroucid"
+                    ? $"engine={engine},name={engine}"
+                    : throw new ArgumentException("--engines must be a list of stello, stello-v1 and egaroucid."))
+                .ToArray();
         int workers = options.Number("workers", Math.Max(1, Environment.ProcessorCount / 2), 1, 256);
         string name = options.Text("name") ?? "mid-quality";
         if (positions.Count == 0)
@@ -140,11 +147,12 @@ internal static class QualityCommands
             throw new ArgumentException($"{path} holds no positions with move scores (make them with make-exact).");
         }
 
-        var sides = engines.Select(engine => engine switch
+        MatchSide[] sides = sideTexts.Select(text => MatchCommands.ParseSide(text + ",time-ms=1")).ToArray();
+        string[] engines = sides.Select(side => side.Name).ToArray();
+        if (engines.Distinct().Count() != engines.Length)
         {
-            "stello" or "stello-v1" or "egaroucid" => MatchCommands.ParseSide($"engine={engine},time-ms=1"),
-            _ => throw new ArgumentException("--engines must be a list of stello, stello-v1 and egaroucid."),
-        }).ToArray();
+            throw new ArgumentException("Give every side of mid-quality its own name= .");
+        }
 
         Console.WriteLine($"mid-quality: {positions.Count} positions, {string.Join(", ", times)} ms per move, {string.Join(" and ", engines)}, {workers} at a time.");
         foreach (MatchSide side in sides)

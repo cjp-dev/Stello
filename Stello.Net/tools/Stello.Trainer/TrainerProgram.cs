@@ -45,6 +45,7 @@ internal static class TrainerProgram
                 "convert" => ConvertCommand.Run(options),
                 "train" => TrainCommand.Run(options),
                 "report" => ReportCommand.Run(options),
+                "size" => SizeCommand.Run(options),
                 _ => Fail(Usage),
             };
         }

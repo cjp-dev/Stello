@@ -38,7 +38,13 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                 }
 
                 int bits = options.Number("hash-bits", SearchLimits.DefaultHashBits, 10, 26);
-                var stello = new SearchEngine(bits);
+                string? evalFile = options.Text("eval");
+                var stello = evalFile is null ? new SearchEngine(bits) : new SearchEngine(bits, MatchCommands.PatternOptions(evalFile));
+                if (evalFile is not null)
+                {
+                    limitText += $", evaluation {Path.GetFileName(evalFile)}";
+                }
+
                 return new BenchSearcher(engine, limitText, bits, position =>
                 {
                     stello.ClearHash();
@@ -46,9 +52,9 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                 });
 
             case "stello-v1":
-                if (options.Text("mpc") is not null || options.Text("level") is not null)
+                if (options.Text("mpc") is not null || options.Text("level") is not null || options.Text("eval") is not null)
                 {
-                    throw new ArgumentException("--mpc and --level are only for --engine egaroucid.");
+                    throw new ArgumentException("--mpc and --level are only for --engine egaroucid, --eval only for --engine stello.");
                 }
 
                 int v1Bits = options.Number("hash-bits", SearchLimits.DefaultHashBits, 10, 26);
@@ -60,6 +66,11 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                 });
 
             case "egaroucid":
+                if (options.Text("eval") is not null)
+                {
+                    throw new ArgumentException("--eval is only for --engine stello.");
+                }
+
                 MatchCommands.LoadEgaroucid();
                 int tableBits = options.Number("hash-bits", MatchCommands.EgaroucidDefaultTableBits, 10, HashTables.DefaultHashLevel);
                 var context = new SearchContext(tableBits);
