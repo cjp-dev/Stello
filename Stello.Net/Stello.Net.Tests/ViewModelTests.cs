@@ -7,8 +7,10 @@ namespace Stello.Net.Tests;
 public class AnalysisViewModelTests
 {
     [Theory]
-    [InlineData(123, ScoreKind.Heuristic, "+123")]
-    [InlineData(-45, ScoreKind.Heuristic, "-45")]
+    [InlineData(123, ScoreKind.Heuristic, "+1.2 discs")]
+    [InlineData(-46, ScoreKind.Heuristic, "-0.5 discs")]
+    [InlineData(-4, ScoreKind.Heuristic, "0.0 discs")]
+    [InlineData(1062, ScoreKind.Heuristic, "+10.6 discs")]
     [InlineData(32610, ScoreKind.Heuristic, "Win")]
     [InlineData(-32610, ScoreKind.Heuristic, "Loss")]
     [InlineData(2, ScoreKind.WinLossDraw, "Win")]

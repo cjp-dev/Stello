@@ -84,8 +84,20 @@ public sealed partial class AnalysisViewModel : ObservableObject
         ScoreKind.Exact => $"{score:+0;-0;0} discs",
         _ when score > WinScore => "Win",
         _ when score < -WinScore => "Loss",
-        _ => score.ToString("+0;-0;0", CultureInfo.CurrentCulture),
+        _ => HeuristicDiscs(score),
     };
+
+    // The search's heuristic scores are in 1/100 disc; shown in discs with one decimal.
+    private static string HeuristicDiscs(int score)
+    {
+        double discs = Math.Round(score / 100.0, 1, MidpointRounding.AwayFromZero);
+        if (discs == 0)
+        {
+            discs = 0; // no "-0.0"
+        }
+
+        return discs.ToString("+0.0;-0.0;0.0", CultureInfo.InvariantCulture) + " discs";
+    }
 
     private static string FormatDepth(int depth, ScoreKind kind) => kind switch
     {

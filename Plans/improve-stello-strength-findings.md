@@ -20,7 +20,7 @@ What the work on Stello 2.0 teaches us, written down as we go: the decisions, th
 | 1 Training data and trainer | done | 500 M positions in 2 minutes; a first model (11 patterns × 15 stages, 1.5 MB) has 5.55 discs error on held-out games, against Stello 1's 12.14 and Egaroucid's 5.05 |
 | 2 Evaluation 2.0 | done | 15 patterns × 10 stages in 0.99 MB: 5.47 discs error; +400 Elo against Stello 1 at 100 and 500 ms, +67 against Egaroucid at 100 ms, −84 at 500 ms |
 | 3 Endgame solver | done | FFO #40–49 in 47.1 s (Stello 1 369 s, Egaroucid port 25.6 s); in games as strong as the old solver (51.1 % at 500 ms) |
-| 4 Release 2.0 in the apps | | |
+| 4 Release 2.0 in the apps | in progress | The engine is Stello 2; the book is being recalculated on a second computer; in the browser 22 empty squares solve in 0.6–1.3 s (Stello 1: 1.1–4.5 s) |
 | 5 Search improvements (2.x) | | |
 
 ## Stello 1, the frozen baseline
@@ -198,6 +198,31 @@ The chosen model is `Stello.Net/Book/stello-eval.bin` ([report](benchmark-result
 
   The solver is much faster, but the games hardly change. The search only solves after the midgame search reaches empty squares − 8 (`EndgameDistance`), so the faster solver starts only about half a square earlier. Egaroucid instead solves selectively (Multi-ProbCut at 74 %, then 88 … 100 %) from 24–28 empty squares; that is phase 5, item 5.
 - **Not measured yet:** the time to solve 20–22 empty squares in the browser. The apps get the new solver in phase 4, so it is measured there.
+
+## Releasing Stello 2.0 (phase 4)
+
+- **The engine is Stello 2** (commit 720f224 on `feature/stello-v2`):
+  - `SearchEngine` always uses the pattern evaluation and the new solver;
+  - Stello 1's evaluator, edge tables, corner extension and solver are gone from `Stello.Engine` (`Stello.Engine.V1` keeps them);
+  - the match keys `eval=classic`, `danger=` and `endgame=` are gone.
+- **The evaluation is built into `Stello.Engine`** as an embedded resource (`EvalWeights.Default`), instead of a separate file that WPF links and the web app fetches, as the plan said. Every app and tool gets it without loading code, and the browser downloads the same bytes inside the engine assembly. That assembly is now 1.15 MB, 1.03 MB compressed.
+- **The book:**
+  - `OpeningBook.EngineVersion` is 3, so `recalc` searches every heuristic leaf again (8,397 of 11,613 leaves; the 3,216 exact ones are kept). The heuristic values are in 1/100 disc and the solved ones stay ±(32600 + discs). Stello 2 reaches depth 17–18 in 30 s per position, where Stello 1 needed 60 s.
+  - The recalculation runs on a second computer (Ryzen 7 7800X3D, 8 workers, about 8 hours), so it does not disturb timed matches here. It can be stopped and continued: values already searched by version 3 are skipped.
+  - `Book/opening-book-stello1.txt` keeps the old book for Stello 1's match sides (`engine=stello-v1,book=on`).
+- **The GUI** shows heuristic scores in discs with one decimal ("+1.2 discs"). The About box describes the new evaluation and solver and credits Egaroucid. Its version text already said "Stello Version 2.0" (from the C# port) and is unchanged.
+- **The book-learning worked example** (chapter 11, `BookLearnerTests`) has new values: with Stello 2, c5 (−62) stays ahead of e3 (−275) at the root.
+
+### Solving in the browser
+
+Eight positions from Stello 2 games (depth 6), with 20 and 22 empty squares, opened in the web app (AOT Release build, headless Chromium, 60 s per move, no book). The computer played the move ("Switch sides").
+
+| | 20 empty squares | 22 empty squares |
+|---|---:|---:|
+| Stello 2, local AOT build | 0.1–0.3 s | 0.6–1.3 s (6.5–23 M nodes) |
+| Stello 1, the live site | 0.3–0.7 s | 1.1–4.5 s (10–60 M nodes) |
+
+All scores are the same. In the browser Stello 2 runs at 8–22 M nodes per second, about native speed. Most of the gain comes from needing fewer nodes.
 
 ## Measurements
 
