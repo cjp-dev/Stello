@@ -41,20 +41,17 @@ internal sealed class MoveOrdering
         }
     }
 
-    /// <summary>
-    /// C++: sortlist. Hash move first (and the hash table's second move, if given), then moves with response values,
-    /// then the rest by square value.
-    /// </summary>
-    public void Order(Span<int> moves, int hashMove, int previousMove, Player player, in Board board, int secondMove = -1)
+    /// <summary>C++: sortlist. Hash move first, then moves with response values, then the rest by square value.</summary>
+    public void Order(Span<int> moves, int hashMove, int previousMove, Player player, in Board board)
     {
         int start = 0;
-        foreach (int first in (ReadOnlySpan<int>)[hashMove, secondMove])
+        if (hashMove >= 0)
         {
-            int index = first >= 0 ? moves[start..].IndexOf(first) : -1;
+            int index = moves.IndexOf(hashMove);
             if (index >= 0)
             {
-                (moves[start], moves[start + index]) = (moves[start + index], moves[start]);
-                start++;
+                (moves[0], moves[index]) = (moves[index], moves[0]);
+                start = 1;
             }
         }
 

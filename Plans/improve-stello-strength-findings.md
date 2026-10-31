@@ -21,7 +21,7 @@ What the work on Stello 2.0 teaches us, written down as we go: the decisions, th
 | 2 Evaluation 2.0 | done | 15 patterns × 10 stages in 0.99 MB: 5.47 discs error; +400 Elo against Stello 1 at 100 and 500 ms, +67 against Egaroucid at 100 ms, −84 at 500 ms |
 | 3 Endgame solver | done | FFO #40–49 in 47.1 s (Stello 1 369 s, Egaroucid port 25.6 s); in games as strong as the old solver (51.1 % at 500 ms) |
 | 4 Release 2.0 in the apps | in progress | The engine is Stello 2; the book is being recalculated on a second computer; in the browser 22 empty squares solve in 0.6–1.3 s (Stello 1: 1.1–4.5 s) |
-| 5 Search improvements (2.x) | in progress (branch `feature/stello-v2.x`) | Item 1, time use: no significant gain; the 2/3 rule stays |
+| 5 Search improvements (2.x) | in progress (branch `feature/stello-v2.x`) | Item 1 (time use): no gain, the 2/3 rule stays. Item 2: PVS in every node +28/+30 Elo, kept; a table with both bounds and two moves gave nothing |
 
 ## Stello 1, the frozen baseline
 
@@ -248,6 +248,33 @@ The time in brackets is the default side's.
 - **Rejected: none passes the gate.** Using more of the time is worth a few Elo at most. The average time per move rises only 5–7 %, because the endgame moves end early anyway, and one more iteration is about one ply. The 2/3 rule stays.
 - **Predicting the next iteration is clearly worse.** It does not start iterations that would not finish, but a cut-off iteration still improves the root move. The code was removed.
 - `SearchOptions.SoftTimePercent` (`soft-pct=`) stays as a switch, so it can be tried again once the search is deeper and more selective.
+
+### Item 2: principal variation search and the hash table
+
+**2a, PVS in every midgame node.** Only the root searched its later moves with a null window. Now every node does: the first move with the full window, the others with a null window and a re-search if they turn out better.
+
+| Against the old search | Score | Elo | Midgame depth (old → new) |
+|---|---:|---:|---:|
+| 100 ms | 54.0 % (51.8–56.3) | +28 | 11.53 → 11.68 |
+| 500 ms | 54.4 % (52.1–56.6) | +30 | 13.34 → 13.67 |
+
+Kept, now the default (commit 53644bd). At a fixed depth of 10, `mid-bench` needs a little more (17.5 M nodes against 16.3 M), but in the same time the search gets deeper. The null windows probably let the selective search cut more often.
+
+**2b, a midgame table with both bounds and two moves.** Each entry kept a lower and an upper bound, the best move and the one before it, and the search that stored it. All matches are against Stello 2 with PVS, at 100 ms:
+
+| Variant | Score | Elo | Midgame depth |
+|---|---:|---:|---:|
+| Both bounds, two moves, entries of earlier searches replaced first | 47.8 % (45.5–50.0) | −16 | 11.54 (11.62) |
+| … without the replacement by search | 48.5 % (46.1–50.8) | −11 | 11.49 (11.64) |
+| … and without the second move | 44.7 % (42.5–47.0) | −37 | 11.29 (11.64) |
+| A shallower result no longer changes the move of a deeper one, with replacement by search | 48.3 % (45.9–50.6) | −12 | 11.52 (11.64) |
+| … without the replacement by search | 50.6 % (48.5–52.8) | +4 | 11.68 (11.61) |
+
+- **Rejected; the code was removed.** The best version is only even with the old table.
+- **What was learned:**
+  - The selective search's shallow searches at depth 3 store results for the same positions just before the deep searches. A table that lets those results change a deeper entry's move loses depth.
+  - Entries from the previous move's search are worth keeping: the tree two plies later is mostly the same. Replacing them first costs about 15 Elo.
+  - The second move helps (−37 → −11). It may be worth adding to the old table on its own later.
 
 ## Measurements
 
