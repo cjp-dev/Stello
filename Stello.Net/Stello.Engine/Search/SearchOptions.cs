@@ -28,4 +28,10 @@ internal sealed record SearchOptions
     /// from using more of the time, but a deeper search may gain more later.
     /// </summary>
     public int? SoftTimePercent { get; init; }
+
+    /// <summary>
+    /// Phase 5, item 2: the midgame hash table with both bounds, two moves and replacement by search
+    /// (<see cref="Stello.Engine.Search.BoundTable"/>).
+    /// </summary>
+    public bool BoundTable { get; init; }
 }

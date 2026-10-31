@@ -65,6 +65,7 @@ public sealed partial class SearchEngine
     private readonly int _selectiveMargin;
     private readonly int _selectivePercent;
     private readonly int? _softTimePercent;
+    private readonly BoundTable? _boundTable;
 
     /// <param name="hashBits">Each of the two hash tables gets 2^hashBits slots of two entries (C++: HASHSIZE 19, one entry).</param>
     public SearchEngine(int hashBits = 19)
@@ -83,6 +84,7 @@ public sealed partial class SearchEngine
         _selectiveMargin = options.SelectiveMargin ?? SelectiveMargin;
         _selectivePercent = options.SelectivePercent ?? 50;
         _softTimePercent = options.SoftTimePercent;
+        _boundTable = options.BoundTable ? new BoundTable(hashBits) : null;
         _midgameTable = new TranspositionTable(hashBits);
         _endgameTable = new TranspositionTable(hashBits);
     }
@@ -92,6 +94,7 @@ public sealed partial class SearchEngine
         _midgameTable.Clear();
         _endgameTable.Clear();
         _localTable.Clear();
+        _boundTable?.Clear();
     }
 
     /// <summary>Finds the best move for <paramref name="player"/> (C++: getcomputer).</summary>
@@ -116,6 +119,7 @@ public sealed partial class SearchEngine
         _lastHeartbeatMs = 0;
         _reportMove = -1;
         _nodes = 0;
+        _boundTable?.NewSearch();
         _nextAbortCheck = 1024;
         _evaluations = 0;
         _cancel = cancellationToken;
@@ -313,11 +317,29 @@ public sealed partial class SearchEngine
         }
 
         int hashMove = -1;
+        int secondMove = -1;
         bool hashGet = ply <= _hashGetHeight;
         bool hashPut = ply <= _hashPutHeight;
         int tag = (int)player;
 
-        if (hashGet && _midgameTable.TryGet(own, other, tag, out TranspositionTable.Entry entry)
+        if (_boundTable is not null)
+        {
+            if (hashGet && _boundTable.TryGet(own, other, tag, out BoundTable.Entry stored))
+            {
+                if (stored.Depth >= look)
+                {
+                    if (stored.Lower >= beta || stored.Upper <= alpha || stored.Lower == stored.Upper)
+                    {
+                        bestMove = stored.Move;
+                        return stored.Lower >= beta ? stored.Lower : stored.Upper;
+                    }
+                }
+
+                hashMove = stored.Move >= 0 && (moves & (1UL << stored.Move)) != 0 ? stored.Move : -1;
+                secondMove = stored.Second >= 0 && (moves & (1UL << stored.Second)) != 0 ? stored.Second : -1;
+            }
+        }
+        else if (hashGet && _midgameTable.TryGet(own, other, tag, out TranspositionTable.Entry entry)
             && entry.Move >= 0 && (moves & (1UL << entry.Move)) != 0)
         {
             if (entry.Depth >= look && entry.Bound switch
@@ -346,8 +368,9 @@ public sealed partial class SearchEngine
 
         Span<int> list = stackalloc int[moveCount];
         Fill(list, moves);
-        _ordering.Order(list, hashMove, previousMove, player, board);
+        _ordering.Order(list, hashMove, previousMove, player, board, secondMove);
 
+        int alphaStart = alpha;
         int best = -Infinity;
         Bound bound = Bound.Lower;
         foreach (int move in list)
@@ -359,9 +382,20 @@ public sealed partial class SearchEngine
             {
                 score = -EvaluateLeaf(child, opponent);
             }
+            else if (best == -Infinity || beta - alpha == 1)
+            {
+                score = -Search(child, opponent, look - 1, ply + 1, move, -beta, -alpha, out int reply);
+                _ordering.RecordResponse(opponent, move, reply, refuted: score <= alpha);
+            }
             else
             {
-                score = -Search(child, opponent, look > 0 ? look - 1 : 0, ply + 1, move, -beta, -alpha, out int reply);
+                // Principal variation search: a later move first only has to show it is not better.
+                score = -Search(child, opponent, look - 1, ply + 1, move, -alpha - 1, -alpha, out int reply);
+                if (score > alpha && score < beta)
+                {
+                    score = -Search(child, opponent, look - 1, ply + 1, move, -beta, -alpha, out reply);
+                }
+
                 _ordering.RecordResponse(opponent, move, reply, refuted: score <= alpha);
             }
 
@@ -380,7 +414,14 @@ public sealed partial class SearchEngine
 
         if (hashPut)
         {
-            _midgameTable.Store(own, other, tag, storedLook, bound, best, bestMove);
+            if (_boundTable is not null)
+            {
+                _boundTable.Store(own, other, tag, storedLook, alphaStart, beta, best, bestMove);
+            }
+            else
+            {
+                _midgameTable.Store(own, other, tag, storedLook, bound, best, bestMove);
+            }
         }
 
         return best;
