@@ -208,13 +208,13 @@ public class BookLearnerTests
 
         Assert.Equal(5, learner.PositionsEvaluated);
         Assert.Equal(8, book.NodeCount);
-        Assert.Equal(-100, Entry(book, "d3", "c5").Value);
-        Assert.Equal(17, Entry(book, "d3", "e3").Value);
+        Assert.Equal(-62, Entry(book, "d3", "c5").Value);
+        Assert.Equal(-275, Entry(book, "d3", "e3").Value);
 
         learner.Minimax();
 
-        Assert.Equal(["e3", "c5"], BookTestData.Replies(book, "d3").Select(r => r.Move.ToString()));
-        Assert.Equal([("e6", 100), ("f6", -54)], BookTestData.Replies(book, "d3 c5").Select(r => (r.Move.ToString(), (int)r.Entry.Value)));
+        Assert.Equal(["c5", "e3"], BookTestData.Replies(book, "d3").Select(r => r.Move.ToString()));
+        Assert.Equal([("e6", 62), ("f6", -100)], BookTestData.Replies(book, "d3 c5").Select(r => (r.Move.ToString(), (int)r.Entry.Value)));
 
         learner.AddGame(Moves("f5 d6 c3 d3 c4"), GameResult.BlackWins);
         Assert.Equal(8, book.NodeCount);

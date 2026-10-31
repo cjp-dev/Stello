@@ -1,38 +1,9 @@
 using System.Diagnostics;
-using Stello.Engine.Evaluation;
-using Stello.Engine.Search;
 
 namespace Stello.Engine.Tests;
 
 public class EndgameTests
 {
-    private static readonly Lazy<EvalWeights> Weights =
-        new(() => EvalWeights.Load(Path.Combine(AppContext.BaseDirectory, "Data", "stello-eval.bin")));
-
-    public static TheoryData<string> Solvers => ["classic", "new"];
-
-    // Stello 1's solver, or Stello 2's (Endgame/SearchEngine.Endgame.cs) with the pattern evaluation.
-    private static SearchEngine Engine(string solver, int hashBits = 19) => solver == "new"
-        ? new SearchEngine(hashBits, new SearchOptions { Pattern = Weights.Value, NewEndgame = true })
-        : new SearchEngine(hashBits);
-
-    public static TheoryData<string, string, string, Player, int, string[]> FfoPositionsBySolver
-    {
-        get
-        {
-            var data = new TheoryData<string, string, string, Player, int, string[]>();
-            foreach (string solver in new[] { "classic", "new" })
-            {
-                foreach (object[] row in FfoPositions)
-                {
-                    data.Add(solver, (string)row[0], (string)row[1], (Player)row[2], (int)row[3], (string[])row[4]);
-                }
-            }
-
-            return data;
-        }
-    }
-
     public static TheoryData<string, string, Player, int, string[]> FfoPositions => new()
     {
         { "#40", "O--OOOOX-OOOOOOXOOXXOOOXOOXOOOXXOOOOOOXX---OOOOX----O--X--------", Player.Black, 38, ["a2"] },
@@ -43,10 +14,10 @@ public class EndgameTests
     };
 
     [Theory]
-    [MemberData(nameof(FfoPositionsBySolver))]
-    public void Solve_FindsExactScoreOfFfoPosition(string solver, string name, string position, Player player, int score, string[] bestMoves)
+    [MemberData(nameof(FfoPositions))]
+    public void Solve_FindsExactScoreOfFfoPosition(string name, string position, Player player, int score, string[] bestMoves)
     {
-        SearchEngine engine = Engine(solver);
+        var engine = new SearchEngine();
 
         SearchResult result = engine.Search(Board.Parse(position), player, SearchLimits.Solve);
 
@@ -55,11 +26,10 @@ public class EndgameTests
         Assert.Contains(result.Move.ToString(), bestMoves);
     }
 
-    [Theory]
-    [MemberData(nameof(Solvers))]
-    public void Solve_MatchesMinimaxOnSmallEndgames(string solver)
+    [Fact]
+    public void Solve_MatchesMinimaxOnSmallEndgames()
     {
-        SearchEngine engine = Engine(solver, hashBits: 16);
+        var engine = new SearchEngine(hashBits: 16);
 
         foreach ((Board board, Player player) in TestPositions.RandomPositions(seed: 7, count: 40, plies: 52))
         {
@@ -71,11 +41,10 @@ public class EndgameTests
         }
     }
 
-    [Theory]
-    [MemberData(nameof(Solvers))]
-    public void Solve_MatchesMinimaxOnTheLastFewSquares(string solver)
+    [Fact]
+    public void Solve_MatchesMinimaxOnTheLastFewSquares()
     {
-        SearchEngine engine = Engine(solver, hashBits: 10);
+        var engine = new SearchEngine(hashBits: 10);
 
         for (int plies = 57; plies <= 60; plies++)
         {
@@ -88,11 +57,10 @@ public class EndgameTests
         }
     }
 
-    [Theory]
-    [MemberData(nameof(Solvers))]
-    public void Solve_MatchesTheEndgameCSuite(string solver)
+    [Fact]
+    public void Solve_MatchesTheEndgameCSuite()
     {
-        SearchEngine engine = Engine(solver, hashBits: 16);
+        var engine = new SearchEngine(hashBits: 16);
         string[] lines = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Data", "endgame-c-positions.txt"))
             .Where(line => !line.StartsWith('#'))
             .ToArray();
@@ -114,29 +82,28 @@ public class EndgameTests
         }
     }
 
-    [Theory]
-    [MemberData(nameof(Solvers))]
-    public void FixedDepth_SolvesTheEndgameWhenItIsNear(string solver)
+    [Fact]
+    public void FixedDepth_SolvesTheEndgameWhenItIsNear()
     {
         (Board board, Player player) = TestPositions.RandomPositions(seed: 3, count: 1, plies: 50).Single();
 
-        SearchResult result = Engine(solver).Search(board, player, SearchLimits.FixedDepth(4));
+        SearchResult result = new SearchEngine().Search(board, player, SearchLimits.FixedDepth(4));
 
         Assert.Equal(ScoreKind.Exact, result.Kind);
         Assert.Equal(Minimax(board, player), result.Score);
     }
 
     [Fact]
-    public void NewSolver_AgreesWithTheClassicSolverAboveThirteenEmptySquares()
+    public void Solve_AgreesWithStelloOneAboveThirteenEmptySquares()
     {
         // 14 to 18 empty squares: the null-window search above the local table, its transposition table and ETC.
-        SearchEngine classic = Engine("classic", hashBits: 16);
-        SearchEngine solver = Engine("new", hashBits: 16);
+        var stelloOne = new Stello.Engine.V1.SearchEngine(hashBits: 16);
+        var solver = new SearchEngine(hashBits: 16);
         for (int plies = 42; plies <= 46; plies++)
         {
             foreach ((Board board, Player player) in TestPositions.RandomPositions(seed: 100 + plies, count: 6, plies: plies))
             {
-                SearchResult expected = classic.Search(board, player, SearchLimits.Solve);
+                SearchResult expected = stelloOne.Search(board, player, SearchLimits.Solve);
                 SearchResult result = solver.Search(board, player, SearchLimits.Solve);
 
                 Assert.Equal(ScoreKind.Exact, result.Kind);
@@ -146,12 +113,12 @@ public class EndgameTests
     }
 
     [Fact]
-    public async Task NewSolver_MoveNowReturnsQuickly()
+    public async Task Solve_MoveNowReturnsQuickly()
     {
         // FFO #49, 26 empty squares: far more than a second to solve.
         Board board = Board.Parse("--OX-O----XXOO--OOOOOXX-OOOOOX--OOOXOXX-OOOOXX-----OOX----X-O---");
         using var moveNow = new CancellationTokenSource();
-        SearchEngine engine = Engine("new");
+        var engine = new SearchEngine();
         Task<SearchResult> search = Task.Run(() =>
             engine.Search(board, Player.Black, SearchLimits.Solve, moveNowToken: moveNow.Token));
 

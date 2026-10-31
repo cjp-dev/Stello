@@ -24,7 +24,7 @@ internal static class BenchCommands
 
     public static int SolveBench(Options options)
     {
-        options.Allow("positions", "from", "to", "passes", "hash-bits", "out", "compare", "engine", "eval", "endgame");
+        options.Allow("positions", "from", "to", "passes", "hash-bits", "out", "compare", "engine", "eval");
         List<BenchmarkPosition> all = BenchmarkPosition.Load(options.Text("positions") ?? Program.DataFile("ffo-40-59.txt"));
         int from = options.Number("from", 40, 0, int.MaxValue);
         int to = options.Number("to", 44, 0, int.MaxValue);
@@ -59,7 +59,7 @@ internal static class BenchCommands
 
     public static int MidBench(Options options)
     {
-        options.Allow("positions", "depth", "passes", "hash-bits", "out", "compare", "engine", "mpc", "level", "eval", "endgame");
+        options.Allow("positions", "depth", "passes", "hash-bits", "out", "compare", "engine", "mpc", "level", "eval");
         List<BenchmarkPosition> positions = BenchmarkPosition.Load(options.Text("positions") ?? Program.DataFile("midgame.txt"));
         int depth = options.Number("depth", 10, 1, 60);
 

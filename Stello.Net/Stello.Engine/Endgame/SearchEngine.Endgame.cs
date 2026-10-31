@@ -57,17 +57,10 @@ public sealed partial class SearchEngine
         public ulong Replies;
     }
 
-    private int SolveChild(ulong own, ulong opponent, int alpha, int beta, int empties)
-    {
-        if (!_newEndgame)
-        {
-            return Solve(own, opponent, alpha, beta, empties);
-        }
-
-        return beta - alpha == 1
+    private int SolveChild(ulong own, ulong opponent, int alpha, int beta, int empties) =>
+        beta - alpha == 1
             ? EndNull(own, opponent, alpha, empties, LegalUndefined)
             : EndWindow(own, opponent, alpha, beta, empties, passed: false);
-    }
 
     // A null-window search of a position reached by a move.
     private int EndNull(ulong own, ulong opponent, int alpha, int empties, ulong legal)
@@ -398,7 +391,7 @@ public sealed partial class SearchEngine
         if (depth == 0)
         {
             _evaluations++;
-            return _pattern is null ? 0 : Math.Clamp(_pattern.Evaluate(own, opponent) / _pattern.UnitsPerDisc, -64, 64);
+            return Math.Clamp(_pattern.Evaluate(own, opponent) / _pattern.UnitsPerDisc, -64, 64);
         }
 
         _nodes++;

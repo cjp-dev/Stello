@@ -18,8 +18,11 @@ public readonly record struct BookMove(Square Square, int Value);
 /// </remarks>
 public sealed class OpeningBook
 {
-    /// <summary>Bumped by hand when a change to the evaluation or the search changes the values it finds.</summary>
-    internal const int EngineVersion = 2;
+    /// <summary>
+    /// Bumped by hand when a change to the evaluation or the search changes the values it finds. Version 3 is Stello
+    /// 2.0, whose heuristic values are in 1/100 disc.
+    /// </summary>
+    internal const int EngineVersion = 3;
 
     internal const Player RootPlayer = Player.White;
 

@@ -1,7 +1,8 @@
-using Stello.Engine.Evaluation;
+using Stello.Engine.V1.Evaluation;
 
 namespace Stello.Engine.Tests;
 
+// Stello 1's evaluation, which Stello.Engine.V1 keeps.
 public class EvaluatorTests
 {
     private const int AllEmptyEdge = 6560;

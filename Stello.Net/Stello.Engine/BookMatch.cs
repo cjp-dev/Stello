@@ -84,7 +84,7 @@ internal interface IMatchPlayer
 /// <summary>Stello's engine with its opening book as a match player.</summary>
 internal sealed class StelloMatchPlayer(int hashBits, OpeningBook? book, SearchOptions? options = null) : IMatchPlayer
 {
-    private readonly SearchEngine _engine = new(hashBits, options ?? SearchOptions.Classic);
+    private readonly SearchEngine _engine = new(hashBits, options ?? SearchOptions.Default);
     private ComputerPlayer? _player;
 
     public void NewGame()

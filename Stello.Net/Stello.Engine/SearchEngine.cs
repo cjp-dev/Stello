@@ -6,8 +6,9 @@ using Stello.Engine.Search;
 namespace Stello.Engine;
 
 /// <summary>
-/// Alpha-beta search ported from Minmax.cpp and Kontrol.cpp: iterative deepening with a hash table, response
-/// killers, selective search, and an exact endgame solver. An instance runs one search at a time.
+/// Stello 2's search: the midgame search ported from Minmax.cpp and Kontrol.cpp (iterative deepening with a hash
+/// table, response killers and selective search), with the trained pattern evaluation, and the endgame solver
+/// adapted from Egaroucid (Endgame/SearchEngine.Endgame.cs). An instance runs one search at a time.
 /// </summary>
 public sealed partial class SearchEngine
 {
@@ -24,12 +25,8 @@ public sealed partial class SearchEngine
     private const int SelectiveMargin = 50;
     private const int SelectiveScoreLimit = 32000;
 
-    private const int EndgameHashMinEmpties = 7;
-    private const int FastestFirstMinEmpties = 7;
-    private const int EvaluationOrderMinEmpties = 18;
-
-    // Enhanced transposition cutoff: from this many empty squares the children are looked up first.
-    private const int TranspositionCutoffMinEmpties = 10;
+    /// <summary>A finished game in the midgame search scores this plus the disc difference (C++: the same).</summary>
+    internal const int WinScore = 32600;
 
     // With this few empty squares the solver tries the empty squares directly instead of generating moves.
     private const int ShallowEmpties = 6;
@@ -37,9 +34,7 @@ public sealed partial class SearchEngine
     // Quadrants a1-d4, e1-h4, a5-d8, e5-h8; squares in regions with an odd number of empties are tried first.
     private static readonly ulong[] Quadrants = [0x0000_0000_0F0F_0F0FUL, 0x0000_0000_F0F0_F0F0UL, 0x0F0F_0F0F_0000_0000UL, 0xF0F0_F0F0_0000_0000UL];
 
-    private const ulong Corners = 0x8100_0000_0000_0081UL;
-
-    // The pattern evaluation's scores in the search: 1/100 disc, close to the classic evaluation's scale.
+    // The pattern evaluation's scores in the search: 1/100 disc, close to Stello 1's evaluation scale.
     private const int PatternUnitsPerDisc = 100;
 
     private readonly TranspositionTable _midgameTable;
@@ -66,15 +61,13 @@ public sealed partial class SearchEngine
 
     internal SearchOptions Options { get; }
 
-    private readonly EvalWeights? _pattern;
+    private readonly EvalWeights _pattern;
     private readonly int _selectiveMargin;
     private readonly int _selectivePercent;
-    private readonly bool _dangerousCorners;
-    private readonly bool _newEndgame;
 
     /// <param name="hashBits">Each of the two hash tables gets 2^hashBits slots of two entries (C++: HASHSIZE 19, one entry).</param>
     public SearchEngine(int hashBits = 19)
-        : this(hashBits, SearchOptions.Classic)
+        : this(hashBits, SearchOptions.Default)
     {
     }
 
@@ -85,11 +78,9 @@ public sealed partial class SearchEngine
         ArgumentNullException.ThrowIfNull(options);
         HashBits = hashBits;
         Options = options;
-        _pattern = options.Pattern;
+        _pattern = options.Pattern ?? EvalWeights.Default;
         _selectiveMargin = options.SelectiveMargin ?? SelectiveMargin;
         _selectivePercent = options.SelectivePercent ?? 50;
-        _dangerousCorners = options.DangerousCorners;
-        _newEndgame = options.NewEndgame;
         _midgameTable = new TranspositionTable(hashBits);
         _endgameTable = new TranspositionTable(hashBits);
     }
@@ -175,7 +166,7 @@ public sealed partial class SearchEngine
                     }
                 }
             }
-            else if (_newEndgame)
+            else
             {
                 for (int look = 0; look < SolveOrderingLooks && empties - 1 - look > EndgameDistance; look++)
                 {
@@ -231,9 +222,9 @@ public sealed partial class SearchEngine
             Board child = Play(board, player, move);
             int score;
 
-            if (look == 0 && !IsDangerous(child, player, move))
+            if (look == 0)
             {
-                score = -EvaluateLeaf(child, opponent, -beta, -alpha, rootMoves.Length);
+                score = -EvaluateLeaf(child, opponent);
             }
             else
             {
@@ -362,9 +353,9 @@ public sealed partial class SearchEngine
             Board child = Play(board, player, move);
             int score;
 
-            if (look == 0 && !IsDangerous(child, player, move))
+            if (look == 0)
             {
-                score = -EvaluateLeaf(child, opponent, -beta, -alpha, moveCount);
+                score = -EvaluateLeaf(child, opponent);
             }
             else
             {
@@ -451,166 +442,6 @@ public sealed partial class SearchEngine
 
         MoveToFront(rootMoves, improvements[..improved]);
         return (bestScore, bestMove);
-    }
-
-    // C++: slutmax1/slutmax3. Scores are final disc differences; empty squares go to the winner.
-    private int Solve(ulong own, ulong opponent, int alpha, int beta, int empties)
-    {
-        if (empties <= ShallowEmpties)
-        {
-            return SolveShallow(own, opponent, alpha, beta, empties, passed: false);
-        }
-
-        if ((++_nodes & 1023) == 0)
-        {
-            CheckAbort();
-        }
-
-        ulong moves = Bitboards.LegalMoves(own, opponent);
-        if (moves == 0)
-        {
-            if (Bitboards.LegalMoves(opponent, own) == 0)
-            {
-                _evaluations++;
-                return FinalScore(own, opponent);
-            }
-
-            return -Solve(opponent, own, -beta, -alpha, empties);
-        }
-
-        int hashMove = -1;
-        bool useHash = empties >= EndgameHashMinEmpties;
-        if (useHash && _endgameTable.TryGet(own, opponent, 0, out TranspositionTable.Entry entry))
-        {
-            if (entry.Bound == Bound.Exact)
-            {
-                return entry.Value;
-            }
-
-            if (entry.Bound == Bound.Lower)
-            {
-                alpha = Math.Max(alpha, entry.Value);
-            }
-            else if (entry.Bound == Bound.Upper)
-            {
-                beta = Math.Min(beta, entry.Value);
-            }
-
-            if (alpha >= beta)
-            {
-                return entry.Value;
-            }
-
-            hashMove = entry.Move;
-        }
-
-        int alphaOriginal = alpha;
-        int count = BitOperations.PopCount(moves);
-        Span<int> list = stackalloc int[count];
-        Span<ulong> flipList = stackalloc ulong[count];
-        Fill(list, moves);
-        for (int i = 0; i < count; i++)
-        {
-            flipList[i] = Bitboards.Flips(own, opponent, list[i]);
-        }
-
-        if (empties >= TranspositionCutoffMinEmpties)
-        {
-            // A child whose hash entry already proves a cutoff makes searching unnecessary.
-            for (int i = 0; i < count; i++)
-            {
-                ulong f = flipList[i];
-                if (_endgameTable.TryGet(opponent & ~f, own | f | (1UL << list[i]), 0, out TranspositionTable.Entry child)
-                    && child.Bound is Bound.Exact or Bound.Upper && -child.Value >= beta)
-                {
-                    return -child.Value;
-                }
-            }
-        }
-
-        if (count > 1)
-        {
-            Span<int> keys = stackalloc int[count];
-            for (int i = 0; i < count; i++)
-            {
-                int square = list[i];
-                ulong flips = flipList[i];
-                if (square == hashMove)
-                {
-                    keys[i] = int.MaxValue;
-                }
-                else if (empties >= EvaluationOrderMinEmpties)
-                {
-                    // Far from the end the evaluation orders better; colours do not matter for the solver.
-                    var child = new Board(opponent & ~flips, own | flips | (1UL << square));
-                    keys[i] = _pattern is null
-                        ? -Evaluator.Evaluate(child, Player.Black, -Infinity, Infinity, count)
-                        : -PatternScore(child, Player.Black);
-                }
-                else if (empties >= FastestFirstMinEmpties)
-                {
-                    // Fastest first: few replies for the opponent (corners count double), then the square value.
-                    ulong childOwn = opponent & ~flips;
-                    ulong childOpponent = own | flips | (1UL << square);
-                    ulong replies = Bitboards.LegalMoves(childOwn, childOpponent);
-                    int mobility = BitOperations.PopCount(replies) + BitOperations.PopCount(replies & Corners);
-                    keys[i] = -mobility * 256 + MoveOrdering.BaseScore(square);
-                }
-                else
-                {
-                    keys[i] = MoveOrdering.BaseScore(square);
-                }
-            }
-
-            SortDescending(list, flipList, keys);
-        }
-
-        int best = -Infinity;
-        int bestMove = -1;
-        for (int i = 0; i < count; i++)
-        {
-            int move = list[i];
-            ulong flips = flipList[i];
-            ulong childOwn = opponent & ~flips;
-            ulong childOpponent = own | flips | (1UL << move);
-            int score;
-
-            // Principal variation search: later moves only have to prove that they are not better.
-            if (best == -Infinity || beta - alpha == 1)
-            {
-                score = -Solve(childOwn, childOpponent, -beta, -alpha, empties - 1);
-            }
-            else
-            {
-                score = -Solve(childOwn, childOpponent, -alpha - 1, -alpha, empties - 1);
-                if (score > alpha && score < beta)
-                {
-                    score = -Solve(childOwn, childOpponent, -beta, -score, empties - 1);
-                }
-            }
-
-            if (score > best)
-            {
-                best = score;
-                bestMove = move;
-                if (best > alpha)
-                {
-                    alpha = best;
-                    if (alpha >= beta)
-                    {
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (useHash)
-        {
-            Bound bound = best >= beta ? Bound.Lower : best > alphaOriginal ? Bound.Exact : Bound.Upper;
-            _endgameTable.Store(own, opponent, 0, empties, bound, best, bestMove);
-        }
-
-        return best;
     }
 
     // Near the end: no move list, no hash table; empty squares in odd regions first (parity).
@@ -745,19 +576,15 @@ public sealed partial class SearchEngine
             : FinalScore(own, opponent);
     }
 
-    private int EvaluateLeaf(in Board board, Player player, int alpha, int beta, int opponentMobility)
+    private int EvaluateLeaf(in Board board, Player player)
     {
         _nodes++;
         _evaluations++;
-        return _pattern is null
-            ? Evaluator.Evaluate(board, player, alpha, beta, opponentMobility)
-            : PatternScore(board, player);
+        return PatternScore(board, player);
     }
 
-    private bool IsDangerous(in Board child, Player player, int move) => _dangerousCorners && Evaluator.IsDangerous(child, player, move);
-
     private int PatternScore(in Board board, Player player) =>
-        _pattern!.Evaluate(board.Discs(player), board.Discs(player.Opponent())) * PatternUnitsPerDisc / _pattern.UnitsPerDisc;
+        _pattern.Evaluate(board.Discs(player), board.Discs(player.Opponent())) * PatternUnitsPerDisc / _pattern.UnitsPerDisc;
 
     private bool StopIterating(SearchLimits limits, TimeBudget budget, int nextLook) => limits.Mode switch
     {
@@ -824,8 +651,8 @@ public sealed partial class SearchEngine
     private static int GameOverScore(ulong own, ulong opponent)
     {
         int difference = FinalScore(own, opponent);
-        return difference > 0 ? difference + Evaluator.WinScore
-            : difference < 0 ? difference - Evaluator.WinScore
+        return difference > 0 ? difference + WinScore
+            : difference < 0 ? difference - WinScore
             : 0;
     }
 
@@ -834,29 +661,6 @@ public sealed partial class SearchEngine
         for (int i = 0; moves != 0; i++, moves &= moves - 1)
         {
             list[i] = BitOperations.TrailingZeroCount(moves);
-        }
-    }
-
-    // Stable insertion sort, highest key first; the flips follow their moves.
-    private static void SortDescending(Span<int> moves, Span<ulong> flips, Span<int> keys)
-    {
-        for (int i = 1; i < moves.Length; i++)
-        {
-            int move = moves[i];
-            ulong flip = flips[i];
-            int key = keys[i];
-            int j = i - 1;
-            while (j >= 0 && keys[j] < key)
-            {
-                moves[j + 1] = moves[j];
-                flips[j + 1] = flips[j];
-                keys[j + 1] = keys[j];
-                j--;
-            }
-
-            moves[j + 1] = move;
-            flips[j + 1] = flip;
-            keys[j + 1] = key;
         }
     }
 

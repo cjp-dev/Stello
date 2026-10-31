@@ -15,4 +15,9 @@
     <InternalsVisibleTo Include="Stello.Trainer" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Stello 2's trained evaluation (EvalWeights.Default). -->
+    <EmbeddedResource Include="..\Book\stello-eval.bin" LogicalName="Stello.Engine.stello-eval.bin" />
+  </ItemGroup>
+
 </Project>

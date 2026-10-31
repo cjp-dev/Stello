@@ -92,10 +92,9 @@ public class MatchAdapterTests
     }
 
     [Fact]
-    public void EngineMatch_StelloOneAtTheSameDepth_PlaysLikeStello()
+    public void EngineMatch_StelloOne_PlaysWholeGamesAgainstStello()
     {
-        // Stello 1 is a frozen copy of the engine Stello 2 starts from; until Stello 2 changes its search, both play the
-        // same games. Afterwards this only checks that Stello 1 plays whole games as a match side.
+        // Stello 1, the frozen copy of the engine Stello 2 started from, as a match side.
         MatchSide stello = MatchCommands.ParseSide("depth=3,name=stello");
         MatchSide stelloOne = MatchCommands.ParseSide("engine=stello-v1,depth=3,name=stello-v1");
         Assert.StartsWith("Stello 1, depth 3", MatchCommands.Describe(stelloOne), StringComparison.Ordinal);

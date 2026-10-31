@@ -79,6 +79,21 @@ internal sealed class EvalWeights
         return stageOf;
     }
 
+    private static readonly Lazy<EvalWeights> BuiltIn = new(() =>
+    {
+        using Stream stream = typeof(EvalWeights).Assembly.GetManifestResourceStream(ResourceName)
+            ?? throw new InvalidOperationException($"The resource {ResourceName} is missing.");
+        return Read(stream);
+    });
+
+    private const string ResourceName = "Stello.Engine.stello-eval.bin";
+
+    /// <summary>
+    /// Stello 2's evaluation, <c>Book/stello-eval.bin</c>, built into the assembly so that every app has it without
+    /// loading a file. It is read on first use.
+    /// </summary>
+    public static EvalWeights Default => BuiltIn.Value;
+
     public static EvalWeights Load(string path)
     {
         using FileStream file = File.OpenRead(path);

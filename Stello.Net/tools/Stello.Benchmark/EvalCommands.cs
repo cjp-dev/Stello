@@ -10,6 +10,7 @@ using Stello.Egaroucid;
 using Stello.Engine;
 using Stello.Engine.Evaluation;
 using Board = Stello.Engine.Board;
+using V1Evaluator = Stello.Engine.V1.Evaluation.Evaluator;
 
 namespace Stello.Benchmark;
 
@@ -73,7 +74,7 @@ internal static class EvalCommands
             {
                 Board board = sample[i].Board;
                 int opponentMobility = BitOperations.PopCount(board.LegalMoves(Player.White));
-                stello[i] = Evaluator.Evaluate(board, Player.Black, -2 * Evaluator.WinScore, 2 * Evaluator.WinScore, opponentMobility);
+                stello[i] = V1Evaluator.Evaluate(board, Player.Black, -2 * V1Evaluator.WinScore, 2 * V1Evaluator.WinScore, opponentMobility);
             }
         });
 

@@ -1,5 +1,3 @@
-using Stello.Engine.Evaluation;
-
 namespace Stello.Engine;
 
 /// <summary>Searches for book values, shared by book learning and the book tool.</summary>
@@ -13,8 +11,8 @@ internal static class BookSearch
 
         // Solved positions are stored as wins/losses beyond the evaluation range, as in C++.
         int value = result.Kind is ScoreKind.Exact or ScoreKind.WinLossDraw
-            ? result.Score > 0 ? Evaluator.WinScore + result.Score
-                : result.Score < 0 ? result.Score - Evaluator.WinScore
+            ? result.Score > 0 ? SearchEngine.WinScore + result.Score
+                : result.Score < 0 ? result.Score - SearchEngine.WinScore
                 : 0
             : result.Score;
 
@@ -58,8 +56,8 @@ internal static class BookSearch
     {
         int difference = board.Count(player) - board.Count(player.Opponent());
         int empties = board.EmptyCount;
-        return difference > 0 ? Evaluator.WinScore + difference + empties
-            : difference < 0 ? difference - empties - Evaluator.WinScore
+        return difference > 0 ? SearchEngine.WinScore + difference + empties
+            : difference < 0 ? difference - empties - SearchEngine.WinScore
             : 0;
     }
 }
