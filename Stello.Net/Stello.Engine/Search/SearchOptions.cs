@@ -22,4 +22,10 @@ internal sealed record SearchOptions
 
     /// <inheritdoc cref="SelectiveMargin"/>
     public int? SelectivePercent { get; init; }
+
+    /// <summary>
+    /// No new iteration after this share of the time (null: 2/3). Kept as a switch: phase 5 found no significant gain
+    /// from using more of the time, but a deeper search may gain more later.
+    /// </summary>
+    public int? SoftTimePercent { get; init; }
 }

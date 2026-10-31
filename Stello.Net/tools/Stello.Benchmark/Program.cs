@@ -13,7 +13,7 @@ internal static class Program
                                     Play side A against side B, two games per start position with the colours swapped.
                                     A side is a list such as "time-ms=100", "depth=8", "game-s=60,hash-bits=20,name=new"
                                     or "engine=egaroucid,time-ms=100,book=on": engine (stello, stello-v1 = Stello 1 or egaroucid), time-ms
-                                    (per move), game-s (per game), depth (Stello) or level (Egaroucid), eval (Stello: another pattern evaluation file), sel-margin and sel-percent (Stello 2's
+                                    (per move), game-s (per game), depth (Stello) or level (Egaroucid), eval (Stello: another pattern evaluation file), sel-margin, sel-percent, and soft-pct (1-100) (Stello 2's
                                     search switches), hash-bits
                                     (Stello 19; Egaroucid 21, the same memory), book (on/off, off), book-acc (Egaroucid, 0),
                                     seed (Egaroucid's book choice, 1), name.

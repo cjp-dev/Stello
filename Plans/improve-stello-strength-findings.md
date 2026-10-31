@@ -21,7 +21,7 @@ What the work on Stello 2.0 teaches us, written down as we go: the decisions, th
 | 2 Evaluation 2.0 | done | 15 patterns × 10 stages in 0.99 MB: 5.47 discs error; +400 Elo against Stello 1 at 100 and 500 ms, +67 against Egaroucid at 100 ms, −84 at 500 ms |
 | 3 Endgame solver | done | FFO #40–49 in 47.1 s (Stello 1 369 s, Egaroucid port 25.6 s); in games as strong as the old solver (51.1 % at 500 ms) |
 | 4 Release 2.0 in the apps | in progress | The engine is Stello 2; the book is being recalculated on a second computer; in the browser 22 empty squares solve in 0.6–1.3 s (Stello 1: 1.1–4.5 s) |
-| 5 Search improvements (2.x) | | |
+| 5 Search improvements (2.x) | in progress (branch `feature/stello-v2.x`) | Item 1, time use: no significant gain; the 2/3 rule stays |
 
 ## Stello 1, the frozen baseline
 
@@ -223,6 +223,31 @@ Eight positions from Stello 2 games (depth 6), with 20 and 22 empty squares, ope
 | Stello 1, the live site | 0.3–0.7 s | 1.1–4.5 s (10–60 M nodes) |
 
 All scores are the same. In the browser Stello 2 runs at 8–22 M nodes per second, about native speed. Most of the gain comes from needing fewer nodes.
+
+## Search improvements (phase 5)
+
+Phase 5 runs on `feature/stello-v2.x`, so the 2.0 release keeps exactly the engine that recalculated the book. Each change is behind a `SearchOptions` switch and plays 1,180 games at 100 ms per move against the current Stello 2. To be kept it needs a lower bound above 50 %, confirmed at 500 ms.
+
+### Item 1: time use
+
+Today Stello starts no new midgame iteration after 2/3 of the time (soft limit) and stops at the time (hard limit). An iteration cut off by the hard limit is not wasted: each better root move it has found is kept.
+
+| Variant (match key) | Time per move | Score | Elo |
+|---|---:|---:|---:|
+| Soft limit 80 % (`soft-pct=80`), 100 ms | 65 ms (62) | 51.6 % (49.4–53.8) | +11 |
+| Soft limit 100 % (`soft-pct=100`), 100 ms | 66 ms (62) | 51.9 % (49.8–54.1) | +14 |
+| … the same again | 67 ms (62) | 49.2 % (47.0–51.5) | −5 |
+| … both runs, 2,360 games | | 50.6 % (about 49.5–51.6) | +4 |
+| Soft limit 100 %, 500 ms | 308 ms (289) | 51.9 % (49.9–54.0) | +14 |
+| Soft limit 85 %, 500 ms | 304 ms (289) | 51.5 % (49.4–53.6) | +11 |
+| Predicted next iteration within the time (`predict=on`), 100 ms | 42 ms (62) | 44.7 % (42.3–47.2) | −37 |
+| Predicted next iteration within 120 % of the time, 100 ms | 46 ms (62) | 46.4 % (44.0–48.7) | −25 |
+
+The time in brackets is the default side's.
+
+- **Rejected: none passes the gate.** Using more of the time is worth a few Elo at most. The average time per move rises only 5–7 %, because the endgame moves end early anyway, and one more iteration is about one ply. The 2/3 rule stays.
+- **Predicting the next iteration is clearly worse.** It does not start iterations that would not finish, but a cut-off iteration still improves the root move. The code was removed.
+- `SearchOptions.SoftTimePercent` (`soft-pct=`) stays as a switch, so it can be tried again once the search is deeper and more selective.
 
 ## Measurements
 

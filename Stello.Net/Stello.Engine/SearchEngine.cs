@@ -64,6 +64,7 @@ public sealed partial class SearchEngine
     private readonly EvalWeights _pattern;
     private readonly int _selectiveMargin;
     private readonly int _selectivePercent;
+    private readonly int? _softTimePercent;
 
     /// <param name="hashBits">Each of the two hash tables gets 2^hashBits slots of two entries (C++: HASHSIZE 19, one entry).</param>
     public SearchEngine(int hashBits = 19)
@@ -81,6 +82,7 @@ public sealed partial class SearchEngine
         _pattern = options.Pattern ?? EvalWeights.Default;
         _selectiveMargin = options.SelectiveMargin ?? SelectiveMargin;
         _selectivePercent = options.SelectivePercent ?? 50;
+        _softTimePercent = options.SoftTimePercent;
         _midgameTable = new TranspositionTable(hashBits);
         _endgameTable = new TranspositionTable(hashBits);
     }
@@ -147,7 +149,7 @@ public sealed partial class SearchEngine
 
         int empties = board.EmptyCount;
         var best = new Best(rootMoves[0], 0, ScoreKind.None, 0);
-        TimeBudget budget = TimeControl.ForMidgame(limits, empties);
+        TimeBudget budget = WithSoftPercent(TimeControl.ForMidgame(limits, empties));
         _hardLimitMs = budget.HardMs;
 
         try
@@ -176,7 +178,7 @@ public sealed partial class SearchEngine
                 }
             }
 
-            budget = TimeControl.ForEndgame(limits, budget, _clock.ElapsedMilliseconds);
+            budget = WithSoftPercent(TimeControl.ForEndgame(limits, budget, _clock.ElapsedMilliseconds));
             _hardLimitMs = budget.HardMs;
 
             // Win/loss/draw first with a null window around 0; it is much faster than the exact score.
@@ -585,6 +587,12 @@ public sealed partial class SearchEngine
 
     private int PatternScore(in Board board, Player player) =>
         _pattern.Evaluate(board.Discs(player), board.Discs(player.Opponent())) * PatternUnitsPerDisc / _pattern.UnitsPerDisc;
+
+    // SearchOptions.SoftTimePercent: no new iteration after this share of the hard limit.
+    private TimeBudget WithSoftPercent(TimeBudget budget) =>
+        _softTimePercent is int percent && budget.HardMs != long.MaxValue
+            ? budget with { SoftMs = budget.HardMs * percent / 100 }
+            : budget;
 
     private bool StopIterating(SearchLimits limits, TimeBudget budget, int nextLook) => limits.Mode switch
     {

@@ -130,6 +130,7 @@ internal static class MatchCommands
         string? evalFile = null;
         int? selectiveMargin = null;
         int? selectivePercent = null;
+        int? softTimePercent = null;
         var keys = new HashSet<string>();
         foreach (string part in text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
@@ -187,6 +188,9 @@ internal static class MatchCommands
                 case "sel-percent":
                     selectivePercent = Number(key, value, 0, 1000);
                     break;
+                case "soft-pct":
+                    softTimePercent = Number(key, value, 1, 100);
+                    break;
                 default:
                     throw new ArgumentException($"Unknown key in the side \"{text}\": {key}");
             }
@@ -202,6 +206,7 @@ internal static class MatchCommands
         {
             ("depth", !egaroucid), ("level", egaroucid), ("book-acc", egaroucid), ("seed", egaroucid), ("eval", engine == EngineKind.Stello), ("sel-margin", engine == EngineKind.Stello),
             ("sel-percent", engine == EngineKind.Stello),
+            ("soft-pct", engine == EngineKind.Stello),
         })
         {
             if (keys.Contains(key) && !allowed)
@@ -233,7 +238,7 @@ internal static class MatchCommands
             string description = $"{limitText}, hash bits {bits}, {(useBook ? "book" : "no book")}";
             return engine == EngineKind.StelloV1
                 ? new MatchSide(name ?? text, limits, bits, CreatePlayer: () => new V1MatchPlayer(bits, book), Description: $"Stello 1, {description}")
-                : StelloSide(name ?? text, limits, bits, book, description, evalFile, selectiveMargin, selectivePercent);
+                : StelloSide(name ?? text, limits, bits, book, description, evalFile, selectiveMargin, selectivePercent, softTimePercent);
         }
 
         // 2^21 slots of 24 bytes take as much memory as Stello's default: two tables of 2^19 slots of two 24-byte entries.
@@ -269,12 +274,13 @@ internal static class MatchCommands
 
     /// <summary>A Stello side with its search options: the evaluation file and the switches of Stello 2's work.</summary>
     private static MatchSide StelloSide(string name, SearchLimits limits, int bits, OpeningBook? book, string description,
-        string? evalFile, int? selectiveMargin, int? selectivePercent)
+        string? evalFile, int? selectiveMargin, int? selectivePercent, int? softTimePercent)
     {
         SearchOptions options = (evalFile is null or "default" ? SearchOptions.Default : PatternOptions(evalFile)) with
         {
             SelectiveMargin = selectiveMargin,
             SelectivePercent = selectivePercent,
+            SoftTimePercent = softTimePercent,
         };
         if (options == SearchOptions.Default)
         {
@@ -282,7 +288,8 @@ internal static class MatchCommands
         }
 
         string extra = (evalFile is null or "default" ? "" : $", evaluation {Path.GetFileName(evalFile)}")
-            + (selectiveMargin is null && selectivePercent is null ? "" : $", selective margin {selectivePercent ?? 50} % + {selectiveMargin ?? 50}");
+            + (selectiveMargin is null && selectivePercent is null ? "" : $", selective margin {selectivePercent ?? 50} % + {selectiveMargin ?? 50}")
+            + (softTimePercent is null ? "" : $", soft limit {softTimePercent} %");
         return new MatchSide(name, limits, bits, book, CreatePlayer: () => new StelloMatchPlayer(bits, book, options),
             Description: $"Stello, {description}{extra}");
     }
