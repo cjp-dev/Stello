@@ -436,7 +436,7 @@ Phase 4 releases Stello 2.0 in the apps: the engine switch is done, and the reca
 1. **Time use:** Stello starts no new iteration after 2/3 of the time and so uses about 313 of 500 ms. An estimate of the next iteration's cost should decide instead. *Measured: no variant was significantly better; the 2/3 rule stays.*
 2. **PVS throughout**, and a transposition table with bounds and two moves, cleared by importance instead of two tables. *Measured: PVS in every node gained about 30 Elo and was kept; the new table was at best even and was dropped.*
 3. **Multi-ProbCut** with an error model fitted on Stello 2's own shallow and deep searches, in place of the fixed selective margin. *Done: +120 Elo at 500 ms ([chapter 06](06-midgame-search.md#selective-search)).*
-4. **Move ordering by a shallow search**, and ETC in the midgame.
+4. **Move ordering by a shallow search**, and ETC in the midgame. *Measured: ordering by the evaluation from 5 plies plus ETC saved 4 % of the nodes and was kept (+13 Elo at 500 ms, [chapter 05](05-move-ordering.md#evaluation-ordering-in-deeper-nodes-stello-2x)); a real shallow search was too costly.*
 5. **A selective endgame** (solve earlier at 74 % → 100 %), and a clog search with a depth or time limit.
 6. **Checking the moves outside the book** when leaving it.
 7. Optional: **Lazy SMP or YBWC** (more threads).

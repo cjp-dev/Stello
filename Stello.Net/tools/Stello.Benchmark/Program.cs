@@ -20,7 +20,7 @@ internal static class Program
           solve-bench [--engine stello|stello-v1|egaroucid] [--eval <file>] [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits N]
                       [--out <file.json>] [--compare <file.json>]
                                     Solve the FFO positions exactly: score check, nodes, time to solve.
-          mid-bench [--engine stello|stello-v1|egaroucid] [--eval <file>] [--positions <file>] [--depth 10] [--mpc 100 | --level L] [--passes 3]
+          mid-bench [--engine stello|stello-v1|egaroucid] [--eval <file>] [--side <Stello side keys>] [--positions <file>] [--depth 10] [--mpc 100 | --level L] [--passes 3]
                     [--hash-bits N] [--out <file.json>] [--compare <file.json>]
                                     Search the midgame positions to a fixed depth: nodes, move and score of each search, speed.
                                     --mpc (Egaroucid's selectivity: 74, 88, 93, 98, 99, 99.9 or 100) and --level are for Egaroucid.

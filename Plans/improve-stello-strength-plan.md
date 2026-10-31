@@ -213,4 +213,5 @@ Each change is a separate commit behind a `SearchOptions` flag and is measured o
   - Item 2a, PVS in every midgame node: kept, +28 Elo at 100 ms and +30 at 500 ms.
   - Item 2b, a midgame table with both bounds and two moves: at best +4, removed.
   - Item 3, Multi-ProbCut with an error model fitted by the trainer's `mpc` command (11,700 positions to depth 13): kept with t = 1.0. Against the old selective search: 67.3 % (+126) at 100 ms and 66.6 % (+120) at 500 ms, and 52.2 % against t = 1.3 at 500 ms. Depth at 500 ms 13.6 → 16.6. The old selective search and its switches are removed; `mpc=` stays to retune t.
+  - Item 4, ordering and midgame ETC: kept the evaluation ordering from look 4 (Egaroucid's depth-0 key, no killers) with ETC from look 4. 3.9 % fewer nodes at depth 12; 53.3 % (+23) at 100 ms and 51.9 % (49.9–53.9, +13) at 500 ms, so it was kept as a speed change. IID and ordering by a shallow search were dropped. `mid-bench --side` counts nodes with any side's switches.
   - Tests: Stello.Engine.Tests 256, all green.

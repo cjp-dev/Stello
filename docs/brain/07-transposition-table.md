@@ -94,6 +94,7 @@ In the node search (chapter 06):
   - the bound is `Upper` and the value is below α (the position is too bad for us), or
   - the bound is `Lower` and the value is at least β (too good; the opponent avoids it).
 - Otherwise the stored move is searched first (chapter 05).
+- **Enhanced transposition cutoff (Stello 2.x).** From `look` = 4, before the moves are ordered, the position after each move is looked up. If a child has an `Exact` or `Upper` entry with depth ≥ `look` − 1 whose negated value is at least β, that move already refutes the node, and the node returns at once without searching anything.
 - After the node is searched, the result is stored with the node's `look` as depth and the bound from the window: `Lower` if the best score ≥ β, `Exact` if it is above α, else `Upper`.
 
 ### Use in the endgame solver

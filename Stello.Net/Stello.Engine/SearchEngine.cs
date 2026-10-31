@@ -71,6 +71,10 @@ public sealed partial class SearchEngine
     private readonly int[,]? _probCutErrors;
     private bool _inProbCut;
 
+    // From look 4 (5 plies) the moves are ordered by evaluation, and the children's stored bounds are tried first (ETC).
+    private const int EvaluationOrderMinLook = 4;
+    private const int MidgameEtcMinLook = 4;
+
     /// <param name="hashBits">Each of the two hash tables gets 2^hashBits slots of two entries (C++: HASHSIZE 19, one entry).</param>
     public SearchEngine(int hashBits = 19)
         : this(hashBits, SearchOptions.Default)
@@ -336,7 +340,30 @@ public sealed partial class SearchEngine
 
         Span<int> list = stackalloc int[moveCount];
         Fill(list, moves);
-        _ordering.Order(list, hashMove, previousMove, player, board);
+
+        // Enhanced transposition cutoff: a child whose stored upper bound already refutes it gives a cutoff here.
+        if (look >= MidgameEtcMinLook && ply + 1 <= _hashGetHeight)
+        {
+            foreach (int move in list)
+            {
+                Board child = Play(board, player, move);
+                if (_midgameTable.TryGet(child.Discs(opponent), child.Discs(player), (int)opponent, out TranspositionTable.Entry childEntry)
+                    && childEntry.Depth >= look - 1 && childEntry.Bound != Bound.Lower && -childEntry.Value >= beta)
+                {
+                    bestMove = move;
+                    return -childEntry.Value;
+                }
+            }
+        }
+
+        if (look >= EvaluationOrderMinLook)
+        {
+            OrderByEvaluation(list, hashMove, board, player);
+        }
+        else
+        {
+            _ordering.Order(list, hashMove, previousMove, player, board);
+        }
 
         int best = -Infinity;
         Bound bound = Bound.Lower;
@@ -385,6 +412,36 @@ public sealed partial class SearchEngine
         }
 
         return best;
+    }
+
+    // Egaroucid's midgame ordering (move_ordering.hpp, depth 0): the hash move, then fewer replies, less potential
+    // mobility for the opponent and a better evaluation first. The response killers are not used here: with them first
+    // the search was weaker.
+    private void OrderByEvaluation(Span<int> list, int hashMove, in Board board, Player player)
+    {
+        Player opponent = player.Opponent();
+        ulong empty = ~(board.Discs(player) | board.Discs(opponent));
+        Span<int> keys = stackalloc int[list.Length];
+        for (int i = 0; i < list.Length; i++)
+        {
+            int move = list[i];
+            if (move == hashMove)
+            {
+                keys[i] = int.MaxValue;
+                continue;
+            }
+
+            Board child = Play(board, player, move);
+            ulong childOwn = child.Discs(opponent);
+            ulong childOther = child.Discs(player);
+            int replies = Endgame.EndgameBits.WeightedMoves(Bitboards.LegalMoves(childOwn, childOther));
+            int potential = Endgame.EndgameBits.PotentialMobility(childOther, empty & ~(1UL << move));
+            int value = EvaluateLeaf(child, opponent);
+            keys[i] = (OrderOffset - replies) * OrderMobility + (OrderOffset - potential) * OrderPotentialMobility
+                - value * OrderValue / PatternUnitsPerDisc;
+        }
+
+        MoveOrdering.SortDescending(list, keys);
     }
 
     private bool TryProbCut(in Board board, Player player, int look, int ply, int previousMove, int alpha, int beta, out int cut)

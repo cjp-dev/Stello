@@ -40,11 +40,21 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
 
                 int bits = options.Number("hash-bits", SearchLimits.DefaultHashBits, 10, 26);
                 string? evalFile = options.Text("eval");
-                var stello = evalFile is null or "default" ? new SearchEngine(bits) : new SearchEngine(bits, MatchCommands.PatternOptions(evalFile));
+                SearchOptions searchOptions = evalFile is null or "default" ? SearchOptions.Default : MatchCommands.PatternOptions(evalFile);
                 if (evalFile is not null and not "default")
                 {
                     limitText += $", evaluation {Path.GetFileName(evalFile)}";
                 }
+
+                // --side: the search switches of a match side, e.g. "order=4,killers=off".
+                if (options.Text("side") is { } sideText)
+                {
+                    MatchSide side = MatchCommands.ParseSide($"depth=1,{sideText}");
+                    searchOptions = (side.Options ?? SearchOptions.Default) with { Pattern = searchOptions.Pattern ?? side.Options?.Pattern };
+                    limitText += $", {sideText}";
+                }
+
+                var stello = new SearchEngine(bits, searchOptions);
 
                 return new BenchSearcher(engine, limitText, bits, position =>
                 {

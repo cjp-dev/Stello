@@ -293,7 +293,7 @@ internal static class MatchCommands
             + (softTimePercent is null ? "" : $", soft limit {softTimePercent} %")
             + (probCutPercent is null ? "" : $", Multi-ProbCut t = {probCutPercent / 100.0:0.00}");
         return new MatchSide(name, limits, bits, book, CreatePlayer: () => new StelloMatchPlayer(bits, book, options),
-            Description: $"Stello, {description}{extra}");
+            Description: $"Stello, {description}{extra}", Options: options);
     }
 
     private static readonly Dictionary<string, SearchOptions> LoadedOptions = [];

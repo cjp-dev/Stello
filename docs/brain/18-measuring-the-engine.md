@@ -22,7 +22,7 @@ dotnet run -c Release --project Stello.Net/tools/Stello.Benchmark -- <command> [
 |---|---|
 | `match --a <side> --b <side> [--starts <file>] [--max-starts N] [--workers N] [--name <name>]` | Plays side A against side B. Writes a Markdown and a JSON report to `Plans/benchmark-results/match_<name>`. |
 | `solve-bench [--engine stello] [--eval <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits 19] [--out <file.json>] [--compare <file.json>]` | Solves FFO positions #40 to #44 (or another range of #40–#59) exactly. |
-| `mid-bench [--engine stello] [--eval <file>] [--depth 10] [--passes 3] [--hash-bits 19] [--out <file.json>] [--compare <file.json>]` | Searches the midgame positions to a fixed depth. |
+| `mid-bench [--engine stello] [--eval <file>] [--side <keys>] [--depth 10] [--passes 3] [--hash-bits 19] [--out <file.json>] [--compare <file.json>]` | Searches the midgame positions to a fixed depth. `--side` takes a Stello match side's search keys (e.g. `mpc=130`), to count nodes with a switch. |
 | `make-starts [--plies 10-12] [--max-value 40]` | Writes the start positions for `match` from the opening book. |
 | `make-positions [--games 20] [--depth 6] [--empties 48,42,36,30,26]` | Writes the midgame positions for `mid-bench`. |
 

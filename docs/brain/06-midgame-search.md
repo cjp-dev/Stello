@@ -106,7 +106,9 @@ flowchart TD
     SelTest -- "yes" --> SelCut["Return beta or alpha"]
     SelTest -- "no" --> Ext
     Sel -- "no" --> Ext["Single reply at look 0: look = 1"]
-    Ext --> Order["Order the moves<br/>(hash move, responses, square values)"]
+    Ext --> Etc{"look ≥ 4 and a child's stored<br/>bound already reaches beta?"}
+    Etc -- "yes" --> EtcCut["Return it (ETC)"]
+    Etc -- "no" --> Order["Order the moves (chapter 05):<br/>look ≥ 4: hash move, then evaluation<br/>otherwise: hash move, responses, square values"]
     Order --> Loop["For each move:<br/>look = 0: evaluate the child<br/>otherwise: search the child with look − 1<br/>(PVS: later moves with a null window first)"]
     Loop --> Cut{"score ≥ beta?"}
     Cut -- "yes" --> Store
@@ -121,6 +123,7 @@ Some details:
 - **Passes** do not use up depth: the opponent is searched with the same `look`.
 - **Extensions.** A position with only one legal move at the horizon is searched one ply deeper. Stello 1 also searched a corner move that its edge tables mark as dangerous (`Evaluator.IsDangerous`) instead of evaluating it; with the pattern evaluation this was worth nothing, and Stello 2 dropped it.
 - **The response table** is updated after every searched child (chapter 05).
+- **Enhanced transposition cutoff** from `look` = 4: the children's hash entries are looked up before the moves are ordered; a child whose stored upper bound already refutes it ends the node ([chapter 07](07-transposition-table.md#use-in-the-midgame-search)).
 - **The hash table** is read only at plies ≤ `look` − 1 and written only at plies ≤ `look` of the current iteration, the same heights as in C++; so it is used in the upper part of the tree, where each entry saves the most work. A hash move is only used if it is legal in the position (chapter 07).
 - **PVS in every node.** The first move is searched with the full window, the others with a null window and again with the full window if they turn out better, as at the root. (Stello 1 and 2.0 used PVS only at the root; in Stello 2.x it was worth about 30 Elo, [findings](../../Plans/improve-stello-strength-findings.md#item-2-principal-variation-search-and-the-hash-table).)
 

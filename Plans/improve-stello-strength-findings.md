@@ -329,6 +329,46 @@ Multi-ProbCut replaces the old selective search. That search used a fixed margin
   - a fit per depth pair instead of the linear model;
   - t by game phase.
 
+### Item 4: move ordering and midgame ETC
+
+The midgame ordered its moves by the hash move, the response killers and the square values. Five additions were tried behind switches, against Stello 2 with Multi-ProbCut:
+- **Evaluation ordering from look L:** Egaroucid's depth-0 key, 35 × (38 − opponent's weighted mobility) + 17 × (38 − potential mobility) − 2.69 × the child's evaluation in 1/100 disc. It was tried with the killers before the evaluated moves, or without them.
+- **ETC from look L:** a child whose stored upper bound already reaches β ends the node.
+- **IID:** a node without a hash move first searches itself to half the depth.
+- **Shallow-search keys:** the evaluation in the key replaced by a search of each child to a quarter of the depth.
+
+`mid-bench` got `--side <keys>` (any Stello side's switches) to count nodes at a fixed depth. At depth 12, 100 positions, 1 pass:
+
+| Variant | Nodes | Time |
+|---|---:|---:|
+| Current (Multi-ProbCut, old ordering) | 11,015,727 | 3.26 s |
+| Evaluation ordering from look 2 / 4 / 8 | 11.87 M / 10.93 M / 11.04 M | 3.58 / 3.28 / 3.32 s |
+| … from look 2 / 4, without killers | 12.10 M / 10.68 M | 3.73 / 3.24 s |
+| ETC from look 4 | 10.92 M | 3.31 s |
+| IID from look 3 / 5 / 7 | 10.88 M / 10.97 M / 11.01 M | about 3.27 s |
+| Evaluation ordering from look 4 without killers, children searched to look / 4 from look 4 / 6 / 8 | 28.6 M / 19.0 M / 15.6 M | 8.17 / 5.47 / 4.55 s |
+| **Evaluation ordering from look 4 without killers, plus ETC from look 4** | **10,582,393** (−3.9 %) | 3.24 s |
+
+Matches, 1,180 games each:
+
+| Variant | 100 ms | 500 ms |
+|---|---:|---:|
+| Evaluation ordering from look 2 / 4 / 6 | 49.0 % (−7) / 49.6 % (−3) / 49.4 % (−4) | |
+| … from look 4, without killers | 51.7 % (49.5–53.8), +11 | |
+| … from look 3, without killers | 51.4 % (49.3–53.5), +10 | |
+| ETC from look 4 / 8 | 49.3 % (−5) / 50.1 % (+1) | |
+| **Evaluation ordering from look 4 without killers, plus ETC from look 4** | **53.3 % (51.1–55.5), +23** | **51.9 % (49.9–53.9), +13**, depth 16.49 → 16.78 |
+
+- **Kept: evaluation ordering from look 4 without killers, plus ETC from look 4.** It is now the default, with no switch.
+  - It passed at 100 ms. At 500 ms the lower bound is 49.9 %, just short of the gate.
+  - It is kept under the speed rule: 3.9 % fewer nodes at a fixed depth, 0.3 plies more depth at 500 ms, and no loss in either match.
+- **The old ordering was already good.** The hash move is almost always there:
+  - iterative deepening and Multi-ProbCut's shallow searches store a move in nearly every deep node, so IID finds nothing to add;
+  - the evaluation only orders the moves after the hash move.
+- **The killers hurt the evaluation ordering.** Placed before the evaluated moves, they push better-evaluated moves back.
+- **A real shallow search per child costs far more than it saves** at the depths Stello reaches (at most about 17 plies). Egaroucid only does it from depth 8 on PV nodes and 16 on null-window nodes (depth >> 3 and >> 4), and its searches are deeper.
+- **Removed:** IID, shallow-search keys and the switches (`order=`, `killers=`, `etc=`, `iid=`, `order-shallow=`).
+
 ## Measurements
 
 All on 1 thread, on the same Intel i7-12850HX laptop VM as the port's measurements. That CPU is hybrid: 8 performance cores with 2 threads each and 8 efficiency cores, 24 threads in all. Matches play 12 games at a time, so their depths and times per move are averages over both kinds of core. A/B results are fair, because both engines in a game share a thread, but absolute numbers differ on other machines.

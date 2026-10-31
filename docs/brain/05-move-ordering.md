@@ -4,7 +4,7 @@
 
 ## In short
 
-Alpha-beta search (chapter 06) is fastest when the best move in each position is searched first: then the other moves are refuted quickly and whole branches are cut off. The engine cannot know the best move in advance, so it guesses, in this order: the move stored in the hash table from an earlier search, then replies that worked well against the opponent's last move before (the *response table*), and finally a fixed value per square that prefers corners and avoids the squares next to empty corners. This chapter describes the ordering of the midgame search; the endgame solver has its own ordering (chapter 08).
+Alpha-beta search (chapter 06) is fastest when the best move in each position is searched first: then the other moves are refuted quickly and whole branches are cut off. The engine cannot know the best move in advance, so it guesses, in this order: the move stored in the hash table from an earlier search, then replies that worked well against the opponent's last move before (the *response table*), and finally a fixed value per square that prefers corners and avoids the squares next to empty corners. In Stello 2.x, nodes 5 or more plies from the horizon order their moves by the opponent's mobility and the pattern evaluation instead, as Egaroucid does. This chapter describes the ordering of the midgame search; the endgame solver has its own ordering (chapter 08).
 
 ## Data structures
 
@@ -60,9 +60,23 @@ After each move `move` has been searched, the search records the opponent's best
 
 The row is chosen by the replying colour and the move it replied to, so the table learns "after this move, that reply is strong". When the same move appears again elsewhere in the tree, the reply is tried early (`Order` with `previousMove`). The table is cleared at the start of every search (`ClearResponses`), so it only holds knowledge from the current search. This idea is often called a *killer response* or *counter-move* heuristic.
 
+### Evaluation ordering in deeper nodes (Stello 2.x)
+
+At nodes with `look` ≥ 4, `SearchEngine.OrderByEvaluation` replaces `Order`. The hash move goes first. Every other move gets a key from the position after it, with Egaroucid's weights (`move_ordering.hpp` at depth 0):
+
+$$\text{key} = 35\,(38 - r) + 17\,(38 - p) - 2.69\,v$$
+
+- $r$ is the opponent's mobility: 2 per legal reply, plus 1 more for each corner reply;
+- $p$ is the opponent's potential mobility: the empty squares next to the mover's discs;
+- $v$ is the pattern evaluation for the opponent, in 1/100 disc (269 per disc).
+
+The moves are then sorted by key, highest first. The response table is not used in these nodes: with the killers before the evaluated moves the search was weaker. Below `look` 4 the old ordering stays, because an evaluation per move costs too much so near the leaves.
+
+Measured against the old ordering ([findings](../../Plans/improve-stello-strength-findings.md#item-4-move-ordering-and-midgame-etc)): together with midgame ETC (chapter 07), 4 % fewer nodes at depth 12, 53.3 % (+23 Elo) at 100 ms and 51.9 % (+13) at 500 ms, with 0.3 plies more depth. Ordering by a quarter-depth search of each child, and internal iterative deepening, were tried and dropped.
+
 ### Where the ordering is used
 
-- At every node of the midgame search, with the hash move and the opponent's last move (chapter 06).
+- At every node of the midgame search with `look` < 4, with the hash move and the opponent's last move (chapter 06); deeper nodes use the evaluation ordering above.
 - At the root, once at the start of a search without a hash move; after that, the root list is reordered by the search itself: each move that becomes the best is moved to the front for the next iteration (chapter 06).
 - The endgame solver uses different keys (evaluation, fewest replies, parity), with `BaseScore` as a tie-breaker (chapter 08).
 
@@ -81,7 +95,7 @@ b8 is last: it is a C-square next to the empty corner a8.
 
 ## Design notes
 
-- **Cheap and simple.** The ordering uses no search and no evaluation, only a hash lookup, a table lookup and a few comparisons, because it runs at every node.
+- **Cheap and simple near the leaves.** `Order` uses no search and no evaluation, only a hash lookup, a table lookup and a few comparisons, because it runs at most nodes. Only the deeper nodes, where a good order saves a whole subtree, pay for an evaluation per move.
 - **Bug fixed.** In C++, after sorting by response score, the code read the response of the wrong square (the −11 offset of the legacy numbering was missing). The C# version reads the right entry.
 - **One table per colour.** C++ had one table for the computer and one for the human. C# uses one per colour, which is the same while one side is the computer, and also correct when the engine searches for both sides (self-play, book learning).
 - **No global state.** The dynamic square values are computed into a local array instead of overwriting a global table, and the response table belongs to the `SearchEngine` instance.
@@ -96,7 +110,7 @@ b8 is last: it is a C-square next to the empty corner a8.
 | File | Main members |
 |---|---|
 | [MoveOrdering.cs](../../Stello.Net/Stello.Engine/Search/MoveOrdering.cs) | `BaseSquareScores`, `CornerAreas`, `Order`, `SquareScores`, `RecordResponse`, `ClearResponses`, `SortDescending`, `BaseScore` |
-| [SearchEngine.cs](../../Stello.Net/Stello.Engine/SearchEngine.cs) | The calls to `Order` and `RecordResponse` in `Search` and `SearchRoot` |
+| [SearchEngine.cs](../../Stello.Net/Stello.Engine/SearchEngine.cs) | The calls to `Order` and `RecordResponse` in `Search` and `SearchRoot`; `OrderByEvaluation` |
 | C++: [Sort.cpp](../../Stello%20C++/BRAIN/Sort.cpp) | `sortlist`, `simsort`, `scores` |
 
 ## Tests
