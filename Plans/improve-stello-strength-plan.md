@@ -208,3 +208,9 @@ Each change is a separate commit behind a `SearchOptions` flag and is measured o
   - Gate: FFO #40–49 are all correct in 47.1 s (port 25.6 s, Stello 1 369 s). Move Now answers within 100 ms during a solve. Against the old solver: 49.7 % at 100 ms and 51.1 % (49.2–53.0) at 500 ms, not worse.
   - The time to solve in the browser moves to phase 4, where the apps get the solver.
   - Tests: Stello.Engine.Tests 264 (`EndgameTests` on both solvers, `EndgameBitsTests`), Egaroucid.Engine.Tests 34, all green.
+- **Phase 5: in progress, on `feature/stello-v2.x` (based on `feature/stello-v2`).** Details are in the findings.
+  - Item 1, time use: no variant passed (soft limit 80–100 %: +4 to +14, not significant; predicting the next iteration: −25 to −37). The 2/3 rule stays; `SoftTimePercent` (`soft-pct=`) stays as a switch.
+  - Item 2a, PVS in every midgame node: kept, +28 Elo at 100 ms and +30 at 500 ms.
+  - Item 2b, a midgame table with both bounds and two moves: at best +4, removed.
+  - Item 3, Multi-ProbCut with an error model fitted by the trainer's `mpc` command (11,700 positions to depth 13): kept with t = 1.0. Against the old selective search: 67.3 % (+126) at 100 ms and 66.6 % (+120) at 500 ms, and 52.2 % against t = 1.3 at 500 ms. Depth at 500 ms 13.6 → 16.6. The old selective search and its switches are removed; `mpc=` stays to retune t.
+  - Tests: Stello.Engine.Tests 256, all green.

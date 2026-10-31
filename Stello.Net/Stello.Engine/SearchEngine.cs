@@ -18,12 +18,8 @@ public sealed partial class SearchEngine
     // C++: the endgame solver takes over when (allway - varlook) <= 7.
     private const int EndgameDistance = 7;
 
-    // C++: SELEXT with D1, D2, DP and E_BOUND.
-    private const int SelectiveLook1 = 7;
-    private const int SelectiveLook2 = 5;
-    private const int SelectiveShallowLook = 3;
-    private const int SelectiveMargin = 50;
-    private const int SelectiveScoreLimit = 32000;
+    // No Multi-ProbCut near won or lost scores.
+    private const int ProbCutScoreLimit = 32000;
 
     /// <summary>A finished game in the midgame search scores this plus the disc difference (C++: the same).</summary>
     internal const int WinScore = 32600;
@@ -61,10 +57,19 @@ public sealed partial class SearchEngine
 
     internal SearchOptions Options { get; }
 
+    /// <summary>Called after each finished midgame iteration with its depth and score (for the Multi-ProbCut fit).</summary>
+    internal Action<int, int>? IterationDone { get; set; }
+
     private readonly EvalWeights _pattern;
-    private readonly int _selectiveMargin;
-    private readonly int _selectivePercent;
     private readonly int? _softTimePercent;
+
+    // Multi-ProbCut (Egaroucid's multi_probcut.hpp, with an error model fitted on Stello 2's own searches). From depth 3
+    // (look 2); a cut needs the shallow search to be t standard deviations outside the window.
+    internal const int DefaultProbCutPercent = 100;
+    private const int ProbCutMinLook = 2;
+    private const int ProbCutPreCheckOffset = 4 * PatternUnitsPerDisc;
+    private readonly int[,]? _probCutErrors;
+    private bool _inProbCut;
 
     /// <param name="hashBits">Each of the two hash tables gets 2^hashBits slots of two entries (C++: HASHSIZE 19, one entry).</param>
     public SearchEngine(int hashBits = 19)
@@ -80,9 +85,8 @@ public sealed partial class SearchEngine
         HashBits = hashBits;
         Options = options;
         _pattern = options.Pattern ?? EvalWeights.Default;
-        _selectiveMargin = options.SelectiveMargin ?? SelectiveMargin;
-        _selectivePercent = options.SelectivePercent ?? 50;
         _softTimePercent = options.SoftTimePercent;
+        _probCutErrors = options.Selective ? ProbCutErrors((options.ProbCutPercent ?? DefaultProbCutPercent) / 100.0) : null;
         _midgameTable = new TranspositionTable(hashBits);
         _endgameTable = new TranspositionTable(hashBits);
     }
@@ -161,6 +165,7 @@ public sealed partial class SearchEngine
                     _hashGetHeight = look - 1;
                     _hashPutHeight = look;
                     SearchRoot(board, player, look, rootMoves, ref best);
+                    IterationDone?.Invoke(look + 1, best.Score);
 
                     if (StopIterating(limits, budget, look + 1))
                     {
@@ -290,28 +295,6 @@ public sealed partial class SearchEngine
             return -Search(board, opponent, look, ply, -1, -beta, -alpha, out _);
         }
 
-        // Selective search: a shallow null-window search decides if the position is clearly outside the window.
-        if (look is SelectiveLook1 or SelectiveLook2)
-        {
-            if (beta is < SelectiveScoreLimit and > -SelectiveScoreLimit)
-            {
-                int threshold = beta + Math.Abs(beta) * _selectivePercent / 100 + _selectiveMargin;
-                if (Search(board, player, SelectiveShallowLook, ply, previousMove, threshold - 1, threshold, out bestMove) >= threshold)
-                {
-                    return beta;
-                }
-            }
-
-            if (alpha is < SelectiveScoreLimit and > -SelectiveScoreLimit)
-            {
-                int threshold = alpha - Math.Abs(alpha) * _selectivePercent / 100 - _selectiveMargin;
-                if (Search(board, player, SelectiveShallowLook, ply, previousMove, threshold, threshold + 1, out bestMove) <= threshold)
-                {
-                    return alpha;
-                }
-            }
-        }
-
         int hashMove = -1;
         bool hashGet = ply <= _hashGetHeight;
         bool hashPut = ply <= _hashPutHeight;
@@ -333,6 +316,13 @@ public sealed partial class SearchEngine
             }
 
             hashMove = entry.Move;
+        }
+
+        // Multi-ProbCut: a shallow null-window search predicts that the full search falls outside the window.
+        if (_probCutErrors is not null && look >= ProbCutMinLook && !_inProbCut
+            && TryProbCut(board, player, look, ply, previousMove, alpha, beta, out int cut))
+        {
+            return cut;
         }
 
         int storedLook = look;
@@ -395,6 +385,67 @@ public sealed partial class SearchEngine
         }
 
         return best;
+    }
+
+    private bool TryProbCut(in Board board, Player player, int look, int ply, int previousMove, int alpha, int beta, out int cut)
+    {
+        int depth = look + 1;
+        int shallowLook = ProbCutShallowDepth(depth) - 1;
+        int error = _probCutErrors![64 - board.EmptyCount, depth];
+        int error0 = Math.Max(PatternUnitsPerDisc, error - ProbCutPreCheckOffset);
+        int static0 = EvaluateLeaf(board, player);
+        cut = 0;
+        _inProbCut = true;
+        try
+        {
+            if (static0 >= beta + error0 && beta + error < ProbCutScoreLimit)
+            {
+                int pcBeta = beta + error;
+                if (Search(board, player, shallowLook, ply, previousMove, pcBeta - 1, pcBeta, out _) >= pcBeta)
+                {
+                    cut = beta;
+                    return true;
+                }
+            }
+
+            if (static0 <= alpha - error0 && alpha - error > -ProbCutScoreLimit)
+            {
+                int pcAlpha = alpha - error;
+                if (Search(board, player, shallowLook, ply, previousMove, pcAlpha, pcAlpha + 1, out _) <= pcAlpha)
+                {
+                    cut = alpha;
+                    return true;
+                }
+            }
+        }
+        finally
+        {
+            _inProbCut = false;
+        }
+
+        return false;
+    }
+
+    // Egaroucid's shallow depth: about half the depth, with the same parity.
+    private static int ProbCutShallowDepth(int depth) => ((depth / 2) & ~1) + (depth & 1);
+
+    // t × σ in 1/100 disc by disc count and depth. σ = deep − shallow search, fitted by the trainer's mpc command on
+    // 11,700 test positions searched to depth 13 without selectivity (Plans/improve-stello-strength-findings.md).
+    private static int[,] ProbCutErrors(double t)
+    {
+        var errors = new int[65, 61];
+        for (int discs = 0; discs <= 64; discs++)
+        {
+            double x = discs / 64.0;
+            for (int depth = 1; depth <= 60; depth++)
+            {
+                int shallow = ProbCutShallowDepth(depth);
+                double sigma = 1.8871 + 2.9543 * x + 0.0660 * x * x - 0.6749 * shallow + 0.2778 * depth;
+                errors[discs, depth] = (int)Math.Ceiling(t * Math.Max(0.5, sigma) * PatternUnitsPerDisc);
+            }
+        }
+
+        return errors;
     }
 
     private (int Score, int Move) SolveRoot(in Board board, Player player, int alpha, int beta, ScoreKind kind, int[] rootMoves, ref Best best)

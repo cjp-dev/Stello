@@ -4,7 +4,7 @@
 
 ## In short
 
-To choose a move, the engine looks ahead: it tries its moves, the opponent's replies, its answers to those, and so on, and evaluates the positions at the end of each line (chapter 21; Stello 1: chapter 04). The best move is the one that leads to the best position when both sides play their best. This is **minimax**; Stello writes it as **negamax** with **alpha-beta pruning**, which skips lines that cannot change the result. The search runs **iteratively deeper**: first 1 ply, then 2, then 3, until the time is used. It is helped by the hash table (chapter 07), move ordering (chapter 05), a few **extensions** and a **selective search** that cuts off positions that are clearly outside the interesting range. When the end of the game is near enough, the endgame solver takes over (chapter 21; Stello 1: chapter 08).
+To choose a move, the engine looks ahead: it tries its moves, the opponent's replies, its answers to those, and so on, and evaluates the positions at the end of each line (chapter 21; Stello 1: chapter 04). The best move is the one that leads to the best position when both sides play their best. This is **minimax**; Stello writes it as **negamax** with **alpha-beta pruning**, which skips lines that cannot change the result. The search runs **iteratively deeper**: first 1 ply, then 2, then 3, until the time is used. It is helped by the hash table (chapter 07), move ordering (chapter 05), a few **extensions** and a **selective search** (Multi-ProbCut) that cuts off positions a shallow search shows to be clearly outside the interesting range. When the end of the game is near enough, the endgame solver takes over (chapter 21; Stello 1: chapter 08).
 
 ## Data structures
 
@@ -24,10 +24,10 @@ To choose a move, the engine looks ahead: it tries its moves, the opponent's rep
 | `Infinity` | 32 767 | Larger than any score |
 | `RootWindow` | 32 664 | The root window is (−32 664, 32 664) |
 | `EndgameDistance` | 7 | Switch to the solver when the search would reach 7 or fewer empty squares |
-| `SelectiveLook1`, `SelectiveLook2` | 7, 5 | The `look` values where the selective search is tried |
-| `SelectiveShallowLook` | 3 | The `look` of its shallow test search |
-| `SelectiveMargin` | 50 | Added to the margin of the selective search |
-| `SelectiveScoreLimit` | 32 000 | No selective search near won or lost scores |
+| `ProbCutMinLook` | 2 | Multi-ProbCut is tried from `look` = 2, a depth of 3 plies |
+| `DefaultProbCutPercent` | 100 | Its t × 100: a cut needs the shallow search to be t = 1.0 standard deviations outside the window |
+| `ProbCutPreCheckOffset` | 400 | The static evaluation must already be within 4 discs of that margin before the shallow search is tried |
+| `ProbCutScoreLimit` | 32 000 | No Multi-ProbCut near won or lost scores |
 
 **Scores** are in 1/100 disc from the point of view of the side to move (Stello 2's pattern evaluation, [chapter 21](21-stello-2-evaluation-and-solver.md#how-the-search-uses-it); Stello 1 used its own evaluation units). A finished game scores ±(32 600 + disc difference), with the empty squares given to the winner, so every won game is better than any evaluation.
 
@@ -99,15 +99,15 @@ flowchart TD
     Count --> Legal{"Legal moves?"}
     Legal -- "none, and none for the opponent" --> Over["Return the game-over score"]
     Legal -- "none, opponent can move" --> PassNode["Pass: search the opponent<br/>with the same look"]
-    Legal -- "yes" --> Sel{"look = 7 or 5?"}
-    Sel -- "yes" --> SelTest["Selective search:<br/>clearly above beta or below alpha?"]
-    SelTest -- "yes" --> SelCut["Return beta or alpha"]
-    SelTest -- "no" --> Hash
-    Sel -- "no" --> Hash{"Hash entry with enough depth<br/>and a usable bound?"}
+    Legal -- "yes" --> Hash{"Hash entry with enough depth<br/>and a usable bound?"}
     Hash -- "yes" --> HashCut["Return the stored value"]
-    Hash -- "no" --> Ext["Single reply at look 0: look = 1"]
+    Hash -- "no" --> Sel{"look ≥ 2?"}
+    Sel -- "yes" --> SelTest["Multi-ProbCut:<br/>a shallow search clearly<br/>above beta or below alpha?"]
+    SelTest -- "yes" --> SelCut["Return beta or alpha"]
+    SelTest -- "no" --> Ext
+    Sel -- "no" --> Ext["Single reply at look 0: look = 1"]
     Ext --> Order["Order the moves<br/>(hash move, responses, square values)"]
-    Order --> Loop["For each move:<br/>look = 0: evaluate the child<br/>otherwise: search the child with look − 1"]
+    Order --> Loop["For each move:<br/>look = 0: evaluate the child<br/>otherwise: search the child with look − 1<br/>(PVS: later moves with a null window first)"]
     Loop --> Cut{"score ≥ beta?"}
     Cut -- "yes" --> Store
     Cut -- "no, more moves" --> Loop
@@ -122,24 +122,32 @@ Some details:
 - **Extensions.** A position with only one legal move at the horizon is searched one ply deeper. Stello 1 also searched a corner move that its edge tables mark as dangerous (`Evaluator.IsDangerous`) instead of evaluating it; with the pattern evaluation this was worth nothing, and Stello 2 dropped it.
 - **The response table** is updated after every searched child (chapter 05).
 - **The hash table** is read only at plies ≤ `look` − 1 and written only at plies ≤ `look` of the current iteration, the same heights as in C++; so it is used in the upper part of the tree, where each entry saves the most work. A hash move is only used if it is legal in the position (chapter 07).
-- Inside the tree the midgame search is plain alpha-beta; PVS is only used at the root.
+- **PVS in every node.** The first move is searched with the full window, the others with a null window and again with the full window if they turn out better, as at the root. (Stello 1 and 2.0 used PVS only at the root; in Stello 2.x it was worth about 30 Elo, [findings](../../Plans/improve-stello-strength-findings.md#item-2-principal-variation-search-and-the-hash-table).)
 
 ### Selective search
 
-At nodes with `look` = 7 or 5, a shallow search (`look` = 3) with a null window tests whether the position is **clearly** outside the window:
+Stello 2.x uses **Multi-ProbCut** (Buro), as Egaroucid does ([chapter 19](19-the-egaroucid-port.md#multi-probcut)): a shallow search predicts the result of the deep one, and when the prediction is clearly outside the window, the deep search is skipped.
+
+At a node with depth $d$ = `look` + 1 ≥ 3 (`TryProbCut`):
+
+1. The shallow depth is about half, with the same parity: $s = 2\lfloor d/4 \rfloor + (d \bmod 2)$, so 3 → 1, 4 → 2, 7 → 3, 10 → 4, 13 → 7.
+2. The error margin is $e = \lceil t\,\sigma(n, s, d) \cdot 100 \rceil$ in 1/100 disc, with $t$ = 1.0 and $n$ the number of discs on the board.
+3. **A cheap test first:** if the static evaluation is at least $\beta + e - 400$, a null-window search to depth $s$ tests whether the position scores at least $\beta + e$. If so, the node returns β. The same is done below α, with $\alpha - e$.
+4. Inside the shallow search, Multi-ProbCut is off.
+
+**The error model** comes from Stello 2's own searches. The trainer's `mpc` command searched 11,700 test positions (300 per disc count from 14 to 52) without selectivity at every depth up to 13, and measured the spread of the deep result minus the shallow one. A least-squares fit over those spreads gives, in discs, with $x = n / 64$:
+
+$$\sigma(n, s, d) = 1.887 + 2.954\,x + 0.066\,x^2 - 0.675\,s + 0.278\,d$$
+
+It is off by 10 % on average. Typical values are 2–4 discs. For example, at 32 discs and depth 11 (shallow depth 5), σ ≈ 3.1 discs: a node with β = 0 is cut when the static evaluation is at least −0.9 discs and the 5-ply search scores at least +3.1 discs. The few positions where the deep search found a forced game end were left out of the fit; Multi-ProbCut is not used near won and lost scores (|α|, |β| + e ≥ 32 000).
+
+**What it gave** (1,180 games each against the old selective search): at 100 ms per move t = 0.8–1.3 all scored 67–70 % (+126 to +147 Elo); at 500 ms t = 1.0 scored 66.6 % (+120 Elo), with 16.6 plies instead of 13.6, and beat t = 1.3 directly by 52.2 %. At a fixed depth of 10, `mid-bench` needs 4.6 times fewer nodes. See the [findings](../../Plans/improve-stello-strength-findings.md#item-3-multi-probcut).
+
+**Stello 1 and 2.0** used a fixed margin from the C++ `SELEXT` code instead: at `look` = 7 and 5, a 4-ply null-window search (`look` = 3) against
 
 $$\beta' = \beta + \left\lfloor \frac{|\beta|}{2} \right\rfloor + 50, \qquad \alpha' = \alpha - \left\lfloor \frac{|\alpha|}{2} \right\rfloor - 50$$
 
-- If the shallow search scores at least $\beta'$, the node returns β at once: a deep search would almost certainly fail high too.
-- If it scores at most $\alpha'$, the node returns α.
-
-For example, with the window (α, β) = (−40, 100):
-
-$$\beta' = 100 + 50 + 50 = 200, \qquad \alpha' = -40 - 20 - 50 = -110$$
-
-A 4-ply test search (`look` = 3) that scores 200 or more makes the node return 100, and one that scores −110 or less makes it return −40; anything in between means the full search is needed. The wider the window, the wider the margins.
-
-The test is skipped when |β| or |α| is 32 000 or more, near won and lost scores. This is Stello's version of the idea behind **ProbCut** (Buro): a shallow search predicts the deep one. ProbCut computes the margin from statistics of shallow against deep results; Stello uses a fixed margin of half the bound plus 50, from the C++ `SELEXT` code. It can miss a good move, but it lets the search go much deeper in the same time.
+returned β or α when it was beyond them. With the window (−40, 100), for example, a test search scoring 200 or more returned 100. The margin grew with the bound and had no statistics behind it.
 
 ### Game over inside the search
 
@@ -203,8 +211,9 @@ See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentati
 
 | File | Main members |
 |---|---|
-| [SearchEngine.cs](../../Stello.Net/Stello.Engine/SearchEngine.cs) | `Search` (public), `SearchRoot`, `Search` (private node search), `EvaluateLeaf`, `GameOverScore`, `StopIterating`, `CheckAbort`, `Report`, `MoveToFront`, `Play` |
+| [SearchEngine.cs](../../Stello.Net/Stello.Engine/SearchEngine.cs) | `Search` (public), `SearchRoot`, `Search` (private node search), `TryProbCut`, `ProbCutErrors`, `EvaluateLeaf`, `GameOverScore`, `StopIterating`, `CheckAbort`, `Report`, `MoveToFront`, `Play` |
 | [SearchLimits.cs](../../Stello.Net/Stello.Engine/SearchLimits.cs), [SearchResult.cs](../../Stello.Net/Stello.Engine/SearchResult.cs) | The limits, `SearchInfo`, `SearchResult`, `ScoreKind` |
+| [MpcCommand.cs](../../Stello.Net/tools/Stello.Trainer/MpcCommand.cs) | The trainer's `mpc` command: the data and the fit of Multi-ProbCut's error model |
 | C++: [Minmax.cpp](../../Stello%20C++/BRAIN/Minmax.cpp), [Kontrol.cpp](../../Stello%20C++/BRAIN/Kontrol.cpp) | `findmax`, `findmax1`, `findmax2`, `zero_findmax`, `getcomputer` |
 
 ## Tests
@@ -220,7 +229,7 @@ See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentati
 - [Fail-Soft – Chess Programming Wiki](https://www.chessprogramming.org/Fail-Soft) and [Null Window – Chess Programming Wiki](https://www.chessprogramming.org/Null_Window).
 - [Principal Variation Search – Chess Programming Wiki](https://www.chessprogramming.org/Principal_Variation_Search).
 - [Iterative Deepening – Chess Programming Wiki](https://www.chessprogramming.org/Iterative_Deepening) and [Odd-Even Effect – Chess Programming Wiki](https://www.chessprogramming.org/Odd-Even_Effect).
-- [ProbCut – Chess Programming Wiki](https://www.chessprogramming.org/ProbCut) and [Buro (1995), ProbCut (pdf)](https://skatgame.net/mburo/ps/probcut.pdf): the statistical form of the selective search.
+- [ProbCut – Chess Programming Wiki](https://www.chessprogramming.org/ProbCut) and [Buro (1995), ProbCut (pdf)](https://skatgame.net/mburo/ps/probcut.pdf): ProbCut and Multi-ProbCut, the statistical form of the selective search.
 - [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html): "Searching", with alpha-beta, move ordering and selective search in Othello.
 
 ---

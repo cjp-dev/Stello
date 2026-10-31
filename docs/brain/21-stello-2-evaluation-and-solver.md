@@ -129,6 +129,7 @@ The trainer is the console tool [Stello.Trainer](../../Stello.Net/tools/Stello.T
   - One stage of 8 M positions converges in 300–500 loops, about 30 s on 24 cores.
 - **`report`** gives a model's error on the test split per number of empty squares, next to Stello 1's evaluation (with a fitted scale) and the Egaroucid port.
 - **`size`** shows how small a model's weights compress with coarser units.
+- **`mpc`** (Stello 2.x) searches test positions without selectivity at every depth and fits Multi-ProbCut's error model from the spread of deep against shallow results ([chapter 06](06-midgame-search.md#selective-search)).
 
 What the training showed:
 
@@ -418,7 +419,7 @@ dotnet run -c Release --project Stello.Net/tools/Stello.Benchmark -- <command> [
 | Midgame speed | `mid-bench --engine stello`, `mid-bench --engine stello-v1`, add `--eval <file>` for another Stello 2 evaluation |
 | Midgame quality | `mid-quality --engines stello,stello-v1,egaroucid`, or `--sides "<side>;<side>"` for match sides with their own keys |
 
-- **Side keys for Stello 2:** `eval=<file>` (another evaluation file; `default` is the built-in one), `sel-margin=` and `sel-percent=` (the selective search's margin, 50 and 50 % by default). They are not allowed for Stello 1 or Egaroucid.
+- **Side keys for Stello 2:** `eval=<file>` (another evaluation file; `default` is the built-in one), `soft-pct=` (the soft time limit) and `mpc=` (Multi-ProbCut's t × 100, from Stello 2.x; 2.0 had `sel-margin=` and `sel-percent=` for its fixed selective margin instead). They are not allowed for Stello 1 or Egaroucid.
 - **Gone:** `eval=classic`, `danger=` and `endgame=` (and `--endgame`) were the switches of phases 2 and 3. They went with the old evaluation and solver, which only Stello 1 has now. To play the old evaluation or solver, play `engine=stello-v1`.
 - **`eval-compare`** measures Stello 1's evaluation against Egaroucid's ([chapter 20](20-engine-comparison.md#evaluation-eval-compare)). A trained model is measured with the trainer's `report` instead:
 
@@ -432,9 +433,9 @@ The trainer's defaults are those of the first model (`classic11`, 15 stages, 1/3
 
 Phase 4 releases Stello 2.0 in the apps: the engine switch is done, and the recalculated book and the release checks follow. Then phase 5 improves the search, as 2.x releases. Each change sits behind a `SearchOptions` switch and must win a 1,180-game match against the best Stello 2 so far (or, for a pure speed change, be faster on `mid-bench` / `solve-bench` with no loss in a match). The order follows the expected gain:
 
-1. **Time use:** Stello starts no new iteration after 2/3 of the time and so uses about 313 of 500 ms. An estimate of the next iteration's cost should decide instead.
-2. **PVS throughout**, and a transposition table with bounds and two moves, cleared by importance instead of two tables.
-3. **Multi-ProbCut** with an error model fitted on Stello 2's own shallow and deep searches, in place of the fixed selective margin.
+1. **Time use:** Stello starts no new iteration after 2/3 of the time and so uses about 313 of 500 ms. An estimate of the next iteration's cost should decide instead. *Measured: no variant was significantly better; the 2/3 rule stays.*
+2. **PVS throughout**, and a transposition table with bounds and two moves, cleared by importance instead of two tables. *Measured: PVS in every node gained about 30 Elo and was kept; the new table was at best even and was dropped.*
+3. **Multi-ProbCut** with an error model fitted on Stello 2's own shallow and deep searches, in place of the fixed selective margin. *Done: +120 Elo at 500 ms ([chapter 06](06-midgame-search.md#selective-search)).*
 4. **Move ordering by a shallow search**, and ETC in the midgame.
 5. **A selective endgame** (solve earlier at 74 % → 100 %), and a clog search with a depth or time limit.
 6. **Checking the moves outside the book** when leaving it.
@@ -464,10 +465,10 @@ Two smaller ideas from phase 3: a small, fast move-ordering table for 11–13 em
 | [SearchEngine.Endgame.cs](../../Stello.Net/Stello.Engine/Endgame/SearchEngine.Endgame.cs) | `SolveChild`, `EndNull`, `EndWindow`, `EndDeep`, `OrderingValue`, `EndLocal`, `EndSimple`, `EndFast`, `Last4` … `Last1`, `StabilityCut` |
 | [EndgameBits.cs](../../Stello.Net/Stello.Engine/Endgame/EndgameBits.cs) | `Flips`, `LegalMoves`, `LoneEmpties`, `Parity`, `WeightedMoves`, `PotentialMobility`, the stability thresholds |
 | [StableDiscs.cs](../../Stello.Net/Stello.Engine/Endgame/StableDiscs.cs), [LocalTable.cs](../../Stello.Net/Stello.Engine/Endgame/LocalTable.cs) | Stable discs; the local table of 7–13 empty squares |
-| [SearchOptions.cs](../../Stello.Net/Stello.Engine/Search/SearchOptions.cs) | `Pattern`, `SelectiveMargin`, `SelectivePercent`: the switches for experiments |
+| [SearchOptions.cs](../../Stello.Net/Stello.Engine/Search/SearchOptions.cs) | `Pattern`, `SoftTimePercent`, `Selective`, `ProbCutPercent`: the switches for experiments |
 | [tools/Stello.Trainer](../../Stello.Net/tools/Stello.Trainer) | `ConvertCommand`, `TrainCommand` (`Fit1`, `FoldedIndex`), `ReportCommand`, `SizeCommand`, `TrainingData` |
 | [Stello.Engine.V1](../../Stello.Net/Stello.Engine.V1) | Stello 1: `SearchEngine`, `Evaluation/Evaluator.cs`, `Evaluation/EdgeTables.cs`, `V1MatchPlayer` |
-| [MatchCommands.cs](../../Stello.Net/tools/Stello.Benchmark/MatchCommands.cs), [BenchSearcher.cs](../../Stello.Net/tools/Stello.Benchmark/BenchSearcher.cs) | The `engine=`, `eval=`, `sel-margin=` and `sel-percent=` keys; `--engine` and `--eval` |
+| [MatchCommands.cs](../../Stello.Net/tools/Stello.Benchmark/MatchCommands.cs), [BenchSearcher.cs](../../Stello.Net/tools/Stello.Benchmark/BenchSearcher.cs) | The `engine=`, `eval=`, `soft-pct=` and `mpc=` keys; `--engine` and `--eval` |
 | [AnalysisViewModel.cs](../../Stello.Net/Stello.App/ViewModels/AnalysisViewModel.cs) | `FormatScore`: scores in discs |
 
 ## Tests

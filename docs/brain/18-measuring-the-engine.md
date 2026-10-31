@@ -44,7 +44,8 @@ A side is a short list of settings:
 | `book=on` | use the opening book (off by default) |
 | `engine=stello-v1` | the engine: `stello` (Stello 2, the default), `stello-v1` (Stello 1) or `egaroucid` ([below](#comparing-engines)) |
 | `eval=<file>` | Stello 2 with another evaluation file; `default` is the built-in one ([chapter 21](21-stello-2-evaluation-and-solver.md)) |
-| `sel-margin=50`, `sel-percent=50` | Stello 2's selective-search margin: \|β\| × percent / 100 + margin, in 1/100 disc ([chapter 06](06-midgame-search.md#selective-search)) |
+| `mpc=100` | Stello 2's Multi-ProbCut t × 100: a cut needs the shallow search to be t standard deviations outside the window ([chapter 06](06-midgame-search.md#selective-search)) |
+| `soft-pct=` | Stello 2's soft time limit in percent of the time per move: no new iteration after it (default 2/3) |
 
 For example `--a time-ms=100,name=old --b time-ms=200,name=new`. Neither side uses the opening book unless it has `book=on`, so the games test the search and the evaluation. When later steps add settings to the engine (threads, the phase 5 search switches), they become new keys. The keys `eval=classic`, `danger=` and `endgame=` of the Stello 2.0 work are gone: the old evaluation and solver are only in Stello 1 now.
 

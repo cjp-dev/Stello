@@ -276,9 +276,62 @@ Kept, now the default (commit 53644bd). At a fixed depth of 10, `mid-bench` need
   - Entries from the previous move's search are worth keeping: the tree two plies later is mostly the same. Replacing them first costs about 15 Elo.
   - The second move helps (−37 → −11). It may be worth adding to the old table on its own later.
 
+### Item 3: Multi-ProbCut
+
+Multi-ProbCut replaces the old selective search. That search used a fixed margin, |β|/2 + 50, at `look` 7 and 5. The new one follows Egaroucid's `multi_probcut.hpp`:
+- from depth 3, the shallow depth is about half the depth with the same parity (3 → 1, 7 → 3, 13 → 7);
+- a cut needs the shallow null-window search to be t × σ outside the window;
+- the static evaluation must first be within 4 discs of that margin;
+- inside the shallow search Multi-ProbCut is off, and it is not used near won and lost scores.
+
+**The error model.** The trainer's new `mpc` command (`tools/Stello.Trainer/MpcCommand.cs`):
+- It searched 11,700 test-split positions, 300 per disc count from 14 to 52, without selectivity, at every depth up to min(13, empties − 8). That took 2 hours on 24 threads.
+- It wrote every iteration's score to `Traning data/mpc-values.csv` (git-ignored).
+- It printed σ of deep − shallow per group of 4 disc counts and fitted σ = c0 + c1·x + c2·x² + c3·s + c4·d by weighted least squares, with x = discs / 64.
+
+σ of deep − shallow in discs, for the shallow depth that is used:
+
+| Discs | 1→3 | 2→4 | 3→5 | 2→6 | 3→7 | 4→8 | 5→9 | 4→10 | 5→11 | 6→12 | 7→13 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 16–19 | 2.39 | 2.26 | 2.23 | 2.69 | 2.48 | 2.35 | 2.28 | 2.47 | 2.22 | 2.23 | 2.11 |
+| 24–27 | 3.11 | 2.68 | 2.41 | 3.11 | 2.98 | 2.80 | 2.55 | 2.88 | 2.68 | 2.70 | 2.49 |
+| 32–35 | 3.44 | 2.71 | 2.33 | 3.53 | 3.27 | 2.94 | 2.60 | 3.16 | 2.96 | 2.74 | 2.74 |
+| 40–43 | 3.39 | 3.12 | 3.03 | 3.92 | 3.69 | 3.32 | 3.24 | 3.63 | 3.61 | 3.12 | 3.11 |
+| 48–51 | 3.70 | 3.22 | 3.02 | 3.96 | 3.65 | 3.25 | | | | | |
+
+- **Fit:** σ = 1.8871 + 2.9543·x + 0.0660·x² − 0.6749·s + 0.2778·d discs. It is off by 10.2 % on average and 38 % at worst, over 117 cells.
+- **The spread grows with the number of discs and shrinks as the shallow search gets closer to the deep one.** The mean of deep − shallow is −0.19 discs: no bias worth correcting.
+- **Game ends had to be filtered out.** In 25 positions the deep search found a forced game end (score ±32 6xx). Those few values blew σ up to 7–20 discs at 36–47 discs, and the first fit was off by 47 %. They are now skipped, as Multi-ProbCut skips such scores.
+- **The static evaluation (0→2) is much worse** than any search (2.8–7.7 discs, growing towards the end). That is why Multi-ProbCut starts at depth 3, as in Egaroucid.
+
+**Matches against Stello 2 with the old selective search**, 1,180 games each:
+
+| t (`mpc=`) | 100 ms: score | Elo | depth (old → new) | 500 ms: score | Elo | depth (old → new) |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0.8 | 69.2 % (67.0–71.5) | +141 | 11.54 → 14.16 | | | |
+| 1.0 | 67.3 % (65.0–69.6) | +126 | 11.59 → 13.81 | 66.6 % (64.4–68.7) | +120 | 13.61 → 16.55 |
+| 1.15 | 68.9 % (66.7–71.2) | +139 | 11.55 → 13.51 | | | |
+| 1.3 | 70.0 % (67.7–72.2) | +147 | 11.55 → 13.22 | 65.8 % (63.6–68.1) | +114 | 13.62 → 15.92 |
+| 1.6 | 64.9 % (62.7–67.1) | +107 | 11.54 → 12.62 | | | |
+| 2.0 | 60.2 % (57.7–62.7) | +72 | 11.57 → 12.00 | | | |
+
+- **t = 1.0 beat t = 1.3 directly at 500 ms:** 52.2 % (50.1–54.3), +15 Elo, depth 16.55 against 15.83.
+- **Kept, with t = 1.0 as the default.** This is the largest gain of phase 5 so far, about +120 Elo at 500 ms. The old selective search, its `SelectiveMargin`/`SelectivePercent` options and the `sel-margin=`/`sel-percent=` keys were removed.
+  - `SearchOptions.ProbCutPercent` (`mpc=`) stays to retune t when the search changes.
+  - `SearchOptions.Selective = false` turns Multi-ProbCut off for the `mpc` command.
+- **Everything between t = 0.8 and 1.3 is within noise at 100 ms.** At 500 ms the lower t wins: there the extra depth is worth more than the cuts it gets wrong.
+- **Speed:**
+  - at a fixed depth of 10, `mid-bench` needs 3.8 M nodes instead of 17.5 M (4.6× fewer);
+  - the first solve starts about 1 empty square earlier (21.3 → 22.5 at 500 ms);
+  - FFO #40–44 are still all correct, in 4.0 s.
+- **Next ideas for Multi-ProbCut:**
+  - Egaroucid also uses it in the endgame (shallow depth d/3, item 5);
+  - a fit per depth pair instead of the linear model;
+  - t by game phase.
+
 ## Measurements
 
-All on 1 thread, on the same Intel i7-12850HX laptop VM as the port's measurements.
+All on 1 thread, on the same Intel i7-12850HX laptop VM as the port's measurements. That CPU is hybrid: 8 performance cores with 2 threads each and 8 efficiency cores, 24 threads in all. Matches play 12 games at a time, so their depths and times per move are averages over both kinds of core. A/B results are fair, because both engines in a game share a thread, but absolute numbers differ on other machines.
 
 | What | Stello 1 | Stello 2 | Egaroucid | Note |
 |---|---:|---:|---:|---|

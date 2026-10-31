@@ -22,6 +22,9 @@ internal static class TrainerProgram
           report --model <file> [--data <folder>] [--max-per-discs N] [--name <name>]
                                     The model's error on the test positions per number of empty squares, next to
                                     Stello 1 (scaled) and the Egaroucid port.
+          mpc [--from 14] [--to 52] [--per-discs 100] [--max-depth 12] [--workers N] [--out <file.csv>] | mpc --fit <file.csv>
+                                    Search test positions without selectivity to every depth and fit the Multi-ProbCut
+                                    error model (the spread of deep minus shallow values).
         """;
 
     public static int Main(string[] args)
@@ -46,6 +49,7 @@ internal static class TrainerProgram
                 "train" => TrainCommand.Run(options),
                 "report" => ReportCommand.Run(options),
                 "size" => SizeCommand.Run(options),
+                "mpc" => MpcCommand.Run(options),
                 _ => Fail(Usage),
             };
         }

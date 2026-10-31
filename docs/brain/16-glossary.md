@@ -58,7 +58,7 @@ The terms used in these documents. The last column gives the chapter that explai
 | Principal variation search (PVS) | Searching the first move with the full window and the others with a null window, re-searching only if one turns out better. | [06](06-midgame-search.md#the-root-principal-variation-search) |
 | Procedural sound | Synthesized 16-bit PCM WAV audio feedback generated at runtime by `SoundWaves` without external audio files. | [15](15-gui-and-settings.md#procedural-sound-system) |
 | Response table | Move ordering data: for each opponent move, a score for each reply that worked well against it before. | [05](05-move-ordering.md#the-response-table) |
-| Selective search | Stello's ProbCut-like pruning: at some depths a shallow search decides whether a position is clearly outside the window and can be cut. | [06](06-midgame-search.md#selective-search) |
+| Selective search | Pruning where a shallow search decides whether a position is clearly outside the window and can be cut. Stello 2.x uses Multi-ProbCut with a fitted error model; Stello 1 and 2.0 used a fixed margin at two depths. | [06](06-midgame-search.md#selective-search) |
 | Self-play | Book learning where the engine plays games against itself with the book and adds them to it. | [11](11-book-learning.md#self-play-playgame-and-selfplay) |
 | Soft limit | The time after which no new iteration of the search is started. | [09](09-time-control.md#how-the-search-uses-the-limits) |
 | Stable disc | A disc that can never be flipped again. | [04](04-evaluation.md#corner-stability-t) |

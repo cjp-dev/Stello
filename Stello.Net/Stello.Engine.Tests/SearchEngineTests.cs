@@ -30,6 +30,17 @@ public class SearchEngineTests
         Assert.Equal(0, result.Nodes);
     }
 
+    [Fact]
+    public void MultiProbCut_SearchesFewerNodesForNearlyTheSameScore()
+    {
+        SearchResult plain = new SearchEngine(19, Search.SearchOptions.Default with { Selective = false })
+            .Search(Midgame, Player.Black, SearchLimits.FixedDepth(9));
+        SearchResult selective = new SearchEngine().Search(Midgame, Player.Black, SearchLimits.FixedDepth(9));
+
+        Assert.True(selective.Nodes * 2 < plain.Nodes, $"{selective.Nodes:N0} nodes with Multi-ProbCut, {plain.Nodes:N0} without");
+        Assert.InRange(selective.Score - plain.Score, -300, 300);
+    }
+
     [Theory]
     [InlineData(1)]
     [InlineData(4)]

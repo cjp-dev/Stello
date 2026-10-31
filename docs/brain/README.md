@@ -44,7 +44,7 @@ The time limit can stop the search at any point; the best move found so far is t
 | 03 | [Rules and move generation](03-rules-and-move-generation.md) | Legal moves with shift-and-mask, flips, pass, game over, perft |
 | 04 | [Evaluation](04-evaluation.md) | Stello 1's evaluation: edge tables, corners, stability, mobility |
 | 05 | [Move ordering](05-move-ordering.md) | Square values, the response table, the hash move |
-| 06 | [Midgame search](06-midgame-search.md) | Negamax alpha-beta, iterative deepening, PVS, selective search |
+| 06 | [Midgame search](06-midgame-search.md) | Negamax alpha-beta, iterative deepening, PVS, selective search (Multi-ProbCut) |
 | 07 | [Transposition table](07-transposition-table.md) | Two-entry slots, bounds, replacement |
 | 08 | [Endgame solver](08-endgame-solver.md) | Stello 1's solver: win/loss/draw and exact passes, fastest-first, parity, enhanced transposition cutoff |
 | 09 | [Time control](09-time-control.md) | Time modes, time per move, "Move Now" |
