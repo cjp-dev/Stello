@@ -57,6 +57,8 @@ The time limit can stop the search at any point; the best move found so far is t
 | 16 | [Glossary](16-glossary.md) | The terms used in these documents |
 | 17 | [References](17-references.md) | Articles, papers and source code on the internet |
 | 18 | [Measuring the engine](18-measuring-the-engine.md) | Engine matches, the FFO endgame benchmark, the midgame benchmark, and the baseline numbers |
+| 19 | [The Egaroucid port](19-the-egaroucid-port.md) | The C# port of Egaroucid: licence, pipeline, C++ to C# file map, node-for-node parity with the C++ original, deliberate differences, how to run it |
+| 20 | [Comparing Stello with Egaroucid](20-engine-comparison.md) | Matches, evaluation error, midgame quality, midgame and endgame speed; what explains the gap, and what it means for Stello 2.0 |
 
 ## Reading paths
 
@@ -65,6 +67,7 @@ The time limit can stop the search at any point; the best move found so far is t
 - **Just the opening book:** 01, 02 (square numbers), 10, 11, 12.
 - **Tuning the engine:** 18 (how to measure a change), 04, 05, 06, 07, 08, 09, and phase 8 in [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md#phase-8--performance-tuning-rounds-1-and-2-paused) for what has already been tried, with measurements, and the remaining ideas.
 - **UI & application architecture:** 01, 13, 14, 15.
+- **Comparing engines / Stello 2.0 work:** 18, 19, 20, then [improve-stello-strength-plan.md](../../Plans/improve-stello-strength-plan.md).
 
 ## How to view these documents
 

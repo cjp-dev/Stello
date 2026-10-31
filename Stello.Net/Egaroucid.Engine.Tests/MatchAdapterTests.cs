@@ -91,6 +91,21 @@ public class MatchAdapterTests
         }
     }
 
+    [Fact]
+    public void EngineMatch_StelloOneAtTheSameDepth_PlaysLikeStello()
+    {
+        // Stello 1 is a frozen copy of the engine Stello 2 starts from; until Stello 2 changes its search, both play the
+        // same games. Afterwards this only checks that Stello 1 plays whole games as a match side.
+        MatchSide stello = MatchCommands.ParseSide("depth=3,name=stello");
+        MatchSide stelloOne = MatchCommands.ParseSide("engine=stello-v1,depth=3,name=stello-v1");
+        Assert.StartsWith("Stello 1, depth 3", MatchCommands.Describe(stelloOne), StringComparison.Ordinal);
+
+        IReadOnlyList<MatchPair> pairs = new EngineMatch(stello, stelloOne, 2).Play(["d3c3c4c5f6f3f4e2d2c2", "d3c5e6d2c6d6c7f6f4f3b4"], null, CancellationToken.None);
+
+        Assert.Equal(2, pairs.Count);
+        Assert.All(pairs, pair => Assert.True(pair.AFirst.Moves.Count > 40 && pair.BFirst.Moves.Count > 40));
+    }
+
     [EgaroucidFact]
     public void EgaroucidPlayer_WithTheSameSeed_PlaysTheSameBookMoves()
     {

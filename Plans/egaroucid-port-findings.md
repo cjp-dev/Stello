@@ -19,8 +19,8 @@ What porting the Egaroucid engine to C# has taught us, written down as we go: ho
 | 3 Single-threaded search | done | All reference searches are exactly equal, node for node |
 | 4 Time management and book | done | Book values exactly equal to C++; the time mode works, but at short times the unlimited clog search and the book exit can take longer than the limit |
 | 5 Comparison with Stello | done | Egaroucid is 330–500 Elo stronger on 1 thread. Mostly its evaluation: its moves get better with time, Stello's hardly do ([report](egaroucid-comparison-report.md)) |
-| 6 Multi-threading (YBWC) | next | |
-| 7 Docs | | |
+| 6 Multi-threading (YBWC) | postponed | The work continues as Stello 2.0 ([improve-stello-strength-plan.md](improve-stello-strength-plan.md)) |
+| 7 Docs | done | Chapters 19 and 20 in `docs/brain` |
 
 ## Egaroucid compared with Stello
 

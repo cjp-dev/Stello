@@ -10,10 +10,10 @@ using SearchResult = Stello.Engine.SearchResult;
 namespace Stello.Benchmark;
 
 /// <summary>
-/// The engine a benchmark searches with (<c>--engine stello|egaroucid</c>): one search per position, each with empty hash
+/// The engine a benchmark searches with (<c>--engine stello|stello-v1|egaroucid</c>): one search per position, each with empty hash
 /// tables, on 1 thread.
 /// </summary>
-/// <param name="Engine">stello or egaroucid.</param>
+/// <param name="Engine">stello, stello-v1 or egaroucid.</param>
 /// <param name="Limits">The limits as text, for the report.</param>
 /// <param name="HashBits">Stello: two tables of 2^bits slots of two entries; Egaroucid: one table of 2^bits slots.</param>
 internal sealed record BenchSearcher(string Engine, string Limits, int HashBits, Func<BenchmarkPosition, SearchResult> Search)
@@ -43,6 +43,20 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                 {
                     stello.ClearHash();
                     return stello.Search(position.Board, position.Player, limits);
+                });
+
+            case "stello-v1":
+                if (options.Text("mpc") is not null || options.Text("level") is not null)
+                {
+                    throw new ArgumentException("--mpc and --level are only for --engine egaroucid.");
+                }
+
+                int v1Bits = options.Number("hash-bits", SearchLimits.DefaultHashBits, 10, 26);
+                var v1 = new Stello.Engine.V1.SearchEngine(v1Bits);
+                return new BenchSearcher(engine, limitText, v1Bits, position =>
+                {
+                    v1.ClearHash();
+                    return v1.Search(position.Board, position.Player, limits);
                 });
 
             case "egaroucid":
@@ -77,7 +91,7 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                 });
 
             default:
-                throw new ArgumentException("--engine must be stello or egaroucid.");
+                throw new ArgumentException("--engine must be stello, stello-v1 or egaroucid.");
         }
     }
 

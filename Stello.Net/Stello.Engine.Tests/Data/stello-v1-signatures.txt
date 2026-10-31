@@ -1,0 +1,34 @@
+# Stello 1's searches, recorded from Stello.Engine at commit a261a6d (before Stello 2.0): position id, limit, move,
+# score, kind, depth, nodes. StelloV1Tests checks that the frozen copy (Stello.Engine.V1) still searches exactly so.
+midgame.txt g01e48 depth=8 c4 57 Heuristic 8 78706
+midgame.txt g01e42 depth=8 d2 128 Heuristic 8 67139
+midgame.txt g01e36 depth=8 c2 267 Heuristic 8 59509
+midgame.txt g01e30 depth=8 e8 305 Heuristic 8 82435
+midgame.txt g01e26 depth=8 h7 290 Heuristic 8 30028
+midgame.txt g02e48 depth=8 b3 4 Heuristic 8 43155
+midgame.txt g02e42 depth=8 b1 34 Heuristic 8 29388
+midgame.txt g02e36 depth=8 e6 124 Heuristic 8 56796
+midgame.txt g02e30 depth=8 c8 85 Heuristic 8 145132
+midgame.txt g02e26 depth=8 c8 -87 Heuristic 8 45653
+midgame.txt g03e48 depth=8 f5 78 Heuristic 8 51667
+midgame.txt g03e42 depth=8 d8 93 Heuristic 8 110246
+midgame.txt g03e36 depth=8 g3 109 Heuristic 8 118365
+midgame.txt g03e30 depth=8 b8 386 Heuristic 8 14343
+midgame.txt g03e26 depth=8 c3 787 Heuristic 8 24523
+midgame.txt g04e48 depth=8 e1 65 Heuristic 8 24468
+midgame.txt g04e42 depth=8 g4 47 Heuristic 8 27267
+midgame.txt g04e36 depth=8 c8 25 Heuristic 8 98058
+midgame.txt g04e30 depth=8 g5 33 Heuristic 8 31044
+midgame.txt g04e26 depth=8 h7 -74 Heuristic 8 19157
+midgame.txt g05e48 depth=8 d6 51 Heuristic 8 84484
+midgame.txt g05e42 depth=8 f6 49 Heuristic 8 62982
+midgame.txt g05e36 depth=8 g6 67 Heuristic 8 63090
+midgame.txt g05e30 depth=8 g4 26 Heuristic 8 49533
+midgame.txt g05e26 depth=8 b2 70 Heuristic 8 20344
+midgame.txt g06e48 depth=8 b4 83 Heuristic 8 28647
+midgame.txt g06e42 depth=8 f2 49 Heuristic 8 32131
+midgame.txt g06e36 depth=8 f6 143 Heuristic 8 60445
+midgame.txt g06e30 depth=8 d8 235 Heuristic 8 32559
+midgame.txt g06e26 depth=8 b8 254 Heuristic 8 11721
+ffo-40-59.txt 40 solve a2 38 Exact 20 18003998
+ffo-40-59.txt 41 solve h4 0 Exact 22 43973573

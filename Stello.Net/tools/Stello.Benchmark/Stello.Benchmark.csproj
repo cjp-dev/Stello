@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Stello.Engine\Stello.Engine.csproj" />
+    <ProjectReference Include="..\..\Stello.Engine.V1\Stello.Engine.V1.csproj" />
     <ProjectReference Include="..\..\Egaroucid.Engine\Egaroucid.Engine.csproj" />
   </ItemGroup>
 

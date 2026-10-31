@@ -22,8 +22,8 @@ namespace Stello.Benchmark;
 internal sealed record QualityResult(string Engine, int TimeMs, string Empties, int Positions, double AverageLoss, double LossMargin, double BestMoveRate,
     double SolvedRate, double AverageMs);
 
-/// <param name="Difference">Stello's average loss minus Egaroucid's, position by position.</param>
-internal sealed record QualityDifference(int TimeMs, double Difference, double Margin);
+/// <param name="Difference">The first engine's average loss minus the second's, position by position.</param>
+internal sealed record QualityDifference(int TimeMs, string First, string Second, double Difference, double Margin);
 
 internal sealed record QualityRun(string Date, string Positions, int Workers, IReadOnlyList<QualityResult> Results, IReadOnlyList<QualityDifference> Differences);
 
@@ -142,9 +142,8 @@ internal static class QualityCommands
 
         var sides = engines.Select(engine => engine switch
         {
-            "stello" => MatchCommands.ParseSide("time-ms=1"),
-            "egaroucid" => MatchCommands.ParseSide("engine=egaroucid,time-ms=1"),
-            _ => throw new ArgumentException("--engines must be stello and/or egaroucid."),
+            "stello" or "stello-v1" or "egaroucid" => MatchCommands.ParseSide($"engine={engine},time-ms=1"),
+            _ => throw new ArgumentException("--engines must be a list of stello, stello-v1 and egaroucid."),
         }).ToArray();
 
         Console.WriteLine($"mid-quality: {positions.Count} positions, {string.Join(", ", times)} ms per move, {string.Join(" and ", engines)}, {workers} at a time.");
@@ -211,12 +210,13 @@ internal static class QualityCommands
                 }
             }
 
-            int s = Array.IndexOf(engines, "stello");
-            int g = Array.IndexOf(engines, "egaroucid");
-            if (s >= 0 && g >= 0)
+            for (int a = 0; a < engines.Length; a++)
             {
-                double[] diff = ofTime.Select(t => moves[s, t].Loss - moves[g, t].Loss).ToArray();
-                differences.Add(new QualityDifference(time, diff.Average(), Margin(diff)));
+                for (int b = a + 1; b < engines.Length; b++)
+                {
+                    double[] diff = ofTime.Select(t => moves[a, t].Loss - moves[b, t].Loss).ToArray();
+                    differences.Add(new QualityDifference(time, engines[a], engines[b], diff.Average(), Margin(diff)));
+                }
             }
         }
 
@@ -262,11 +262,11 @@ internal static class QualityCommands
         if (run.Differences.Count > 0)
         {
             text.AppendLine();
-            text.AppendLine("| ms/move | Stello's loss − Egaroucid's (paired, discs) |");
-            text.AppendLine("|---:|---:|");
+            text.AppendLine("| ms/move | Engines | First's loss − second's (paired, discs) |");
+            text.AppendLine("|---:|---|---:|");
             foreach (QualityDifference d in run.Differences)
             {
-                text.AppendLine(CultureInfo.InvariantCulture, $"| {d.TimeMs} | {d.Difference:+0.00;-0.00;0.00} ± {d.Margin:0.00} |");
+                text.AppendLine(CultureInfo.InvariantCulture, $"| {d.TimeMs} | {d.First} − {d.Second} | {d.Difference:+0.00;-0.00;0.00} ± {d.Margin:0.00} |");
             }
         }
 

@@ -42,7 +42,7 @@ A side is a short list of settings:
 | `hash-bits=19` | the size of each hash table: 2<sup>19</sup> slots (the app's default) |
 | `name=new` | the name in the report |
 
-For example `--a time-ms=100,name=old --b time-ms=200,name=new`. Neither side uses the opening book, so the games test the search and the evaluation. When later steps add settings to the engine (another evaluation, threads), they become new keys.
+For example `--a time-ms=100,name=old --b time-ms=200,name=new`. Neither side uses the opening book unless it has `book=on`, so the games test the search and the evaluation. When later steps add settings to the engine (another evaluation, threads), they become new keys.
 
 ### Start positions
 
@@ -90,6 +90,28 @@ Stello.Benchmark mid-bench --compare before.json      (with the new code)
 ```
 
 `solve-bench` has the same `--out` and `--compare`. A change that is meant to play differently (a new evaluation) will differ, and must instead win a `match`.
+
+## Comparing engines
+
+Since the Egaroucid port ([chapter 19](19-the-egaroucid-port.md)), the tool can measure three engines. A match side chooses one with the key `engine=`, and `solve-bench` and `mid-bench` with `--engine`:
+
+| Value | Engine |
+|---|---|
+| `stello` (the default) | the engine in `Stello.Engine`, which becomes Stello 2.0 |
+| `stello-v1` | Stello 1: the engine before Stello 2.0, frozen in `Stello.Engine.V1` as the baseline |
+| `egaroucid` | the C# port of Egaroucid in `Egaroucid.Engine`; it needs Egaroucid's resources |
+
+For example `--a engine=stello-v1,time-ms=100 --b engine=egaroucid,time-ms=100`. An Egaroucid side takes `level=` instead of `depth=`, and also `book-acc=` and `seed=`. `book=on` turns on the opening book of either engine.
+
+Three commands compare the engines part by part:
+
+| Command | What it does |
+|---|---|
+| `eval-compare [--data <folder>] [--per-empties 5000]` | Scores both evaluations against the final scores of Egaroucid's training games (not in the repository). |
+| `make-exact [--games 100] [--empties 28,26,24]` | Writes midgame positions with every move solved exactly by the port, to `Data/midgame-exact.txt`. |
+| `mid-quality [--times 50,200,1000] [--engines stello,stello-v1,egaroucid]` | Measures the discs each engine's move loses against perfect play, at a fixed time per move. |
+
+[Chapter 20](20-engine-comparison.md) gives the results and the exact commands.
 
 ## Baseline
 

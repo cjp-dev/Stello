@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Stello 1: the engine as it was before Stello 2.0 (commit a261a6d), frozen as the baseline for matches and benchmarks.
+    Only the tools and tests use it. Do not change its search or evaluation; Stello 2.0 lives in Stello.Engine.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Stello.Engine\Stello.Engine.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Stello.Engine.Tests" />
+    <InternalsVisibleTo Include="Stello.Benchmark" />
+    <InternalsVisibleTo Include="Egaroucid.Engine.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -113,6 +113,16 @@ Articles, papers and source code on the internet that explain the techniques use
 | [Logistello – Michael Buro](https://skatgame.net/mburo/log.html) | Michael Buro's historic championship Othello program and evaluation papers. |
 | [Usability 101: Introduction to Usability – Nielsen Norman Group](https://www.nngroup.com/articles/usability-101-introduction-to-usability/) | Principles of status visibility, match integrity, and user control. |
 
+## 19 The Egaroucid port, 20 Comparing Stello with Egaroucid
+
+| Link | What you find there |
+|---|---|
+| [Egaroucid on GitHub](https://github.com/Nyanyan/Egaroucid) | Takuto Yamana's Othello program (GPL-3.0-or-later), whose engine 7.9 Stello ports to C# (`Egaroucid.Engine`). |
+| [Egaroucid – website](https://www.egaroucid.nyanyan.dev/en/) | Downloads, including the resources the port reads (evaluation weights, hash numbers, opening book). |
+| [Technical explanation – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/explanation/) | How Egaroucid works: pattern evaluation, Multi-ProbCut, move ordering and the endgame search. |
+| [Training data – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/train-data/) | Egaroucid's self-play and match data. Stello's `eval-compare` uses it to measure evaluations; it may not be redistributed. As its terms ask: *Stello used Egaroucid's self-play data for training and testing its Othello AI.* |
+| [ProbCut – Chess Programming Wiki](https://www.chessprogramming.org/ProbCut) | Multi-ProbCut, the selective search Egaroucid uses. |
+
 ## Writing these documents
 
 | Link | What you find there |

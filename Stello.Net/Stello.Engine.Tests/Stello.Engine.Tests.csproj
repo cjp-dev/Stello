@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Stello.Engine\Stello.Engine.csproj" />
+    <ProjectReference Include="..\Stello.Engine.V1\Stello.Engine.V1.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -27,6 +28,7 @@
     <None Include="..\Book\opening-book.txt" Link="Data\opening-book.txt" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\Book\opening-book.bin" Link="Data\opening-book.bin" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Data\endgame-c-positions.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Data\stello-v1-signatures.txt" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\tools\Stello.Benchmark\Data\*.txt" LinkBase="Data\Benchmark" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

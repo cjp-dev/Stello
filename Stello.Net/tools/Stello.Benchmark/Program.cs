@@ -12,14 +12,14 @@ internal static class Program
           match --a <side> --b <side> [--starts <file>] [--max-starts N] [--workers N] [--name <name>]
                                     Play side A against side B, two games per start position with the colours swapped.
                                     A side is a list such as "time-ms=100", "depth=8", "game-s=60,hash-bits=20,name=new"
-                                    or "engine=egaroucid,time-ms=100,book=on": engine (stello or egaroucid), time-ms
+                                    or "engine=egaroucid,time-ms=100,book=on": engine (stello, stello-v1 = Stello 1 or egaroucid), time-ms
                                     (per move), game-s (per game), depth (Stello) or level (Egaroucid), hash-bits
                                     (Stello 19; Egaroucid 21, the same memory), book (on/off, off), book-acc (Egaroucid, 0),
                                     seed (Egaroucid's book choice, 1), name.
-          solve-bench [--engine stello|egaroucid] [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits N]
+          solve-bench [--engine stello|stello-v1|egaroucid] [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits N]
                       [--out <file.json>] [--compare <file.json>]
                                     Solve the FFO positions exactly: score check, nodes, time to solve.
-          mid-bench [--engine stello|egaroucid] [--positions <file>] [--depth 10] [--mpc 100 | --level L] [--passes 3]
+          mid-bench [--engine stello|stello-v1|egaroucid] [--positions <file>] [--depth 10] [--mpc 100 | --level L] [--passes 3]
                     [--hash-bits N] [--out <file.json>] [--compare <file.json>]
                                     Search the midgame positions to a fixed depth: nodes, move and score of each search, speed.
                                     --mpc (Egaroucid's selectivity: 74, 88, 93, 98, 99, 99.9 or 100) and --level are for Egaroucid.
@@ -29,7 +29,7 @@ internal static class Program
           make-exact [--starts <file>] [--from 20] [--games 100] [--depth 6] [--empties 28,26,24] [--workers N] [--out <file>]
                                     Write positions from Stello's games with every move solved exactly by the Egaroucid port
                                     (Data/midgame-exact.txt). An existing file is continued.
-          mid-quality [--positions <file>] [--times 50,200,1000] [--engines stello,egaroucid] [--workers N] [--max-positions N]
+          mid-quality [--positions <file>] [--times 50,200,1000] [--engines stello,stello-v1,egaroucid] [--workers N] [--max-positions N]
                                     The discs each engine's move loses against perfect play, at fixed time per move.
           make-starts [--book <book.txt>] [--plies 10-12] [--max-value 40] [--out <file>]
                                     Write balanced start positions for match from the opening book.

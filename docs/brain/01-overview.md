@@ -6,7 +6,7 @@ This chapter shows the big picture: the projects, the main types, and what happe
 
 ## The projects
 
-The solution [Stello.Net.slnx](../../Stello.Net/Stello.Net.slnx) has seven projects. The arrows show which project uses which; the apps and the app tests also use the engine's types directly.
+The solution [Stello.Net.slnx](../../Stello.Net/Stello.Net.slnx) has eleven projects. The arrows show which project uses which; the apps and the app tests also use the engine's types directly. The projects for comparing engines (Stello 1, the Egaroucid port and the port's tests) are used only by the tools and tests, never by the apps ([chapter 19](19-the-egaroucid-port.md)).
 
 ```mermaid
 flowchart LR
@@ -18,6 +18,12 @@ flowchart LR
     EngineTests["Stello.Engine.Tests<br/>engine tests"] --> Engine
     Tool["Stello.BookTool<br/>book tool<br/>net10.0"] --> Engine
     Bench["Stello.Benchmark<br/>matches and benchmarks<br/>net10.0"] --> Engine
+    V1["Stello.Engine.V1<br/>Stello 1, frozen<br/>net10.0"] --> Engine
+    Bench --> V1
+    Bench --> Egaroucid["Egaroucid.Engine<br/>C# port of Egaroucid<br/>net10.0"]
+    EgaroucidTests["Egaroucid.Engine.Tests<br/>port tests"] --> Egaroucid
+    EgaroucidTests --> Bench
+    Reference["tools/Egaroucid.Reference<br/>C++ reference, outside the solution"] -. "fixtures" .-> EgaroucidTests
     Text[("Stello.Net/Book/opening-book.txt<br/>master opening book")] -. "build" .-> Tool
     Tool -. "build" .-> Book[("Stello.Net/Book/opening-book.bin")]
     Book -. "copied as Data/OPENING" .-> Wpf
@@ -33,7 +39,11 @@ flowchart LR
 | [Stello.Engine.Tests](../../Stello.Net/Stello.Engine.Tests) | xUnit tests of the engine: perft, evaluation, search, endgame (FFO positions), book, book learning. |
 | [Stello.Net.Tests](../../Stello.Net/Stello.Net.Tests) | xUnit tests of the view models, with fake dialogs, settings and book storage. |
 | [Stello.BookTool](../../Stello.Net/tools/Stello.BookTool) | Console tool for the master opening book: import, format, build, verify, statistics, recalculating the leaves, comparing and matching books (chapter 12). |
-| [Stello.Benchmark](../../Stello.Net/tools/Stello.Benchmark) | Console tool that measures the engine: matches between engine settings, the FFO endgame benchmark and a midgame speed benchmark that also checks that a change kept the search unchanged (chapter 18). |
+| [Stello.Benchmark](../../Stello.Net/tools/Stello.Benchmark) | Console tool that measures the engine: matches between engine settings, the FFO endgame benchmark and a midgame speed benchmark that also checks that a change kept the search unchanged (chapter 18). It also plays and measures Stello 1 and the Egaroucid port (chapter 20). |
+| [Stello.Engine.V1](../../Stello.Net/Stello.Engine.V1) | Stello 1: the engine as it was before Stello 2.0, frozen as the baseline for matches and benchmarks (`engine=stello-v1`). Tools and tests only. |
+| [Egaroucid.Engine](../../Stello.Net/Egaroucid.Engine) | A C# port of the Egaroucid engine (© Takuto Yamana, GPL-3.0-or-later), exact node for node on 1 thread, for comparing engines (chapter 19). Tools and tests only. |
+| [Egaroucid.Engine.Tests](../../Stello.Net/Egaroucid.Engine.Tests) | xUnit tests that compare the port with the C++ original, and the match adapter. Skipped when Egaroucid's resources are missing (chapter 19). |
+| [tools/Egaroucid.Reference](../../Stello.Net/tools/Egaroucid.Reference) | Not a .NET project: the C++ reference harness that builds the original Egaroucid and writes the port's test fixtures (chapter 19). |
 
 The master opening book is the text file [Stello.Net/Book/opening-book.txt](../../Stello.Net/Book/opening-book.txt). The book tool builds [opening-book.bin](../../Stello.Net/Book/opening-book.bin) from it, which the WPF app links as `Data/OPENING` and the web app copies to `wwwroot/data/OPENING.bin` when it is built. The engine tests use both files, and the C++ file [Stello C++/OPENING](../../Stello%20C++/OPENING) to test the import (chapter 10).
 

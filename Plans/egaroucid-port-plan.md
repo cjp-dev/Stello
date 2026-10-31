@@ -291,3 +291,5 @@ All of this lives in `tools/Stello.Benchmark`, which references `Egaroucid.Engin
     - `mid-quality`: Egaroucid's loss falls from 1.23 to 0.51 discs from 50 to 1000 ms, Stello's from 1.61 to 1.38.
     - FFO #40–49: 25.6 s against 369 s.
   - **Not done:** hybrids (deferred to the improved-engine step, as planned).
+- **Phase 6: postponed (2026-10-31).** The user stopped the port after phase 5: the comparison is a good enough baseline. The work continues in [improve-stello-strength-plan.md](improve-stello-strength-plan.md) (Stello 2.0). YBWC can be ported later if wanted.
+- **Phase 7: done as part of phase 0 of the Stello 2.0 plan.** The docs chapters `docs/brain/19-the-egaroucid-port.md` and `20-engine-comparison.md`.
