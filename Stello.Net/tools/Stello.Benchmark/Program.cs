@@ -15,7 +15,7 @@ internal static class Program
                                     or "engine=egaroucid,time-ms=100,book=on": engine (stello, stello-v1 = Stello 1 or egaroucid), time-ms
                                     (per move), game-s (per game), depth (Stello) or level (Egaroucid), eval (Stello: another pattern evaluation file), sel-margin and sel-percent (Stello 2's
                                     search switches), hash-bits
-                                    (Stello 19; Egaroucid 21, the same memory), book (on/off, off), book-acc (Egaroucid, 0),
+                                    (Stello 19; Egaroucid 21, the same memory), book (on/off, off), book-file (Stello: another text book, turns the book on), book-acc (Egaroucid, 0),
                                     seed (Egaroucid's book choice, 1), name.
           solve-bench [--engine stello|stello-v1|egaroucid] [--eval <file>] [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits N]
                       [--out <file.json>] [--compare <file.json>]

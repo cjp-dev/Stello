@@ -105,7 +105,7 @@ Since the Egaroucid port ([chapter 19](19-the-egaroucid-port.md)), the tool can 
 | `stello-v1` | Stello 1: the engine before Stello 2.0, frozen in `Stello.Engine.V1` as the baseline |
 | `egaroucid` | the C# port of Egaroucid in `Egaroucid.Engine`; it needs Egaroucid's resources |
 
-For example `--a engine=stello-v1,time-ms=100 --b engine=egaroucid,time-ms=100`. An Egaroucid side takes `level=` instead of `depth=`, and also `book-acc=` and `seed=`. `book=on` turns on the opening book of any engine; Stello 1 then plays from its own book, `Book/opening-book-stello1.txt`. `--eval <file>` gives `solve-bench` and `mid-bench` another Stello 2 evaluation.
+For example `--a engine=stello-v1,time-ms=100 --b engine=egaroucid,time-ms=100`. An Egaroucid side takes `level=` instead of `depth=`, and also `book-acc=` and `seed=`. `book=on` turns on the opening book of any engine; Stello 1 then plays from its own book, `Book/opening-book-stello1.txt`. `book-file=<text book>` gives a Stello side another book and turns it on. `--eval <file>` gives `solve-bench` and `mid-bench` another Stello 2 evaluation.
 
 Three commands compare the engines part by part:
 

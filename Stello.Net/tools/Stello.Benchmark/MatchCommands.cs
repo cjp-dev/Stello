@@ -128,6 +128,7 @@ internal static class MatchCommands
         int seed = 1;
         string? name = null;
         string? evalFile = null;
+        string? bookFile = null;
         int? selectiveMargin = null;
         int? selectivePercent = null;
         var keys = new HashSet<string>();
@@ -169,6 +170,10 @@ internal static class MatchCommands
                         _ => throw new ArgumentException($"book must be on or off in the side \"{text}\"."),
                     };
                     break;
+                case "book-file":
+                    bookFile = value;
+                    useBook = true;
+                    break;
                 case "book-acc":
                     bookAccuracy = Number(key, value, 0, 10);
                     break;
@@ -200,7 +205,7 @@ internal static class MatchCommands
 
         foreach ((string key, bool allowed) in new[]
         {
-            ("depth", !egaroucid), ("level", egaroucid), ("book-acc", egaroucid), ("seed", egaroucid), ("eval", engine == EngineKind.Stello), ("sel-margin", engine == EngineKind.Stello),
+            ("depth", !egaroucid), ("level", egaroucid), ("book-acc", egaroucid), ("seed", egaroucid), ("eval", engine == EngineKind.Stello), ("book-file", !egaroucid), ("sel-margin", engine == EngineKind.Stello),
             ("sel-percent", engine == EngineKind.Stello),
         })
         {
@@ -228,7 +233,7 @@ internal static class MatchCommands
             int bits = hashBits ?? SearchLimits.DefaultHashBits;
             // Stello 1 plays from the book it was made with; Stello 2's book was recalculated by Stello 2.
             OpeningBook? book = useBook
-                ? OpeningBook.Load(Program.DataFile(engine == EngineKind.StelloV1 ? "opening-book-stello1.txt" : "opening-book.txt"))
+                ? OpeningBook.Load(bookFile ?? Program.DataFile(engine == EngineKind.StelloV1 ? "opening-book-stello1.txt" : "opening-book.txt"))
                 : null;
             string description = $"{limitText}, hash bits {bits}, {(useBook ? "book" : "no book")}";
             return engine == EngineKind.StelloV1
