@@ -704,8 +704,12 @@ public sealed partial class SearchEngine
         return PatternScore(board, player);
     }
 
+    // Capped at ±64 discs, the largest possible result.
     private int PatternScore(in Board board, Player player) =>
-        _pattern.Evaluate(board.Discs(player), board.Discs(player.Opponent())) * PatternUnitsPerDisc / _pattern.UnitsPerDisc;
+        Math.Clamp(
+            _pattern.Evaluate(board.Discs(player), board.Discs(player.Opponent())) * PatternUnitsPerDisc / _pattern.UnitsPerDisc,
+            -64 * PatternUnitsPerDisc,
+            64 * PatternUnitsPerDisc);
 
     // SearchOptions.SoftTimePercent: no new iteration after this share of the hard limit.
     private TimeBudget WithSoftPercent(TimeBudget budget) =>

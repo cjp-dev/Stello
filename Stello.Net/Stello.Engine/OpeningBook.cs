@@ -22,7 +22,7 @@ public sealed class OpeningBook
     /// Bumped by hand when a change to the evaluation or the search changes the values it finds. Version 3 is Stello
     /// 2.0, whose heuristic values are in 1/100 disc.
     /// </summary>
-    internal const int EngineVersion = 3;
+    internal const int EngineVersion = 4;
 
     internal const Player RootPlayer = Player.White;
 
