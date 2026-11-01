@@ -1,0 +1,212 @@
+{
+  "Date": "2026-11-01 17:26",
+  "Model": "p15-s30-3m.bin",
+  "ModelBytes": 3595508,
+  "Positions": 1040276,
+  "ModelPerSecond": 3462070.4344411236,
+  "ModelAll": {
+    "Scale": 16,
+    "Mae": 5.352793273131361,
+    "Rmse": 7.1593602765598385
+  },
+  "StelloOneAll": {
+    "Scale": 72.21175526848464,
+    "Mae": 12.140181235635989,
+    "Rmse": 15.456219914940577
+  },
+  "EgaroucidAll": null,
+  "Groups": [
+    {
+      "Empties": "56-60",
+      "Positions": 4,
+      "DrawMae": 1.5,
+      "Model": {
+        "Scale": 16,
+        "Mae": 3.71875,
+        "Rmse": 5.313235243239283
+      },
+      "StelloOne": {
+        "Scale": 2568.8478260869565,
+        "Mae": 1.5327968045224132,
+        "Rmse": 2.235066729393697
+      },
+      "Egaroucid": null
+    },
+    {
+      "Empties": "51-55",
+      "Positions": 40272,
+      "DrawMae": 12.693161501787843,
+      "Model": {
+        "Scale": 16,
+        "Mae": 6.124234890246325,
+        "Rmse": 8.434862284097015
+      },
+      "StelloOne": {
+        "Scale": 26.478574460732055,
+        "Mae": 8.075564222653684,
+        "Rmse": 12.309853863860186
+      },
+      "Egaroucid": null
+    },
+    {
+      "Empties": "46-50",
+      "Positions": 100000,
+      "DrawMae": 14.9612,
+      "Model": {
+        "Scale": 16,
+        "Mae": 6.29165875,
+        "Rmse": 8.483080324792109
+      },
+      "StelloOne": {
+        "Scale": 17.926019529376166,
+        "Mae": 7.910723371373499,
+        "Rmse": 10.429038698285144
+      },
+      "Egaroucid": null
+    },
+    {
+      "Empties": "41-45",
+      "Positions": 100000,
+      "DrawMae": 17.07822,
+      "Model": {
+        "Scale": 16,
+        "Mae": 6.3538575,
+        "Rmse": 8.443378308806553
+      },
+      "StelloOne": {
+        "Scale": 19.71957793468825,
+        "Mae": 8.342352436411439,
+        "Rmse": 10.965428596995293
+      },
+      "Egaroucid": null
+    },
+    {
+      "Empties": "36-40",
+      "Positions": 100000,
+      "DrawMae": 18.45148,
+      "Model": {
+        "Scale": 16,
+        "Mae": 6.1842375,
+        "Rmse": 8.15253978831137
+      },
+      "StelloOne": {
+        "Scale": 24.279956026570392,
+        "Mae": 9.49537249273152,
+        "Rmse": 12.27142365546473
+      },
+      "Egaroucid": null
+    },
+    {
+      "Empties": "31-35",
+      "Positions": 100000,
+      "DrawMae": 19.54286,
+      "Model": {
+        "Scale": 16,
+        "Mae": 5.9314025,
+        "Rmse": 7.776536087206501
+      },
+      "StelloOne": {
+        "Scale": 30.780961800196796,
+        "Mae": 10.223722128390483,
+        "Rmse": 13.060620440601264
+      },
+      "Egaroucid": null
+    },
+    {
+      "Empties": "26-30",
+      "Positions": 100000,
+      "DrawMae": 20.21092,
+      "Model": {
+        "Scale": 16,
+        "Mae": 5.521439375,
+        "Rmse": 7.192317480630809
+      },
+      "StelloOne": {
+        "Scale": 39.01588077982521,
+        "Mae": 10.503800809655234,
+        "Rmse": 13.319348319489754
+      },
+      "Egaroucid": null
+    },
+    {
+      "Empties": "21-25",
+      "Positions": 100000,
+      "DrawMae": 20.572,
+      "Model": {
+        "Scale": 16,
+        "Mae": 5.05088125,
+        "Rmse": 6.588941795491519
+      },
+      "StelloOne": {
+        "Scale": 48.4594790372422,
+        "Mae": 10.195049170160207,
+        "Rmse": 12.934558990616809
+      },
+      "Egaroucid": null
+    },
+    {
+      "Empties": "16-20",
+      "Positions": 100000,
+      "DrawMae": 20.73488,
+      "Model": {
+        "Scale": 16,
+        "Mae": 4.98079125,
+        "Rmse": 6.409183974481463
+      },
+      "StelloOne": {
+        "Scale": 60.13102522461651,
+        "Mae": 9.86100329581246,
+        "Rmse": 12.453689166793504
+      },
+      "Egaroucid": null
+    },
+    {
+      "Empties": "11-15",
+      "Positions": 100000,
+      "DrawMae": 20.64798,
+      "Model": {
+        "Scale": 16,
+        "Mae": 5.0248625,
+        "Rmse": 6.460861034916322
+      },
+      "StelloOne": {
+        "Scale": 74.25718398564237,
+        "Mae": 9.290686007085863,
+        "Rmse": 11.726084669608348
+      },
+      "Egaroucid": null
+    },
+    {
+      "Empties": "6-10",
+      "Positions": 100000,
+      "DrawMae": 20.45762,
+      "Model": {
+        "Scale": 16,
+        "Mae": 4.801738125,
+        "Rmse": 6.180825999740042
+      },
+      "StelloOne": {
+        "Scale": 91.36991194734529,
+        "Mae": 8.75071589199799,
+        "Rmse": 10.970709410217706
+      },
+      "Egaroucid": null
+    },
+    {
+      "Empties": "1-5",
+      "Positions": 100000,
+      "DrawMae": 19.7988,
+      "Model": {
+        "Scale": 16,
+        "Mae": 3.076454375,
+        "Rmse": 4.265766394176725
+      },
+      "StelloOne": {
+        "Scale": 112.28905246450248,
+        "Mae": 8.004040170209475,
+        "Rmse": 10.009214661278909
+      },
+      "Egaroucid": null
+    }
+  ]
+}

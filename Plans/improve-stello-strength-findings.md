@@ -429,6 +429,35 @@ Matches, 1,180 games each:
 - **The clog search was not tried.** It finds forced early game ends, mostly wipeouts. Egaroucid needs it because its selective endgame can miss them. With no selective endgame there is nothing for it to fix, and wipeouts are rare in these games.
 - **Kept:** the trainer's `mpc-end` command, with the single-move fix in both commands, for a later try, for example with Egaroucid's staged levels (74 % … 100 %) or at longer time controls.
 
+### Side experiment: a larger evaluation for the desktop (2026-11-01)
+
+The question: does an evaluation well over 1 MB, for the desktop app only, play better?
+
+- **Trainer change first (8cf2341).** Rows are now stored as 16-bit numbers relative to each feature's first index, in blocks of 2^22 rows. Before, they were 32-bit indices in one array. This halves the memory, so 3 M positions per disc count fit on the 15 GB laptop. The change reproduces `Book/stello-eval.bin` byte for byte.
+- **Settings:** all runs use 1/16 discs and zero weights seen fewer than 10 times. The errors are on the usual test split (1.04 M positions).
+
+| Model | Positions per disc count | File (gzip) | Test error (MAE / RMSE) | Peak memory | Training time |
+|---|---:|---:|---:|---:|---:|
+| `plus15` × 10 stages (the shipped model) | 1 M | 0.99 MB | 5.47 / 7.31 | 5.8 GB | 8 min |
+| `plus15` × 30 stages | 3 M | 3.6 MB | 5.35 / 7.16 | 11.1 GB | 36 min |
+| `plus15` × 60 stages | 1 M | 6.0 MB | 5.35 / 7.17 | 3.1 GB | 21 min |
+| `plus15` × 60 stages | 3 M | 6.5 MB | 5.31 / 7.12 | 8.6 GB | 56 min |
+| `egaroucid16` × 30 stages | 3 M | 4.6 MB | 5.27 / 7.05 | 10.4 GB | 45 min |
+| `egaroucid16` × 60 stages | 1 M | 7.6 MB | 5.28 / 7.07 | 3.6 GB | 25 min |
+| **`egaroucid16` × 60 stages** | **3 M** | **8.3 MB** | **5.23 / 7.01** | 10.0 GB | 70 min |
+| `plus15` / `egaroucid16` × 10 stages | 3 M | — | out of memory | > 13 GB | — |
+
+Egaroucid's evaluation has a test error of 5.05 for comparison. The 10-stage runs failed because each stage spans 6 disc counts, so it holds 18 M rows plus its neighbours'. The reports are `benchmark-results/grid-*.md`.
+
+- **The gains on paper are small.** The best model is 0.24 discs better than the shipped one, at 8 times the size.
+  - Roughly 2/3 of the gain comes from more stages and the larger pattern set, and 1/3 from three times the data.
+  - Three times the data gives only −0.04 to −0.05, so 10 M per disc count on the 32 GB PC would gain perhaps another 0.05.
+- **In play it is no better.** The best model (`egaroucid16` × 60 stages, 3 M) played the shipped evaluation at 500 ms per move, with no books and 1,180 games. Both used the shipped model's Multi-ProbCut fit.
+  - It scored 51.2 % (49.0–53.4), +9 Elo (−7 to +24). The difference is not significant.
+  - `egaroucid16` has more patterns, so the search ran at 3.66 M nodes per second against 4.41 M (−17 %). The midgame depth fell from 16.75 to 16.39.
+  - The more accurate evaluation roughly pays for its slower speed, and no more ([result](benchmark-results/match_v2x-eval-e16-s60-3m-500ms.md)).
+- **Not pursued.** The final 10 M model, its own Multi-ProbCut fit (about 2 h) and a 2 s match could add a few Elo at most, for an 8 MB file. Size alone does not close the gap to Egaroucid's 5.05: with Egaroucid's own 16 pattern shapes and 60 stages, Stello's trainer reaches 5.23. The rest must come from Egaroucid's other inputs or from its training.
+
 ## Measurements
 
 All on 1 thread, on the same Intel i7-12850HX laptop VM as the port's measurements. That CPU is hybrid: 8 performance cores with 2 threads each and 8 efficiency cores, 24 threads in all. Matches play 12 games at a time, so their depths and times per move are averages over both kinds of core. A/B results are fair, because both engines in a game share a thread, but absolute numbers differ on other machines.
