@@ -20,7 +20,7 @@ What the work on Stello 2.0 teaches us, written down as we go: the decisions, th
 | 1 Training data and trainer | done | 500 M positions in 2 minutes; a first model (11 patterns × 15 stages, 1.5 MB) has 5.55 discs error on held-out games, against Stello 1's 12.14 and Egaroucid's 5.05 |
 | 2 Evaluation 2.0 | done | 15 patterns × 10 stages in 0.99 MB: 5.47 discs error; +400 Elo against Stello 1 at 100 and 500 ms, +67 against Egaroucid at 100 ms, −84 at 500 ms |
 | 3 Endgame solver | done | FFO #40–49 in 47.1 s (Stello 1 369 s, Egaroucid port 25.6 s); in games as strong as the old solver (51.1 % at 500 ms) |
-| 4 Release 2.0 in the apps | in progress | The engine is Stello 2; the book is being recalculated on a second computer; in the browser 22 empty squares solve in 0.6–1.3 s (Stello 1: 1.1–4.5 s) |
+| 4 Release 2.0 in the apps | done | The engine is Stello 2 with a book recalculated by it; with books on it scores 88.9 % (+362) against Stello 1 at 500 ms, and the new book is as good as the old one (49.2 %); in the browser 22 empty squares solve in 0.6–1.3 s (Stello 1: 1.1–4.5 s) |
 | 5 Search improvements (2.x) | | |
 
 ## Stello 1, the frozen baseline
@@ -208,10 +208,21 @@ The chosen model is `Stello.Net/Book/stello-eval.bin` ([report](benchmark-result
 - **The evaluation is built into `Stello.Engine`** as an embedded resource (`EvalWeights.Default`), instead of a separate file that WPF links and the web app fetches, as the plan said. Every app and tool gets it without loading code, and the browser downloads the same bytes inside the engine assembly. That assembly is now 1.15 MB, 1.03 MB compressed.
 - **The book:**
   - `OpeningBook.EngineVersion` is 3, so `recalc` searches every heuristic leaf again (8,397 of 11,613 leaves; the 3,216 exact ones are kept). The heuristic values are in 1/100 disc and the solved ones stay ±(32600 + discs). A first try with 30 s per position already reached depth 17–18, as deep as Stello 1's last recalculation in 60 s; the run uses 60 s, like Stello 1's.
-  - The recalculation runs on a second computer (Ryzen 7 7800X3D, 8 workers, about 16 hours), so it does not disturb timed matches here. It can be stopped and continued: values already searched by version 3 are skipped.
+  - The recalculation ran on a second computer (Ryzen 7 7800X3D, 8 workers, about 16 hours), so it did not disturb timed matches here. 11,322 values changed (5,634 leaves, 5,688 backed up), 219 more leaves were solved exactly (3,435 in all) and 1,307 positions got another first move. White's replies to d3: c5 −0.25, c3 −0.62, e3 −1.50 discs. The main line from the start is 15 moves, as before up to g5. `verify` passes.
+  - One leaf had −65 discs, as the midgame evaluation was not capped; Stello 2.x caps it at ±64.
+  - **Flaw found afterwards:** 2,718 leaves carry the C++ book's `INEXACT` flag, imported as win/loss/draw, with evaluation-sized values (e.g. −18). `recalc` kept every win/loss/draw value it could not solve, so these kept their C++-era values in this recalculation too (`WinLossDraw -> WinLossDraw 2,744 (0)`). Fixed on `feature/stello-v2.x` (d21e42f): only values beyond ±32,600 are kept. The 2.x recalculation replaces them.
   - `Book/opening-book-stello1.txt` keeps the old book for Stello 1's match sides (`engine=stello-v1,book=on`).
 - **The GUI** shows heuristic scores in discs with one decimal ("+1.2 discs"). The About box describes the new evaluation and solver and credits Egaroucid. Its version text already said "Stello Version 2.0" (from the C# port) and is unchanged.
 - **The book-learning worked example** (chapter 11, `BookLearnerTests`) has new values: with Stello 2, c5 (−62) stays ahead of e3 (−275) at the root.
+
+### The book gates (500 ms per move, books on, 1,180 games from `starts.txt`)
+
+| Match | Result |
+|---|---|
+| Stello 2 + new book against Stello 1 + its book | **88.9 %** (87.2–90.7 %), +362 Elo, +12.6 discs per game; depth 13.05 against 12.25 ([result](benchmark-results/match_v2-p4-book-vs-v1-500ms.md)) |
+| Stello 2 + new book against Stello 2 + the version 2 book (`book-file=`) | **49.2 %** (47.3–51.2 %), −5 Elo, −0.1 discs per game: not worse ([result](benchmark-results/match_v2-p4-newbook-vs-oldbook-500ms.md)) |
+
+The games start at plies 10–12, so the books only differ in the lines they hold beyond that; an even result is what to expect there. The first match is about as strong as without books (+393), so the book costs Stello 2 nothing.
 
 ### Solving in the browser
 

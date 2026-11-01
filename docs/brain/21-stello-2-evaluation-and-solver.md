@@ -386,9 +386,10 @@ Eight positions from Stello 2's games, with 20 and 22 empty squares, were opened
 
 ## The opening book
 
-- **`OpeningBook.EngineVersion` is 3.** So `recalc` ([chapter 12](12-book-tool.md#recalculating-the-leaves-recalc)) searches every leaf that is not exact again with Stello 2: 8,397 of 11,613 leaves; the 3,216 exact ones are kept.
+- **`OpeningBook.EngineVersion` is 3.** So `recalc` ([chapter 12](12-book-tool.md#recalculating-the-leaves-recalc)) searched every leaf that was not exact again with Stello 2: 8,397 of 11,613 leaves; the 3,216 exact ones were kept.
 - **The new heuristic values are in 1/100 disc.** Solved values stay ±(32 600 + discs).
-- **The book is being recalculated** with Stello 2, 60 s per position as for Stello 1's book, on a second computer, so it does not disturb timed matches. A first try with 30 s already reached depth 17–18, as deep as Stello 1's recalculation got in 60 s. The run can be stopped and continued. Its results are not known yet.
+- **The book was recalculated** with Stello 2, 60 s per position as for Stello 1's book, on a second computer (Ryzen 7 7800X3D, 8 workers, about 16 hours), so it did not disturb timed matches. 11,322 values changed, 219 more leaves were solved and 1,307 positions got another first move ([chapter 12](12-book-tool.md#stello-2-recalculation-version-3-november-2026)).
+- **The release gates with books on**, 500 ms per move: Stello 2 with the new book scored 88.9 % (+362 Elo) against Stello 1 with its book, and 49.2 % (47.3–51.2 %) against Stello 2 with the old book, so the new book is not worse.
 - **`Book/opening-book-stello1.txt` keeps the old book** for Stello 1's match sides (`engine=stello-v1,book=on`). Stello 2's sides use `opening-book.txt`.
 - The worked example of book learning ([chapter 11](11-book-learning.md#worked-example-learning-on-an-empty-book)) now has Stello 2's values.
 
@@ -430,7 +431,7 @@ The trainer's defaults are those of the first model (`classic11`, 15 stages, 1/3
 
 ## What comes next
 
-Phase 4 releases Stello 2.0 in the apps: the engine switch is done, and the recalculated book and the release checks follow. Then phase 5 improves the search, as 2.x releases. Each change sits behind a `SearchOptions` switch and must win a 1,180-game match against the best Stello 2 so far (or, for a pure speed change, be faster on `mid-bench` / `solve-bench` with no loss in a match). The order follows the expected gain:
+Phase 4 released Stello 2.0 in the apps, with the recalculated book. Then phase 5 improves the search, as 2.x releases. Each change sits behind a `SearchOptions` switch and must win a 1,180-game match against the best Stello 2 so far (or, for a pure speed change, be faster on `mid-bench` / `solve-bench` with no loss in a match). The order follows the expected gain:
 
 1. **Time use:** Stello starts no new iteration after 2/3 of the time and so uses about 313 of 500 ms. An estimate of the next iteration's cost should decide instead.
 2. **PVS throughout**, and a transposition table with bounds and two moves, cleared by importance instead of two tables.
