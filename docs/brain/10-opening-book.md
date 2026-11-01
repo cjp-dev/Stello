@@ -63,7 +63,7 @@ d3c3c4 c5:-29:B e3:-29:B
 
 - The first line identifies the format; other lines starting with `#` are comments.
 - Each other line is one position. It starts with the **key**: the moves from the start that reach it, without spaces and beginning with d3 (`--` is a pass). Of the lines of book moves that reach the position, the shortest is used, and of those the alphabetically first.
-- Then follow the book moves in book order, in the frame of the key line, as `move:value:origin`. A searched value adds the effort, e.g. `c6:-56:W:60s:d18:v2` (a win/loss/draw result, 60 s per move, depth 18 reached, engine version 2). Only the 1 091 exact values from the original C++ book have no effort.
+- Then follow the book moves in book order, in the frame of the key line, as `move:value:origin`. A searched value adds the effort, e.g. `c6:-56:W:60s:d18:v2` (marked win/loss/draw by the C++ book, see below; 60 s per move, depth 18 reached, engine version 2). Only the 1 091 exact values from the original C++ book have no effort.
 - The lines are sorted by length, then alphabetically, and written with `\n` and invariant culture, so a change to the book only changes the lines of the positions that changed.
 - Reading checks that every line is a legal game from the start, every book move is legal, no position or move is given twice, and every position can be reached from d3 by book moves. Errors give an `InvalidDataException` with the line number.
 
@@ -100,6 +100,8 @@ The import walks the tree depth first, in file order, and adds each legal move t
 | `CALCULATED` | `Heuristic` (effort unknown) |
 | Not `CALCULATED` (a move from an added game, ±32 665) | `Unknown` |
 | The first node of a chain with value 0, not `EXACT` | `Unknown`: C++ `savebook` wrote 0 instead of 32 600 here, so the 0 cannot be trusted |
+
+Most `INEXACT` nodes hold evaluation-sized values (for example −56), so they are not proven results. When `recalc` cannot solve such a position it replaces the value; it keeps a `WinLossDraw` value only beyond ±32 600, a proven win or loss. Before engine version 4 it kept all of them, so 2 718 leaves still had their C++ values after the Stello 2.0 recalculation.
 
 - Moves that are not legal could never be played and are left out.
 - When two lines reach the same position, their moves are joined: the moves of the first line come first, in their order, and moves only the later line has are added at the end. For a move in both, the value with the better origin is kept (`Exact` > `WinLossDraw` > `BackedUp` > `Heuristic` > `Unknown`).

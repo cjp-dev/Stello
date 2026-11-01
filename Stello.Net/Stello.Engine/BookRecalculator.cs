@@ -69,8 +69,11 @@ internal sealed class BookRecalculator
                 {
                     foreach (BookEntry entry in leaf.Entries.Where(NeedsSearch))
                     {
-                        // A proven win, loss or draw is kept when the new search could not solve the position.
-                        if (entry.Origin == BookOrigin.WinLossDraw && origin == BookOrigin.Heuristic)
+                        // A proven win or loss is kept when the new search could not solve the position. A
+                        // win/loss/draw entry with an evaluation-sized value (from the C++ book's INEXACT flag) is
+                        // not a proof and gets the new value.
+                        if (entry.Origin == BookOrigin.WinLossDraw && Math.Abs((int)entry.Value) > SearchEngine.WinScore
+                            && origin == BookOrigin.Heuristic)
                         {
                             entry.Set(entry.Value, BookOrigin.WinLossDraw, effort);
                         }
