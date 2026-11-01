@@ -129,7 +129,7 @@ The trainer is the console tool [Stello.Trainer](../../Stello.Net/tools/Stello.T
   - One stage of 8 M positions converges in 300–500 loops, about 30 s on 24 cores.
 - **`report`** gives a model's error on the test split per number of empty squares, next to Stello 1's evaluation (with a fitted scale) and the Egaroucid port.
 - **`size`** shows how small a model's weights compress with coarser units.
-- **`mpc`** (Stello 2.x) searches test positions without selectivity at every depth and fits Multi-ProbCut's error model from the spread of deep against shallow results ([chapter 06](06-midgame-search.md#selective-search)).
+- **`mpc`** (Stello 2.x) searches test positions without selectivity at every depth and fits Multi-ProbCut's error model from the spread of deep against shallow results ([chapter 06](06-midgame-search.md#selective-search)). **`mpc-end`** does the same against exact scores, for a selective endgame (tried in phase 5 and dropped; see the findings).
 
 What the training showed:
 
@@ -437,7 +437,7 @@ Phase 4 releases Stello 2.0 in the apps: the engine switch is done, and the reca
 2. **PVS throughout**, and a transposition table with bounds and two moves, cleared by importance instead of two tables. *Measured: PVS in every node gained about 30 Elo and was kept; the new table was at best even and was dropped.*
 3. **Multi-ProbCut** with an error model fitted on Stello 2's own shallow and deep searches, in place of the fixed selective margin. *Done: +120 Elo at 500 ms ([chapter 06](06-midgame-search.md#selective-search)).*
 4. **Move ordering by a shallow search**, and ETC in the midgame. *Measured: ordering by the evaluation from 5 plies plus ETC saved 4 % of the nodes and was kept (+13 Elo at 500 ms, [chapter 05](05-move-ordering.md#evaluation-ordering-in-deeper-nodes-stello-2x)); a real shallow search was too costly.*
-5. **A selective endgame** (solve earlier at 74 % → 100 %), and a clog search with a depth or time limit.
+5. **A selective endgame** (solve earlier at 74 % → 100 %), and a clog search with a depth or time limit. *Measured: a selective pass with a fitted error model, and earlier or later solve starts, gave nothing (−14 to +7 Elo); dropped.*
 6. **Checking the moves outside the book** when leaving it.
 7. Optional: **Lazy SMP or YBWC** (more threads).
 

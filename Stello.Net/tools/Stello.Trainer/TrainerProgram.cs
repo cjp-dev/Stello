@@ -23,6 +23,7 @@ internal static class TrainerProgram
                                     The model's error on the test positions per number of empty squares, next to
                                     Stello 1 (scaled) and the Egaroucid port.
           mpc [--from 14] [--to 52] [--per-discs 100] [--max-depth 12] [--workers N] [--out <file.csv>] | mpc --fit <file.csv>
+          mpc-end [--from 38] [--to 50] [--per-discs 100] [--max-depth 10] [--solve-s 60] [--workers N] [--out <file.csv>] | mpc-end --fit <file.csv>
                                     Search test positions without selectivity to every depth and fit the Multi-ProbCut
                                     error model (the spread of deep minus shallow values).
         """;
@@ -50,6 +51,7 @@ internal static class TrainerProgram
                 "report" => ReportCommand.Run(options),
                 "size" => SizeCommand.Run(options),
                 "mpc" => MpcCommand.Run(options),
+                "mpc-end" => MpcCommand.RunEnd(options),
                 _ => Fail(Usage),
             };
         }

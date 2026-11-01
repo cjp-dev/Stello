@@ -369,6 +369,46 @@ Matches, 1,180 games each:
 - **A real shallow search per child costs far more than it saves** at the depths Stello reaches (at most about 17 plies). Egaroucid only does it from depth 8 on PV nodes and 16 on null-window nodes (depth >> 3 and >> 4), and its searches are deeper.
 - **Removed:** IID, shallow-search keys and the switches (`order=`, `killers=`, `etc=`, `iid=`, `order-shallow=`).
 
+### Item 5: a selective endgame and when to start solving
+
+**The selective pass.** It ran between the midgame and the exact solve: the solver with Multi-ProbCut at every node from 14 empty squares.
+- The shallow test was a midgame search (Multi-ProbCut off) to Egaroucid's endgame depth, about a third of the empty squares with the same parity.
+- The pre-check used the static evaluation within 4 discs, as in the midgame.
+- Its results were stored in the endgame table with a negative depth. The exact solve only used their moves.
+- Its root score became the move's heuristic score, and the win/loss/draw and exact solves followed as before.
+- The switch `end-dist=` let the midgame hand over earlier.
+
+**The error model** comes from the trainer's new `mpc-end` command:
+- It solved 1,950 test positions (150 per disc count from 38 to 50, that is 14–26 empty squares) exactly, with a limit of 60 s each. 111 positions were left out because they took longer, mostly at 24–26 empty squares, so the sample leans slightly towards easier positions.
+- It searched each position without selectivity to every depth up to min(10, empties − 8). That took 15 minutes on 24 threads.
+- **σ of exact − shallow in discs:** 6–8 for the static evaluation; at Egaroucid's shallow depth 3.7–5.6 (4.9 at 14 empties, 4.2 at 20, 4.4 at 24). That is larger than in the midgame, because the deep side is now the exact result.
+- **Fit:** σ = 17.0938 − 25.4434·x + 14.9928·x² − 0.2715·s. It is off by 8.5 % on average, over 120 cells. The mean of exact − shallow is −0.49 discs.
+- **A bug in both data commands:** positions with a single legal move are played without a search, so their search values stayed 0.
+  - In the first `mpc-end` fit this gave σ of 8–11 discs at 16–19 and 23 empty squares, flat over the depths.
+  - Both commands now skip such positions, and the fits drop such rows from older files.
+  - Refitted without them, the midgame model of item 3 becomes σ = 1.4547 + 4.0093·x − 1.6181·x² − 0.4457·s + 0.2048·d, off by 5.0 % on average. That is within 10 % of the fit in use at typical points (3.08 against 3.06 discs at 32 discs, 5→11). The matches found t = 0.8–1.3 equally good, so the tuned constants stay.
+
+**Matches at 100 ms, 1,180 games each, against Stello 2 after item 4:**
+
+| Variant | Score | Elo | First solve (empty squares, default → variant) |
+|---|---:|---:|---:|
+| Selective pass, t = 1.0, at the usual hand-over (`end-mpc=100`) | 49.7 % (47.7–51.8) | −2 | 20.1 → 19.3 |
+| … handing over 2 squares earlier (`end-dist=9`) | 49.9 % (47.9–52.0) | −1 | 20.1 → 19.4 |
+| … 4 squares earlier (`end-dist=11`) | 47.9 % (45.6–50.2) | −14 | 20.2 → 19.5 |
+| … t = 0.7, `end-dist=9` | 49.7 % (47.7–51.7) | −2 | 20.1 → 19.7 |
+| … t = 1.5, `end-dist=9` | 48.9 % (46.8–51.0) | −7 | 20.2 → 19.1 |
+| No selective pass, exact solve when the midgame would reach 5 empty squares (`end-dist=5`) | 50.0 % (47.9–52.1) | 0 | 20.2 → 19.8 |
+| … 6 (`end-dist=6`) | 51.1 % (48.9–53.2) | +7 | 20.1 → 20.0 |
+| … 8 (`end-dist=8`) | 49.0 % (46.9–51.1) | −7 | 20.2 → 20.3 |
+| … 9 (`end-dist=9`) | 48.6 % (46.6–50.6) | −10 | 20.1 → 20.4 |
+
+- **Rejected; the engine code was removed.** No variant is better.
+  - The selective pass costs time and pushes the exact solve about one square later.
+  - Its result is no better than the midgame's. When the solve starts, the last midgame iteration has already searched (selectively) to 8 empty squares from the end.
+- **When to start solving is flat** around today's rule (the midgame stops when its next iteration would leave 7 or fewer empty squares). The rule stays.
+- **The clog search was not tried.** It finds forced early game ends, mostly wipeouts. Egaroucid needs it because its selective endgame can miss them. With no selective endgame there is nothing for it to fix, and wipeouts are rare in these games.
+- **Kept:** the trainer's `mpc-end` command, with the single-move fix in both commands, for a later try, for example with Egaroucid's staged levels (74 % … 100 %) or at longer time controls.
+
 ## Measurements
 
 All on 1 thread, on the same Intel i7-12850HX laptop VM as the port's measurements. That CPU is hybrid: 8 performance cores with 2 threads each and 8 efficiency cores, 24 threads in all. Matches play 12 games at a time, so their depths and times per move are averages over both kinds of core. A/B results are fair, because both engines in a game share a thread, but absolute numbers differ on other machines.
@@ -387,6 +427,7 @@ All on 1 thread, on the same Intel i7-12850HX laptop VM as the port's measuremen
 | Match against Stello 1, 100 / 500 ms per move, no books | — | 90.9 % (+400) / 90.6 % (+393) | — | phase 2, `stello-eval.bin` ([100 ms](benchmark-results/match_v2-p2-eval-vs-v1-100ms.md), [500 ms](benchmark-results/match_v2-p2-eval-vs-v1-500ms.md)) |
 | Stello 2 against Egaroucid, 100 / 500 ms per move | — | 59.5 % (+67) / 38.2 % (−84) | — | phase 2 ([100 ms](benchmark-results/match_v2-p2-eval-vs-egaroucid-100ms.md), [500 ms](benchmark-results/match_v2-p2-eval-vs-egaroucid-500ms.md)) |
 | `mid-quality`, loss in discs at 50 / 200 / 1000 ms | 1.59 / 1.59 / 1.39 | 1.33 / 0.91 / 0.68 | 1.18 / 0.94 / 0.54 | phase 2 ([result](benchmark-results/v2-p2-mid-quality.md)) |
+| Stello 2.x (phase 5 items 1–4) against Egaroucid, 100 / 500 ms per move, no books | — | 76.4 % (+204) / 57.7 % (55.4–59.9, +54) | — | phase 5; depth 13.9 / 16.8 against Egaroucid's 8.7 / 13.4 nominal; Egaroucid's longest move at 100 ms took 590 ms ([100 ms](benchmark-results/match_v2x-p5-item4-vs-egaroucid-100ms.md), [500 ms](benchmark-results/match_v2x-p5-item4-vs-egaroucid-500ms.md)) |
 
 ## Ideas for later
 
