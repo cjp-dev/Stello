@@ -208,6 +208,12 @@ Each change is a separate commit behind a `SearchOptions` flag and is measured o
   - Gate: FFO #40–49 are all correct in 47.1 s (port 25.6 s, Stello 1 369 s). Move Now answers within 100 ms during a solve. Against the old solver: 49.7 % at 100 ms and 51.1 % (49.2–53.0) at 500 ms, not worse.
   - The time to solve in the browser moves to phase 4, where the apps get the solver.
   - Tests: Stello.Engine.Tests 264 (`EndgameTests` on both solvers, `EndgameBitsTests`), Egaroucid.Engine.Tests 34, all green.
+- **Phase 4: done (2026-11-01).**
+  - The engine is Stello 2 (720f224); the GUI shows scores in discs (5414efb); docs chapter 21 and updates (689bfbf).
+  - The book was recalculated with Stello 2 on the second computer (60 s per position, 8 workers, about 16 h): 11,322 values changed, 1,307 positions got another first move, `verify` passes (153baa2). `book-file=` lets a match side use another book (b8bc973).
+  - Gate: with books on at 500 ms, Stello 2 + new book scored 88.9 % (+362) against Stello 1 + its book, and 49.2 % (47.3–51.2 %) against Stello 2 + the old book, not worse.
+  - Found afterwards: 2,718 leaves marked win/loss/draw by the C++ book kept their old values; fixed for the 2.x recalculation (d21e42f on `feature/stello-v2.x`).
+  - Live site after the deploy (Playwright, headless Chromium): the About box shows the 2.0 text; the computer played 15 book moves, then searched depth 14–15 in 1 s with scores in discs; Move Now during a 60 s search moved within 0.11 s (with the browser driver's delay); 22 empty squares solved in 0.59 s (+12 discs). No page errors.
 - **Phase 5: in progress, on `feature/stello-v2.x` (based on `feature/stello-v2`).** Details are in the findings.
   - Item 1, time use: no variant passed (soft limit 80–100 %: +4 to +14, not significant; predicting the next iteration: −25 to −37). The 2/3 rule stays; `SoftTimePercent` (`soft-pct=`) stays as a switch.
   - Item 2a, PVS in every midgame node: kept, +28 Elo at 100 ms and +30 at 500 ms.

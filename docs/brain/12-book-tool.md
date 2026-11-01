@@ -207,9 +207,25 @@ In a paired tournament match between Version 1 and Version 2 across all 265 ply-
 - Version 2 lost points on only 4 pairs out of 265 (246 tied, 15 won by Version 2, 4 lost).
 - Tool verdict: `Book B is stronger.`
 
-### Stello 2 recalculation: Version 3 (in progress)
+### Stello 2 recalculation: Version 3 (November 2026)
 
-Stello 2.0 raised `OpeningBook.EngineVersion` to 3, so `recalc` searches the 8,397 leaves that are not exact (of 11,613) again with Stello 2, 60 s per position; the 3,216 exact values are kept. The new values are in 1/100 disc; solved values stay ±(32 600 + discs). The run is in progress, so its numbers are not here yet. The old book is kept as `Book/opening-book-stello1.txt` for Stello 1's match sides ([chapter 21](21-stello-2-evaluation-and-solver.md#the-opening-book)).
+Stello 2.0 raised `OpeningBook.EngineVersion` to 3, so `recalc` searched every leaf that was not exact again with Stello 2, 60 s per position, with 8 workers on a Ryzen 7 7800X3D (about 16 hours). The new heuristic values are in 1/100 disc; solved values stay ±(32 600 + discs). The old book is kept as `Book/opening-book-stello1.txt` for Stello 1's match sides ([chapter 21](21-stello-2-evaluation-and-solver.md#the-opening-book)).
+
+| | Version 2 (Stello 1) | Version 3 (Stello 2.0) |
+|---|---|---|
+| Exact / win-loss-draw / heuristic values | 3 216 / 2 860 / 5 546 | 3 435 / 2 761 / 5 426 |
+| Newly solved exact endgames | — | +219 (+103 from heuristic, +116 from win-loss-draw) |
+| Values changed | — | 11 322 (5 634 leaves, 5 688 backed-up) |
+| Positions with another first move | — | 1 307 |
+| White's replies to d3 | c5 −10, c3 −29, e3 −150 (Stello 1 units) | c5 −25, c3 −62, e3 −150 (1/100 disc) |
+| Depth reached in 60 s | 17–18 | about 17 on average, 18–19 near the start |
+| Main line from the start | 17 moves | 15 moves (±25), the same up to g5 |
+
+The matches start at plies 10–12 (`starts.txt`), with books on and 500 ms per move, 1,180 games each:
+- Stello 2 with this book against Stello 1 with its book: **88.9 %** (87.2–90.7 %), +362 Elo ([result](../../Plans/benchmark-results/match_v2-p4-book-vs-v1-500ms.md));
+- Stello 2 with this book against Stello 2 with the Version 2 book (`book-file=`): **49.2 %** (47.3–51.2 %), −5 Elo, so not worse ([result](../../Plans/benchmark-results/match_v2-p4-newbook-vs-oldbook-500ms.md)).
+
+**A flaw found afterwards:** 2 718 leaves carry the C++ book's `INEXACT` flag, imported as win-loss-draw, but hold evaluation-sized values. `recalc` kept every win-loss-draw value it could not solve, so these still have their old values (the report's `WinLossDraw -> WinLossDraw 2,744 (0)`). Stello 2.x's `recalc` keeps only values beyond ±32 600 (chapter 10).
 
 ## Worked example: `stats`
 
@@ -221,12 +237,12 @@ Moves:        22,878
 Leaf moves:   11,622
 Passes:       4
 Longest line: 57 plies
-Replies to d3: c5 (-10, BackedUp), c3 (-29, BackedUp), e3 (-150, BackedUp)
+Replies to d3: c5 (-25, BackedUp), c3 (-62, BackedUp), e3 (-150, BackedUp)
 
 Origin of the values:
-  Heuristic       5,546
-  WinLossDraw     2,860
-  Exact           3,216
+  Heuristic       5,426
+  WinLossDraw     2,761
+  Exact           3,435
   BackedUp       11,256
 
 Search limit of the searched values:
