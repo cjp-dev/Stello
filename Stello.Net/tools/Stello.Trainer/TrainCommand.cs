@@ -118,30 +118,65 @@ internal static class TrainCommand
             : throw new ArgumentException($"--{name} must be a positive number.");
     }
 
-    /// <summary>Positions as their folded weight numbers (one per feature) and scores.</summary>
-    private sealed record Encoded(int Count, int Features, int[] Indices, float[] Scores);
+    /// <summary>
+    /// Positions as their folded weight numbers and scores. A feature's number is stored as 16 bits relative to the
+    /// first folded number of its shape (<see cref="FoldedIndex.FeatureBase"/>; a shape has at most 3^10 = 59,049
+    /// raw indices), which halves the memory against 32-bit numbers. The rows are kept in blocks, so that more than
+    /// 2^31 numbers (34 M positions of 62 features) fit.
+    /// </summary>
+    private sealed class Encoded
+    {
+        private const int BlockRows = 1 << 22;
+        private readonly ushort[][] _blocks;
+
+        public Encoded(int count, int[] featureBase, float[] scores)
+        {
+            Count = count;
+            FeatureBase = featureBase;
+            Scores = scores;
+            int features = featureBase.Length;
+            _blocks = new ushort[(count + BlockRows - 1) / BlockRows][];
+            for (int b = 0; b < _blocks.Length; b++)
+            {
+                _blocks[b] = new ushort[(long)Math.Min(BlockRows, count - (long)b * BlockRows) * features];
+            }
+        }
+
+        public int Count { get; }
+
+        public int Features => FeatureBase.Length;
+
+        /// <summary>The first folded number of each feature's shape.</summary>
+        public int[] FeatureBase { get; }
+
+        public float[] Scores { get; }
+
+        /// <summary>The relative numbers of position <paramref name="i"/>, one per feature.</summary>
+        public Span<ushort> Row(int i) => _blocks[i / BlockRows].AsSpan(i % BlockRows * Features, Features);
+    }
 
     private static Encoded Encode(FoldedIndex folded, Sample[] samples, int workers)
     {
         int features = folded.Set.FeatureCount;
-        var indices = new int[samples.Length * features];
-        var scores = new float[samples.Length];
+        int[] featureBase = folded.FeatureBase;
+        var encoded = new Encoded(samples.Length, featureBase, new float[samples.Length]);
         Parallel.For(0, workers, new ParallelOptions { MaxDegreeOfParallelism = workers }, worker =>
         {
             Span<int> raw = stackalloc int[features];
             for (int i = worker; i < samples.Length; i += workers)
             {
                 folded.Set.Indices(samples[i].Own, samples[i].Opponent, raw);
+                Span<ushort> row = encoded.Row(i);
                 for (int f = 0; f < features; f++)
                 {
-                    indices[i * features + f] = folded.Of(raw[f]);
+                    row[f] = (ushort)(folded.Of(raw[f]) - featureBase[f]);
                 }
 
-                scores[i] = samples[i].Score;
+                encoded.Scores[i] = samples[i].Score;
             }
         });
 
-        return new Encoded(samples.Length, features, indices, scores);
+        return encoded;
     }
 
     private sealed record Fit(int Loops, double TrainMae, double ValidationMae, double ValidationMse);
@@ -155,9 +190,14 @@ internal static class TrainCommand
         var m = new double[count];
         var v = new double[count];
         var appear = new int[count];
-        foreach (int index in train.Indices)
+        int[] featureBase = train.FeatureBase;
+        for (int i = 0; i < train.Count; i++)
         {
-            appear[index]++;
+            ReadOnlySpan<ushort> row = train.Row(i);
+            for (int f = 0; f < row.Length; f++)
+            {
+                appear[featureBase[f] + row[f]]++;
+            }
         }
 
         double[][] partial = Enumerable.Range(0, workers).Select(_ => new double[count]).ToArray();
@@ -177,24 +217,23 @@ internal static class TrainCommand
                 Array.Clear(sum);
                 double squared = 0;
                 double absolute = 0;
-                int features = train.Features;
-                long first = (long)train.Count * worker / workers;
-                long last = (long)train.Count * (worker + 1) / workers;
-                for (long i = first; i < last; i++)
+                int first = (int)((long)train.Count * worker / workers);
+                int last = (int)((long)train.Count * (worker + 1) / workers);
+                for (int i = first; i < last; i++)
                 {
-                    ReadOnlySpan<int> row = train.Indices.AsSpan((int)(i * features), features);
+                    ReadOnlySpan<ushort> row = train.Row(i);
                     double predicted = 0;
-                    foreach (int index in row)
+                    for (int f = 0; f < row.Length; f++)
                     {
-                        predicted += weights[index];
+                        predicted += weights[featureBase[f] + row[f]];
                     }
 
                     double residual = train.Scores[i] - predicted;
                     squared += residual * residual;
                     absolute += Math.Abs(residual);
-                    foreach (int index in row)
+                    for (int f = 0; f < row.Length; f++)
                     {
-                        sum[index] += residual;
+                        sum[featureBase[f] + row[f]] += residual;
                     }
                 }
 
@@ -269,13 +308,14 @@ internal static class TrainCommand
     {
         double squared = 0;
         double absolute = 0;
-        int features = data.Features;
+        int[] featureBase = data.FeatureBase;
         for (int i = 0; i < data.Count; i++)
         {
+            ReadOnlySpan<ushort> row = data.Row(i);
             double predicted = 0;
-            foreach (int index in data.Indices.AsSpan(i * features, features))
+            for (int f = 0; f < row.Length; f++)
             {
-                predicted += weights[index];
+                predicted += weights[featureBase[f] + row[f]];
             }
 
             double residual = data.Scores[i] - predicted;
@@ -298,9 +338,16 @@ internal sealed class FoldedIndex
         Set = set;
         _ofRaw = new int[set.RawSize];
         var rawOf = new List<int>();
+        var shapeStart = new int[set.Shapes.Count];
         for (int s = 0; s < set.Shapes.Count; s++)
         {
             PatternShape shape = set.Shapes[s];
+            if (shape.Size > ushort.MaxValue + 1)
+            {
+                throw new ArgumentException($"A shape of {set.Name} has {shape.Size:N0} raw indices; the trainer stores at most 65,536 per shape.");
+            }
+
+            shapeStart[s] = rawOf.Count;
             var number = new Dictionary<int, int>();
             foreach (int representative in shape.Representatives)
             {
@@ -315,7 +362,12 @@ internal sealed class FoldedIndex
         }
 
         _rawOf = rawOf.ToArray();
+        var shapes = set.Shapes.ToList();
+        FeatureBase = Enumerable.Range(0, set.FeatureCount).Select(f => shapeStart[shapes.IndexOf(set.ShapeOf(f))]).ToArray();
     }
+
+    /// <summary>The first folded number of each feature's shape: a feature's folded numbers follow it.</summary>
+    public int[] FeatureBase { get; }
 
     public PatternSet Set { get; }
 
