@@ -110,7 +110,7 @@ The import walks the tree depth first, in file order, and adds each legal move t
 
 Black's four first moves d3, c4, f5 and e6 are equivalent: each can be turned into d3 by a mirror or a turn of the board that keeps the start position.
 
-![Four boards: Black opens with d3, c4, f5 or e6, and the book replies c5, e3, d6 or f4. c4 is mapped to d3 by the main diagonal, f5 by the anti-diagonal and e6 by a half turn; every reply has the value −10.](images/book-symmetries.svg)
+![Four boards: Black opens with d3, c4, f5 or e6, and the book replies c5, e3, d6 or f4. c4 is mapped to d3 by the main diagonal, f5 by the anti-diagonal and e6 by a half turn; every reply has the value −25.](images/book-symmetries.svg)
 
 | Symmetry | Square (column, row) goes to | Maps to d3 |
 |---|---|---|
@@ -197,28 +197,28 @@ The checkbox **Stello Opening Book (11,200 canonical positions)** in the setting
 | Pass moves | 4 |
 | Files | text 898 KB, binary 193 KB |
 
-Counting d3 as ply 1 and each position at its shortest line, the book has about 500 positions at plies 10–12, then 180–330 per ply up to ply 40; after that fewer and fewer lines continue, down to 26 positions at ply 55. The C++ tree had 23 389 nodes; the import has 511 fewer moves, because a move stored in two lines (or in two frames) is now stored once and moves that could not be played are left out. 14 positions were stored in two frames. After the import all leaves were searched again (version 1), and then recalculated with the fixed evaluation (version 2, chapter 12), upgrading 226 positions to exact solutions and changing the first move in 622 positions.
+Counting d3 as ply 1 and each position at its shortest line, the book has about 500 positions at plies 10–12, then 180–330 per ply up to ply 40; after that fewer and fewer lines continue, down to 26 positions at ply 55. The C++ tree had 23 389 nodes; the import has 511 fewer moves, because a move stored in two lines (or in two frames) is now stored once and moves that could not be played are left out. 14 positions were stored in two frames. After the import all leaves were searched again (version 1), and then recalculated with the fixed evaluation (version 2, chapter 12), upgrading 226 positions to exact solutions and changing the first move in 622 positions. Stello 2 (version 3, [chapter 21](21-stello-2-evaluation-and-solver.md#the-opening-book)) searched every heuristic and win/loss/draw leaf again for 60 s per position (about 16 hours with 8 workers on a Ryzen 7 7800X3D); 11 322 values changed, 219 more leaves were solved exactly and the first move changed in 1 307 positions. Its heuristic values are in 1/100 disc.
 
 ### The same reply for all four first moves
 
-After each of Black's first moves the book gives the mirrored reply with the same value −10:
+After each of Black's first moves the book gives the mirrored reply with the same value −25 (−0.25 discs):
 
 | Black's first move | Symmetry to d3 | Book reply | Value |
 |---|---|---|---|
-| d3 | `Identity` | c5 | −10 |
-| c4 | `MainDiagonal` | e3 | −10 |
-| f5 | `AntiDiagonal` | d6 | −10 |
-| e6 | `HalfTurn` | f4 | −10 |
+| d3 | `Identity` | c5 | −25 |
+| c4 | `MainDiagonal` | e3 | −25 |
+| f5 | `AntiDiagonal` | d6 | −25 |
+| e6 | `HalfTurn` | f4 | −25 |
 
 ### A game from the book
 
-Playing only book moves for both sides from the start (random first move with `new Random(0)`) gives 17 moves, with the values ±10:
+Playing only book moves for both sides from the start (random first move with `new Random(0)`) gives 15 moves, with the values ±25 (the first move has the value 0):
 
 ```text
-f5 d6 c3 d3 c4 f4 f6 g5 e6 f7 g6 c5 f3 e7 h6 g4 g3
+f5 d6 c3 d3 c4 f4 f6 g5 c6 e3 d7 c5 e6 d8 h4
 ```
 
-It starts as the well-known "tiger" opening (f5 d6 c3 d3 c4). Up to g6 it is the main line of the C++ book; there the C++ book played e7, the recalculated book plays c5. After g3 the book has no reply.
+It starts as the well-known "tiger" opening (f5 d6 c3 d3 c4). Up to g5 it is the main line of the C++ book; there the C++ book (and the version 2 book) played e6, the Stello 2 book plays c6. After h4 the book has no reply.
 
 ## Design notes
 
@@ -248,7 +248,7 @@ See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentati
 ## Tests
 
 - [OpeningBookTests.cs](../../Stello.Net/Stello.Engine.Tests/OpeningBookTests.cs):
-  - all four first moves over 100 seeds; the same reply (value −10) after the four symmetric first moves; the 17-move main line;
+  - all four first moves over 100 seeds; the same reply (value −25) after the four symmetric first moves; the 15-move main line;
   - a legal book move in every one of the more than 11 000 book positions, and an equivalent move in each of their mirror images;
   - a random position is not in the book; the four first moves give the same canonical position;
   - the shipped binary file holds the text book, the text book is in its normal form, and the text and binary files read to the same book;
