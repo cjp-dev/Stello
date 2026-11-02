@@ -11,7 +11,7 @@ What the work on Stello 3.0 teaches us, written down as we go: the decisions, th
 |---|---|---|
 | 0 Set-up and the frozen Stello 2.0 | done (2026-11-02) | Stello.Engine.V2 searches node for node like 2.0; the Rust workspace builds for Linux, Windows and WASM, and .NET and Node call it |
 | 1 The core in Rust | done (2026-11-02) | Board, evaluation, midgame search and endgame solver node-for-node identical to C# 2.0 (mid-bench, FFO #40–49, 3,100 random midgame and endgame positions, the whole test split); 1.27–1.37× faster on one thread |
-| 2 Desktop and tools on Rust | in progress | The C# `SearchEngine` calls Rust; identical to 2.0 through the wrapper (mid-bench, random positions, FFO, a whole book recalculation); 1.26–1.39× faster, so a speed pass comes before the match |
+| 2 Desktop and tools on Rust | done (2026-11-02) | The C# `SearchEngine` calls Rust, identical to 2.0 (mid-bench, random positions, FFO, handover, 500 random endgames, a whole book recalculation); after a speed pass 2.8–3.1× faster in the midgame and 1.75× on FFO; 3.0 beats 2.0 at 500 ms with 59.6 % (+68 Elo) |
 | 3 The web app on Rust | not started | |
 | 4 Release (3.0 preview) | not started | |
 | 5 Threads and a shared hash table | not started | |
@@ -265,5 +265,74 @@ This is a straight port with no speed work. The plan's phase 2 target is 1.5× n
 - **Tools:** each ran on Rust: Benchmark `match` (`stello` against `stello-v2`), BookTool `match`, and the trainer's `mpc` (with too few positions to fit, as expected).
 - **Builds:** the solution builds with 0 warnings. WPF gets `stello_engine.dll` (checked with the MinGW cross-build), and the web publish contains no native library.
 
-### Next
-1.5× was the target. The plan's speed work keeps the nodes identical. Then comes the 500 ms match of 3.0 against 2.0.
+## Phase 2, part 2: the speed pass (2026-11-02, 8220705)
+
+Every change keeps the nodes identical. It was checked through the wrapper after each step, with `--compare` against the C# 2.0 results.
+
+### Where the time went (perf)
+- **Midgame:** the evaluation took 58 %. About a third of that was waiting on weight-table loads; the rest built the indices (16 symmetry transforms, then about 120 parts). After it came ordering at 10 % (mostly the two insertion sorts), `bits::flips` at 6 %, the TT store at 3.6 %, and the 48 MB memset at the start of each search.
+- **Endgame:** `flips` took 45 %, because its four downward directions branched on a bit scan and mispredicted. Then came `end_simple` at 15 %, `last2` at 9 % and `legal_moves` at 8 %.
+
+### Changes
+1. **The evaluation reads each feature's squares straight from the board** (`eval/patterns.rs`), so the symmetry transforms are gone.
+   - **BMI2:** one `pext` per side and feature plus a shared digit table, in a `#[target_feature(enable = "bmi2")]` function. It is chosen at run time by the new `cpu.rs`, which refuses AMD and Hygon before family 19h, where `pext` runs in microcode.
+   - **Portable:** parts that gather squares from different columns with one multiply; WASM uses this path.
+   - **Effect:** depth 10 0.84 → 0.49 s with `pext`; the portable path alone gives 0.84 → 0.70 s. Tests check both paths against `indices()` for all three pattern sets.
+2. **Midgame flips** use the endgame's mask flips (C# walks each ray square by square): depth 10 −8 %, perft(9) 64 → 50 ms.
+3. **The TT is cleared by generation.** A u16 in the entry's padding keeps it at 24 bytes. An entry from an older generation counts as empty, also for replacement, and the table is memset only when the counter wraps. Search time is the same; the wall time of 5 × 100 searches goes from 2.99 to 2.37 s.
+4. **Branchless downward rays** in the endgame flips (`1<<63 >> lzcnt(x|1)`): FFO #40–44 −14 %, depth 10 −17 %.
+5. **A rank sort** in `sort_descending`, with no data-dependent branches: depth 12 −3 %.
+6. **Prefetch** of the hash slot at nodes that store but do not probe: depth 12 −3 %, random positions −10 %.
+7. **`last_flip_count` from per-line tables** (row, column and both diagonals into a byte each, then an 8×256 count table), checked against `flips` on 20,000 boards × 64 squares: FFO −6 %.
+
+**Tried and reverted:** `#[inline(always)]` on the endgame flips (8–10 % slower), one packed u64 per move for the insertion sort (8 % slower), and a 16-lane rank comparison (35 % slower, because it did not vectorize).
+
+### Speed (one pinned CPU, fastest of 3 passes, same session)
+| Run | C# 2.0 | Rust at 8fd3f98 | Rust now, wrapper | Faster than C# |
+|---|---:|---:|---:|---:|
+| mid-bench depth 10 | 1.074 s | 0.831 s | 0.351 s | 3.06× |
+| mid-bench depth 12 | 3.077 s | 2.395 s | 1.062 s | 2.90× |
+| 1,000 random positions, depth 8 | 2.590 s | 2.102 s | 0.920 s | 2.82× |
+| FFO #40–49 | 45.7 s | 34.4 s | 26.1 s | 1.75× |
+| Whole-book recalc, depth 10, 4 workers | 50 s | 47 s | 32 s | 1.56× |
+
+- **The wrapper costs nothing measurable:** the CLI gives the same times.
+- **This VM hides the P- and E-cores,** so the runs were pinned with `taskset`.
+- **A recheck after the commit** (mid-bench depth 12, unpinned) gave the same result: identical, 1.074 s against 3.282 s.
+
+### Parity, all identical against C# 2.0
+- **Through the wrapper:** mid-bench depth 10 and 12, random positions at depth 8, FFO #40–49, `midgame-handover.txt` at depth 12 (300 searches), and `endgame-random.txt` (500 solves, 27.7 G nodes; 540 s against C#'s 974 s).
+- **The portable code natively** (`stello-cli --cpu portable`): FFO #40–49, depth 12 and random positions at depth 8.
+- **The book recalc:** books and reports byte-identical before and after the pass (13,064 values changed).
+- **WASM under Node:** the same moves, scores and nodes as before the pass. Speed: mid-bench depth 10 1.42 → 0.86 s, FFO #40 0.335 → 0.255 s, FFO #41–42 1.20 → 0.98 s.
+- **Tests and lint:** `cargo test` (28 unit tests plus parity and search) and the 483 engine tests pass; clippy and `cargo fmt` are clean; the WASM and windows-gnu builds pass.
+
+### What more would take (none of it changes nodes)
+- **Endgame** (now 38 % in flips): AVX2 flips and legal moves. Without an AVX2 build target, the recursive solver has to be compiled twice (a `#[target_feature]` copy and a portable one), a refactor of about 1,200 lines.
+- **Midgame:** the evaluation now mostly waits on weight-table loads. Incremental indices through make and unmake would help, but are invasive.
+- **WASM:** a `simd128` build, which needs WASM SIMD in the browser.
+
+### The match and the phase 2 gate: passed
+**3.0 (Rust, `engine=stello`) against 2.0 (C#, `engine=stello-v2`):** 500 ms per move, no books, 1,180 games from `starts.txt`. Full result: [match_v3p2-vs-v2-500ms](benchmark-results/match_v3p2-vs-v2-500ms.md).
+
+| | Stello 2.0 (C#) | Stello 3.0 (Rust) |
+|---|---:|---:|
+| Points | 476.5 | **703.5 (59.6 %)** |
+| Wins / draws / losses | +389 =175 −616 | +616 =175 −389 |
+| Midgame depth (average) | 16.67 | 18.58 |
+| First solve (empty squares) | 22.2 | 23.2 |
+| Nodes per second | 4.25 M | 10.38 M |
+
+- **Strength:** 3.0 scores 59.6 % (57.3–61.9 %), Elo +68 (+51 to +84). The same search is about two plies deeper in the same time, and starts solving one empty square earlier.
+- **Speed in play:** 2.4× the nodes per second over whole games. The bench ratios are higher, because games include the endgame, where the gain is 1.75×.
+
+| Gate item | Result |
+|---|---|
+| Tests pass on the wrapper | 483 engine tests, 34 Egaroucid tests, `cargo test` |
+| ≥ 1.5× native speed (target) | 2.8–3.1× midgame, 1.75× FFO, 1.56× whole-book recalc |
+| 500 ms match of 3.0 against 2.0 > 50 % | 59.6 % (57.3–61.9) |
+| Book recalc sample gives identical values | the whole book at depth 10: identical books and reports, both before and after the speed pass |
+| WPF builds | yes (`-p:EnableWindowsTargeting=true`, Windows DLL cross-built with MinGW), with `stello_engine.dll` in its output; the user's own test on Windows is pending |
+
+**Environment note:** a cross-built DLL that Cargo had hard-linked into `target/.../release` gave "Stale file handle" on the mount. Deleting both links and rebuilding fixed it.
+
