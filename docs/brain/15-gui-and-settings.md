@@ -4,13 +4,13 @@
 
 ## In short
 
-Stello features a unified, tournament-grade user interface across both **WPF desktop** and **Blazor WebAssembly** clients. Conforming to the universal tournament game GUI blueprint ([general-game-gui-specification.md](https://github.com/cjp-dev/GameShell/blob/main/docs/general-game-gui-specification.md), v1.1, kept in the shared GameShell library), the interface combines a warm wooden board aesthetic, a 4-layer dual-card player scoreboard, fixed board orientation, quick action controls, real-time AI telemetry, and synthesized procedural audio feedback.
+Stello has two front ends on one view model (`MainViewModel`, chapter 14): the **web app** (Blazor WebAssembly) and the **desktop app** (WPF). The web app follows the tournament game GUI blueprint ([general-game-gui-specification.md](https://github.com/cjp-dev/GameShell/blob/main/docs/general-game-gui-specification.md), v1.1, kept in the shared GameShell library): a wooden board, a 4-layer dual-card player scoreboard, fixed board orientation, quick action buttons, the analysis panel, a move history and synthesized sounds. The desktop app has a plainer window with a board, the status and the analysis, plus the book-learning commands ([below](#the-desktop-app)).
 
-This chapter documents the visual layout, navigation menus, settings dialog, competitive integrity status system, opening book and transposition table memory configurations, real-time search telemetry streaming engine, and full keyboard shortcut mappings.
+This chapter documents the visual layout, the menus, the settings dialog, the status that marks a modified game, the opening book and transposition table settings, the analysis panel, and the keyboard shortcuts. Everything up to the desktop section describes the web app; the settings dialog and the analysis are shared.
 
 ---
 
-## Graphical User Interface layout
+## Graphical User Interface layout (web app)
 
 ![Stello User Interface](images/gui.png)
 
@@ -36,7 +36,7 @@ graph TD
 
 ### Modern Light Theme & Color Palette
 
-Both desktop and web clients share a consistent palette designed for high contrast, clean typography, and tactile wooden board aesthetics:
+The web app uses a palette designed for high contrast, clean typography, and tactile wooden board aesthetics:
 
 | UI Element | Color Value | Description |
 |---|---|---|
@@ -66,24 +66,22 @@ The interface supports customization of board materials and piece rendering dire
 
 ## Menu bar and navigation
 
-The application header features a standardized 4-menu hierarchy providing structured access to all game operations and shortcuts:
+The web app's header has four menus (`Home.razor`):
 
 ### 1. File Menu
-* **New Game (`Ctrl+N`):** Starts a new game session. If a match is actively underway, a confirmation prompt prevents accidental loss of progress. Resets clocks, clears undo/redo history, and sets Black for the opening move.
+* **New Game (`Ctrl+N`):** Starts a new game in the current game mode. While a game is under way it asks "Abandon current match and start a new game?" first. Resets the clocks and the undo/redo history; Black moves first (the computer, in vs Computer (White)).
 * **Open... (`Ctrl+O`):** Loads saved `.stello` or `.txt` game record files into the active session.
 * **Save (`Ctrl+S`):** Saves the current game record to the active file path.
 * **Save As...:** Exports the current match, complete with move history, to a `.stello` or `.txt` game file.
 * *(Separator)*
-* **Add Game to Book...:** Analyzes the active game record and merges its move sequence into the user opening book (available when at least 2 moves have been played).
-* *(Separator)*
-* **Exit:** Closes the desktop application (desktop client only).
+* **Add Game to Book...:** Adds the game's moves to the user's opening book in the browser's local storage (chapter 11). It needs at least two moves and a confirmation; for an unfinished game it asks "Did Black win the game?".
 
 ### 2. Game Menu
 * **vs Computer (Black):** Configures human vs computer play with the human playing Black (first move). Prompts confirmation if switching modes during an active match.
 * **vs Computer (White):** Configures computer vs human play with the computer playing Black (makes opening move) and human playing White.
 * **vs Human (Two players):** Hot-seat multiplayer mode where both Black and White are controlled locally.
 * *(Separator)*
-* **Switch sides:** Switches player roles between Black and White mid-match without resetting or rotating the board. If a match is underway, prompts confirmation, marks the game status modified (`IsStatusModified = true`), and triggers AI thinking if it becomes the computer's turn.
+* **Switch sides:** Gives the human the other colour without resetting or rotating the board, and switches between vs Computer (Black) and vs Computer (White). Enabled only against the computer, on the human's turn, while the game is not over. It marks the game modified (`IsStatusModified` becomes true), and the computer moves at once.
 * *(Separator)*
 * **Settings... (`F2`):** Opens the modal Game Settings dialog to configure engine thinking limits, opening book usage, and transposition table capacity.
 
@@ -99,10 +97,10 @@ The application header features a standardized 4-menu hierarchy providing struct
 * **Animate Flips:** Toggles 3D disc flip animations during captures.
 
 ### 4. Help Menu
-* **User guide (`F1`):** Opens this chapter directly, providing immediate access to interface instructions, settings explanations, and shortcut tables.
-* **Rules & Documentation (`Shift+F1`):** Opens the complete Stello Architecture and Rules manual (at `/docs` in the web client, or online documentation for desktop).
+* **User guide (`F1`):** Opens this chapter in a new browser tab, shown by the app's Docs pages (`/docs/15-gui-and-settings`).
+* **Rules & Documentation (`Shift+F1`):** Opens the index of this documentation in a new tab (the Docs pages at `/docs`; the build copies `docs/brain` into the app, chapter 14).
 * *(Separator)*
-* **About Stello...:** Displays engine version, author photograph (Claus Pedersen), history of the C++ and C# implementations, the Stello 2.0 brain (the pattern evaluation trained on Egaroucid's data and the endgame solver adapted from Egaroucid, with credit to Egaroucid), the licence (GPL-3.0-only) and the address of the source code.
+* **About Stello...:** Shows "Stello Version 2.0", the picture of the author with the caption "Claus Pedersen – wrote Stello in C++ in 1992 and ported it to C# in 2026", and four paragraphs (`AboutInfo`, shared by both apps): what Stello is; its brain (alpha-beta search, a hash table and iterative deepening; since version 2.0 an evaluation by patterns of squares, trained on 500 million positions from the games of Egaroucid, the Othello program by Takuto Yamana, and an endgame solver adapted from Egaroucid's; more than 11,000 opening positions; perfect play near the end); the port of the 1992 C++ original to C# and .NET 10, running as a Windows program and in the browser; and the licence (GPL-3.0-only) with the address of the source code, https://github.com/cjp-dev/Stello.
 
 > [!NOTE] Dedicated Quick Action Buttons for Undo & Redo
 > In accordance with the tournament GUI specification, Undo and Redo are provided via prominent **Quick Action buttons** beneath the scoreboard and via standard keyboard shortcuts (`Ctrl+Z` / `Ctrl+Y`), keeping the top menus streamlined and uncluttered.
@@ -152,9 +150,9 @@ Each player card is structured into 4 clear vertical layers:
 
 ### 3. Quick Action Buttons
 Positioned directly beneath the dual player cards:
-* **`[Undo]`:** Reverts the previous move (in human-vs-human) or rolls back both the computer and human move pair (in human-vs-computer). Clocks are refunded back to the exact snapshot recorded at that ply (`_timeLeftAtPly`). Disabled at Move 0, while the AI is thinking, and after a game lost on time.
-* **`[Redo]`:** Re-applies the most recently undone move. Disabled while the AI is thinking and after a game lost on time.
-* **`[Move Now]`:** Rendered when playing against the computer. While the AI is searching, pressing `[Move Now]` triggers cancellation and forces the engine to immediately play the best candidate evaluated up to that point.
+* **`[Undo]`:** Takes back one move with two players; against the computer it goes back to the previous position where the human is to move, taking back the computer's reply as well, and marks the game modified. The clocks go back to the snapshot stored before that computer move (`_timeLeftAtPly`, chapter 14). Disabled at move 0, while the computer is thinking, and after a game lost on time.
+* **`[Redo]`:** Plays the undone moves again, up to the next position where the human is to move (one move with two players). Disabled when nothing was undone, while the computer is thinking, and after a game lost on time.
+* **`[Move Now]`:** Shown when playing against the computer, enabled while it thinks. It stops the search and makes the computer play the best move it has found so far (chapter 09).
 
 ### 4. Board Orientation (Fixed) & Visual Indicators
 The $8 \times 8$ board orientation remains **strictly fixed** (`a1` in the top-left, `h8` in the bottom-right) regardless of whether the user plays Black or White or switches sides.
@@ -239,7 +237,7 @@ When enabled via **Options $\rightarrow$ Analysis** (`Ctrl+A`), the telemetry si
 |---|---|
 | **Move** | The coordinate currently being searched at the root (e.g., `f4`, `d3`). |
 | **Depth** | Current search depth in plies (e.g., `10 plies`), or `to the end (20 empty)` when the endgame is solved. Empty for a book move or when there is no search (a pass or a single legal move). |
-| **Score** | Positional evaluation from the active player's perspective, in discs with one decimal (the search scores in 1/100 disc, [chapter 21](21-stello-2-evaluation-and-solver.md#how-the-search-uses-it)):<br/>• Positive (e.g. `+2.4 discs`): Advantage for the engine.<br/>• Negative (e.g. `-1.5 discs`): Advantage for the opponent.<br/>• Solved endgame: the final disc difference (e.g. `+4 discs`, `-2 discs`), or only `Win`, `Loss` or `Draw` when just the result is known.<br/>• `Book`: the move comes from the opening book. |
+| **Score** | The search's score for the computer, the side that is searching, in discs with one decimal (the search scores in 1/100 disc, [chapter 04](04-evaluation.md)):<br/>• Positive (e.g. `+2.4 discs`): Advantage for the engine.<br/>• Negative (e.g. `-1.5 discs`): Advantage for the opponent.<br/>• Solved endgame: the final disc difference (e.g. `+4 discs`, `-2 discs`), or only `Win`, `Loss` or `Draw` when just the result is known (also for a heuristic score beyond ±32 600).<br/>• `Book`: the move comes from the opening book. |
 | **Best move** | Coordinate of the currently leading principal variation candidate (e.g., `f4`). |
 | **Nodes** | Total board states evaluated during the search, formatted with thousands separators (`226.269`). |
 | **Speed** | Search throughput in nodes per second (`nps`). |
@@ -250,10 +248,10 @@ Instant moves, such as opening-book moves and single legal moves, would otherwis
 
 ### Web Worker Engine Host in the Browser
 In Blazor WebAssembly (`Stello.Web`), running deep searches directly on the main UI thread would block JavaScript execution and cause interface stutter. Stello isolates the entire engine within a dedicated **Web Worker**:
-1. `WebEngineHost` transmits move requests as compact JSON messages to `engine-worker.js`.
-2. The Web Worker executes `EngineWorker.ChooseMove` on its dedicated background thread.
-3. Every $\le 100\text{ ms}$, the worker streams progress reports back to the UI thread to update the telemetry panel without triggering full board re-renders.
-4. Pressing **Move Now** or cancelling sends a terminate signal, ensuring instantaneous UI responsiveness.
+1. `WebEngineHost` sends move requests as compact JSON messages to `engine-worker.js`.
+2. The Web Worker runs `EngineWorker.ChooseMove` in its own .NET runtime, off the page's thread.
+3. The worker sends progress reports to the page at most every $100\text{ ms}$ (and whenever the depth or the best move changes) to update the analysis panel.
+4. **Move Now** or a cancel sets a stop signal in memory shared with the worker, which the search reads at its next progress report; if that is not possible, the worker is terminated and started again (chapter 14).
 
 ---
 
@@ -274,31 +272,55 @@ Each row is one round: the round number, Black's move and White's move (a pass i
 
 ## Procedural Sound System
 
-Stello includes a built-in procedural audio generator (`SoundWaves`) utilizing the Web Audio API in the browser and Windows audio services in desktop:
-* **Move Snap:** Crisp acoustic click when placing a disc.
-* **Flip Rustle:** Soft multi-frequency rustle during disc captures.
-* **Pass Tone:** Distinct double-clack acoustic tone signalling a mandatory pass.
-* **Game Over Chimes:** Triumphant fanfare upon winning, descending chime upon defeat.
+The web app plays sounds through the Web Audio API (`BrowserSoundService`); **Options → Sound** turns them off (`IsSoundOn`). The desktop app has no sound (`NullSoundService`, chapter 14). `SoundWaves.Create` synthesizes each sound as a 16-bit PCM WAV byte array at run time, so no `.mp3` or `.wav` files are downloaded; the bytes are registered with the page once, on the first sound:
 
-Because all audio waveforms are generated procedurally as 16-bit PCM WAV byte streams at runtime, no external `.mp3` or `.wav` asset downloads are required.
+* **Move:** a short click, for every move of the human and of the computer.
+* **Pass:** a double clack, when the game loop passes for a player.
+* **Win:** a rising fanfare when the human beats the computer, when a two-player game has a winner, or when the computer runs out of time.
+* **Loss:** a falling chime when the computer wins, or when the human runs out of time.
+
+`SoundWaves` also has a `Flip` sound, which the view model does not play.
 
 ---
 
 ## Keyboard shortcuts reference
 
-| Shortcut | Scope | Action |
+In the web app the letter shortcuts are Ctrl+letter (or Cmd+letter on a Mac); GameShell catches them only for the letters Stello uses.
+
+| Shortcut | Web app | Desktop app |
 |---|---|---|
-| `Ctrl+N` | Global | New Game (with active game confirmation) |
-| `Ctrl+O` | Global | Open saved game record (`.txt`) |
-| `Ctrl+S` | Global | Save active game record |
-| `Ctrl+A` | Global | Toggle **AI Analysis Panel** visibility |
-| `Ctrl+Z` | Board | Undo previous move (refunds chess clock time) |
-| `Ctrl+Y` | Board | Redo previously undone move |
-| `Ctrl+M` | Engine | Force computer to play current best move (**Move Now**) |
-| `F1` | Global | Open **User guide** (this chapter) |
-| `Shift+F1` | Global | Open **Rules & Documentation** (full architectural manual) |
-| `F2` | Global (web) | Open **Settings** |
-| `Escape` | Global (web) | Close an open menu or the mobile drawer |
+| `Ctrl+N` | New Game (with the confirmation while a game is under way) | New Game |
+| `Ctrl+O` | Open a game record (`.stello` or `.txt`) | Open |
+| `Ctrl+S` | Save the game record | Save |
+| `Ctrl+A` | Show or hide the **Analysis** panel | Show or hide the Analysis panel |
+| `Ctrl+Z` | Undo (the clocks go back too) | Back (also `Ctrl+T`) |
+| `Ctrl+Y` | Redo | Forward (also `Ctrl+F`) |
+| `Ctrl+M` | **Move Now** | Move Now |
+| `F1` | **User guide** (this chapter) | – |
+| `Shift+F1` | **Rules & Documentation** (the index of this documentation) | – |
+| `F2` | **Settings** | – |
+| `Escape` | Close an open menu or the mobile drawer | – |
+
+---
+
+## The desktop app
+
+The WPF app ([MainWindow.xaml](../../Stello.Net/Stello.Net/MainWindow.xaml)) runs the same view model with the engine on a background task (chapter 14). It always plays the human against the computer; Switch Sides changes the colours.
+
+| Menu | Items |
+|---|---|
+| File | New Game (`Ctrl+N`), Open... (`Ctrl+O`), Save (`Ctrl+S`), Save As..., Exit |
+| Game | Switch Sides, Move Now (`Ctrl+M`), Settings... |
+| Moves | Back (`Ctrl+Z`), Forward (`Ctrl+Y`) |
+| View | Analysis (`Ctrl+A`) |
+| Book | Add Game to Book..., Evaluate Book..., Self-play..., Stop Learning (chapter 11) |
+| Help | About Stello... (the same text as the web app, `AboutInfo`) |
+
+- **The board** (`BoardView`) is green (`#1E7A3C`), with a dark dot on each legal move and a red dot (`#E03030`) on the last move; it is sized to the window and centred together with the panels.
+- **Status** shows the status text (with the notices of chapter 14), the disc count (`Black 5 – White 5`), the human's colour (`You play Black`), and in `TimePerGame` mode the computer's clock (`Computer time left: 4:40`).
+- **Analysis** has seven fields: Move, Depth, Value, Best move, Nodes, Evaluations and Time. Value and Evaluations are bound to `AnalysisViewModel.Value` and `Evaluations`, aliases of `Score` and `Speed` kept for the WPF window. The view model raises no change notification for the aliases, so WPF does not update these two fields; the other five show the same text as in the web app.
+- **Settings** ([SettingsWindow.xaml](../../Stello.Net/Stello.Net/Views/SettingsWindow.xaml)) has the groups "Thinking Limits" (the three modes with sliders) and "Stello Opening Book & Transposition Table" (the checkbox "Enable Stello Opening Book (11,200 canonical positions)" and a "Table Capacity" slider over the same five sizes as the web app's list).
+- There are no game modes, board styles, sound, quick action buttons, move history or Help pages. The window position and size are saved with the settings (chapter 14).
 
 ---
 
@@ -317,7 +339,10 @@ Because all audio waveforms are generated procedurally as 16-bit PCM WAV byte st
 | [`EngineWorker.cs`](../../Stello.Net/Stello.Web/Worker/EngineWorker.cs) | `EngineWorker` | Web Worker search runner with dynamic engine resizing on hash bit changes |
 | [`LocalEngineHost.cs`](../../Stello.Net/Stello.App/Services/LocalEngineHost.cs) | `LocalEngineHost` | Desktop background task runner for search and book operations |
 | [`SoundWaves.cs`](../../Stello.Net/Stello.App/Services/SoundWaves.cs) | `SoundWaves` | Procedural 16-bit PCM WAV synthesized sound generator |
-| [`MainWindow.xaml`](../../Stello.Net/Stello.Net/MainWindow.xaml) | `MainWindow` | WPF desktop application window and menu definitions |
+| [`BrowserSoundService.cs`](../../Stello.Net/Stello.Web/Services/BrowserSoundService.cs) | `BrowserSoundService` | Registers the sounds with the page and plays them (web app) |
+| [`AboutInfo.cs`](../../Stello.Net/Stello.App/Models/AboutInfo.cs) | `AboutInfo` | The title, version, picture caption and paragraphs of the About box, shared by both apps |
+| [`MainWindow.xaml`](../../Stello.Net/Stello.Net/MainWindow.xaml) | `MainWindow` | WPF desktop application window, menus and key bindings |
+| [`BoardView.xaml`](../../Stello.Net/Stello.Net/Views/BoardView.xaml), [`AboutWindow.xaml`](../../Stello.Net/Stello.Net/Views/AboutWindow.xaml) | `BoardView`, `AboutWindow` | The WPF board and About box |
 | [`SettingsWindow.xaml`](../../Stello.Net/Stello.Net/Views/SettingsWindow.xaml) | `SettingsWindow` | WPF desktop modal settings dialog with sliders and capacity labels |
 
 ---
@@ -330,5 +355,5 @@ Because all audio waveforms are generated procedurally as 16-bit PCM WAV byte st
 
 ---
 
-Previous: [14 App integration](14-app-integration.md) · Next: [16 Glossary](16-glossary.md)
+Previous: [14 App integration](14-app-integration.md) · Next: [16 The goal and the plan](16-the-goal-and-the-plan.md)
 

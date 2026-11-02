@@ -15,7 +15,7 @@ The search can always go one ply deeper, so something must decide when to stop. 
 | `FixedDepth` | `SearchLimits.FixedDepth(plies, ...)` | Search 1–60 plies, no time limit | `sogedybde` |
 | `TimePerMove` | `SearchLimits.TimePerMove(time, ...)` | A fixed time for this move | `tid_per_trek` |
 | `TimePerGame` | `SearchLimits.TimePerGame(remaining, ...)` | Share the time left on the computer's clock over the remaining moves | `spil_tid` |
-| `Solve` | `SearchLimits.Solve` | Solve to the end, no time limit (tests and book learning) | – |
+| `Solve` | `SearchLimits.Solve` | Solve to the end, no time limit (tests, the endgame benchmark, the trainer's `mpc-end`) | – |
 
 In addition to the time mode, `SearchLimits` carries two engine configuration properties configured via the settings dialog (chapter 15):
 * `UseOpeningBook` (`bool`, default `true`): toggles whether the opening book is queried.
@@ -26,6 +26,8 @@ In the app, the settings dialog gives a depth of 1–20 plies, 1–60 seconds pe
 ### `TimeBudget`
 
 An internal `readonly record struct` with `SoftMs` and `HardMs`, in milliseconds since the search started. `TimeBudget.Unlimited` is used for fixed depth and solve.
+
+The soft limit is two thirds of the hard limit in every timed mode (below). For experiments, `SearchOptions.SoftTimePercent` (the match key `soft-pct=`) replaces it by another share of the hard limit (`WithSoftPercent`); the apps always use two thirds. Using more of the time was measured and gave no significant gain ([chapter 23](23-phase-5-the-search.md)).
 
 ### Progress and result
 
@@ -39,7 +41,7 @@ An internal `readonly record struct` with `SoftMs` and `HardMs`, in milliseconds
 | `ScoreKind` | Meaning | Shown as |
 |---|---|---|
 | `None` | No search: a pass or a single legal move | (nothing) |
-| `Heuristic` | Evaluation units from the midgame search; beyond ±32 600 the game is won or lost | "+123", or "Win"/"Loss"; depth "8 plies" |
+| `Heuristic` | 1/100 disc from the midgame search; beyond ±32 600 the game is won or lost | In discs with one decimal, "+1.2 discs", or "Win"/"Loss"; depth "8 plies" |
 | `WinLossDraw` | Only the sign is known | "Win", "Loss" or "Draw"; depth "to the end (20 empty)" |
 | `Exact` | The final disc difference with perfect play | "+12 discs" |
 | `Book` | The move comes from the opening book | Score "Book"; depth empty |
@@ -75,7 +77,7 @@ xychart-beta
     line [24, 32, 40, 48, 56, 64]
 ```
 
-  The green line is the hard limit, $\frac{1}{4} + \frac{3\,(64 - s)}{256}$ of $t$; the orange line is the soft limit, two thirds of it. The 6 is `FastEndgameEmpties` (C++ `lookahead − 2` at the default level). If the clock is already below zero, 10 ms is used.
+  The green line is the hard limit, $\frac{1}{4} + \frac{3\,(64 - s)}{256}$ of $t$; the orange line is the soft limit, two thirds of it. The 6 is `FastEndgameEmpties` (C++ `lookahead − 2` at the default level). If the clock is already below zero, the remaining time is taken as 10 ms (the same in the endgame budget).
 - **Fixed depth and solve:** no time limit.
 
 ### The budget for the endgame
@@ -88,11 +90,11 @@ The soft limit decides whether pass 2 (the exact score) is started after pass 1 
 
 ### How the search uses the limits
 
-- **Soft limit:** `StopIterating` is checked after each midgame iteration and after the win/loss/draw pass. For fixed depth it checks the depth instead; for solve it never stops.
-- **Hard limit:** `CheckAbort` is called every 1024 nodes (in the midgame search and in the solver). When the hard limit is passed, or Move Now is requested, it throws a private exception that unwinds the whole search; `Search` catches it and returns the best move found so far. That move may come from an unfinished iteration: each iteration starts with the previous best move, so a new best move from an unfinished iteration has already been compared with it at the new depth.
+- **Soft limit:** `StopIterating` is checked after each midgame iteration and after the win/loss/draw pass: no new iteration, and no exact pass, is started once the elapsed time is past the soft limit. For fixed depth it checks the depth instead (and after the win/loss/draw pass always goes on to the exact score); for solve it never stops.
+- **Hard limit:** `CheckAbort` is called about every 1024 nodes: in the midgame node search when the node counter reaches a multiple of 1024, in the solver every 1024 nodes counted since the last check (`_nextAbortCheck`). If no progress was reported for 100 ms, it first repeats the last report, so the app's analysis panel stays alive during a long iteration. When the hard limit is passed, or Move Now is requested, it throws a private exception that unwinds the whole search; `Search` catches it and returns the best move found so far. That move may come from an unfinished iteration: each iteration starts with the previous best move, so a new best move from an unfinished iteration has already been compared with it at the new depth.
 - **Cancel:** `CheckAbort` also calls `cancellationToken.ThrowIfCancellationRequested()`. The `OperationCanceledException` is not caught by the engine, so the caller knows that nothing should be played.
 
-At 15–20 million nodes per second, 1024 nodes take well under a millisecond, so the search reacts to the limits and the tokens almost at once.
+At about 4 million nodes per second in the midgame and over 20 million in the solver ([findings](../../Plans/improve-stello-strength-findings.md)), 1024 nodes take well under a millisecond, so the search reacts to the limits and the tokens almost at once.
 
 ### Move Now
 
@@ -146,7 +148,9 @@ See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentati
 |---|---|
 | [SearchLimits.cs](../../Stello.Net/Stello.Engine/SearchLimits.cs) | `TimeControlMode`, `SearchLimits` |
 | [Search/TimeControl.cs](../../Stello.Net/Stello.Engine/Search/TimeControl.cs) | `TimeBudget`, `ForMidgame`, `ForEndgame`, `ForGame`, `FastEndgameEmpties` |
-| [SearchEngine.cs](../../Stello.Net/Stello.Engine/SearchEngine.cs) | `StopIterating`, `CheckAbort`, `Report`, `Result`, `SearchAbortedException` |
+| [SearchEngine.cs](../../Stello.Net/Stello.Engine/SearchEngine.cs) | `StopIterating`, `WithSoftPercent`, `CheckAbort`, `Report`, `Result`, `SearchAbortedException` |
+| [Endgame/SearchEngine.Endgame.cs](../../Stello.Net/Stello.Engine/Endgame/SearchEngine.Endgame.cs) | `CountEndNode`, the solver's node count and abort check |
+| [Search/SearchOptions.cs](../../Stello.Net/Stello.Engine/Search/SearchOptions.cs) | `SoftTimePercent` |
 | [SearchResult.cs](../../Stello.Net/Stello.Engine/SearchResult.cs) | `ScoreKind`, `SearchInfo`, `SearchResult` |
 | [GameSettings.cs](../../Stello.Net/Stello.App/Models/GameSettings.cs), [AnalysisViewModel.cs](../../Stello.Net/Stello.App/ViewModels/AnalysisViewModel.cs) | The app's settings and how scores are shown |
 | C++: [Kontrol.cpp](../../Stello%20C++/BRAIN/Kontrol.cpp) | `calc_time`, `calc_end_time`, `getcomputer` |
@@ -157,7 +161,7 @@ See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentati
 
 - 300 ms per move finishes within 400 ms with a legal move;
 - a 10-second game clock uses at most 2 seconds for one midgame move;
-- progress is reported for every depth;
+- progress is reported for every depth, and repeated periodically during a long search;
 - Move Now returns a legal move within 100 ms;
 - cancel throws within 100 ms, and an already cancelled token throws at once.
 

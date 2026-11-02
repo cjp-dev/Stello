@@ -25,7 +25,7 @@ dotnet run -c Release --project Stello.Net/tools/Stello.BookTool -- <command> [a
 | `compare <old book> <new book> [--out <report.txt>]` | Reports the values and first moves that changed |
 | `match <book A> <book B> (--starts <report.txt> \| --starts-ply N) [--max-starts N] [--depth 10 \| --time-s S] [--workers N] [--hash-bits 19]` | Plays the two books against each other |
 
-Files are written to a temporary file first and then renamed, so a failed run never leaves half a book. A file that cannot be read gives the error and exit code 1. `--workers` is the number of engines that search at the same time; the default is half the number of logical processors (the physical cores with hyper-threading). Each engine has two hash tables of $2^{\text{hash-bits}}$ slots (48 MiB at 19, chapter 07). Ctrl+C stops `recalc` and `match` cleanly; they then exit with code 2.
+Books are written to a temporary file first and then renamed (`WriteAtomically`), so a failed run never leaves half a book; the reports of `recalc` and `compare` are written directly. A file that cannot be read gives the error and exit code 1. `--workers` is the number of engines that search at the same time; the default is half the number of logical processors (the physical cores with hyper-threading). Each engine has two hash tables of $2^{\text{hash-bits}}$ slots (48 MiB at 19, chapter 07). Ctrl+C stops `recalc` and `match` cleanly; they then exit with code 2.
 
 ## Updating the master book
 
@@ -84,7 +84,7 @@ flowchart TD
 ```
 
 - **The search** is the one used in a game (`SearchEngine.Search` through `BookSearch.PositionValue`, chapter 06): with 60 s per move it deepens the midgame search and switches to the endgame solver when it gets near enough to the end (chapter 08). The kind of result gives the origin: `Heuristic`, `WinLossDraw` or `Exact`. A position with a single legal move is searched too; for a position where the player must pass, the opponent's position is searched; a finished game gets its disc count.
-- **A proven result is kept.** If a leaf was `WinLossDraw` and the new search could not solve the position, the old value stays, with the new effort.
+- **A proven result is kept.** If a leaf was `WinLossDraw` with a value beyond ±32 600 (`SearchEngine.WinScore`), a proven win or loss, and the new search only gives a heuristic value, the old value stays, with the new effort. A `WinLossDraw` value of evaluation size (from the C++ book's `INEXACT` flag, chapter 10) is no proof and gets the new value and origin. A new result that is solved (win/loss/draw or exact) always replaces the old one. A proven draw has the value 0, which the rule cannot tell from an unproven value, so it is not kept either.
 - **The same result with any number of workers.** Each search starts with a clean hash table, so a value does not depend on which searches the worker did before.
 - **Stop and continue.** The text book is the checkpoint: it is saved every `--save-every` searches (default 10) and when the run stops. Running `recalc` again skips what is already done, because those leaves now have the effort of this run.
 - **The end.** The values are backed up and sorted (`BookMinimax`, as in Evaluate Book), so `verify` gives no more warnings, and `<book>.report.txt` is written (see `compare`). Then run `build`.
@@ -97,47 +97,45 @@ flowchart TD
 | `--save-every N` | 10 | Save the book after every N searches |
 | `--hash-bits N` | 19 | Hash table size of each engine |
 
-Each search prints a line with the count, the ply and line of the leaf position, the new value, origin and depth, the time it took, and an estimate of the time left (the average search time so far, times the searches left, divided by the workers). The first lines of a run on the master book:
+The run starts with a line that counts the leaf positions, how many will be searched and how many are already good enough, the limit and the workers. Then each search prints a line with the count, the ply and line of the leaf position, the new value (for the player who makes the book move), origin and depth, the time it took, and an estimate of the time left (the average search time so far, times the searches left, divided by the workers). The lines have this form; the values here are those of the master book's first leaf, d3 c3 e6:
 
 ```text
-11,613 leaf positions; 10,522 to search, 1,091 already good enough. 60 s per position, 12 workers. Ctrl+C stops and saves; run again to continue.
-[     1/10,522] ply  5 d3c3c4c5b5    -67 Heuristic d18 (47.9 s), ...
-[     2/10,522] ply  3 d3e3f3    -30 Heuristic d18 (48.0 s), ...
-[     5/10,522] ply  5 d3c5d6c3f4    -37 Heuristic d18 (60.0 s), ...
-[     6/10,522] ply  5 d3c5e6f3c4     49 Heuristic d17 (60.0 s), ...
+11,613 leaf positions; <to search> to search, <rest> already good enough. 60 s per position, 8 workers. Ctrl+C stops and saves; run again to continue.
+[     1/<to search>] ply  3 d3c3e6   -525 Heuristic d30 (<time> s), left <time left>
 ```
 
-The master book has 10 522 leaf positions to search (the 1 091 exact ones are kept). In the opening a search takes 48–60 s and reaches depth 17–18 (60 s is the hard limit, chapter 09); near the end it is much faster. With 12 workers the whole run takes up to about 14 hours.
+The master book has 11 613 leaf positions (11 622 leaf moves; a few lead to the same position). When the engine version is raised, every leaf position that has a value that is not exact is searched again: about 8 200 for the master book. With Stello 2.0 and 60 s per position, a search in the opening reaches 19–30 plies, mostly 24–26 (it starts no new iteration after 40 s, and 60 s is the hard limit, chapter 09); near the end of the book the endgame solver finishes much sooner. With 8 workers on a Ryzen 7 7800X3D the whole run takes about 14 hours.
 
 ## Comparing two books: `compare`
 
-`compare` (`BookComparison`) compares the book moves the two books have in common, and the move each book plays first in each position. The report (also written by `recalc`) for the recalculation of the master book:
+`compare` (`BookComparison`) compares the book moves the two books have in common, and the move each book plays first in each position. The report that `recalc` wrote for the last recalculation of the master book, [opening-book.report.txt](../../Stello.Net/Book/opening-book.report.txt) (shortened):
 
 ```text
-# Comparison of old-book.txt (old) and Stello.Net/Book/opening-book.txt (new)
+# Recalculated Stello.Net/Book/opening-book.txt with 60 s per position (2026-11-02 00:05)
 # Positions: 11,200 (before 11,200); book moves: 22,878 (before 22,878)
-# Values changed: 15,729
+# Values changed: 15,776
 # Origin before -> after: book moves (values changed)
-#   Unknown     -> Heuristic        15 (15)
-#   Heuristic   -> Heuristic     5,630 (5,605)
-#   Heuristic   -> WinLossDraw     264 (264)
-#   Heuristic   -> Exact         1,238 (1,238)
-#   WinLossDraw -> WinLossDraw   2,723 (0)
-#   WinLossDraw -> Exact           661 (661)
-#   Exact       -> Exact         1,091 (0)
-#   BackedUp    -> BackedUp     11,256 (7,946)
-# Positions whose first book move changed: 2,163
+#   Heuristic   -> Heuristic     4,225 (4,095)
+#   Heuristic   -> WinLossDraw     595 (595)
+#   Heuristic   -> Exact           606 (604)
+#   WinLossDraw -> Heuristic     2,723 (2,719)
+#   WinLossDraw -> Exact            38 (32)
+#   Exact       -> Exact         3,435 (0)
+#   BackedUp    -> BackedUp     11,256 (7,731)
+# Positions whose first book move changed: 1,694
 # <line> <old move>:<old value> <new move>:<new value>
-d3c5e6 d2:-32 f5:-10
-d3c5d6e3 b5:-16 f4:-8
+d3c5 f6:25 d6:87
+d3e3f4 g3:-150 c3:-775
 ...
 ```
+
+The title line is the one `recalc` writes; `compare` writes "Comparison of <old> (old) and <new> (new)" instead. The `WinLossDraw -> Heuristic` row is the rule above at work: 2 718 of those values came from the C++ book's `INEXACT` flag and had no proof, and 5 were proven draws (value 0); the new search gave them all a heuristic value. The 38 proven wins and losses were solved exactly this time.
 
 Everything except the changed positions is a comment, so the report can be given to `match` as its list of start positions.
 
 ## Playing the books against each other: `match`
 
-`match` (`BookMatch`) plays book A against book B with the same engine and the same search limits, so only the books differ. It is the engine match of [chapter 18](18-measuring-the-engine.md) (`EngineMatch`) with a book on each side.
+`match` (`BookMatch`) plays book A against book B with the same engine and the same search limits, so only the books differ. It is the engine match of [chapter 17](17-measuring-the-engine.md) (`EngineMatch`) with a book on each side.
 
 - **Start positions:** the lines in a file (`--starts`, normally the report: the positions where the first book move changed, the only places where the books can play differently), or every book position at a ply (`--starts-ply`). `--max-starts` takes the first N.
 - **A pair of games** is played from each start position: first book A plays the side to move and book B the other side, then the other way round. Each side is a `ComputerPlayer` with its own `SearchEngine` (with a cleared hash table) and its own book, used as in a real game. The games are played to the end.
@@ -153,7 +151,7 @@ Pairs where book B lost points (376):
   ...
 ```
 
-(The C++ book as imported, A, against the recalculated book, B, from the 2 163 positions of the report above, depth 10 per move, 8 workers.)
+(The C++ book as imported, A, against its first recalculation, B, from the 2 163 positions of that recalculation's report, depth 10 per move, 8 workers; see the [Stello 1 documentation](stello-1/12-book-tool.md).) The verdict line is "Book B is stronger." when the whole interval is above 50 %, "Book A is stronger." when it is below, and otherwise "No significant difference.".
 
 ## Recalculating the master book
 
@@ -173,59 +171,9 @@ dotnet run -c Release --project Stello.Net/tools/Stello.BookTool -- verify Stell
 
 The report that `recalc` writes compares with the book at the start of the last run; after a run that was stopped and continued, `compare` against the book in git gives the report of the whole recalculation. Commit the text and the binary book if the match does not show that the old book is stronger.
 
-### Initial recalculation: Version 1 (October 2026)
+### The master book now
 
-The imported C++ master book was first recalculated with 60 s per position and 8 workers on an Intel i7-12850HX laptop, over about a day, with one restart after a reboot.
-
-| | Before (C++ book) | After (Version 1) |
-|---|---|---|
-| Leaf values searched for 60 s | 0 | 10 531 |
-| Exact / win-loss-draw / heuristic values | 1 091 / 3 384 / 7 132 (and 15 unknown) | 2 990 / 2 987 / 5 645 |
-| Moves not backed up / positions not sorted | 104 / 18 | 0 / 0 |
-| White's replies to d3 | c5 −39, c3 −40, e3 −110 | c5 −10, c3 −35, e3 −126 |
-| Main line from the start | 16 moves (±39) | 17 moves (±10), the same up to move 11 |
-| Binary file | 172 KB | 193 KB (the efforts are stored) |
-
-2 163 positions got another first move, the first one at ply 3 (after d3 c5 e6 the book now plays f5 instead of d2). In the match from those positions, the recalculated book won 387 pairs 2–0 and lost 292 pairs 0–2; 1 264 pairs were even, 136 ended 1½–½ and 84 ½–1½. In total it scored 52.8 % (95 % interval 51.6–54.0 %), so it was stronger.
-
-### Evaluation bugfix recalculation: Version 2 (October 2026)
-
-After correcting the leaf evaluation in `Evaluator.cs` (`EdgeContext.Reply`, chapter 04), `OpeningBook.EngineVersion` was bumped to 2 and all 8 623 non-exact leaves were recalculated with 60 s per position using 7 workers:
-
-| | Version 1 (legacy eval) | Version 2 (fixed eval) |
-|---|---|---|
-| Engine version tag | `v1` | `v2` |
-| Exact / win-loss-draw / heuristic values | 2 990 / 2 987 / 5 645 | 3 216 / 2 860 / 5 546 |
-| Newly solved exact endgames | — | +226 (+29 from heuristic, +197 from WLD) |
-| Newly solved win-loss-draw | — | +70 (from heuristic) |
-| Values changed | — | 6 068 (2 455 leaves, 3 334 backed-up) |
-| Positions with another first move | — | 622 |
-| White's replies to d3 | c5 −10, c3 −35, e3 −126 | c5 −10, c3 −29, e3 −150 |
-
-In a paired tournament match between Version 1 and Version 2 across all 265 ply-8 start positions (530 games) at depth 10:
-- Version 2 scored **271.5 of 530 (51.2 %, 95 % interval 50.0 % to 52.4 %)** with **+0.3 discs per game**.
-- Version 2 lost points on only 4 pairs out of 265 (246 tied, 15 won by Version 2, 4 lost).
-- Tool verdict: `Book B is stronger.`
-
-### Stello 2 recalculation: Version 3 (November 2026)
-
-Stello 2.0 raised `OpeningBook.EngineVersion` to 3, so `recalc` searched every leaf that was not exact again with Stello 2, 60 s per position, with 8 workers on a Ryzen 7 7800X3D (about 16 hours). The new heuristic values are in 1/100 disc; solved values stay ±(32 600 + discs). The old book is kept as `Book/opening-book-stello1.txt` for Stello 1's match sides ([chapter 21](21-stello-2-evaluation-and-solver.md#the-opening-book)).
-
-| | Version 2 (Stello 1) | Version 3 (Stello 2.0) |
-|---|---|---|
-| Exact / win-loss-draw / heuristic values | 3 216 / 2 860 / 5 546 | 3 435 / 2 761 / 5 426 |
-| Newly solved exact endgames | — | +219 (+103 from heuristic, +116 from win-loss-draw) |
-| Values changed | — | 11 322 (5 634 leaves, 5 688 backed-up) |
-| Positions with another first move | — | 1 307 |
-| White's replies to d3 | c5 −10, c3 −29, e3 −150 (Stello 1 units) | c5 −25, c3 −62, e3 −150 (1/100 disc) |
-| Depth reached in 60 s | 17–18 | about 17 on average, 18–19 near the start |
-| Main line from the start | 17 moves | 15 moves (±25), the same up to g5 |
-
-The matches start at plies 10–12 (`starts.txt`), with books on and 500 ms per move, 1,180 games each:
-- Stello 2 with this book against Stello 1 with its book: **88.9 %** (87.2–90.7 %), +362 Elo ([result](../../Plans/benchmark-results/match_v2-p4-book-vs-v1-500ms.md));
-- Stello 2 with this book against Stello 2 with the Version 2 book (`book-file=`): **49.2 %** (47.3–51.2 %), −5 Elo, so not worse ([result](../../Plans/benchmark-results/match_v2-p4-newbook-vs-oldbook-500ms.md)).
-
-**A flaw found afterwards:** 2 718 leaves carry the C++ book's `INEXACT` flag, imported as win-loss-draw, but hold evaluation-sized values. `recalc` kept every win-loss-draw value it could not solve, so these still have their old values (the report's `WinLossDraw -> WinLossDraw 2,744 (0)`). Stello 2.x's `recalc` keeps only values beyond ±32 600 (chapter 10).
+The master book's values are those of Stello 2.0, engine version 4 (chapter 10): every leaf that is not exact was searched with 60 s per position, 8 workers on a Ryzen 7 7800X3D, in about 14 hours, and the exact values of earlier engine versions were kept. The run changed 15 776 values and the first move in 1 694 positions (the report above). In 1 180 games with books on and 500 ms per move, a pair from each of the 590 start positions at plies 10–12 in the benchmark's `starts.txt` (chapter 17), it scored 51.7 % (49.7–53.6 %) against the book before it, which is no significant difference but not worse ([result](../../Plans/benchmark-results/match_v2x-book2x-vs-book20-500ms.md)). The book was recalculated twice for Stello 2.0, as told in [chapter 22](22-phase-4-the-release.md) and [chapter 23](23-phase-5-the-search.md); the second run also searched the 2 718 `INEXACT` leaves that the first one had kept by mistake.
 
 ## Worked example: `stats`
 
@@ -237,12 +185,12 @@ Moves:        22,878
 Leaf moves:   11,622
 Passes:       4
 Longest line: 57 plies
-Replies to d3: c5 (-25, BackedUp), c3 (-62, BackedUp), e3 (-150, BackedUp)
+Replies to d3: c5 (-87, BackedUp), c3 (-262, BackedUp), e3 (-775, BackedUp)
 
 Origin of the values:
-  Heuristic       5,426
-  WinLossDraw     2,761
-  Exact           3,435
+  Heuristic       6,948
+  WinLossDraw       595
+  Exact           4,079
   BackedUp       11,256
 
 Search limit of the searched values:
@@ -257,7 +205,7 @@ Ply  Positions  Leaf moves   (d3 is ply 1; a position counts at its shortest lin
  55         26           2
 ```
 
-Only the 1 091 exact values from the C++ book have no known effort; all other leaves were searched by `recalc` with 60 s per move.
+Only the 1 091 exact values from the C++ book have no known effort; all other leaves were searched by `recalc` with 60 s per move. The values are in 1/100 disc for the player who makes the move: c5 is worth −0.87 discs for White.
 
 ## Design notes
 
@@ -289,7 +237,7 @@ Only the 1 091 exact values from the C++ book have no known effort; all other le
 
 The tool itself has no tests; the code it calls is tested in [OpeningBookTests.cs](../../Stello.Net/Stello.Engine.Tests/OpeningBookTests.cs) (chapter 10), including the two tests on the shipped files above, and in [BookRecalculatorTests.cs](../../Stello.Net/Stello.Engine.Tests/BookRecalculatorTests.cs):
 
-- `recalc` searches only the leaves that are not good enough, searches a transposed leaf once, keeps a proven result the search cannot solve, gives the same book with 1 and 4 workers (and a consistent book after back-up), and continues where a stopped run stopped, with checkpoints;
+- `recalc` searches only the leaves that are not good enough, searches a transposed leaf once, keeps a proven result the search cannot solve, replaces a win/loss/draw value that is no proof, gives the same book with 1 and 4 workers (and a consistent book after back-up), and continues where a stopped run stopped, with checkpoints;
 - `compare` reports the changed values and first moves, and its report gives the start positions;
 - `match` with the same book on both sides scores exactly 50 % with the colours swapped and finished, legal games; an illegal start position is rejected; the summary and its interval; reading start positions.
 

@@ -81,7 +81,7 @@ flowchart TD
     Empty -- "no" --> Second["Store the new one in the second entry"]
 ```
 
-The first entry is "depth-preferred": it survives until a result at least as deep arrives. The second entry is "always replaced": it keeps the most recent shallow result. This is the *two-tier* scheme described on the Chess Programming Wiki. C++ had one entry per slot, so a deep endgame result could be overwritten by many shallow ones; the second entry was added in phase 8.
+The first entry is "depth-preferred": it survives until a result at least as deep arrives. The second entry is "always replaced": it keeps the most recent shallow result. This is the *two-tier* scheme described on the Chess Programming Wiki. C++ had one entry per slot, so a deep result could be overwritten by many shallow ones.
 
 ### Use in the midgame search
 
@@ -94,22 +94,29 @@ In the node search (chapter 06):
   - the bound is `Upper` and the value is below α (the position is too bad for us), or
   - the bound is `Lower` and the value is at least β (too good; the opponent avoids it).
 - Otherwise the stored move is searched first (chapter 05).
-- **Enhanced transposition cutoff (Stello 2.x).** From `look` = 4, before the moves are ordered, the position after each move is looked up. If a child has an `Exact` or `Upper` entry with depth ≥ `look` − 1 whose negated value is at least β, that move already refutes the node, and the node returns at once without searching anything.
+- **Enhanced transposition cutoff.** From `look` = 4 (`MidgameEtcMinLook`), when the children's ply is still within the read height, the position after each move is looked up before the moves are ordered, with the opponent as the tag. If a child has an `Exact` or `Upper` entry with depth ≥ `look` − 1 whose negated value is at least β, that move already refutes the node, and the node returns at once without searching anything.
+- **Multi-ProbCut's shallow searches** (chapter 06) read and write the same table at the same plies. Their entries have a small depth, so for the deep search that follows they mostly give the move to try first, and the depth-preferred entry keeps deeper results.
 - After the node is searched, the result is stored with the node's `look` as depth and the bound from the window: `Lower` if the best score ≥ β, `Exact` if it is above α, else `Upper`.
 
 ### Use in the endgame solver
 
-In `Solve` (chapter 08), with 7 or more empty squares and tag 0:
+The solver ([chapter 08](08-endgame-solver.md)) uses the endgame table with tag 0 and the number of empty squares as the depth; an exact endgame result never needs a deeper search, so the stored depth is not checked when reading. Two kinds of node use it:
 
-- An `Exact` entry is returned at once.
-- A `Lower` entry raises α and an `Upper` entry lowers β; if then α ≥ β, the stored value is returned.
-- The stored move is tried first.
-- The result is stored with the number of empty squares as depth; an exact endgame score never needs a deeper search.
-- With 10 or more empty squares, the positions after each move are looked up first (*enhanced transposition cutoff*, chapter 08).
+- **Nodes with a window** (`EndWindow`, 7 or more empty squares, the principal variation of the solver):
+  - an `Exact` entry is returned at once;
+  - a `Lower` entry raises α and an `Upper` entry lowers β; if then α ≥ β, the stored value is returned;
+  - otherwise the stored move is searched first;
+  - the result is stored as `Lower` if it reached β, `Exact` if it is above the original α, else `Upper`.
+- **Null-window nodes above 13 empty squares** (`EndDeep`, a fail-soft null window around α, so there is no window to narrow):
+  - an entry that is not `Upper` with a value above α, or not `Lower` with a value at or below α, already answers the question "better than α?", so its value is returned;
+  - otherwise the stored move is searched first, before the other moves are ordered;
+  - the result is stored as `Lower` if it is above α, else `Upper`.
+
+Both are described in [Above 13 empty squares: `EndWindow` and `EndDeep`](08-endgame-solver.md#above-13-empty-squares-endwindow-and-enddeep). Null-window nodes with 13 or fewer empty squares use the solver's small local table instead ([7 to 13 empty squares](08-endgame-solver.md#7-to-13-empty-squares-endlocal-and-endsimple)), and nodes with 6 or fewer empty squares no table at all. From 12 empty squares (`EndEtcMinEmpties`), both kinds of node first look up the positions after each move (*enhanced transposition cutoff*, chapter 08).
 
 ### Two tables
 
-Midgame values (heuristic scores in 1/100 disc, depending on the search depth) and endgame values (final disc differences) mean different things, so they are kept in separate tables. The tables are never cleared during a game: `SearchEngine.ClearHash` exists, but the app does not call it, so results from the previous move are still there when the next search starts.
+Midgame values (heuristic scores in 1/100 disc, depending on the search depth, or ±(32 600 + discs) for a finished game) and endgame values (final disc differences, −64 to 64) mean different things, so they are kept in separate tables. The tables are never cleared during a game: `SearchEngine.ClearHash` (which also clears the solver's local table) exists, but the apps do not call it, so results from the previous move are still there when the next search starts. The tools call it between independent searches: the benchmarks, the trainer's `mpc` command, the book recalculation and the book match.
 
 ## Worked examples
 
@@ -156,7 +163,8 @@ The deep result A survived two shallow stores (steps 2 and 3); only a deeper res
 
 - **Full positions instead of Zobrist keys.** C++ used 32-bit Zobrist-style keys from random numbers, and checked only 32 bits, so false hits were possible. Storing both bitboards costs 16 bytes per entry but makes every hit certain, and there is no random key table to maintain. See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md), section 3.5.
 - **Two tables** instead of one shared table: C++ mixed midgame and endgame values in the same table.
-- **Two entries per slot** (phase 8) was the biggest single gain of phase 8: the nodes for FFO #43 dropped from 292 M to about 117–168 M. A single-entry table of $2^{23}$ entries gave a similar result, so the problem had been deep entries being overwritten. Larger two-entry tables ($2^{21}$–$2^{23}$ slots) gave no further gain: FFO #40–#44 took 17.4–17.9 s against 17.0 s with $2^{19}$ slots, so the default stayed at $2^{19}$ (see [Tested and rejected](../../Plans/Stello%20porting%20documentation.md#tested-and-rejected) in the porting documentation).
+- **Two entries per slot.** With one entry per slot, as in C++, deep endgame results were overwritten by many shallow ones; the second entry keeps them. The measurements from the port, which also set the default of $2^{19}$ slots, are in the [Stello 1 documentation](stello-1/07-transposition-table.md).
+- **One bound and one move per entry.** An entry with both bounds and two moves was tried for the midgame and was not better ([chapter 23](23-phase-5-the-search.md)).
 - **Bounds narrow the endgame window.** In the endgame, a stored bound that does not end the search still narrows (α, β), which C++ did not do.
 
 ## Where in the code
@@ -164,7 +172,8 @@ The deep result A survived two shallow stores (steps 2 and 3); only a deeper res
 | File | Main members |
 |---|---|
 | [TranspositionTable.cs](../../Stello.Net/Stello.Engine/Search/TranspositionTable.cs) | `Bound`, `TranspositionTable`, `Entry`, `TryGet`, `Store`, `Clear`, `Slot` |
-| [SearchEngine.cs](../../Stello.Net/Stello.Engine/SearchEngine.cs) | `_midgameTable` and `_endgameTable`, their use in `Search` and `Solve`, `ClearHash` |
+| [SearchEngine.cs](../../Stello.Net/Stello.Engine/SearchEngine.cs) | `_midgameTable` and `_endgameTable`, the midgame use in `Search` (with `MidgameEtcMinLook`), `ClearHash` |
+| [Endgame/SearchEngine.Endgame.cs](../../Stello.Net/Stello.Engine/Endgame/SearchEngine.Endgame.cs) | The endgame use in `EndWindow` and `EndDeep`, `EndEtcMinEmpties` |
 | C++: [Minmax.cpp](../../Stello%20C++/BRAIN/Minmax.cpp), [HASH.H](../../Stello%20C++/BRAIN/HASH.H) | `f_hash_put`, the C++ hash table |
 
 ## Tests

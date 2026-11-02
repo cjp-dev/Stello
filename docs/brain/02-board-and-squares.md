@@ -4,7 +4,7 @@
 
 ## In short
 
-A position is stored as two 64-bit numbers, one for the black discs and one for the white discs, with one bit per square. This is called a *bitboard*. With bitboards, the engine can work on all 64 squares at once with a few machine instructions, and a whole position is only 16 bytes. This chapter explains how squares are numbered, how the bits map to squares, and the older "legacy" square numbers that are still used by the opening book and Stello 1's edge tables.
+A position is stored as two 64-bit numbers, one for the black discs and one for the white discs, with one bit per square. This is called a *bitboard*. With bitboards, the engine can work on all 64 squares at once with a few machine instructions, and a whole position is only 16 bytes. This chapter explains how squares are numbered, how the bits map to squares, and the older "legacy" square numbers of the C++ program, which are still used to import its opening book.
 
 ## Data structures
 
@@ -73,7 +73,7 @@ Shifting "right" from column h would land on column a of the next row (h4 is bit
 
 ### Legacy square numbers
 
-The C++ program used a 10 × 10 array with a border ring around the board, and numbered the squares 10 × row + column, both counted from 1. These numbers are still used in two places: the moves in the C++ opening book file, which is read to import it (chapter 10), and the tables ported from the C++ evaluation (chapter 04).
+The C++ program used a 10 × 10 array with a border ring around the board, and numbered the squares 10 × row + column, both counted from 1. These numbers are still used in one place: the moves in the C++ opening book file, which is read to import it (`LegacyBookFormat`, chapter 10).
 
 ![A 10 by 10 grid: a grey border ring with numbers 0 to 99, and the playing squares from 11 (a1) to 88 (h8).](images/board-legacy-numbers.svg)
 
@@ -126,7 +126,7 @@ The four first moves in legacy numbers are d3 = 34, c4 = 43, f5 = 56 and e6 = 65
 - **Why immutable.** A `Board` is 16 bytes, the same size as two `long` values. Copying it is as cheap as passing a reference, so the search keeps the parent position in a local variable instead of undoing moves, and the game record stores every position ([chapter 13](13-game-record.md)).
 - **Value equality.** `Board` is a record struct, so two boards with the same discs are equal. The tests compare boards directly, and the hash table and the opening book use the two bitboards as keys.
 - **Side to move is not part of the board.** A position is a `Board` plus the `Player` to move. The search, the game record and the book always pass both.
-- **Legacy numbers only at the edges.** The rest of the engine uses `Square` and bitboards. The evaluation still fills a 10 × 10 array for the ported C++ code (chapter 04).
+- **Legacy numbers only at the edge.** Only the import of the C++ book uses them; the rest of the engine, the evaluation included, works on `Square` and bitboards (chapter 04).
 
 ## Where in the code
 

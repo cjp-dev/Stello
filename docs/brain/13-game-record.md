@@ -10,7 +10,7 @@
 
 ### `Move`
 
-A `Move` is a square or a pass. It is a `readonly record struct` with one field, `Square?`; `null` means a pass, so `default(Move)` is `Move.Pass`. As text it is "f5" or "pass".
+A `Move` is a square or a pass. It is a `readonly record struct` with one property, `Square` (a `Square?`); `null` means a pass, so `default(Move)` is `Move.Pass`. As text it is "f5" or "pass".
 
 ### `Game`
 
@@ -55,9 +55,10 @@ flowchart LR
 ### Changing the game
 
 - **`Play(square)`**: throws if the game is over; otherwise computes the new board with `Board.Play` (which throws on an illegal move), then appends it.
-- **`Pass()`**: allowed only when `MustPass` is true (no legal move, but the game is not over). The board stays the same and the other side is to move.
+- **`Pass()`**: allowed only when `MustPass` is true (no legal move, but the game is not over); otherwise it throws. The board stays the same and the other side is to move.
+- **`Play(move)`**: `Play(square)` for a square, `Pass()` for a pass; used when a record or a computer move is replayed.
 - **Append** (private): removes all moves and positions after `Ply`, adds the move and the new position, and increases `Ply`.
-- **`Undo()` / `Redo()`**: decrease or increase `Ply`. Nothing else changes, so they are instant.
+- **`Undo()` / `Redo()`**: decrease or increase `Ply` (they throw if `CanUndo` or `CanRedo` is false). Nothing else changes, so they are instant.
 - **`NewGame()`**: clears the history and keeps the sides.
 - **`SwitchSides()`**: swaps the human's and the computer's colour; the position does not change.
 
@@ -79,13 +80,13 @@ stateDiagram-v2
     Earlier --> Empty: NewGame
 ```
 
-The app does not always undo one ply at a time: Back and Forward jump to the previous or next position where the human is to move, skipping the computer's moves (chapter 14).
+The app does not always undo one ply at a time: against the computer, Back and Forward jump to the previous or next position where the human is to move, skipping the computer's moves; with two players they move one ply (chapter 14).
 
 ### The text format
 
 `GameRecordFormat.Format` writes `PlayedMoves` separated by spaces. Undone moves are not saved.
 
-`GameRecordFormat.Parse` splits the text on any whitespace and replays the moves from the start position. It stops at the first problem and throws a `FormatException` with the move number:
+`GameRecordFormat.Parse(text, human)` splits the text on any whitespace and replays the moves from the start position, in a `Game` where the human plays `human` (Black by default). It stops at the first problem and throws a `FormatException` with the move number:
 
 | Problem | Example text | Message |
 |---|---|---|
@@ -94,7 +95,7 @@ The app does not always undo one ply at a time: Back and Forward jump to the pre
 | Pass that is not forced | `pass` | Move 1: Black has a legal move and cannot pass. |
 | Move after the end | a wipe-out game followed by `a1` | Move 10: the game is already over. |
 
-Upper and lower case and extra whitespace are accepted. The app saves games as `*.stello` files in this format (and also opens standard `*.txt` move list files). In the user interface, the active game history is displayed chronologically in the Move History panel (chapter 15).
+Upper and lower case and extra whitespace are accepted. The apps save games as `*.stello` files in this format (and also open `*.txt` move list files). The web app also shows the played moves, two to a row, in its Move History panel (chapter 15).
 
 ## Worked example: a game with a pass
 
@@ -138,7 +139,7 @@ Reading this text back with `Parse` gives the same game: the "pass" is accepted 
 | File | Main members |
 |---|---|
 | [Move.cs](../../Stello.Net/Stello.Engine/Move.cs) | `Move`, `Pass`, `IsPass`, `TryParse` |
-| [Game.cs](../../Stello.Net/Stello.Engine/Game.cs) | `Game`, `Play`, `Pass`, `Undo`, `Redo`, `NewGame`, `SwitchSides`, `MustPass`, `Winner` |
+| [Game.cs](../../Stello.Net/Stello.Engine/Game.cs) | `Game`, `Play` (a square or a move), `Pass`, `Undo`, `Redo`, `NewGame`, `SwitchSides`, `MustPass`, `Winner` |
 | [GameRecordFormat.cs](../../Stello.Net/Stello.Engine/GameRecordFormat.cs) | `Format`, `Parse` |
 
 ## Tests

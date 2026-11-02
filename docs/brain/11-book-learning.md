@@ -16,7 +16,7 @@ The opening book can grow and improve itself. **Adding a game** stores its moves
 | Origin | Value |
 |---|---|
 | A move in an added game | +32 665 for the winner's moves, −32 665 for the loser's, 0 in a draw (`WinValue`) |
-| A search with a heuristic score | The search score in 1/100 disc (Stello 2's pattern evaluation, [chapter 21](21-stello-2-evaluation-and-solver.md)); a book searched by Stello 1 holds its evaluation units (chapter 04) |
+| A search with a heuristic score | The search score in 1/100 disc, at most ±6 400 (the pattern evaluation, [chapter 04](04-evaluation.md)) |
 | A search that solved the position | ±(32 600 + disc difference), 0 for a draw |
 | A move to a position that is in the book | −(value of the best move there), backed up by minimax |
 
@@ -119,7 +119,7 @@ flowchart TD
 
 ### In the app
 
-The Book menu has four commands ([chapter 14](14-app-integration.md#threading)):
+The desktop app's Book menu has four commands ([chapter 14](14-app-integration.md#threading)); the web app has only Add Game to Book, in its File menu, and keeps the book in the browser's local storage:
 
 | Command | Does |
 |---|---|
@@ -143,14 +143,14 @@ Starting from `OpeningBook.CreateEmpty()`, with `SearchLimits.FixedDepth(4)` and
 - **EvaluatePositions** searches 5 positions: the leaf e6, and one dropout move in each of the four positions (e3 as White's reply to d3, e6 after c5, e3 after f6, c6 after f5). The book now has 8 book moves, and the values are backed up: the game move c5 is worth −62 for White, the new move e3 −275.
 - **Minimax** sorts the moves: the book still answers d3 with c5, the better of the two, and after d3 c5 it plays e6 (+62) instead of the game move f6 (−100).
 
-The values are Stello 2's, in 1/100 disc: c5 is worth −0.62 discs for White. (With Stello 1's evaluation, e3 came out better than c5 and moved to the front.)
+The values are in 1/100 disc: c5 is worth −0.62 discs for White, e3 −2.75.
 
 Adding the same game in another frame afterwards, `f5 d6 c3 d3 c4` (the tiger after f5), adds no moves: the book still has 8. The test `Learning_WorkedExampleOfChapter12` checks the counts, the values of c5, e3, e6 and f6, and the order of the moves.
 
 ## Design notes
 
 - **A port of the C++ learning.** The values, dropout expansion, stable sorting and saving every 10 positions work as in C++ `Book.cpp`. The flags became origin and effort (chapter 10).
-- **Positions instead of lines.** The book stores each position once (chapter 10), so evaluation searches a transposed position once, and minimax backs up in one pass instead of ten rounds. C++ (and the first C# version) did not add the move that led into a known position by another move order; now it is added, so back-up also reaches that move order.
+- **Positions instead of lines.** The book stores each position once (chapter 10), so evaluation searches a transposed position once, and minimax backs up in one pass instead of ten rounds. C++ did not add the move that led into a known position by another move order; now it is added, so back-up also reaches that move order.
 - **No illegal moves to remove.** C++ removed book moves that were not legal while it evaluated; the files are now checked when they are read, and games when they are added, so the book never holds an illegal move.
 - **Bugs fixed.** C++ stored a solved draw as −32 600 (a loss); C# stores 0. C++ self-play took the result from the last *midgame* value even when the endgame had been solved; C# uses the exact score or the final board.
 - **Usable interactively.** C++ self-play ran forever on the UI thread and the program had to be killed; C# runs in the background and stops on request.

@@ -30,7 +30,7 @@ One book move (internal class):
 | `Exact` | A search that solved the position exactly, or a finished game |
 | `BackedUp` | Minus the value of the position after the move, which is itself in the book |
 
-`BookEffort(Kind, Amount, DepthReached, EngineVersion)` records the search limit (`Time` in milliseconds, `Depth` in plies, `Solve`, or `None` if unknown), the depth the search reached, and the engine version. `OpeningBook.EngineVersion` (now 4) is raised by hand when a change to the evaluation or the search changes the values it finds, so old values can be told apart and searched again. Version 2 was recalculated after fixing the leaf evaluation. Version 3 is Stello 2.0, whose heuristic values are in 1/100 disc; the book was recalculated with it ([chapter 21](21-stello-2-evaluation-and-solver.md#the-opening-book)). Version 4 is Stello 2.x, with the phase 5 search (PVS, Multi-ProbCut, evaluation ordering) and the evaluation capped at ±64 discs; the book is being recalculated with it. Values imported from the original C++ book have no effort.
+`BookEffort(Kind, Amount, DepthReached, EngineVersion)` records the search limit (`Time` in milliseconds, `Depth` in plies, `Solve`, or `None` if unknown), the depth the search reached (plies, or empty squares when the endgame was solved), and the engine version. `OpeningBook.EngineVersion` is raised by hand when a change to the evaluation or the search changes the values it finds, so old values can be told apart and searched again (`recalc`, chapter 12). It is **4**: the search of chapters 05–08 (PVS, Multi-ProbCut, evaluation ordering) with the pattern evaluation of chapter 04, whose heuristic values are in 1/100 disc and capped at ±64 discs. Every leaf of the master book that is not exact was searched with it. An exact value is never searched again, because it does not depend on the engine, so the book also holds exact values tagged with engine versions 1–3. Values imported from the original C++ book have no effort.
 
 ### `OpeningBook`
 
@@ -54,16 +54,16 @@ The master book is [Stello.Net/Book/opening-book.txt](../../Stello.Net/Book/open
 # 11200 positions, 22878 moves
 # <line> <move>:<value>:<origin>[:<limit>:d<depth reached>:v<engine version>] ...
 # origin: U unknown, H heuristic, W win/loss/draw, X exact, B backed up; limit: time per move (s, ms), depth (ply), solve, - unknown
-d3 c5:-10:B c3:-29:B e3:-150:B
-d3c3 c4:29:B e6:-18:W:60s:d18:v2
-d3c5 f6:10:B e6:10:B d6:-16:B c6:-56:W:60s:d18:v2
-d3e3 f4:150:B f3:35:W:60s:d18:v2
-d3c3c4 c5:-29:B e3:-29:B
+d3 c5:-87:B c3:-262:B e3:-775:B
+d3c3 c4:262:B e6:-525:H:60s:d30:v4
+d3c5 d6:87:B f6:75:B e6:75:B c6:-375:H:60s:d29:v4
+d3e3 f4:775:B f3:200:H:60s:d28:v4
+d3c3c4 c5:-262:B e3:-262:B
 ```
 
 - The first line identifies the format; other lines starting with `#` are comments.
 - Each other line is one position. It starts with the **key**: the moves from the start that reach it, without spaces and beginning with d3 (`--` is a pass). Of the lines of book moves that reach the position, the shortest is used, and of those the alphabetically first.
-- Then follow the book moves in book order, in the frame of the key line, as `move:value:origin`. A searched value adds the effort, e.g. `c6:-56:W:60s:d18:v2` (marked win/loss/draw by the C++ book, see below; 60 s per move, depth 18 reached, engine version 2). Only the 1 091 exact values from the original C++ book have no effort.
+- Then follow the book moves in book order, in the frame of the key line, as `move:value:origin`. A searched value adds the effort, e.g. `e6:-525:H:60s:d30:v4` (heuristic, −5.25 discs; 60 s per move, depth 30 reached, engine version 4). Only the 1 091 exact values from the original C++ book have no effort.
 - The lines are sorted by length, then alphabetically, and written with `\n` and invariant culture, so a change to the book only changes the lines of the positions that changed.
 - Reading checks that every line is a legal game from the start, every book move is legal, no position or move is given twice, and every position can be reached from d3 by book moves. Errors give an `InvalidDataException` with the line number.
 
@@ -78,7 +78,7 @@ The apps use [Stello.Net/Book/opening-book.bin](../../Stello.Net/Book/opening-bo
 | Move | byte square (0–63, 64 = pass), `int16` value, byte origin; for a searched origin also byte effort kind, 7-bit encoded amount, byte depth reached, byte engine version; then a 7-bit encoded reference to the position after the move |
 | Reference | 0 = not in the book, 1 = the position follows here, $n + 2$ = position number $n$ (numbered in the order they are written), reached by another move order |
 
-The positions are written depth first from the position after d3, in book order. A position's bitboards are not stored: they are found by playing the moves, and the squares are written in the frame of the board as it is reached. So a book move takes about 8.5 bytes (the master book is 193 209 bytes, against 187 118 for the C++ file, which had no search effort). Reading checks the moves, the references and the counts.
+The positions are written depth first from the position after d3, in book order. A position's bitboards are not stored: they are found by playing the moves, and the squares are written in the frame of the board as it is reached. So a book move takes about 8.5 bytes (the master book is 193 210 bytes, against 187 118 for the C++ file, which had no search effort). Reading checks the moves, the references and the counts.
 
 ### The C++ file (import only)
 
@@ -101,7 +101,7 @@ The import walks the tree depth first, in file order, and adds each legal move t
 | Not `CALCULATED` (a move from an added game, ±32 665) | `Unknown` |
 | The first node of a chain with value 0, not `EXACT` | `Unknown`: C++ `savebook` wrote 0 instead of 32 600 here, so the 0 cannot be trusted |
 
-Most `INEXACT` nodes hold evaluation-sized values (for example −56), so they are not proven results. When `recalc` cannot solve such a position it replaces the value; it keeps a `WinLossDraw` value only beyond ±32 600, a proven win or loss. Before engine version 4 it kept all of them, so 2 718 leaves still had their C++ values after the Stello 2.0 recalculation.
+Most `INEXACT` nodes hold evaluation-sized values (for example −56), so they are not proven results. When `recalc` cannot solve such a position it replaces the value; it keeps a `WinLossDraw` value only beyond ±32 600, a proven win or loss (chapter 12). In the master book every one of them has been searched again: its 595 `WinLossDraw` values are all proven results of Stello 2.0's own searches.
 
 - Moves that are not legal could never be played and are left out.
 - When two lines reach the same position, their moves are joined: the moves of the first line come first, in their order, and moves only the later line has are added at the end. For a move in both, the value with the better origin is kept (`Exact` > `WinLossDraw` > `BackedUp` > `Heuristic` > `Unknown`).
@@ -174,7 +174,7 @@ flowchart TD
     Has -- "no" --> Search
 ```
 
-The checkbox **Stello Opening Book (11,200 canonical positions)** in the settings dialog (chapter 15) controls `limits.UseOpeningBook`. When unchecked, the book lookup is completely bypassed. A book move returns at once, with 0 nodes and no time used.
+The checkbox **Stello Opening Book (11,200 canonical positions)** in the settings dialog (chapter 15; "Enable Stello Opening Book …" in the desktop app) controls `limits.UseOpeningBook`. When unchecked, the book lookup is completely bypassed. A book move returns at once, with 0 nodes and no time used.
 
 ### Loading and saving
 
@@ -186,20 +186,24 @@ The checkbox **Stello Opening Book (11,200 canonical positions)** in the setting
 
 ### The master book
 
-`Stello.BookTool stats` on the master book:
+`Stello.BookTool stats` on the master book (the rows on engine versions and depths are counted from the efforts in the text file):
 
 | Property | Value |
 |---|---|
 | Positions / book moves | 11 200 / 22 878 |
 | Leaf moves (the position after them is not in the book) | 11 622 |
-| White's replies to d3 | c5 (−10), c3 (−29), e3 (−150) |
+| White's replies to d3 | c5 (−87), c3 (−262), e3 (−775), in 1/100 disc |
 | Longest line | 57 plies |
-| Origins | 11 256 backed up, 5 546 heuristic, 2 860 win/loss/draw, 3 216 exact |
+| Origins | 11 256 backed up, 6 948 heuristic, 595 win/loss/draw, 4 079 exact |
 | Search effort | 10 531 values searched for 60 s per move (`recalc`, chapter 12); 1 091 exact values from the C++ book |
+| Engine version of the searched values | 8 187 version 4 (all heuristic and win/loss/draw values, and 644 exact ones); 2 344 exact values from versions 1–3 |
+| Depth reached by the heuristic searches | 19–30 plies, mostly 24–26 |
 | Pass moves | 4 |
-| Files | text 898 KB, binary 193 KB |
+| Files | text 913 KB, binary 193 KB |
 
-Counting d3 as ply 1 and each position at its shortest line, the book has about 500 positions at plies 10–12, then 180–330 per ply up to ply 40; after that fewer and fewer lines continue, down to 26 positions at ply 55. The C++ tree had 23 389 nodes; the import has 511 fewer moves, because a move stored in two lines (or in two frames) is now stored once and moves that could not be played are left out. 14 positions were stored in two frames. After the import all leaves were searched again (version 1), and then recalculated with the fixed evaluation (version 2, chapter 12), upgrading 226 positions to exact solutions and changing the first move in 622 positions. Stello 2 (version 3, [chapter 21](21-stello-2-evaluation-and-solver.md#the-opening-book)) searched every heuristic and win/loss/draw leaf again for 60 s per position (about 16 hours with 8 workers on a Ryzen 7 7800X3D); 11 322 values changed, 219 more leaves were solved exactly and the first move changed in 1 307 positions. Its heuristic values are in 1/100 disc. Stello 2.x (version 4: Multi-ProbCut, PVS and better move ordering) searched them again for 60 s per position (about 14 hours, 8 workers, the same PC), reaching depths 22–29 against 17–19. This time the 2 718 old `WinLossDraw` leaves without a proof were searched too. 15 776 values changed, 606 heuristic leaves became exact and 595 proven wins or losses, and the first move changed in 1 694 positions. On 200 random heuristic leaves the values are 2.0 discs from the Egaroucid port's level 21 (version 3: 2.2).
+Counting d3 as ply 1 and each position at its shortest line, the book has about 500 positions at plies 10–12, then 180–330 per ply up to ply 40; after that fewer and fewer lines continue, down to 26 positions at ply 55. The C++ tree had 23 389 nodes; the import has 511 fewer moves, because a move stored in two lines (or in two frames) is now stored once and moves that could not be played are left out. 14 positions were stored in two frames.
+
+Since the import, every leaf that is not exact has been searched again by `recalc` (chapter 12) with 60 s per position; the current values are those of Stello 2.0 (engine version 4), backed up and sorted. The searches solved 4 079 − 1 091 = 2 988 leaf moves exactly and 595 for win, loss or draw. Compared with the Egaroucid port searching at level 21 ([chapter 18](18-the-egaroucid-port.md)), 200 random heuristic leaves are on average 2.0 discs away (correlation 0.94). The book was recalculated twice for Stello 2.0: when the pattern evaluation and the endgame solver went into the apps ([chapter 22](22-phase-4-the-release.md)), and again with the final search ([chapter 23](23-phase-5-the-search.md)), which also searched the 2 718 imported `INEXACT` leaves. The recalculations with engine versions 1 and 2 are described in the [Stello 1 documentation](stello-1/10-opening-book.md).
 
 ### The same reply for all four first moves
 
@@ -220,16 +224,16 @@ Playing only book moves for both sides from the start (random first move with `n
 f5 d6 c5 f4 e3 c6 d3 f6 e6 d7 g4 c4 g5 c3 f7 d2 e7 f2 e2
 ```
 
-Up to f2 (18 moves) it follows the named line "Rotating Flat (Kling Continuation)" in Egaroucid's list of openings. The books before version 4 played the "tiger" (f5 d6 c3 d3 c4) instead; version 4 rates c3 after f5 d6 at +0.75 for Black and c5 at +0.87. After e2 the book has no reply.
+Up to f2 (18 moves) it follows the named line "Rotating Flat (Kling Continuation)" in Egaroucid's list of openings. After f5 d6 the book rates c5 at +0.87 for Black and c3, the "tiger" (f5 d6 c3 d3 c4), at +0.75, so it leaves the tiger at move 3. After e2 the book has no reply.
 
 ## Design notes
 
 - **Positions instead of a tree.** The C++ book was a tree of lines, so a position reached by two lines was stored twice, possibly with different moves and values, and minimax needed ten rounds to carry values between the copies. Now each position is stored once, and back-up is exact in one pass (chapter 11).
-- **One canonical form instead of four lookups.** C++ transformed the game's moves (`convop`, with a special case for the symmetric position after c3, c4, c5) and tried three transposition patterns; the first C# version tried all four symmetries against an index. The canonical form finds a position in any frame with one lookup.
+- **One canonical form instead of four lookups.** C++ transformed the game's moves (`convop`, with a special case for the symmetric position after c3, c4, c5) and tried three transposition patterns. The canonical form finds a position in any frame with one lookup.
 - **Origin and effort instead of flags.** The C++ flags did not say how long a value was searched for, so a 1-second value could not be told from a 2-minute value. The effort lets the book tool search only the values that are not good enough yet.
 - **Text in git, binary for the apps.** The text file can be read and compared in git; the binary file is small for the web version. The binary file is built by the book tool and committed next to the text file; a test checks that it holds the same book, instead of building it on every build.
 - **The C++ format is only read.** Byte-identical saving of the C++ file was dropped; the C++ program keeps its own `Stello C++/OPENING`.
-- **The same moves as before.** The import keeps the order of the first line that reaches a position, as the old lookup did, so the computer plays the same book moves. The only exception is one of the 14 positions that C++ stored in two frames, where the first one in the file is now used.
+- **The import plays the C++ moves.** The import keeps the order of the first line that reaches a position, as the C++ lookup did, so the imported book plays the same book moves as the C++ program (`recalc` and book learning then re-sort them by value). The only exception is one of the 14 positions that C++ stored in two frames, where the first one in the file is now used.
 - **The same reply choice as C++.** C++ also played the first legal reply: code that picked the best value was overwritten right after, and random choice was disabled with `#if 0`.
 
 See [Stello porting documentation.md](../../Plans/Stello%20porting%20documentation.md), phases 4 and 10.

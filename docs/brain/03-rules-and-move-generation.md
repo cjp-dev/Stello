@@ -8,7 +8,7 @@ A move is legal when it flips at least one opponent disc: the new disc and anoth
 
 ## Data structures
 
-All rule code works on raw bitboards in the internal static class `Bitboards`. `Board` wraps it for the rest of the engine.
+All rule code works on raw bitboards in the internal static class `Bitboards`. `Board` wraps it for the rest of the engine. The endgame solver has its own, faster copy of the move generator and the flips in `EndgameBits` (below and chapter 08).
 
 | Constant | Value | Squares |
 |---|---|---|
@@ -22,7 +22,7 @@ All rule code works on raw bitboards in the internal static class `Bitboards`. `
 |---|---|
 | `Bitboards.LegalMoves(own, opponent)` | A bitboard of all legal moves for `own` |
 | `Bitboards.Flips(own, opponent, square)` | A bitboard of the discs flipped by a move on `square`; 0 if none |
-| `Bitboards.PotentialMobility(own, opponent)` | A count used by the evaluation (chapter 04) |
+| `Bitboards.PotentialMobility(own, opponent)` | The number of (empty square, direction) pairs next to an opponent disc; only the frozen baseline in `Stello.Engine.V1` uses it (the move ordering counts potential mobility with `EndgameBits.PotentialMobility`, chapter 05) |
 | `Board.LegalMoves(player)`, `HasLegalMove`, `IsLegal` | The same for a `Board` and a `Player` |
 | `Board.Flips(player, square)` | 0 if the square is occupied, otherwise `Bitboards.Flips` |
 | `Board.Play(player, square)` | The new board; throws if the move flips nothing |
@@ -167,10 +167,14 @@ These are the values in [PerftTests.cs](../../Stello.Net/Stello.Engine.Tests/Per
 
 ## Design notes
 
-- **One implementation.** The C++ version had many hand-optimised variants of move generation and move making (for the search, the endgame, the evaluation). The C# version has one legal-move generator and one flip routine, used everywhere.
+- **Two implementations, tested against each other.** The C++ version had many hand-optimised variants of move generation and move making (for the search, the endgame, the evaluation). The C# engine has two:
+  - `Bitboards`, described in this chapter, used by `Board`, the game record, the midgame search, the book and the solver's shallowest nodes (`SolveShallow`, at most 6 empty squares);
+  - `EndgameBits.LegalMoves` and `EndgameBits.Flips`, used by the rest of the endgame solver, where speed matters most. The legal moves follow Egaroucid's `calc_legal`: after the start $r_1$ and one single step, two steps double the run with a precomputed pair mask ($p = m \land (m \ll s)$, then $r \mathrel{|}= p \land (r \ll 2s)$), so four steps instead of six cover a line. The flips use a table of rays per square and direction: the first square on a ray that is not an opponent disc is isolated with the lowest or highest set bit, and if it is an own disc, everything before it on the ray is flipped. No loop walks along the line.
+
+  `EndgameBitsTests` checks on 300 random positions that both give the same legal moves and the same flips on every empty square.
 - **All moves at once, flips one move at a time.** Move generation is needed at every node and for mobility in the evaluation, so it is done without branches for all squares together. Flips are only needed for the move being played, so a short loop per direction is enough.
-- **Fill technique and Edax lineage.** The six repeated shift-and-mask steps (`ScanLeft`/`ScanRight`) implement the broadword parallel prefix "fill" algorithm (Dumb7Fill) popularized by Richard Delorme's [Edax Reversi](https://github.com/abulmo/edax-reversi) (`board.c`, lines 750–760) and documented on the [Othello page of the Chess Programming Wiki](https://www.chessprogramming.org/Othello). Faster SIMD and Kogge-Stone variants exist; they are candidates for later performance work, not needed for correctness.
-- **Legality through flips.** `Play` throws on an illegal move, so callers cannot corrupt a position by mistake. The search, which only plays generated moves, uses `Bitboards.Flips` directly.
+- **Fill technique and Edax lineage.** The six repeated shift-and-mask steps (`ScanLeft`/`ScanRight`) implement the broadword parallel prefix "fill" algorithm (Dumb7Fill) popularized by Richard Delorme's [Edax Reversi](https://github.com/abulmo/edax-reversi) (`board.c`, lines 750–760) and documented on the [Othello page of the Chess Programming Wiki](https://www.chessprogramming.org/Othello). SIMD variants exist; they are candidates for later performance work, not needed for correctness.
+- **Legality through flips.** `Play` throws on an illegal move, so callers cannot corrupt a position by mistake. The search, which only plays generated moves, uses `Bitboards.Flips` (or, in the solver, `EndgameBits.Flips`) directly.
 
 ## Where in the code
 
@@ -178,6 +182,7 @@ These are the values in [PerftTests.cs](../../Stello.Net/Stello.Engine.Tests/Per
 |---|---|
 | [Bitboards.cs](../../Stello.Net/Stello.Engine/Bitboards.cs) | `LegalMoves`, `ScanLeft`, `ScanRight`, `Flips`, `RayLeft`, `RayRight`, `PotentialMobility` |
 | [Board.cs](../../Stello.Net/Stello.Engine/Board.cs) | `LegalMoves`, `HasLegalMove`, `IsLegal`, `Flips`, `Play`, `IsGameOver` |
+| [Endgame/EndgameBits.cs](../../Stello.Net/Stello.Engine/Endgame/EndgameBits.cs) | The solver's `LegalMoves` and `Flips` (from Egaroucid) |
 
 ## Tests
 
@@ -189,6 +194,7 @@ These are the values in [PerftTests.cs](../../Stello.Net/Stello.Engine.Tests/Per
   - an illegal move throws;
   - pass, full board and wipe-out.
 - [PerftTests.cs](../../Stello.Net/Stello.Engine.Tests/PerftTests.cs): perft to depth 8.
+- [EndgameBitsTests.cs](../../Stello.Net/Stello.Engine.Tests/EndgameBitsTests.cs): the solver's legal moves and flips equal those of `Bitboards` in 300 random positions.
 
 ## Further reading
 
