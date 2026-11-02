@@ -25,7 +25,15 @@ internal static class ParityCommands
 
     public static int ParityData(Options options)
     {
-        options.Allow("out", "games", "seed", "split", "max-per-discs", "eval");
+        options.Allow("out", "games", "seed", "split", "max-per-discs", "eval", "midgame", "count", "min-empties");
+        if (options.Text("midgame") is { } midgamePath)
+        {
+            int count = options.Number("count", 1000, 1, 1_000_000);
+            int minEmpties = options.Number("min-empties", 16, 1, 60);
+            WriteMidgamePositions(midgamePath, count, options.Number("seed", 1, 0, int.MaxValue), minEmpties);
+            return 0;
+        }
+
         EvalWeights weights = options.Text("eval") is { } path ? EvalWeights.Load(path) : EvalWeights.Default;
         if (options.Text("split") is { } split)
         {
@@ -99,6 +107,52 @@ internal static class ParityCommands
         // One empty square in each corner, the rest full: passes and one-move endings.
         Edge("last-corners", ~corners & 0x0F0F_0F0F_0F0F_0F0FUL, ~corners & 0xF0F0_F0F0_F0F0_F0F0UL);
         return positions;
+    }
+
+    /// <summary>
+    /// Positions for mid-bench's parity runs of the Rust engine: from each of <paramref name="count"/> random games, one
+    /// random position with at least <paramref name="minEmpties"/> empty squares and two legal moves. With 16 or more
+    /// empty squares a search to depth 8 stays in the midgame (the solver takes over within 7 plies of the end).
+    /// </summary>
+    private static void WriteMidgamePositions(string path, int count, int seed, int minEmpties)
+    {
+        var random = new Random(seed);
+        var lines = new List<string>
+        {
+            $"# Random midgame positions for parity runs (Stello.Benchmark parity-data --midgame --count {count} --seed {seed} --min-empties {minEmpties}):",
+            $"# from each of {count} random games, one random position with at least {minEmpties} empty squares and two legal moves.",
+        };
+        var candidates = new List<(Board Board, Player Player)>();
+        for (int game = 1; game <= count; game++)
+        {
+            candidates.Clear();
+            Board board = Board.Initial;
+            Player player = Player.Black;
+            while (!board.IsGameOver && board.EmptyCount >= minEmpties)
+            {
+                ulong moves = board.LegalMoves(player);
+                if (moves == 0)
+                {
+                    player = player.Opponent();
+                    continue;
+                }
+
+                if (BitOperations.PopCount(moves) >= 2)
+                {
+                    candidates.Add((board, player));
+                }
+
+                Square[] squares = Square.InMask(moves).ToArray();
+                board = board.Play(player, squares[random.Next(squares.Length)]);
+                player = player.Opponent();
+            }
+
+            (Board chosen, Player side) = candidates[random.Next(candidates.Count)];
+            lines.Add(new BenchmarkPosition($"r{game:0000}e{chosen.EmptyCount}", chosen, side, null, []).Format());
+        }
+
+        File.WriteAllLines(path, lines);
+        Console.WriteLine($"Wrote {count:N0} positions to {path}.");
     }
 
     private static void AddRandomGame(List<(string, Board, Player)> positions, string id, Board board, Player player, Random random)

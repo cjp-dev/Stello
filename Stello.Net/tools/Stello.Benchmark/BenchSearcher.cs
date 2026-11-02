@@ -38,6 +38,11 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                     throw new ArgumentException("--mpc and --level are only for --engine egaroucid.");
                 }
 
+                if (options.Text("selective") is not null || options.Text("probcut-pct") is not null)
+                {
+                    throw new ArgumentException("--selective and --probcut-pct are only for --engine stello-v2 (--side for stello).");
+                }
+
                 int bits = options.Number("hash-bits", SearchLimits.DefaultHashBits, 10, 26);
                 string? evalFile = options.Text("eval");
                 SearchOptions searchOptions = evalFile is null or "default" ? SearchOptions.Default : MatchCommands.PatternOptions(evalFile);
@@ -90,6 +95,27 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                 if (v2Eval is not null and not "default")
                 {
                     limitText += $", evaluation {Path.GetFileName(v2Eval)}";
+                }
+
+                // --selective off (the plain search of the trainer's mpc) and --probcut-pct: Stello 2.0's search switches,
+                // for the Rust engine's parity runs (stello mid-bench takes the same options).
+                switch (options.Text("selective"))
+                {
+                    case null or "on":
+                        break;
+                    case "off":
+                        v2Options = v2Options with { Selective = false };
+                        limitText += ", selective off";
+                        break;
+                    default:
+                        throw new ArgumentException("--selective must be on or off.");
+                }
+
+                if (options.Text("probcut-pct") is not null)
+                {
+                    int percent = options.Number("probcut-pct", 100, 1, 1000);
+                    v2Options = v2Options with { ProbCutPercent = percent };
+                    limitText += $", probcut {percent} %";
                 }
 
                 var v2 = new Stello.Engine.V2.SearchEngine(v2Bits, v2Options);

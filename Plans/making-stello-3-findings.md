@@ -10,7 +10,7 @@ What the work on Stello 3.0 teaches us, written down as we go: the decisions, th
 | Phase | State | What it showed |
 |---|---|---|
 | 0 Set-up and the frozen Stello 2.0 | done (2026-11-02) | Stello.Engine.V2 searches node for node like 2.0; the Rust workspace builds for Linux, Windows and WASM, and .NET and Node call it |
-| 1 The core in Rust | in progress | Steps 1–2 (board and rules, evaluation): identical to C# on 6,214 fixture positions, perft 1–8 and the whole test split; Rust perft 4.2× and evaluation 1.3–1.4× faster |
+| 1 The core in Rust | in progress | Steps 1–2 (board and rules, evaluation): identical to C# on 6,214 fixture positions, perft 1–8 and the whole test split; Rust perft 4.2× and evaluation 1.3–1.4× faster. Steps 3 and 5 (midgame search, stopping, progress): node-for-node identical in 9 mid-bench comparisons; 1.27–1.31× faster |
 | 2 Desktop and tools on Rust | not started | |
 | 3 The web app on Rust | not started | |
 | 4 Release (3.0 preview) | not started | |
@@ -110,3 +110,62 @@ C#'s move generation is slower partly because `Bitboards.Flips` calls its eight 
 - **Two move generators:** the C# has two with identical results, Stello's `Bitboards` for the midgame and Egaroucid's `EndgameBits` for the solver. Both are ported and both are checked.
 - **Not yet tested:** the endgame's tables (flip neighbours, quadrants, stability thresholds) were copied by script and are untested until the endgame step's node parity.
 - **Size in the browser:** the embedded evaluation makes the WASM module about 1.1 MB. Phase 3 may pass the bytes to `init` instead.
+
+## Phase 1, steps 3 and 5: the midgame search, stopping and progress (2026-11-02)
+
+### What was ported
+About 1,900 lines in `stello-core/src/search/` (`engine.rs`, `limits.rs`, `options.rs`, `ordering.rs`, `table.rs`, `time.rs`) and `endgame/search.rs`.
+- **The search itself:** iterative deepening with PVS at the root and in every node, game-over scores, `onlyMoves`, the single-move shortcut and passes.
+- **Selectivity and ordering:** Multi-ProbCut with its error table, the evaluation ordering from look 4 with the response table, and midgame ETC.
+- **Tables and options:** both transposition tables (two-entry slots, the same hash and replacement), the 2/3 time rule with `SoftTimePercent`, and the options (another evaluation, `Selective`, `ProbCutPercent`).
+- **The solver's surroundings,** ported now because they live in C#'s `SearchEngine.cs`: `SolveRoot`, `SolveShallow`, `SolveLast2`, `SolveLast`, the 7-ply hand-over rule and the 4-look presearch in solve mode. Only the deeper solver remains a stub, `solve_child`, filled in by step 4.
+- **Stopping and progress:**
+  - abort checks at exactly C#'s node counts;
+  - progress reports with 100 ms heartbeats;
+  - cancel and Move Now through a `StopSignal` trait. `SearchSignals` holds two atomic flags that another thread can set; the browser can read a `SharedArrayBuffer` instead.
+- **Structure:** `SearchEngine` keeps the state between searches. A `Searcher` holds one running search, and the endgame is added to it as another `impl` block.
+
+### Parity
+C#'s `Stello.Benchmark mid-bench --engine stello-v2 --compare <the Rust JSON>` reported "identical" (same nodes, moves and scores) in every run:
+
+| Run | Searches | Nodes |
+|---|---:|---:|
+| `midgame.txt`, depth 10 | 100 | 3,719,468 |
+| `midgame.txt`, depth 12 | 100 | 10,582,535 |
+| 1,000 random positions, depth 8 (`Data/midgame-random.txt`, from `parity-data --midgame`) | 1,000 | 9,624,573 |
+| `--selective off`, depth 8, `midgame.txt` and the random positions | 100 + 1,000 | |
+| `--eval` with two grid models (`plus15` × 30 stages, `egaroucid16` × 30 stages), depth 10 | 2 × 100 | |
+| `--probcut-pct 150`, depth 10 | 100 | |
+| `--hash-bits 12`, depth 10 | 100 | |
+
+- **Tests:** `cargo test` runs 36 tests, including:
+  - 20 recorded 2.0 signatures;
+  - the single-move shortcut, passes and `only_moves`;
+  - progress and heartbeats;
+  - the soft rule, with a clock the test moves by hand;
+  - the hard limit;
+  - cancel and Move Now from another thread;
+  - `SolveShallow`/`SolveLast2`/`SolveLast` against a plain minimax on 300 random endings.
+- **Lint and builds:** clippy (including wasm32) and `cargo fmt --check` are clean, and the Windows, WASM and .NET builds pass.
+
+### Speed (1 thread, Release, fastest of 3 passes)
+| | Rust | C# 2.0 | Rust faster by |
+|---|---:|---:|---:|
+| mid-bench depth 10 | 0.84 s, 4.45 M nodes/s | 1.06 s, 3.50 M nodes/s | 1.27× |
+| mid-bench depth 12 | 2.35 s, 4.50 M nodes/s | 3.07 s, 3.45 M nodes/s | 1.31× |
+
+The midgame is limited by the evaluation, which runs at 4.9 M evaluations per second. The plan's target is 1.5×, so speed work after parity starts there: index extraction, SIMD on the desktop, and incremental updates if they keep the nodes. Clearing the hash tables is a single `memset`, since an all-zero entry is the empty one.
+
+### Notes from the C#
+- **Where the solver code lives:** `SolveRoot`, `SolveShallow`, `SolveLast2`, `SolveLast` and `Quadrants` are in `SearchEngine.cs`, not in the endgame file.
+- **Two abort-check schemes share one node counter:**
+  - the midgame and `SolveShallow` check when `(++_nodes & 1023) == 0`;
+  - `CountEndNode` checks at `_nextAbortCheck`.
+
+  Leaf evaluations also count as nodes, so the midgame's checks fall irregularly but deterministically. Both schemes are kept exactly.
+- **Ordering counts:** `OrderByEvaluation`'s evaluations count as nodes and evaluations.
+- **Multi-ProbCut and the table:** its shallow search runs at the same ply, so it reads and writes the hash table.
+- **Hash cutoffs are asymmetric:** an upper bound cuts if its value is below α (strictly), a lower bound if it is at least β.
+- **The ProbCut flag:** `_inProbCut` is reset in a `finally`; Rust resets it on the stop path too.
+- **Overflow:** the response table is an `int` that can overflow in very long searches. Rust uses wrapping addition, as C#'s unchecked arithmetic does.
+- **The clock in the browser:** `std::time::Instant` is always zero on `wasm32-unknown-unknown`, so the web build must set its own clock (`performance.now()`).

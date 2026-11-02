@@ -21,9 +21,10 @@ internal static class Program
                       [--out <file.json>] [--compare <file.json>]
                                     Solve the FFO positions exactly: score check, nodes, time to solve.
           mid-bench [--engine stello|stello-v2|stello-v1|egaroucid] [--eval <file>] [--side <Stello side keys>] [--positions <file>] [--depth 10] [--mpc 100 | --level L] [--passes 3]
-                    [--hash-bits N] [--out <file.json>] [--compare <file.json>]
+                    [--hash-bits N] [--selective on|off] [--probcut-pct N] [--out <file.json>] [--compare <file.json>]
                                     Search the midgame positions to a fixed depth: nodes, move and score of each search, speed.
                                     --mpc (Egaroucid's selectivity: 74, 88, 93, 98, 99, 99.9 or 100) and --level are for Egaroucid.
+                                    --selective (Multi-ProbCut) and --probcut-pct (its t × 100) are for stello-v2, as in `stello mid-bench`.
           eval-compare [--data <folder>] [--files N] [--per-empties 5000] [--name <name>]
                                     Both evaluations against the final scores of Egaroucid's training games (not in the
                                     repository: Traning data/Egaroucid_Train_Data/0001_egaroucid_7_5_1_lv17 by default).
@@ -39,6 +40,9 @@ internal static class Program
                                     Write the fixtures that the Rust engine (Stello.Rust/stello-core/tests/data by default) is
                                     checked against: positions with legal moves, flips and Stello 2.0's evaluation, the pattern
                                     sets, and perft counts.
+          parity-data --midgame <file> [--count 1000] [--seed 1] [--min-empties 16]
+                                    Write random midgame positions for parity runs of mid-bench: one random position from each
+                                    of --count random games, with at least --min-empties empty squares and two legal moves.
           parity-data --split <folder>|default [--max-per-discs 20000|all] [--eval <file>]
                                     Stello 2.0's evaluation over the trainer's test split (default: Traning data/stello-bin):
                                     the count and FNV-1a checksums to compare with `stello eval-split`, and the speed.

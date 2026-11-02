@@ -7,6 +7,8 @@ use std::time::Instant;
 use stello_core::eval::{self, EvalWeights};
 use stello_core::{Board, Player, board};
 
+mod bench;
+
 const USAGE: &str = "\
 Usage: stello <command> [options]
 
@@ -19,6 +21,12 @@ Usage: stello <command> [options]
                             Evaluate and PatternScore in order, to compare with
                             `Stello.Benchmark parity-data --split`, then the evaluation speed and perft(8)'s time.
                             --max-per-discs takes evenly spread positions per number of discs, as the trainer's report.
+  mid-bench [--positions <file>] [--depth 10] [--passes 3] [--hash-bits 19] [--eval <file>]
+            [--selective on|off] [--probcut-pct N] [--out <file.json>]
+                            Search the midgame positions (default Stello.Net/tools/Stello.Benchmark/Data/midgame.txt)
+                            to a fixed depth, each with cleared hash tables: nodes, move and score of each search, speed.
+                            --out writes the JSON of `Stello.Benchmark mid-bench --out`, so that
+                            `Stello.Benchmark mid-bench --engine stello-v2 --compare <file.json>` checks parity.
 ";
 
 const FNV_OFFSET: u64 = 14_695_981_039_346_656_037;
@@ -33,6 +41,7 @@ fn main() -> ExitCode {
         }
         Some("perft") => perft(&args[1..]),
         Some("eval-split") => eval_split(&args[1..]),
+        Some("mid-bench") => bench::mid_bench(&args[1..]),
         _ => Err(USAGE.to_string()),
     };
 
@@ -46,13 +55,13 @@ fn main() -> ExitCode {
 }
 
 /// `--name value` options and positional arguments.
-struct Options {
+pub(crate) struct Options {
     named: Vec<(String, String)>,
     positional: Vec<String>,
 }
 
 impl Options {
-    fn parse(args: &[String], allowed: &[&str]) -> Result<Options, String> {
+    pub(crate) fn parse(args: &[String], allowed: &[&str]) -> Result<Options, String> {
         let mut options = Options { named: Vec::new(), positional: Vec::new() };
         let mut rest = args.iter();
         while let Some(arg) = rest.next() {
@@ -71,7 +80,7 @@ impl Options {
         Ok(options)
     }
 
-    fn text(&self, name: &str) -> Option<&str> {
+    pub(crate) fn text(&self, name: &str) -> Option<&str> {
         self.named.iter().find(|(n, _)| n == name).map(|(_, v)| v.as_str())
     }
 }
@@ -93,7 +102,7 @@ fn perft(args: &[String]) -> Result<(), String> {
 }
 
 /// The repository folder: the first folder above the current one with Stello.Net/Stello.Net.slnx.
-fn repository_folder() -> Option<std::path::PathBuf> {
+pub(crate) fn repository_folder() -> Option<std::path::PathBuf> {
     let current = std::env::current_dir().ok()?;
     current.ancestors().find(|folder| folder.join("Stello.Net").join("Stello.Net.slnx").exists()).map(Path::to_path_buf)
 }

@@ -7,16 +7,23 @@
 //! - [`square`], [`board`]: C# `Square`, `Move`, `Player`, `Board`;
 //! - [`bits`]: C# `Bitboards` (legal moves, flips, potential mobility);
 //! - [`endgame::bits`]: C# `EndgameBits` (the solver's bit helpers, also used by the midgame ordering);
-//! - [`eval`]: C# `Evaluation/` (`EvalWeights`, the pattern sets, the symmetries) and `SearchEngine.PatternScore`.
+//! - [`eval`]: C# `Evaluation/` (`EvalWeights`, the pattern sets, the symmetries) and `SearchEngine.PatternScore`;
+//! - [`search`]: C# `SearchEngine` (the midgame search), `Search/` and the shared `SearchLimits`/`SearchResult` types;
+//! - [`endgame::search`]: C# Endgame/SearchEngine.Endgame.cs, the solver (phase 1 step 4).
 
 pub mod bits;
 pub mod board;
 pub mod endgame;
 pub mod eval;
+pub mod search;
 pub mod square;
 
 pub use board::{Board, Player};
 pub use eval::EvalWeights;
+pub use search::{
+    ScoreKind, SearchEngine, SearchError, SearchInfo, SearchLimits, SearchOptions, SearchResult, SearchSignals,
+    StopSignal, TimeControlMode,
+};
 pub use square::{Move, Square};
 
 /// The engine's version, for the wrapper's sanity check.

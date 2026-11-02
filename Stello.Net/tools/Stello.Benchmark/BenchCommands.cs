@@ -59,7 +59,7 @@ internal static class BenchCommands
 
     public static int MidBench(Options options)
     {
-        options.Allow("positions", "depth", "passes", "hash-bits", "out", "compare", "engine", "mpc", "level", "eval", "side");
+        options.Allow("positions", "depth", "passes", "hash-bits", "out", "compare", "engine", "mpc", "level", "eval", "side", "selective", "probcut-pct");
         List<BenchmarkPosition> positions = BenchmarkPosition.Load(options.Text("positions") ?? Program.DataFile("midgame.txt"));
         int depth = options.Number("depth", 10, 1, 60);
 

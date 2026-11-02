@@ -1,0 +1,1013 @@
+//! C#: `Stello.Engine.V2.SearchEngine` (SearchEngine.cs): the midgame search ported from Minmax.cpp and Kontrol.cpp
+//! (iterative deepening with a hash table, response killers and selective search), with the trained pattern
+//! evaluation, and the root of the endgame solver.
+//!
+//! The C# class is split in two: [`SearchEngine`] holds what lives from search to search (the options, the tables,
+//! the response table), and [`Searcher`] is one running search (the counters, the clock, the progress callback, the
+//! stop signals) with borrows of the engine's tables. The midgame search is an `impl Searcher` block here; the
+//! endgame solver (C#'s partial class Endgame/SearchEngine.Endgame.cs) is another one in [`crate::endgame::search`].
+//!
+//! C# throws to stop a search; here every search function returns `Result<_, Abort>` and `?` unwinds.
+
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
+
+use super::limits::{ScoreKind, SearchInfo, SearchLimits, SearchResult, TimeControlMode};
+use super::options::SearchOptions;
+use super::ordering::{self, MoveOrdering};
+use super::table::{Bound, TranspositionTable};
+use super::time::{self, TimeBudget};
+use crate::bits;
+use crate::board::{Board, Player};
+use crate::endgame;
+use crate::endgame::search::{
+    EndgameState, ORDER_MOBILITY, ORDER_OFFSET, ORDER_POTENTIAL_MOBILITY, ORDER_VALUE, SOLVE_ORDERING_LOOKS,
+};
+use crate::eval::{self, EvalWeights, PATTERN_UNITS_PER_DISC};
+use crate::square::{Move, Square};
+
+pub(crate) const INFINITY: i32 = 32767;
+const ROOT_WINDOW: i32 = 32664;
+
+// C++: the endgame solver takes over when (allway - varlook) <= 7.
+const ENDGAME_DISTANCE: i32 = 7;
+
+// No Multi-ProbCut near won or lost scores.
+const PROBCUT_SCORE_LIMIT: i32 = 32000;
+
+/// A finished game in the midgame search scores this plus the disc difference (C++: the same).
+pub const WIN_SCORE: i32 = 32600;
+
+/// Multi-ProbCut's default t × 100 (Egaroucid's multi_probcut.hpp, with an error model fitted on Stello 2's own
+/// searches). C#: `SearchEngine.DefaultProbCutPercent`.
+pub const DEFAULT_PROBCUT_PERCENT: i32 = 100;
+
+// From depth 3 (look 2); a cut needs the shallow search to be t standard deviations outside the window.
+const PROBCUT_MIN_LOOK: i32 = 2;
+const PROBCUT_PRE_CHECK_OFFSET: i32 = 4 * PATTERN_UNITS_PER_DISC;
+
+// From look 4 (5 plies) the moves are ordered by evaluation, and the children's stored bounds are tried first (ETC).
+const EVALUATION_ORDER_MIN_LOOK: i32 = 4;
+const MIDGAME_ETC_MIN_LOOK: i32 = 4;
+
+/// The most moves a list can hold (a position has at most 33 legal moves; any 64-square board fits).
+pub(crate) const MAX_MOVES: usize = 64;
+
+/// t × σ in 1/100 disc by disc count (0–64) and depth (1–60).
+type ProbCutErrors = [[i32; 61]; 65];
+
+/// A monotonic clock: the time since any fixed moment. C# uses a `Stopwatch`; WebAssembly has no clock in `std`, so
+/// the web build passes one (`performance.now()`) through [`SearchEngine::set_clock`].
+pub type Clock = fn() -> Duration;
+
+/// The default [`Clock`]: `std::time::Instant` since the first call. On `wasm32-unknown-unknown`, which has no
+/// clock, it is always zero, so time limits never stop a search there until a clock is set.
+pub fn system_clock() -> Duration {
+    #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+    {
+        static ORIGIN: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+        ORIGIN.get_or_init(std::time::Instant::now).elapsed()
+    }
+    #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+    {
+        Duration::ZERO
+    }
+}
+
+/// What can stop a running search; read at every abort check (every 1024 nodes) and at the start.
+/// C#: the `cancellationToken` and `moveNowToken` of `Search`.
+pub trait StopSignal {
+    /// Stops the search with [`SearchError::Cancelled`].
+    fn is_cancelled(&self) -> bool;
+    /// Stops the search and returns the best move found so far.
+    fn is_move_now(&self) -> bool;
+}
+
+/// Stop signals as atomic flags, which another thread (or the FFI wrapper's token callbacks) sets while the search
+/// runs.
+#[derive(Default, Debug)]
+pub struct SearchSignals {
+    cancel: AtomicBool,
+    move_now: AtomicBool,
+}
+
+impl SearchSignals {
+    pub fn new() -> SearchSignals {
+        SearchSignals::default()
+    }
+
+    /// Cancel: the search returns [`SearchError::Cancelled`].
+    pub fn cancel(&self) {
+        self.cancel.store(true, Ordering::Relaxed);
+    }
+
+    /// Move Now: the search returns the best move found so far.
+    pub fn move_now(&self) {
+        self.move_now.store(true, Ordering::Relaxed);
+    }
+
+    /// Clears both flags for the next search.
+    pub fn reset(&self) {
+        self.cancel.store(false, Ordering::Relaxed);
+        self.move_now.store(false, Ordering::Relaxed);
+    }
+}
+
+impl StopSignal for SearchSignals {
+    #[inline]
+    fn is_cancelled(&self) -> bool {
+        self.cancel.load(Ordering::Relaxed)
+    }
+
+    #[inline]
+    fn is_move_now(&self) -> bool {
+        self.move_now.load(Ordering::Relaxed)
+    }
+}
+
+/// Never stops: for searches that only the limits end.
+#[derive(Clone, Copy, Default, Debug)]
+pub struct NoStop;
+
+impl StopSignal for NoStop {
+    fn is_cancelled(&self) -> bool {
+        false
+    }
+
+    fn is_move_now(&self) -> bool {
+        false
+    }
+}
+
+/// Why [`SearchEngine::search`] returned no result.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum SearchError {
+    /// The cancel signal was set (C#: `OperationCanceledException`).
+    Cancelled,
+    /// None of the `only_moves` is legal (C#: `ArgumentException`).
+    NoLegalOnlyMove,
+}
+
+impl std::fmt::Display for SearchError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            SearchError::Cancelled => "The search was cancelled.",
+            SearchError::NoLegalOnlyMove => "None of the moves to search is legal.",
+        })
+    }
+}
+
+impl std::error::Error for SearchError {}
+
+/// Why a running search unwinds. C#: `OperationCanceledException` and `SearchAbortedException`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum Abort {
+    /// Time is up or Move Now: keep the best move found so far.
+    Stop,
+    /// Cancelled: no result.
+    Cancelled,
+}
+
+/// C#: `SearchEngine`. An instance runs one search at a time; it keeps its hash tables between searches until
+/// [`SearchEngine::clear_hash`].
+pub struct SearchEngine {
+    hash_bits: u32,
+    options: SearchOptions,
+    probcut_errors: Option<Box<ProbCutErrors>>,
+    midgame_table: TranspositionTable,
+    endgame_table: TranspositionTable,
+    endgame: EndgameState,
+    ordering: MoveOrdering,
+    clock: Clock,
+    iteration_done: Option<Box<dyn FnMut(i32, i32) + Send>>,
+}
+
+impl SearchEngine {
+    /// Each of the two hash tables gets 2^`hash_bits` slots of two entries (C++: HASHSIZE 19, one entry). Panics
+    /// unless `hash_bits` is 10–26 (C# throws `ArgumentOutOfRangeException`).
+    pub fn new(hash_bits: u32, options: SearchOptions) -> SearchEngine {
+        assert!((10..=26).contains(&hash_bits), "hash bits must be 10-26");
+        let probcut_errors = options
+            .selective
+            .then(|| probcut_errors(options.probcut_percent.unwrap_or(DEFAULT_PROBCUT_PERCENT) as f64 / 100.0));
+        SearchEngine {
+            hash_bits,
+            options,
+            probcut_errors,
+            midgame_table: TranspositionTable::new(hash_bits),
+            endgame_table: TranspositionTable::new(hash_bits),
+            endgame: EndgameState::default(),
+            ordering: MoveOrdering::default(),
+            clock: system_clock,
+            iteration_done: None,
+        }
+    }
+
+    /// C#: `HashBits`.
+    pub fn hash_bits(&self) -> u32 {
+        self.hash_bits
+    }
+
+    /// C#: `Options`.
+    pub fn options(&self) -> &SearchOptions {
+        &self.options
+    }
+
+    /// C#: `ClearHash`.
+    pub fn clear_hash(&mut self) {
+        self.midgame_table.clear();
+        self.endgame_table.clear();
+        self.endgame.clear();
+    }
+
+    /// The clock that times the search (default [`system_clock`]).
+    pub fn set_clock(&mut self, clock: Clock) {
+        self.clock = clock;
+    }
+
+    /// Called after each finished midgame iteration with its depth and score (for the Multi-ProbCut fit).
+    /// C#: `IterationDone`.
+    pub fn set_iteration_done(&mut self, callback: Option<Box<dyn FnMut(i32, i32) + Send>>) {
+        self.iteration_done = callback;
+    }
+
+    /// Finds the best move for `player` (C++: getcomputer). C#: `Search`.
+    ///
+    /// - `progress` gets a report after every root move and a heartbeat (the last report again) when 100 ms passed
+    ///   without one;
+    /// - `stop`: cancel returns [`SearchError::Cancelled`]; Move Now returns the best move found so far;
+    /// - `only_moves`: search only these moves, even if just one is left (C++ calclib: the best move not yet in the
+    ///   book).
+    pub fn search(
+        &mut self,
+        board: &Board,
+        player: Player,
+        limits: &SearchLimits,
+        progress: Option<&mut dyn FnMut(&SearchInfo)>,
+        stop: &dyn StopSignal,
+        only_moves: Option<u64>,
+    ) -> Result<SearchResult, SearchError> {
+        if stop.is_cancelled() {
+            return Err(SearchError::Cancelled);
+        }
+
+        let progress = progress.map(|p| p as &mut dyn FnMut(&SearchInfo));
+        self.searcher(progress, stop).run(board, player, limits, only_moves)
+    }
+
+    /// A new search on this engine's tables, with the counters at zero and the clock started (C#: the start of
+    /// `Search`). The endgame's tests call the solver through it.
+    pub(crate) fn searcher<'a>(
+        &'a mut self,
+        progress: Option<&'a mut dyn FnMut(&SearchInfo)>,
+        stop: &'a dyn StopSignal,
+    ) -> Searcher<'a> {
+        let SearchEngine {
+            options,
+            probcut_errors,
+            midgame_table,
+            endgame_table,
+            endgame,
+            ordering,
+            clock,
+            iteration_done,
+            ..
+        } = self;
+        Searcher {
+            pattern: options.pattern.as_deref().unwrap_or_else(|| EvalWeights::built_in()),
+            probcut_errors: probcut_errors.as_deref(),
+            midgame_table,
+            endgame_table,
+            endgame,
+            ordering,
+            progress,
+            iteration_done: iteration_done.as_deref_mut(),
+            stop,
+            clock: *clock,
+            start: clock(),
+            soft_time_percent: options.soft_time_percent,
+            nodes: 0,
+            evaluations: 0,
+            next_abort_check: 1024,
+            hard_limit_ms: i64::MAX,
+            hash_get_height: 0,
+            hash_put_height: 0,
+            in_probcut: false,
+            last_heartbeat_ms: 0,
+            report_depth: 0,
+            report_move: -1,
+            report_best_move: -1,
+            report_score: 0,
+            report_kind: ScoreKind::None,
+        }
+    }
+
+    /// [`SearchEngine::search`] without progress reports or stop signals.
+    pub fn search_simple(&mut self, board: &Board, player: Player, limits: &SearchLimits) -> SearchResult {
+        self.search(board, player, limits, None, &NoStop, None).expect("a search without stop signals finishes")
+    }
+}
+
+/// C#: `SearchEngine.Best`.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Best {
+    pub mv: i32,
+    pub score: i32,
+    pub kind: ScoreKind,
+    pub depth: i32,
+}
+
+/// One running search of a [`SearchEngine`]: C#'s per-search fields, with borrows of the engine's tables.
+pub(crate) struct Searcher<'a> {
+    pub(crate) pattern: &'a EvalWeights,
+    probcut_errors: Option<&'a ProbCutErrors>,
+    pub(crate) midgame_table: &'a mut TranspositionTable,
+    #[allow(dead_code)] // Read by the solver (phase 1 step 4); remove then.
+    pub(crate) endgame_table: &'a mut TranspositionTable,
+    #[allow(dead_code)] // Read by the solver (phase 1 step 4); remove then.
+    pub(crate) endgame: &'a mut EndgameState,
+    pub(crate) ordering: &'a mut MoveOrdering,
+    progress: Option<&'a mut dyn FnMut(&SearchInfo)>,
+    iteration_done: Option<&'a mut (dyn FnMut(i32, i32) + Send + 'static)>,
+    stop: &'a dyn StopSignal,
+    clock: Clock,
+    start: Duration,
+    soft_time_percent: Option<i32>,
+
+    pub(crate) nodes: u64,
+    pub(crate) evaluations: u64,
+    /// The endgame's abort check (C#: `_nextAbortCheck`); the midgame checks when `nodes % 1024 == 0`.
+    pub(crate) next_abort_check: u64,
+    hard_limit_ms: i64,
+    hash_get_height: i32,
+    hash_put_height: i32,
+    in_probcut: bool,
+    last_heartbeat_ms: i64,
+    pub(crate) report_depth: i32,
+    pub(crate) report_move: i32,
+    pub(crate) report_best_move: i32,
+    pub(crate) report_score: i32,
+    pub(crate) report_kind: ScoreKind,
+}
+
+impl Searcher<'_> {
+    fn run(
+        &mut self,
+        board: &Board,
+        player: Player,
+        limits: &SearchLimits,
+        only_moves: Option<u64>,
+    ) -> Result<SearchResult, SearchError> {
+        let mut moves = board.legal_moves(player);
+        if let Some(allowed) = only_moves {
+            moves &= allowed;
+            if moves == 0 {
+                return Err(SearchError::NoLegalOnlyMove);
+            }
+        }
+
+        if moves == 0 {
+            return Ok(self.result(Best { mv: -1, score: 0, kind: ScoreKind::None, depth: 0 }));
+        }
+
+        if moves.count_ones() == 1 && limits.mode() != TimeControlMode::Solve && only_moves.is_none() {
+            return Ok(self.result(Best {
+                mv: moves.trailing_zeros() as i32,
+                score: 0,
+                kind: ScoreKind::None,
+                depth: 0,
+            }));
+        }
+
+        self.ordering.clear_responses();
+        let mut root = [0i32; MAX_MOVES];
+        let count = fill(&mut root, moves);
+        let root_moves = &mut root[..count];
+        self.ordering.order(root_moves, -1, -1, player, board);
+
+        let mut best = Best { mv: root_moves[0], score: 0, kind: ScoreKind::None, depth: 0 };
+        match self.iterate(board, player, limits, root_moves, &mut best) {
+            // Time is up or "move now": keep the best move found so far.
+            Ok(()) | Err(Abort::Stop) => Ok(self.result(best)),
+            Err(Abort::Cancelled) => Err(SearchError::Cancelled),
+        }
+    }
+
+    // The iterations, then the solver; returns when `best` is the result.
+    fn iterate(
+        &mut self,
+        board: &Board,
+        player: Player,
+        limits: &SearchLimits,
+        root_moves: &mut [i32],
+        best: &mut Best,
+    ) -> Result<(), Abort> {
+        let empties = board.empty_count() as i32;
+        let mut budget = time::for_midgame(limits, empties).with_soft_percent(self.soft_time_percent);
+        self.hard_limit_ms = budget.hard_ms;
+
+        if limits.mode() != TimeControlMode::Solve {
+            let mut look = 0;
+            while empties - 1 - look > ENDGAME_DISTANCE {
+                self.hash_get_height = look - 1;
+                self.hash_put_height = look;
+                self.search_root(board, player, look, root_moves, best)?;
+                if let Some(callback) = self.iteration_done.as_mut() {
+                    callback(look + 1, best.score);
+                }
+
+                if self.stop_iterating(limits, budget, look + 1) {
+                    return Ok(());
+                }
+
+                look += 1;
+            }
+        } else {
+            let mut look = 0;
+            while look < SOLVE_ORDERING_LOOKS && empties - 1 - look > ENDGAME_DISTANCE {
+                self.hash_get_height = look - 1;
+                self.hash_put_height = look;
+                self.search_root(board, player, look, root_moves, best)?;
+                look += 1;
+            }
+        }
+
+        budget = time::for_endgame(limits, budget, self.elapsed_ms()).with_soft_percent(self.soft_time_percent);
+        self.hard_limit_ms = budget.hard_ms;
+
+        // Win/loss/draw first with a null window around 0; it is much faster than the exact score.
+        let (wld, wld_move) = self.solve_root(board, player, -1, 1, ScoreKind::WinLossDraw, root_moves, best)?;
+        let keep_midgame_move = wld < 0 && best.kind == ScoreKind::Heuristic;
+        *best = Best {
+            mv: if keep_midgame_move { best.mv } else { wld_move },
+            score: wld,
+            kind: if wld == 0 { ScoreKind::Exact } else { ScoreKind::WinLossDraw },
+            depth: empties,
+        };
+
+        if wld == 0 || self.stop_iterating(limits, budget, 0) {
+            return Ok(());
+        }
+
+        let (alpha, beta) = if wld > 0 { (wld - 1, 65) } else { (-65, wld + 1) };
+        let (exact, exact_move) = self.solve_root(board, player, alpha, beta, ScoreKind::Exact, root_moves, best)?;
+        *best = Best { mv: exact_move, score: exact, kind: ScoreKind::Exact, depth: empties };
+        Ok(())
+    }
+
+    fn search_root(
+        &mut self,
+        board: &Board,
+        player: Player,
+        look: i32,
+        root_moves: &mut [i32],
+        best: &mut Best,
+    ) -> Result<(), Abort> {
+        let opponent = player.opponent();
+        let mut alpha = -ROOT_WINDOW;
+        let beta = ROOT_WINDOW;
+        let mut best_score = -INFINITY;
+        let mut best_move = -1;
+        let mut improvements = [0i32; MAX_MOVES];
+        let mut improved = 0;
+
+        for (i, &mv) in root_moves.iter().enumerate() {
+            self.report_depth = look + 1;
+            self.report_move = mv;
+            self.report_best_move = if best_move >= 0 { best_move } else { best.mv };
+            self.report_score = if best_move >= 0 { best_score } else { best.score };
+            self.report_kind = ScoreKind::Heuristic;
+            let child = board.play_unchecked(player, mv as u32);
+            let score;
+
+            if look == 0 {
+                score = -self.evaluate_leaf(&child, opponent);
+            } else {
+                let child_look = look - 1;
+                let reply;
+
+                // C++ zero_findmax: null window after the first move once the search is deeper than 3 plies.
+                if i == 0 || look <= 2 {
+                    let (value, r) = self.search(&child, opponent, child_look, 1, mv, -beta, -alpha)?;
+                    (score, reply) = (-value, r);
+                } else {
+                    let (value, r) = self.search(&child, opponent, child_look, 1, mv, -alpha - 1, -alpha)?;
+                    if -value > alpha && -value < beta {
+                        let (value, r) = self.search(&child, opponent, child_look, 1, mv, -beta, -alpha)?;
+                        (score, reply) = (-value, r);
+                    } else {
+                        (score, reply) = (-value, r);
+                    }
+                }
+
+                self.ordering.record_response(opponent, mv, reply, score <= alpha);
+            }
+
+            if score > best_score {
+                best_score = score;
+                best_move = mv;
+                alpha = alpha.max(score);
+                improvements[improved] = mv;
+                improved += 1;
+                *best = Best { mv, score, kind: ScoreKind::Heuristic, depth: look + 1 };
+            }
+
+            self.report(look + 1, mv, best_move, best_score, ScoreKind::Heuristic);
+        }
+
+        move_to_front(root_moves, &improvements[..improved]);
+        Ok(())
+    }
+
+    /// The node search: the score and the best move (-1 if none). C++: findmax2 (findmax/findmax1 kept a move tree
+    /// for ordering; the hash table does that here). C#: `Search`.
+    #[allow(clippy::too_many_arguments)]
+    fn search(
+        &mut self,
+        board: &Board,
+        player: Player,
+        mut look: i32,
+        ply: i32,
+        previous_move: i32,
+        mut alpha: i32,
+        beta: i32,
+    ) -> Result<(i32, i32), Abort> {
+        self.nodes += 1;
+        if self.nodes & 1023 == 0 {
+            self.check_abort()?;
+        }
+
+        let opponent = player.opponent();
+        let own = board.discs(player);
+        let other = board.discs(opponent);
+        let moves = bits::legal_moves(own, other);
+
+        if moves == 0 {
+            if bits::legal_moves(other, own) == 0 {
+                self.evaluations += 1;
+                return Ok((game_over_score(own, other), -1));
+            }
+
+            let (value, _) = self.search(board, opponent, look, ply, -1, -beta, -alpha)?;
+            return Ok((-value, -1));
+        }
+
+        let mut hash_move = -1;
+        let hash_get = ply <= self.hash_get_height;
+        let hash_put = ply <= self.hash_put_height;
+        let tag = player.index() as i32;
+
+        if hash_get
+            && let Some(entry) = self.midgame_table.get(own, other, tag)
+            && entry.mv >= 0
+            && moves & (1u64 << entry.mv) != 0
+        {
+            let value = entry.value as i32;
+            if entry.depth as i32 >= look
+                && match entry.bound {
+                    Bound::Exact => true,
+                    Bound::Upper => value < alpha,
+                    Bound::Lower => value >= beta,
+                    Bound::None => false,
+                }
+            {
+                return Ok((value, entry.mv as i32));
+            }
+
+            hash_move = entry.mv as i32;
+        }
+
+        // Multi-ProbCut: a shallow null-window search predicts that the full search falls outside the window.
+        if self.probcut_errors.is_some()
+            && look >= PROBCUT_MIN_LOOK
+            && !self.in_probcut
+            && let Some(cut) = self.try_probcut(board, player, look, ply, previous_move, alpha, beta)?
+        {
+            return Ok((cut, -1));
+        }
+
+        let stored_look = look;
+        let move_count = moves.count_ones() as usize;
+
+        // A single reply at the horizon is searched one ply deeper.
+        if move_count == 1 && look == 0 {
+            look = 1;
+        }
+
+        let mut buffer = [0i32; MAX_MOVES];
+        fill(&mut buffer, moves);
+        let list = &mut buffer[..move_count];
+
+        // Enhanced transposition cutoff: a child whose stored upper bound already refutes it gives a cutoff here.
+        // C#: ply + 1 <= _hashGetHeight.
+        if look >= MIDGAME_ETC_MIN_LOOK && ply < self.hash_get_height {
+            for &mv in list.iter() {
+                let child = board.play_unchecked(player, mv as u32);
+                if let Some(entry) =
+                    self.midgame_table.get(child.discs(opponent), child.discs(player), opponent.index() as i32)
+                    && entry.depth as i32 >= look - 1
+                    && entry.bound != Bound::Lower
+                    && -(entry.value as i32) >= beta
+                {
+                    return Ok((-(entry.value as i32), mv));
+                }
+            }
+        }
+
+        if look >= EVALUATION_ORDER_MIN_LOOK {
+            self.order_by_evaluation(list, hash_move, board, player);
+        } else {
+            self.ordering.order(list, hash_move, previous_move, player, board);
+        }
+
+        let mut best = -INFINITY;
+        let mut best_move = -1;
+        let mut bound = Bound::Lower;
+        for &mv in list.iter() {
+            let child = board.play_unchecked(player, mv as u32);
+            let score;
+
+            if look == 0 {
+                score = -self.evaluate_leaf(&child, opponent);
+            } else if best == -INFINITY || beta - alpha == 1 {
+                let (value, reply) = self.search(&child, opponent, look - 1, ply + 1, mv, -beta, -alpha)?;
+                score = -value;
+                self.ordering.record_response(opponent, mv, reply, score <= alpha);
+            } else {
+                // Principal variation search: a later move first only has to show it is not better.
+                let (mut value, mut reply) =
+                    self.search(&child, opponent, look - 1, ply + 1, mv, -alpha - 1, -alpha)?;
+                if -value > alpha && -value < beta {
+                    (value, reply) = self.search(&child, opponent, look - 1, ply + 1, mv, -beta, -alpha)?;
+                }
+
+                score = -value;
+                self.ordering.record_response(opponent, mv, reply, score <= alpha);
+            }
+
+            if score > best {
+                bound = if score >= beta {
+                    Bound::Lower
+                } else if score > alpha {
+                    Bound::Exact
+                } else {
+                    Bound::Upper
+                };
+                alpha = alpha.max(score);
+                best = score;
+                best_move = mv;
+                if best >= beta {
+                    break;
+                }
+            }
+        }
+
+        if hash_put {
+            self.midgame_table.store(own, other, tag, stored_look, bound, best, best_move);
+        }
+
+        Ok((best, best_move))
+    }
+
+    // Egaroucid's midgame ordering (move_ordering.hpp, depth 0): the hash move, then fewer replies, less potential
+    // mobility for the opponent and a better evaluation first. The response killers are not used here: with them
+    // first the search was weaker.
+    fn order_by_evaluation(&mut self, list: &mut [i32], hash_move: i32, board: &Board, player: Player) {
+        let opponent = player.opponent();
+        let empty = !(board.discs(player) | board.discs(opponent));
+        let mut keys = [0i32; MAX_MOVES];
+        for (key, &mv) in keys.iter_mut().zip(list.iter()) {
+            if mv == hash_move {
+                *key = i32::MAX;
+                continue;
+            }
+
+            let child = board.play_unchecked(player, mv as u32);
+            let child_own = child.discs(opponent);
+            let child_other = child.discs(player);
+            let replies = endgame::bits::weighted_moves(bits::legal_moves(child_own, child_other));
+            let potential = endgame::bits::potential_mobility(child_other, empty & !(1u64 << mv));
+            let value = self.evaluate_leaf(&child, opponent);
+            *key = (ORDER_OFFSET - replies) * ORDER_MOBILITY + (ORDER_OFFSET - potential) * ORDER_POTENTIAL_MOBILITY
+                - value * ORDER_VALUE / PATTERN_UNITS_PER_DISC;
+        }
+
+        let count = list.len();
+        ordering::sort_descending(list, &mut keys[..count]);
+    }
+
+    /// The cut score if Multi-ProbCut cuts this node. C#: `TryProbCut`.
+    #[allow(clippy::too_many_arguments)]
+    fn try_probcut(
+        &mut self,
+        board: &Board,
+        player: Player,
+        look: i32,
+        ply: i32,
+        previous_move: i32,
+        alpha: i32,
+        beta: i32,
+    ) -> Result<Option<i32>, Abort> {
+        let depth = look + 1;
+        let shallow_look = probcut_shallow_depth(depth) - 1;
+        let errors = self.probcut_errors.expect("Multi-ProbCut is on");
+        let error = errors[64 - board.empty_count() as usize][depth as usize];
+        let error0 = PATTERN_UNITS_PER_DISC.max(error - PROBCUT_PRE_CHECK_OFFSET);
+        let static0 = self.evaluate_leaf(board, player);
+
+        // C#'s finally: the flag is cleared even when the search stops.
+        self.in_probcut = true;
+        let cut =
+            self.probcut_searches(board, player, shallow_look, ply, previous_move, alpha, beta, error, error0, static0);
+        self.in_probcut = false;
+        cut
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn probcut_searches(
+        &mut self,
+        board: &Board,
+        player: Player,
+        shallow_look: i32,
+        ply: i32,
+        previous_move: i32,
+        alpha: i32,
+        beta: i32,
+        error: i32,
+        error0: i32,
+        static0: i32,
+    ) -> Result<Option<i32>, Abort> {
+        if static0 >= beta + error0 && beta + error < PROBCUT_SCORE_LIMIT {
+            let pc_beta = beta + error;
+            if self.search(board, player, shallow_look, ply, previous_move, pc_beta - 1, pc_beta)?.0 >= pc_beta {
+                return Ok(Some(beta));
+            }
+        }
+
+        if static0 <= alpha - error0 && alpha - error > -PROBCUT_SCORE_LIMIT {
+            let pc_alpha = alpha - error;
+            if self.search(board, player, shallow_look, ply, previous_move, pc_alpha, pc_alpha + 1)?.0 <= pc_alpha {
+                return Ok(Some(alpha));
+            }
+        }
+
+        Ok(None)
+    }
+
+    /// The root of the solver: the score and move for `kind` (win/loss/draw or exact) within (alpha, beta).
+    /// C#: `SolveRoot`.
+    #[allow(clippy::too_many_arguments)]
+    fn solve_root(
+        &mut self,
+        board: &Board,
+        player: Player,
+        mut alpha: i32,
+        beta: i32,
+        kind: ScoreKind,
+        root_moves: &mut [i32],
+        best: &mut Best,
+    ) -> Result<(i32, i32), Abort> {
+        let own = board.discs(player);
+        let opponent = board.discs(player.opponent());
+        let empties = board.empty_count() as i32;
+        let mut best_score = -INFINITY;
+        let mut best_move = -1;
+        let mut improvements = [0i32; MAX_MOVES];
+        let mut improved = 0;
+
+        for (i, &mv) in root_moves.iter().enumerate() {
+            let has_solved_move = best_move >= 0 || matches!(best.kind, ScoreKind::WinLossDraw | ScoreKind::Exact);
+            self.report_depth = if has_solved_move { empties } else { best.depth };
+            self.report_move = mv;
+            self.report_best_move = if best_move >= 0 { best_move } else { best.mv };
+            self.report_score = if best_move >= 0 { best_score } else { best.score };
+            self.report_kind = if best_move >= 0 { kind } else { best.kind };
+            let flips = bits::flips(own, opponent, mv as u32);
+            let child_own = own | flips | (1u64 << mv);
+            let child_opponent = opponent & !flips;
+            let score = if i == 0 {
+                -self.solve_child(child_opponent, child_own, -beta, -alpha, empties - 1)?
+            } else {
+                let value = -self.solve_child(child_opponent, child_own, -alpha - 1, -alpha, empties - 1)?;
+                if value > alpha && value < beta {
+                    -self.solve_child(child_opponent, child_own, -beta, -alpha, empties - 1)?
+                } else {
+                    value
+                }
+            };
+
+            if score > best_score {
+                best_score = score;
+                best_move = mv;
+                alpha = alpha.max(score);
+                improvements[improved] = mv;
+                improved += 1;
+                if kind == ScoreKind::Exact || score >= 0 || best.kind == ScoreKind::None {
+                    let kind = if kind == ScoreKind::WinLossDraw && score == 0 { ScoreKind::Exact } else { kind };
+                    *best = Best { mv, score, kind, depth: empties };
+                }
+            }
+
+            self.report(empties, mv, best_move, best_score, kind);
+            if best_score >= beta {
+                break;
+            }
+        }
+
+        move_to_front(root_moves, &improvements[..improved]);
+        Ok((best_score, best_move))
+    }
+
+    /// The evaluation of a leaf, counted as a node and an evaluation. C#: `EvaluateLeaf`.
+    #[inline]
+    pub(crate) fn evaluate_leaf(&mut self, board: &Board, player: Player) -> i32 {
+        self.nodes += 1;
+        self.evaluations += 1;
+        eval::pattern_score(self.pattern, board.discs(player), board.discs(player.opponent()))
+    }
+
+    fn stop_iterating(&self, limits: &SearchLimits, budget: TimeBudget, next_look: i32) -> bool {
+        match limits.mode() {
+            TimeControlMode::FixedDepth => next_look >= limits.depth(),
+            TimeControlMode::Solve => false,
+            _ => self.elapsed_ms() > budget.soft_ms,
+        }
+    }
+
+    /// The heartbeat, then the stop signals and the hard time limit. C#: `CheckAbort`.
+    #[cold]
+    pub(crate) fn check_abort(&mut self) -> Result<(), Abort> {
+        if self.progress.is_some() && self.report_move >= 0 && self.elapsed_ms() - self.last_heartbeat_ms >= 100 {
+            self.report(
+                self.report_depth,
+                self.report_move,
+                self.report_best_move,
+                self.report_score,
+                self.report_kind,
+            );
+        }
+
+        if self.stop.is_cancelled() {
+            return Err(Abort::Cancelled);
+        }
+
+        if self.stop.is_move_now() || self.elapsed_ms() >= self.hard_limit_ms {
+            return Err(Abort::Stop);
+        }
+
+        Ok(())
+    }
+
+    /// C#: `Report`.
+    pub(crate) fn report(&mut self, depth: i32, mv: i32, best_move: i32, score: i32, kind: ScoreKind) {
+        let Some(progress) = self.progress.as_mut() else { return };
+        let elapsed = (self.clock)().saturating_sub(self.start);
+        self.last_heartbeat_ms = elapsed.as_millis() as i64;
+        progress(&SearchInfo {
+            depth,
+            current_move: Square::new(mv as u8),
+            best_move: (best_move >= 0).then(|| Square::new(best_move as u8)),
+            score,
+            kind,
+            nodes: self.nodes,
+            evaluations: self.evaluations,
+            elapsed,
+        });
+    }
+
+    fn elapsed(&self) -> Duration {
+        (self.clock)().saturating_sub(self.start)
+    }
+
+    /// C#: `_clock.ElapsedMilliseconds` (whole milliseconds).
+    fn elapsed_ms(&self) -> i64 {
+        self.elapsed().as_millis() as i64
+    }
+
+    fn result(&self, best: Best) -> SearchResult {
+        SearchResult {
+            mv: if best.mv >= 0 { Move(Some(Square::new(best.mv as u8))) } else { Move::PASS },
+            score: best.score,
+            kind: best.kind,
+            depth: best.depth,
+            nodes: self.nodes,
+            evaluations: self.evaluations,
+            elapsed: self.elapsed(),
+        }
+    }
+}
+
+// Egaroucid's shallow depth: about half the depth, with the same parity.
+fn probcut_shallow_depth(depth: i32) -> i32 {
+    ((depth / 2) & !1) + (depth & 1)
+}
+
+/// t × σ in 1/100 disc by disc count and depth. σ = deep − shallow search, fitted by the trainer's mpc command on
+/// 11,700 test positions searched to depth 13 without selectivity (Plans/improve-stello-strength-findings.md).
+/// C#: `ProbCutErrors` (the same double arithmetic, in the same order).
+fn probcut_errors(t: f64) -> Box<ProbCutErrors> {
+    let mut errors = Box::new([[0i32; 61]; 65]);
+    for (discs, row) in errors.iter_mut().enumerate() {
+        let x = discs as f64 / 64.0;
+        for depth in 1..=60 {
+            let shallow = probcut_shallow_depth(depth);
+            let sigma = 1.8871 + 2.9543 * x + 0.0660 * x * x - 0.6749 * shallow as f64 + 0.2778 * depth as f64;
+            row[depth as usize] = (t * sigma.max(0.5) * PATTERN_UNITS_PER_DISC as f64).ceil() as i32;
+        }
+    }
+
+    errors
+}
+
+/// The final disc difference for the side owning `own`, the empty squares going to the winner. C#: `FinalScore`.
+#[inline]
+pub(crate) fn final_score(own: u64, opponent: u64) -> i32 {
+    let own_count = own.count_ones() as i32;
+    let opponent_count = opponent.count_ones() as i32;
+    let empties = 64 - own_count - opponent_count;
+    let difference = own_count - opponent_count;
+    if difference > 0 {
+        difference + empties
+    } else if difference < 0 {
+        difference - empties
+    } else {
+        0
+    }
+}
+
+/// C#: `GameOverScore`: ±([`WIN_SCORE`] + the final disc difference).
+#[inline]
+fn game_over_score(own: u64, opponent: u64) -> i32 {
+    let difference = final_score(own, opponent);
+    if difference > 0 {
+        difference + WIN_SCORE
+    } else if difference < 0 {
+        difference - WIN_SCORE
+    } else {
+        0
+    }
+}
+
+/// The squares of `moves`, lowest first; returns the count. C#: `Fill`.
+#[inline]
+pub(crate) fn fill(list: &mut [i32], mut moves: u64) -> usize {
+    let mut count = 0;
+    while moves != 0 {
+        list[count] = moves.trailing_zeros() as i32;
+        count += 1;
+        moves &= moves - 1;
+    }
+
+    count
+}
+
+// Each new best move goes to the front, so the last best move is searched first next time (C++: put_in_front).
+fn move_to_front(moves: &mut [i32], improvements: &[i32]) {
+    for &mv in improvements {
+        let index = moves.iter().position(|&m| m == mv).expect("an improvement is a root move");
+        moves[..=index].rotate_right(1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn engines_and_signals_can_move_to_other_threads() {
+        fn send<T: Send>() {}
+        fn sync<T: Sync>() {}
+        send::<SearchEngine>();
+        send::<SearchSignals>();
+        sync::<SearchSignals>();
+    }
+
+    #[test]
+    fn shallow_depth_keeps_the_parity() {
+        let shallow: Vec<i32> = (1..=10).map(probcut_shallow_depth).collect();
+        assert_eq!(shallow, [1, 0, 1, 2, 3, 2, 3, 4, 5, 4]);
+    }
+
+    #[test]
+    fn errors_follow_the_fitted_model() {
+        let errors = probcut_errors(1.0);
+        // 30 discs, depth 6 (shallow 2): σ = 1.8871 + 2.9543 * 0.46875 + 0.0660 * 0.46875² - 1.3498 + 1.6668.
+        assert_eq!(errors[30][6], 361);
+        assert!(errors.iter().all(|row| row[1..].iter().all(|&e| e >= 50)));
+    }
+
+    #[test]
+    fn move_to_front_puts_the_last_improvement_first() {
+        let mut moves = [1, 2, 3, 4];
+        move_to_front(&mut moves, &[3, 4]);
+        assert_eq!(moves, [4, 3, 1, 2]);
+    }
+
+    #[test]
+    fn final_scores_give_the_empties_to_the_winner() {
+        assert_eq!(final_score(0b111, 0b1), 2 + 60);
+        assert_eq!(final_score(0b1, 0b111), -2 - 60);
+        assert_eq!(game_over_score(0b11, 0b1100), 0);
+        assert_eq!(game_over_score(u64::MAX, 0), 64 + WIN_SCORE);
+    }
+}
