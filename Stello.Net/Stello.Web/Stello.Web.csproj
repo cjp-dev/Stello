@@ -34,15 +34,15 @@
     </ItemGroup>
   </Target>
 
-  <!-- The brain documentation is shown by the Docs pages; copied into wwwroot like the book (git-ignored). -->
-  <Target Name="CopyBrainDocs" BeforeTargets="AssignTargetPaths">
+  <!-- The documentation (docs) is shown by the Docs pages; copied into wwwroot like the book (git-ignored). -->
+  <Target Name="CopyDocs" BeforeTargets="AssignTargetPaths">
     <ItemGroup>
-      <BrainDocs Include="..\..\docs\**\*" />
+      <DocsFile Include="..\..\docs\**\*" />
     </ItemGroup>
-    <Copy SourceFiles="@(BrainDocs)" DestinationFiles="@(BrainDocs->'wwwroot\content\brain\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(DocsFile)" DestinationFiles="@(DocsFile->'wwwroot\content\docs\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <ItemGroup>
-      <Content Remove="wwwroot\content\brain\**" />
-      <Content Include="wwwroot\content\brain\**" />
+      <Content Remove="wwwroot\content\docs\**" />
+      <Content Include="wwwroot\content\docs\**" />
     </ItemGroup>
   </Target>
 

@@ -61,7 +61,7 @@ Settings and the book are written to a temporary file first and then renamed ove
 |---|---|---|
 | The evaluation weights (chapter 04) | [Stello.Net/Book/stello-eval.bin](../Stello.Net/Book/stello-eval.bin) | `Stello.Engine.csproj` embeds it as the resource `Stello.Engine.stello-eval.bin`; `EvalWeights.Default` reads it on first use. Both apps (and the tools) get it with the engine DLL, with no file to load |
 | The opening book (chapter 10) | [Stello.Net/Book/opening-book.bin](../Stello.Net/Book/opening-book.bin), built by the book tool (chapter 12) | `Stello.Net.csproj` links it as `Data\OPENING`, copied next to the program. `Stello.Web.csproj` copies it to `wwwroot/data/OPENING.bin` before every build (target `CopyOpeningBook`; the copy is git-ignored), because the development server does not serve linked files |
-| This documentation | `docs/**` | `Stello.Web.csproj` copies it to `wwwroot/content/brain/` (target `CopyBrainDocs`), where the web app's Docs pages show it (Help menu, chapter 15) |
+| This documentation | `docs/**` | `Stello.Web.csproj` copies it to `wwwroot/content/docs/` (target `CopyDocs`), where the web app's Docs pages show it (Help menu, chapter 15) |
 | The picture in the About box | `Stello.Net/Images/2026 Claus Pedersen.jpg` | The WPF app has it as a WPF resource (`Images\ClausPedersen.jpg`); the web build copies it to `wwwroot/images/claus-pedersen.jpg` (target `CopyAboutPicture`, git-ignored) |
 
 The web app is published with ahead-of-time compilation to WebAssembly (`RunAOTCompilation` in Release, which needs the `wasm-tools` workload), because the engine is CPU-bound.
