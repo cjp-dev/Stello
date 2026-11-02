@@ -79,21 +79,13 @@ internal sealed class EvalWeights
         return stageOf;
     }
 
-    private static readonly Lazy<EvalWeights> BuiltIn = new(() =>
-    {
-        using Stream stream = typeof(EvalWeights).Assembly.GetManifestResourceStream(ResourceName)
-            ?? throw new InvalidOperationException($"The resource {ResourceName} is missing.");
-        return Read(stream);
-    });
-
-    private const string ResourceName = "Stello.Engine.stello-eval.bin";
-
-    /// <summary>
-    /// Stello 2's evaluation, <c>Book/stello-eval.bin</c>, built into the assembly so that every app has it without
-    /// loading a file. It is read on first use.
-    /// </summary>
-    public static EvalWeights Default => BuiltIn.Value;
-
+    /// <summary>Reads an evaluation file, such as Stello's own, <c>Stello.Net/Book/stello-eval.bin</c>.</summary>
+    /// <remarks>
+    /// Stello's evaluation is built into the Rust engine (stello-core), which searches with it unless
+    /// <see cref="Search.SearchOptions.Pattern"/> gives another. It is not built into this assembly, so that the web
+    /// app does not download it twice; the tools that evaluate in C# load the file, which their builds copy to their
+    /// Data folder.
+    /// </remarks>
     public static EvalWeights Load(string path)
     {
         byte[] bytes = File.ReadAllBytes(path);
@@ -101,9 +93,6 @@ internal sealed class EvalWeights
         weights._fileBytes = bytes;
         return weights;
     }
-
-    /// <summary>Whether these are the built-in weights (<see cref="Default"/>), without loading them.</summary>
-    internal bool IsDefault => BuiltIn.IsValueCreated && ReferenceEquals(this, BuiltIn.Value);
 
     // The file these weights were loaded from, or written once by FileBytes.
     private byte[]? _fileBytes;

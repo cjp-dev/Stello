@@ -18,11 +18,6 @@
     <InternalsVisibleTo Include="Stello.Trainer" />
   </ItemGroup>
 
-  <ItemGroup>
-    <!-- Stello 2's trained evaluation (EvalWeights.Default). -->
-    <EmbeddedResource Include="..\Book\stello-eval.bin" LogicalName="Stello.Engine.stello-eval.bin" />
-  </ItemGroup>
-
   <!--
     The search runs in Rust (Stello.Rust, crate stello-ffi, library stello_engine). Before the build, Cargo builds it
     when its sources are newer than the library, and the library is copied to the output of this project and of every

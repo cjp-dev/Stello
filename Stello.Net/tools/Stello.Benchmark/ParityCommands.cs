@@ -44,7 +44,7 @@ internal static class ParityCommands
             return 0;
         }
 
-        EvalWeights weights = options.Text("eval") is { } path ? EvalWeights.Load(path) : EvalWeights.Default;
+        EvalWeights weights = EvalWeights.Load(options.Text("eval") ?? Program.DataFile("stello-eval.bin"));
         if (options.Text("split") is { } split)
         {
             string maxText = options.Text("max-per-discs") ?? "20000";

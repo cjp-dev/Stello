@@ -18,4 +18,9 @@
     <Compile Include="..\Stello.BookTool\Options.cs" Link="Options.cs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Stello's evaluation, for the C# evaluations of mpc and mpc-end (TrainerProgram.DefaultEvaluation). -->
+    <None Include="..\..\Book\stello-eval.bin" Link="Data\stello-eval.bin" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -51,6 +51,7 @@ internal static class MpcCommand
         var clock = Stopwatch.StartNew();
         int done = 0;
         var options2 = SearchOptions.Default with { Selective = false };
+        EvalWeights weights = TrainerProgram.DefaultEvaluation();
         Parallel.For(0, positions.Count, new ParallelOptions { MaxDegreeOfParallelism = workers },
             () => new SearchEngine(18, options2),
             (i, _, engine) =>
@@ -59,7 +60,7 @@ internal static class MpcCommand
                 int empties = 64 - sample.Discs;
                 int depth = Math.Min(maxDepth, empties - 8);
                 var row = new int[depth + 1];
-                row[0] = EvalWeights.Default.Evaluate(sample.Own, sample.Opponent) * 100 / EvalWeights.Default.UnitsPerDisc;
+                row[0] = weights.Evaluate(sample.Own, sample.Opponent) * 100 / weights.UnitsPerDisc;
                 engine.ClearHash();
                 engine.IterationDone = (d, score) =>
                 {
@@ -131,6 +132,7 @@ internal static class MpcCommand
         int done = 0;
         int skipped = 0;
         var plain = SearchOptions.Default with { Selective = false };
+        EvalWeights weights = TrainerProgram.DefaultEvaluation();
 
         // The slowest (fewest discs) first, so the workers finish together.
         int[] order = Enumerable.Range(0, positions.Count).OrderBy(i => positions[i].Discs).ToArray();
@@ -143,7 +145,7 @@ internal static class MpcCommand
                 int depth = Math.Min(maxDepth, empties - 8);
                 var row = new int[depth + 2];
                 var board = new Board(sample.Own, sample.Opponent);
-                row[1] = EvalWeights.Default.Evaluate(sample.Own, sample.Opponent) * 100 / EvalWeights.Default.UnitsPerDisc;
+                row[1] = weights.Evaluate(sample.Own, sample.Opponent) * 100 / weights.UnitsPerDisc;
                 engine.ClearHash();
                 engine.IterationDone = (d, score) =>
                 {

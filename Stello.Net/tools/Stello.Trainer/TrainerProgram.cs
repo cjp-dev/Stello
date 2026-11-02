@@ -1,5 +1,6 @@
 using System.Globalization;
 using Stello.BookTool;
+using Stello.Engine.Evaluation;
 
 namespace Stello.Trainer;
 
@@ -65,6 +66,9 @@ internal static class TrainerProgram
             return Fail(exception.Message);
         }
     }
+
+    /// <summary>Stello's evaluation, <c>Stello.Net/Book/stello-eval.bin</c>, copied to the tool's Data folder by its build.</summary>
+    internal static EvalWeights DefaultEvaluation() => EvalWeights.Load(Path.Combine(AppContext.BaseDirectory, "Data", "stello-eval.bin"));
 
     /// <summary>The Stello repository folder: the first folder above the current folder or the tool with Stello.Net/Stello.Net.slnx.</summary>
     public static string RepositoryFolder()

@@ -170,7 +170,7 @@ public sealed class SearchEngine
         }
 
         StelloNative.EnsureLoaded();
-        byte[]? eval = Options.Pattern is { IsDefault: false } pattern ? pattern.FileBytes : null;
+        byte[]? eval = Options.Pattern?.FileBytes;
         EngineHandle engine;
         int status;
         fixed (byte* bytes = eval)

@@ -12,7 +12,7 @@ What the work on Stello 3.0 teaches us, written down as we go: the decisions, th
 | 0 Set-up and the frozen Stello 2.0 | done (2026-11-02) | Stello.Engine.V2 searches node for node like 2.0; the Rust workspace builds for Linux, Windows and WASM, and .NET and Node call it |
 | 1 The core in Rust | done (2026-11-02) | Board, evaluation, midgame search and endgame solver node-for-node identical to C# 2.0 (mid-bench, FFO #40–49, 3,100 random midgame and endgame positions, the whole test split); 1.27–1.37× faster on one thread |
 | 2 Desktop and tools on Rust | done (2026-11-02) | The C# `SearchEngine` calls Rust, identical to 2.0 (mid-bench, random positions, FFO, handover, 500 random endgames, a whole book recalculation); after a speed pass 2.8–3.1× faster in the midgame and 1.75× on FFO; 3.0 beats 2.0 at 500 ms with 59.6 % (+68 Elo) |
-| 3 The web app on Rust | not started | |
+| 3 The web app on Rust | done (2026-11-02) | The browser searches with the Rust engine in WebAssembly, node for node like 2.0; in Chromium 2.3–2.4× faster than the .NET AOT worker in the midgame and 1.59× on FFO #40–44 (1.86× overall); the worker starts in 92 ms instead of 680, Stop and Move Now answer in under 1 ms, and the first visit is 1.07 MB smaller |
 | 4 Release (3.0 preview) | not started | |
 | 5 Threads and a shared hash table | not started | |
 | 6 Lazy SMP | not started | |
@@ -336,3 +336,83 @@ Every change keeps the nodes identical. It was checked through the wrapper after
 
 **Environment note:** a cross-built DLL that Cargo had hard-linked into `target/.../release` gave "Stale file handle" on the mount. Deleting both links and rebuilding fixed it.
 
+## Phase 3: the web app on Rust (2026-11-02, 458c50a)
+
+### Design
+- **`stello-wasm`** (wasm-bindgen 0.2.130, `--target web`) exports `init(evaluation?, hashBits)`, `search(request, host)` and `version()`:
+  - `search` takes and returns the JSON of the web app's `EngineProtocol` (the same shapes). Rust reads and writes it (`protocol.rs`), because `JSON.parse` would round the 64-bit boards;
+  - `host` is `{ progress(json), signal() }`. The engine reads `signal()` (an `Atomics.load` of the page's `SharedArrayBuffer`: 1 Move Now, 2 cancel) at every abort check, every 1,024 nodes. The .NET worker only read it in its progress reports;
+  - the clock is `performance.now()`, imported and set with `SearchEngine::set_clock`;
+  - progress is throttled as before: a new depth or best move at once, otherwise every 100 ms;
+  - a request with other hash bits makes a new engine, as the .NET worker did.
+- **`engine-worker.js`** loads the wasm-bindgen module. It has two commands, `init` and `search`, and needs no book.
+- **`WebEngineHost`** looks up the book on the page with `ComputerPlayer.TryChooseBookMove`, the book step of `ChooseMove` moved out unchanged, so a book move no longer waits for the worker. Games are added to the book on the page too (`BookLearner.AddGame`), as in `LocalEngineHost`. The book tracker is reset when the hash bits change or the worker restarts, as the .NET worker's new `ComputerPlayer` did. The protocol, the cooperative stop and the 300 ms fallback are unchanged.
+- **The evaluation is embedded** in the module (`include_bytes!`). The module is 1,194,262 bytes, 1,065,123 with brotli; 990,568 bytes of it are the gzip file, which brotli cannot shrink. A separate file would transfer the same plus a request, and start-up does not change. `init` still accepts the bytes of another file.
+- **The build:** a `BuildStelloWasm` target in `Stello.Web.csproj` runs Cargo (`--target wasm32-unknown-unknown`, always release) and wasm-bindgen into `wwwroot/engine` (git-ignored) when the Rust sources are newer. It stops with a clear message if Cargo, the wasm32 target (checked in `rustc --print sysroot`) or wasm-bindgen is missing. `StelloWasmEngine=false` skips it.
+- **The deploy workflow** installs Rust stable with the target, and the prebuilt wasm-bindgen 0.2.130 from its GitHub release. It publishes with `-p:StelloNativeEngine=false`, since the web app does not need the native library. Its Rust steps were run in a clean `ubuntu:24.04` container, and the module built there passes the Node tests.
+- **The web app no longer references Stello.Engine.V2.**
+- **Stello.Engine no longer embeds `stello-eval.bin`** (follow-up after 458c50a). Only the Benchmark's `parity-data` and the trainer's `mpc` evaluated with `EvalWeights.Default`; they load the file from their `Data` folder instead. `Stello.Engine.wasm` goes from 1,031,245 to 41,135 bytes with brotli.
+
+### Gate P3 (Release AOT publish in headless Chromium, served with COOP/COEP and brotli)
+Speed: the old build is b132d6f (the .NET AOT worker running Stello 2.0), and each search runs on a fresh engine.
+
+| Run | .NET AOT worker | Rust worker | Faster by |
+|---|---:|---:|---:|
+| mid-bench depth 10, 100 positions (3.72 M nodes) | 2.149 s, 1.73 M nodes/s | 0.933 s, 3.99 M nodes/s | 2.30× |
+| mid-bench depth 12, every 5th position (2.44 M nodes) | 1.389 s | 0.580 s | 2.40× |
+| FFO #40–44 (92.5 M nodes) | 4.141 s, 22.3 M nodes/s | 2.609 s, 35.4 M nodes/s | 1.59× |
+| All three | 7.68 s | 4.12 s | 1.86× |
+
+| Gate item | Result |
+|---|---|
+| The Release build plays | a whole game, computer against computer, 1 s per move with the book (19 book moves, 41 searched); Add Game to Book saved the book; no page errors |
+| Stop and Move Now within 100 ms | in the engine (signal to answer): 0.2–0.9 ms, against 6–38 ms for .NET. In the app (click until the board changes): Move Now 25–27 ms, cancel (New Game) 28–31 ms, against 34–57 ms |
+| 22 empty squares solved | FFO #41 in 340 ms (.NET 569 ms); a 22-empty game position in the app in 0.26 s at 26.5 M nodes/s (.NET 0.49 s, 12.9 M nodes/s) |
+| Browser speed ≥ 1.9× (target) | midgame 2.30–2.40×, FFO 1.59×, overall 1.86× |
+| Worker start-up | 89–97 ms, against 658–713 ms for the second .NET runtime |
+| Transferred size, first visit | 7,913,010 bytes (2.0) → 7,829,307 (458c50a) → 6,844,294 bytes without the evaluation in `Stello.Engine` |
+
+- **Start-up, measured under Node:** compiling the module takes 3–7 ms. Decoding the evaluation takes about 40 ms, and the first growth of memory for the 48 MB of hash tables about 35 ms.
+- **Parity:**
+  - the browser engine matches the 2.0 signatures on all 100 depth-10 searches and the 5 solves;
+  - the .NET and the Rust worker agree on all 125 searches;
+  - the browser and native `stello mid-bench --depth 12` agree on 20 of 20.
+- **Tests:**
+  - 9 Node tests of the built package (`node --test Stello.Rust/stello-wasm/tests/engine.test.mjs`): signatures, progress throttling, time per move with the JavaScript clock, Move Now and cancel in the midgame and in a solve, other hash bits, rejected requests, the evaluation as bytes;
+  - 3 Rust unit tests of the protocol;
+  - 484 engine tests;
+  - `cargo test`, clippy (also for wasm32) and `cargo fmt` are clean.
+
+### The solver in WebAssembly (follow-up)
+- **Profile** (`node --cpu-prof`, FFO #40–44, debug symbols):
+
+  | Function | Share of the time |
+  |---|---:|
+  | `endgame::bits::flips` | 28 % |
+  | `end_simple` | 17 % |
+  | `end_fast` | 10 % |
+  | `legal_moves` | 9 % |
+  | `evaluate` (the ordering searches) | 9 % |
+  | `last1`–`last3` | 13 % |
+
+  The JavaScript clock and the signal reads take under 1 %.
+- **WebAssembly is already close to native:** the solves take 2.59 s under Node, against 2.08 s natively (default code) and 2.17 s with `--cpu portable`, the same code WebAssembly runs. `i64.clz`, `ctz` and `popcnt` are single instructions in WebAssembly, and V8 compiles them to `lzcnt`/`tzcnt`/`popcnt`.
+- **Why the target is out of reach:** .NET's AOT build is nearly as fast in the browser as C# natively (22.3 against 23.3 M nodes/s). So 1.9× in the browser would need the solver itself to get about 25 % faster than after phase 2's speed pass (1.75× natively).
+- **Tried, nodes unchanged, none kept:**
+
+  | Change | Browser (Node) | Native |
+  |---|---|---|
+  | A copy of `flips` for each square, with the rays as constants and the rays that cannot flip removed | 2.59 → 3.23 s | 2.08 → 2.54 s |
+  | `#[inline(always)]` on `flips` (as in phase 2) | 2.59 → 2.77 s | 2.08 → 2.29 s |
+  | Branchless upward rays | unchanged (LLVM already makes them branchless) | unchanged |
+  | `opt-level` 2 | unchanged | — |
+  | `opt-level` s | 15 % slower | — |
+  | `wasm-opt -O3` | 0–4 % slower | — |
+  | `simd128` | about 2 % faster | — |
+  | `target-cpu=bleeding-edge` | about 3 % faster | — |
+
+  `bleeding-edge` needs features that not every browser has.
+- **What could still help:**
+  - `simd128` (2 %). The .NET AOT build already requires WebAssembly SIMD, so this adds no new browser requirement;
+  - a different flip algorithm, such as Edax's per-square `flip_carry` functions with outflank tables (about 1,500 lines);
+  - SIMD flips for the four upward rays. WebAssembly SIMD has no per-lane variable shifts and no 64-bit `clz`, so the downward rays stay scalar.
