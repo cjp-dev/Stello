@@ -60,11 +60,9 @@ A child is searched with the window (−β, −α). Stello's search is **fail-so
 
 The picture shows a depth-2 search for Black in the midgame test position (the one used in [SearchEngineTests.cs](../../Stello.Net/Stello.Engine.Tests/SearchEngineTests.cs)). At this depth none of the search's extras is active: the root searches every move with the full window (`look` ≤ 2), there is no Multi-ProbCut (`look` < 2) and no enhanced transposition cutoff or evaluation ordering (`look` < 4), so it is plain alpha-beta. Each row is a black move with White's replies; the leaves are scored by the pattern evaluation for Black, in 1/100 disc, and White picks the lowest.
 
-<!-- TODO (team lead, after the benchmark): the figure and its alt text below show Stello 1 numbers. Regenerate with Stello 2.0 and redraw images/alpha-beta-tree.svg: position TestGames.Play("f5 d6 c3 d3 c4 f4 c5 b3 c2 e6").Board, Black to move. For root moves a3, f3, c6, a4 in that order, with White's replies in square order (a1 … h8): the score of every reply's position for Black, EvaluateLeaf / PatternScore in 1/100 disc; then plain fail-soft alpha-beta over this order: each move's value, which replies are skipped after a cutoff, the number of leaves evaluated, and the leaf count of a full minimax. If the best move changes, pick four root moves that show both a new best and cutoffs. -->
-![Four rows, one per black move a3, f3, c6 and a4, each with the evaluated white replies. a3 gives −105. f3 is cut off after b4 = −124, skipping four replies. c6 gives 61, the new best. a4 is cut off after its first reply c1 = 45, skipping eleven.](images/alpha-beta-tree.svg)
+![Four rows, one per black move f3, a3, c6 and a4, each with the evaluated white replies, in 1/100 disc. f3 gives −737. a3 is cut off after its fifth reply, e3 = −925, skipping seven replies. c6 gives 112, the new best. a4 is cut off after its first reply c1 = −237, skipping eleven.](images/alpha-beta-tree.svg)
 
-<!-- TODO (team lead): the numbers in this paragraph (45 / 124 leaves, 21 evaluations, c6 and 61) are Stello 1's. Rerun: new SearchEngine().Search(that position, Player.Black, SearchLimits.FixedDepth(2), progress); take the leaf counts from the alpha-beta over the figure's order, and from the real search the evaluations of the depth-2 iteration (Evaluations of the last depth-2 SearchInfo minus that of the last depth-1 SearchInfo), the best move and the score. -->
-With the root moves in this order and the replies in square order, alpha-beta evaluates 45 leaves instead of the 124 of a full minimax. In the real search, the depth-1 iteration has already moved the best move, c6, to the front, so α is 61 from the first move on and the other moves are refuted sooner; the replies are also tried in square-value order, because the response table holds nothing yet for a root move that has not been searched at this depth and the hash table is not read at ply 1 in a depth-2 iteration (chapter 05). The depth-2 iteration then needs only 21 evaluations. Both find c6 with score 61.
+With these four root moves in this order and the replies in square order, alpha-beta evaluates 28 leaves instead of the 46 of a full minimax (over all 11 moves, a full minimax evaluates 123). In the real search, the depth-1 iteration has already moved the best move, c6, to the front, so α is 112 from the first move on and the other moves are refuted sooner; the replies are also tried in square-value order, because the response table holds nothing yet for a root move that has not been searched at this depth and the hash table is not read at ply 1 in a depth-2 iteration (chapter 05). The depth-2 iteration then needs only 21 evaluations. Both find c6 with score 112 (+1.12 discs).
 
 ### The search as a whole
 
@@ -166,7 +164,7 @@ When neither side can move, the node returns $\pm(32600 + d)$, where $d$ is the 
 
 ## Worked example: iterative deepening
 
-The midgame test position after `f5 d6 c3 d3 c4 f4 c5 b3 c2 e6`, Black to move, searched with `SearchLimits.FixedDepth(10)` (Release build, 25 September 2026; times depend on the machine):
+The midgame test position after `f5 d6 c3 d3 c4 f4 c5 b3 c2 e6`, Black to move, searched by `new SearchEngine()` with `SearchLimits.FixedDepth(10)` (Release build, 2 November 2026, on the laptop used for all measurements; times depend on the machine):
 
 ```text
 --------
@@ -179,37 +177,34 @@ The midgame test position after `f5 d6 c3 d3 c4 f4 c5 b3 c2 e6`, Black to move, 
 --------
 ```
 
-<!-- TODO (team lead, after the benchmark): the table below holds Stello 1 numbers. Rerun in a Release build: new SearchEngine() (hashBits 19, SearchOptions.Default, so Multi-ProbCut on) .Search(TestGames.Play("f5 d6 c3 d3 c4 f4 c5 b3 c2 e6").Board, Player.Black, SearchLimits.FixedDepth(10), progress). For each depth 1–10 take the last SearchInfo with that Depth (reported after the last root move of the iteration): BestMove, Score, Nodes, Evaluations, Elapsed (ms), all totals since the start of the search. Update the date in the sentence above and the machine if it matters. -->
 | Depth (plies) | Best move | Score | Nodes (total) | Evaluations (total) | Time (total) |
 |---|---|---|---|---|---|
-| 1 | c6 | −83 | 11 | 11 | 9 ms |
-| 2 | c6 | 61 | 43 | 32 | 11 ms |
-| 3 | b4 | −2 | 312 | 257 | 12 ms |
-| 4 | c6 | 103 | 1 033 | 749 | 14 ms |
-| 5 | c6 | 0 | 3 248 | 2 476 | 19 ms |
-| 6 | b4 | 113 | 9 689 | 6 539 | 32 ms |
-| 7 | c6 | 22 | 29 094 | 20 947 | 72 ms |
-| 8 | c6 | 88 | 99 214 | 66 328 | 186 ms |
-| 9 | c6 | 13 | 147 302 | 103 055 | 204 ms |
-| 10 | c6 | 70 | 675 903 | 437 509 | 361 ms |
+| 1 | c6 | 50 | 11 | 11 | 5 ms |
+| 2 | c6 | 112 | 43 | 32 | 7 ms |
+| 3 | c6 | 75 | 297 | 249 | 8 ms |
+| 4 | c6 | 87 | 493 | 391 | 8 ms |
+| 5 | c6 | 275 | 1 267 | 966 | 9 ms |
+| 6 | b4 | 162 | 4 787 | 3 354 | 14 ms |
+| 7 | b4 | 300 | 8 950 | 6 381 | 18 ms |
+| 8 | c6 | 225 | 18 387 | 12 604 | 30 ms |
+| 9 | c6 | 275 | 22 893 | 15 865 | 35 ms |
+| 10 | c6 | 200 | 30 977 | 20 968 | 44 ms |
 
 The counters and times are totals since the start of the search. The best move's score at each depth:
 
-<!-- TODO (team lead): the chart's line is the Score column of the table above; replace it with the Stello 2.0 scores and adjust the y-axis range to them. -->
 ```mermaid
 %%{init: {"themeVariables": {"xyChart": {"plotColorPalette": "#1e7a3c"}}}}%%
 xychart-beta
     title "Score of the best move by depth"
     x-axis "Depth (plies)" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    y-axis "Score (1/100 disc)" -100 --> 120
-    line [-83, 61, -2, 103, 0, 113, 22, 88, 13, 70]
+    y-axis "Score (1/100 disc)" 0 --> 320
+    line [50, 112, 75, 87, 275, 162, 300, 225, 275, 200]
 ```
 
-<!-- TODO (team lead): check that both points below still hold for the Stello 2.0 numbers; drop or reword the second if the scores no longer alternate. -->
 Two things are typical:
 
-- Each iteration costs a few times more than the previous one, so the earlier iterations are cheap.
-- The score goes up and down between odd and even depths: at odd depths the leaves have White to move, at even depths Black, and a static evaluation judges a position differently depending on who is to move. This is the *odd-even effect*; comparing only odd or only even depths gives a steadier picture.
+- The iterations grow slowly. The early ones grow by up to 7 times (depth 2 to 3), but from depth 7 on each costs at most about twice the previous one: the hash table carries the best moves and bounds over from the previous iteration, and Multi-ProbCut (from depth 3) cuts most of the clearly bad lines. Depth 10 takes 31 000 nodes.
+- The score goes up and down between odd and even depths. From depth 5 on, the odd depths score higher than the even ones around them (275, 300, 275 against 162, 225, 200). At odd depths the leaves have White to move, at even depths Black, and a static evaluation judges a position differently depending on who is to move. This is the *odd-even effect*; comparing only odd or only even depths gives a steadier picture.
 
 ## Design notes
 

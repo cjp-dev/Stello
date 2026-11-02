@@ -221,7 +221,7 @@ A null-window search at 14 empty squares (50 discs) with α = 30. The threshold 
 
 ### The FFO positions
 
-`solve-bench` solves FFO #40–49 exactly in solve mode, on one thread (Intel i7-12850HX laptop, measured on 31 October 2026, [result](../../Plans/benchmark-results/v2-p3-solve-bench-40-49.json)):
+`solve-bench` solves FFO #40–49 exactly in solve mode, on one thread (Intel i7-12850HX laptop, measured on 2 November 2026, [result](../../Plans/benchmark-results/v2-final-solve-bench-40-49.json)):
 
 | Position | Empty squares | Exact score | Move | Nodes | Time |
 |---|---:|---:|---|---:|---:|
@@ -230,12 +230,12 @@ A null-window search at 14 empty squares (50 discs) with α = 30. The threshold 
 | #42 | 22 | +6 | g2 | 22.5 M | 0.8 s |
 | #43 | 23 | −12 | c7 | 33.4 M | 1.5 s |
 | #44 | 23 | −14 | d2 | 11.5 M | 0.6 s |
-| #45 | 24 | +6 | b2 | 306.7 M | 11.1 s |
+| #45 | 24 | +6 | b2 | 306.7 M | 11.0 s |
 | #46 | 24 | −8 | b3 | 49.9 M | 2.2 s |
 | #47 | 25 | +4 | g2 | 30.7 M | 1.3 s |
 | #48 | 25 | +28 | f6 | 237.7 M | 12.0 s |
-| #49 | 26 | +16 | e1 | 382.2 M | 16.3 s |
-| **Total** | | | | **1.10 G** | **47.1 s** |
+| #49 | 26 | +16 | e1 | 382.2 M | 16.2 s |
+| **Total** | | | | **1.10 G** | **46.8 s** |
 
 - All scores and moves are correct (#43 has two best moves, c7 and g3). That is about 23 M nodes per second; Egaroucid's own solver, in the C# port, takes 25.6 s.
 - In the web app (Blazor WebAssembly, AOT build), positions from games with 20 empty squares are solved in 0.1–0.3 s and with 22 empty squares in 0.6–1.3 s, at about native speed.

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 434" width="800" height="434" font-family="sans-serif">
 <title>Alpha-beta cutoffs in a real position</title>
-<desc>A two-ply search for Black in the test midgame position. Each row is a black move with the evaluated white replies. a3 is searched fully and gives alpha -105. For f3 the reply b4 = -124 is below alpha, so four replies are skipped. c6 gives 61, the new best. For a4 the first reply c1 = 45 is below 61, so eleven replies are skipped.</desc>
+<desc>A two-ply search for Black in the test midgame position, scores in 1/100 disc. Each row is a black move with the evaluated white replies. f3 is searched fully and gives alpha -737. For a3 the fifth reply, e3 = -925, is below alpha, so seven replies are skipped. c6 gives 112, the new best. For a4 the first reply c1 = -237 is below 112, so eleven replies are skipped.</desc>
 <rect x="0" y="0" width="800" height="434" fill="#FFFFFF"/>
 <text x="20" y="26" font-size="16" font-weight="bold" fill="#000000">Alpha-beta at depth 2: Black moves, White replies, leaves evaluated for Black</text>
 <text x="39" y="65" font-size="12" text-anchor="middle" fill="#000000">a</text>
@@ -53,124 +53,124 @@
 <circle cx="75" cy="169" r="2.6999999999999997" fill="#FFC107" stroke="#7A5C00" stroke-width="1"/>
 <circle cx="39" cy="133" r="2.6999999999999997" fill="#FFC107" stroke="#7A5C00" stroke-width="1"/>
 <text x="30" y="236" font-size="13" fill="#000000">Black to move</text>
-<text x="30" y="254" font-size="12" fill="#555555">(first 4 of 11 moves,</text>
-<text x="30" y="270" font-size="12" fill="#555555">in ordering order)</text>
+<text x="30" y="254" font-size="12" fill="#555555">(4 of its 11 moves;</text>
+<text x="30" y="270" font-size="12" fill="#555555">scores in 1/100 disc)</text>
 <rect x="200" y="60" width="44" height="34" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5" rx="6"/>
-<text x="222" y="83" font-size="16" text-anchor="middle" font-weight="bold" fill="#000000">a3</text>
+<text x="222" y="83" font-size="16" text-anchor="middle" font-weight="bold" fill="#000000">f3</text>
 <rect x="254" y="60" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
 <text x="274" y="73" font-size="12" text-anchor="middle" fill="#555555">c1</text>
-<text x="274" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">59</text>
+<text x="274" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">100</text>
 <rect x="298" y="60" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
-<text x="318" y="73" font-size="12" text-anchor="middle" fill="#555555">a2</text>
-<text x="318" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">452</text>
+<text x="318" y="73" font-size="12" text-anchor="middle" fill="#555555">d1</text>
+<text x="318" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">350</text>
 <rect x="342" y="60" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
 <text x="362" y="73" font-size="12" text-anchor="middle" fill="#555555">d2</text>
-<text x="362" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-3</text>
+<text x="362" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-225</text>
 <rect x="386" y="60" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
 <text x="406" y="73" font-size="12" text-anchor="middle" fill="#555555">e2</text>
-<text x="406" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-40</text>
-<rect x="430" y="60" width="40" height="34" fill="#FFFFFF" stroke="#1565C0" stroke-width="2.5" rx="4"/>
-<text x="450" y="73" font-size="12" text-anchor="middle" fill="#555555">e3</text>
-<text x="450" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-105</text>
+<text x="406" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">112</text>
+<rect x="430" y="60" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
+<text x="450" y="73" font-size="12" text-anchor="middle" fill="#555555">g2</text>
+<text x="450" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">2012</text>
 <rect x="474" y="60" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
-<text x="494" y="73" font-size="12" text-anchor="middle" fill="#555555">f3</text>
-<text x="494" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-104</text>
+<text x="494" y="73" font-size="12" text-anchor="middle" fill="#555555">e3</text>
+<text x="494" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">62</text>
 <rect x="518" y="60" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
-<text x="538" y="73" font-size="12" text-anchor="middle" fill="#555555">b4</text>
-<text x="538" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-30</text>
+<text x="538" y="73" font-size="12" text-anchor="middle" fill="#555555">g3</text>
+<text x="538" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">412</text>
 <rect x="562" y="60" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
-<text x="582" y="73" font-size="12" text-anchor="middle" fill="#555555">g4</text>
-<text x="582" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-41</text>
+<text x="582" y="73" font-size="12" text-anchor="middle" fill="#555555">b4</text>
+<text x="582" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-475</text>
 <rect x="606" y="60" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
-<text x="626" y="73" font-size="12" text-anchor="middle" fill="#555555">b5</text>
-<text x="626" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-25</text>
+<text x="626" y="73" font-size="12" text-anchor="middle" fill="#555555">g4</text>
+<text x="626" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">787</text>
 <rect x="650" y="60" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
-<text x="670" y="73" font-size="12" text-anchor="middle" fill="#555555">g5</text>
-<text x="670" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-36</text>
+<text x="670" y="73" font-size="12" text-anchor="middle" fill="#555555">b5</text>
+<text x="670" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-375</text>
 <rect x="694" y="60" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
-<text x="714" y="73" font-size="12" text-anchor="middle" fill="#555555">c6</text>
-<text x="714" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-66</text>
-<rect x="738" y="60" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
-<text x="758" y="73" font-size="12" text-anchor="middle" fill="#555555">f6</text>
-<text x="758" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-27</text>
-<text x="254" y="111" font-size="13" fill="#000000">a3 = −105: first move: all replies; alpha = −105</text>
+<text x="714" y="73" font-size="12" text-anchor="middle" fill="#555555">g5</text>
+<text x="714" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">237</text>
+<rect x="738" y="60" width="40" height="34" fill="#FFFFFF" stroke="#1565C0" stroke-width="2.5" rx="4"/>
+<text x="758" y="73" font-size="12" text-anchor="middle" fill="#555555">c6</text>
+<text x="758" y="88" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-737</text>
+<text x="254" y="111" font-size="13" fill="#000000">f3 = −737: first move: all replies; alpha = −737</text>
 <rect x="200" y="138" width="44" height="34" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5" rx="6"/>
-<text x="222" y="161" font-size="16" text-anchor="middle" font-weight="bold" fill="#000000">f3</text>
+<text x="222" y="161" font-size="16" text-anchor="middle" font-weight="bold" fill="#000000">a3</text>
 <rect x="254" y="138" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
 <text x="274" y="151" font-size="12" text-anchor="middle" fill="#555555">c1</text>
-<text x="274" y="166" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-28</text>
+<text x="274" y="166" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-112</text>
 <rect x="298" y="138" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
-<text x="318" y="151" font-size="12" text-anchor="middle" fill="#555555">d1</text>
-<text x="318" y="166" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-80</text>
+<text x="318" y="151" font-size="12" text-anchor="middle" fill="#555555">a2</text>
+<text x="318" y="166" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">2437</text>
 <rect x="342" y="138" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
 <text x="362" y="151" font-size="12" text-anchor="middle" fill="#555555">d2</text>
-<text x="362" y="166" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-56</text>
+<text x="362" y="166" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-450</text>
 <rect x="386" y="138" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
 <text x="406" y="151" font-size="12" text-anchor="middle" fill="#555555">e2</text>
-<text x="406" y="166" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-77</text>
-<rect x="430" y="138" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
-<text x="450" y="151" font-size="12" text-anchor="middle" fill="#555555">g2</text>
-<text x="450" y="166" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">214</text>
-<rect x="474" y="138" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
-<text x="494" y="151" font-size="12" text-anchor="middle" fill="#555555">e3</text>
-<text x="494" y="166" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">34</text>
-<rect x="518" y="138" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
-<text x="538" y="151" font-size="12" text-anchor="middle" fill="#555555">g3</text>
-<text x="538" y="166" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-33</text>
-<rect x="562" y="138" width="40" height="34" fill="#FFFFFF" stroke="#D32F2F" stroke-width="2.5" rx="4"/>
-<text x="582" y="151" font-size="12" text-anchor="middle" fill="#555555">b4</text>
-<text x="582" y="166" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-124</text>
+<text x="406" y="166" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-125</text>
+<rect x="430" y="138" width="40" height="34" fill="#FFFFFF" stroke="#D32F2F" stroke-width="2.5" rx="4"/>
+<text x="450" y="151" font-size="12" text-anchor="middle" fill="#555555">e3</text>
+<text x="450" y="166" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-925</text>
+<rect x="474" y="138" width="40" height="34" fill="#EEEEEE" stroke="#BDBDBD" stroke-width="1" rx="4" stroke-dasharray="3 2"/>
+<text x="494" y="151" font-size="12" text-anchor="middle" fill="#9E9E9E">f3</text>
+<text x="494" y="166" font-size="12" text-anchor="middle" fill="#9E9E9E">–</text>
+<rect x="518" y="138" width="40" height="34" fill="#EEEEEE" stroke="#BDBDBD" stroke-width="1" rx="4" stroke-dasharray="3 2"/>
+<text x="538" y="151" font-size="12" text-anchor="middle" fill="#9E9E9E">b4</text>
+<text x="538" y="166" font-size="12" text-anchor="middle" fill="#9E9E9E">–</text>
+<rect x="562" y="138" width="40" height="34" fill="#EEEEEE" stroke="#BDBDBD" stroke-width="1" rx="4" stroke-dasharray="3 2"/>
+<text x="582" y="151" font-size="12" text-anchor="middle" fill="#9E9E9E">g4</text>
+<text x="582" y="166" font-size="12" text-anchor="middle" fill="#9E9E9E">–</text>
 <rect x="606" y="138" width="40" height="34" fill="#EEEEEE" stroke="#BDBDBD" stroke-width="1" rx="4" stroke-dasharray="3 2"/>
-<text x="626" y="151" font-size="12" text-anchor="middle" fill="#9E9E9E">g4</text>
+<text x="626" y="151" font-size="12" text-anchor="middle" fill="#9E9E9E">b5</text>
 <text x="626" y="166" font-size="12" text-anchor="middle" fill="#9E9E9E">–</text>
 <rect x="650" y="138" width="40" height="34" fill="#EEEEEE" stroke="#BDBDBD" stroke-width="1" rx="4" stroke-dasharray="3 2"/>
-<text x="670" y="151" font-size="12" text-anchor="middle" fill="#9E9E9E">b5</text>
+<text x="670" y="151" font-size="12" text-anchor="middle" fill="#9E9E9E">g5</text>
 <text x="670" y="166" font-size="12" text-anchor="middle" fill="#9E9E9E">–</text>
 <rect x="694" y="138" width="40" height="34" fill="#EEEEEE" stroke="#BDBDBD" stroke-width="1" rx="4" stroke-dasharray="3 2"/>
-<text x="714" y="151" font-size="12" text-anchor="middle" fill="#9E9E9E">g5</text>
+<text x="714" y="151" font-size="12" text-anchor="middle" fill="#9E9E9E">c6</text>
 <text x="714" y="166" font-size="12" text-anchor="middle" fill="#9E9E9E">–</text>
 <rect x="738" y="138" width="40" height="34" fill="#EEEEEE" stroke="#BDBDBD" stroke-width="1" rx="4" stroke-dasharray="3 2"/>
-<text x="758" y="151" font-size="12" text-anchor="middle" fill="#9E9E9E">c6</text>
+<text x="758" y="151" font-size="12" text-anchor="middle" fill="#9E9E9E">f6</text>
 <text x="758" y="166" font-size="12" text-anchor="middle" fill="#9E9E9E">–</text>
-<text x="254" y="189" font-size="13" fill="#D32F2F">f3 ≤ −124: b4 = −124 ≤ alpha: cutoff</text>
+<text x="254" y="189" font-size="13" fill="#D32F2F">a3 ≤ −925: e3 = −925 ≤ alpha: cutoff</text>
 <rect x="200" y="216" width="44" height="34" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5" rx="6"/>
 <text x="222" y="239" font-size="16" text-anchor="middle" font-weight="bold" fill="#000000">c6</text>
 <rect x="254" y="216" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
 <text x="274" y="229" font-size="12" text-anchor="middle" fill="#555555">c1</text>
-<text x="274" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">181</text>
+<text x="274" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">675</text>
 <rect x="298" y="216" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
 <text x="318" y="229" font-size="12" text-anchor="middle" fill="#555555">d1</text>
-<text x="318" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">124</text>
+<text x="318" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">900</text>
 <rect x="342" y="216" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
 <text x="362" y="229" font-size="12" text-anchor="middle" fill="#555555">d2</text>
-<text x="362" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">120</text>
+<text x="362" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">187</text>
 <rect x="386" y="216" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
 <text x="406" y="229" font-size="12" text-anchor="middle" fill="#555555">e2</text>
-<text x="406" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">105</text>
+<text x="406" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">587</text>
 <rect x="430" y="216" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
 <text x="450" y="229" font-size="12" text-anchor="middle" fill="#555555">e3</text>
-<text x="450" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">183</text>
-<rect x="474" y="216" width="40" height="34" fill="#FFFFFF" stroke="#1565C0" stroke-width="2.5" rx="4"/>
+<text x="450" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">487</text>
+<rect x="474" y="216" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
 <text x="494" y="229" font-size="12" text-anchor="middle" fill="#555555">b4</text>
-<text x="494" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">61</text>
+<text x="494" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">125</text>
 <rect x="518" y="216" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
 <text x="538" y="229" font-size="12" text-anchor="middle" fill="#555555">g4</text>
-<text x="538" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">107</text>
-<rect x="562" y="216" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
+<text x="538" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">525</text>
+<rect x="562" y="216" width="40" height="34" fill="#FFFFFF" stroke="#1565C0" stroke-width="2.5" rx="4"/>
 <text x="582" y="229" font-size="12" text-anchor="middle" fill="#555555">b6</text>
-<text x="582" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">153</text>
+<text x="582" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">112</text>
 <rect x="606" y="216" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
 <text x="626" y="229" font-size="12" text-anchor="middle" fill="#555555">f6</text>
-<text x="626" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">109</text>
+<text x="626" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">150</text>
 <rect x="650" y="216" width="40" height="34" fill="#FFFFFF" stroke="#757575" stroke-width="1" rx="4"/>
 <text x="670" y="229" font-size="12" text-anchor="middle" fill="#555555">c7</text>
-<text x="670" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">212</text>
-<text x="254" y="267" font-size="13" fill="#000000">c6 = 61: better: alpha = 61, best move c6</text>
+<text x="670" y="244" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">775</text>
+<text x="254" y="267" font-size="13" fill="#000000">c6 = 112: better: alpha = 112, best move c6</text>
 <rect x="200" y="294" width="44" height="34" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5" rx="6"/>
 <text x="222" y="317" font-size="16" text-anchor="middle" font-weight="bold" fill="#000000">a4</text>
 <rect x="254" y="294" width="40" height="34" fill="#FFFFFF" stroke="#D32F2F" stroke-width="2.5" rx="4"/>
 <text x="274" y="307" font-size="12" text-anchor="middle" fill="#555555">c1</text>
-<text x="274" y="322" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">45</text>
+<text x="274" y="322" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">-237</text>
 <rect x="298" y="294" width="40" height="34" fill="#EEEEEE" stroke="#BDBDBD" stroke-width="1" rx="4" stroke-dasharray="3 2"/>
 <text x="318" y="307" font-size="12" text-anchor="middle" fill="#9E9E9E">a2</text>
 <text x="318" y="322" font-size="12" text-anchor="middle" fill="#9E9E9E">–</text>
@@ -204,8 +204,8 @@
 <rect x="738" y="294" width="40" height="34" fill="#EEEEEE" stroke="#BDBDBD" stroke-width="1" rx="4" stroke-dasharray="3 2"/>
 <text x="758" y="307" font-size="12" text-anchor="middle" fill="#9E9E9E">f6</text>
 <text x="758" y="322" font-size="12" text-anchor="middle" fill="#9E9E9E">–</text>
-<text x="254" y="345" font-size="13" fill="#D32F2F">a4 ≤ 45: c1 = 45 ≤ alpha: cutoff</text>
+<text x="254" y="345" font-size="13" fill="#D32F2F">a4 ≤ −237: c1 = −237 ≤ alpha: cutoff</text>
 <text x="20" y="382" font-size="12" fill="#000000">Blue = the lowest reply (White picks it). Red = the reply that proves the move is not better than alpha; the grey replies are never evaluated.</text>
-<text x="20" y="400" font-size="12" fill="#000000">Over all 11 moves, plain minimax evaluates 124 leaves and alpha-beta in this order 45;</text>
-<text x="20" y="418" font-size="12" fill="#000000">Stello's depth-2 iteration, with its ordering, 21. Result: c6, 61.</text>
+<text x="20" y="400" font-size="12" fill="#000000">For these four moves plain minimax evaluates 46 leaves and alpha-beta in this order 28 (all 11 moves: 123 for minimax);</text>
+<text x="20" y="418" font-size="12" fill="#000000">Stello's depth-2 iteration, with c6 first from depth 1, needs 21 evaluations. Result: c6, 112.</text>
 </svg>

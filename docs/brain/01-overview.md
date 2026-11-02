@@ -281,7 +281,7 @@ Two tokens control a running search:
 | Scores | 1/100 disc for the side to move; a finished game ±(32 600 + disc difference); the solver in whole discs |
 | Hash tables | 2 tables (midgame, endgame), configurable from 65K to 16.7M entries per table ($3\text{ MB}$ to $768\text{ MB}$ total), default $2^{19}$ slots of 2 entries of 24 bytes ($48\text{ MB}$ total) |
 | Master opening book | 11 200 positions, 22 878 book moves, all leaves searched for 60 s by the Stello 2.0 search (`OpeningBook.EngineVersion` 4); binary file 193 KB |
-| Engine tests / app tests | 255 / 83 (and 34 for the Egaroucid port) |
+| Engine tests / app tests | 257 / 83 (and 34 for the Egaroucid port) |
 
 ---
 
