@@ -3,7 +3,7 @@ using Stello.BookTool;
 
 namespace Stello.Benchmark;
 
-/// <summary>Command line tool that measures the engine: matches between engines and speed benchmarks (docs/brain chapter 18).</summary>
+/// <summary>Command line tool that measures the engine: matches between engines and speed benchmarks (docs/brain chapter 17).</summary>
 internal static class Program
 {
     private const string Usage = """

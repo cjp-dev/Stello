@@ -84,6 +84,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(MoveNowCommand))]
     [NotifyCanExecuteChangedFor(nameof(SwitchSidesCommand))]
+    [NotifyCanExecuteChangedFor(nameof(UndoCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RedoCommand))]
     private bool _isThinking;
 
     [ObservableProperty]
@@ -364,6 +366,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _game = loaded;
         _fileName = file.Name;
         _lostOnTime = null;
+        IsGameModified = false;
         if (GameMode != GameMode.HumanVsHuman)
         {
             GameMode = loaded.Human == Player.Black ? GameMode.HumanVsComputer : GameMode.ComputerVsHuman;

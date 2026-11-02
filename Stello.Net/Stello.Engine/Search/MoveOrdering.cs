@@ -30,7 +30,6 @@ internal sealed class MoveOrdering
 
     public void ClearResponses() => Array.Clear(_responses);
 
-    public static int BaseScore(int square) => BaseSquareScores[square];
 
     /// <summary>A refutation (the reply caused a cutoff) counts 4, other best replies 1.</summary>
     public void RecordResponse(Player replier, int move, int reply, bool refuted)

@@ -39,10 +39,8 @@ public sealed class NewGuiFeaturesTests
         Assert.Equal("f5", vm.Move);
         Assert.Equal("4 plies", vm.Depth);
         Assert.Equal("+20", vm.Score);
-        Assert.Equal("+20", vm.Value); // Alias
         Assert.Equal("d6", vm.BestMove);
         Assert.Contains("nps", vm.Speed);
-        Assert.Equal(vm.Speed, vm.Evaluations); // Alias
 
         vm.Clear();
         Assert.Equal(2, eventCount);

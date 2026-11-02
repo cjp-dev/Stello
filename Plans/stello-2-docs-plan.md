@@ -136,4 +136,5 @@ The agents found these while checking the docs against the code. They are fixed 
 - Step 4: done (b582b2d renumbering, 9772925 Part 2). Chapter 24 is still to be written.
 - Step 5: done. README (7f6696e); chapter 24 from the final measurements; 06's worked examples and figure regenerated with Stello 2.0; 08's FFO table from the final run; link check 0 broken in docs/brain; no "2.x"; Part 1's remaining "Stello 1" mentions are archive links or the frozen `Stello.Engine.V1`.
 - Final measurements: against Stello 1 with books 96.4 % (+571) at 100 ms, 94.7 % (+501) at 500 ms; against Egaroucid without books 75.6 % (+196) at 100 ms, 58.8 % (+62) at 500 ms, with books 54.9 % (+34) at 500 ms; FFO #40–49 46.8 s.
-- Step 6: next (merge and push), then the code fixes.
+- Step 6: done. main = 946e0b3, deploy 41414073220 succeeded. Archive pages are served as raw markdown by the web docs viewer (GameShell renders only top-level chapters); asked the user.
+- Code fixes 1–5: done, with tests and the docs updated (12, 14, 15, 23, 24, 01).

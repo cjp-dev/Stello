@@ -85,7 +85,7 @@ None of these is decided. They are listed roughly by value for the work.
    - The solve start from an estimate of the solve time, then a selective solve as Egaroucid does. Both were tried in phase 5 with the fixed rule and gave nothing at 100–500 ms. They may help at longer time controls.
 5. **The opening book.**
    - Search the moves the book does not have, in every book position, for 60 s each, and add the good ones. Checking them during the game, with the game's time, gave nothing ([chapter 23](23-phase-5-the-search.md)).
-   - A recalculation keeps a proven draw only once the rule for win/loss/draw values is fixed. The five draws lost in version 4 would then come back with the next recalculation.
+   - The five proven draws that version 4 turned into heuristic values are searched again by the next recalculation (a new `EngineVersion`), and should be solved again, as version 3 solved them. The rule that lost them is fixed: a recalculation now keeps a draw that Stello solved.
 6. **The apps.** The computer-against-computer game mode (`GameMode.ComputerVsComputer`) exists in the code but cannot be chosen from any menu.
 
 ## How to repeat the final measurements

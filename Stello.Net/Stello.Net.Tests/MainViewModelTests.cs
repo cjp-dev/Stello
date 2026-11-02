@@ -242,6 +242,40 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task Open_ClearsTheModifiedFlag()
+    {
+        MainViewModel vm = Create();
+        Play(vm, "f5");
+        await vm.Idle;
+        await vm.UndoCommand.ExecuteAsync(null);
+        Assert.True(vm.IsGameModified);
+        OpenFile("f5");
+
+        await vm.OpenCommand.ExecuteAsync(null);
+        await vm.Idle;
+
+        Assert.False(vm.IsGameModified);
+    }
+
+    [Fact]
+    public async Task Undo_IsReevaluatedWhenTheComputerStartsThinking()
+    {
+        MainViewModel vm = Create(engineDelayMs: 0);
+        vm.ComputerDelayMs = 10_000;
+        var thinkingWhenNotified = new List<bool>();
+        vm.UndoCommand.CanExecuteChanged += (_, _) => thinkingWhenNotified.Add(vm.IsThinking);
+
+        Play(vm, "f5");
+        await Task.Delay(100);
+
+        Assert.True(vm.IsThinking);
+        Assert.Contains(true, thinkingWhenNotified);
+        Assert.False(vm.UndoCommand.CanExecute(null));
+        vm.MoveNowCommand.Execute(null);
+        await vm.Idle.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
     public async Task Open_InvalidFileShowsError()
     {
         OpenFile("f5 z9");

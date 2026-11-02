@@ -281,7 +281,7 @@ Two small changes prepared the second book recalculation (commit b8e7109):
 
 After the first 2.0 release, a flaw was found in its book ([chapter 22](22-phase-4-the-release.md)). 2,718 leaves carried the C++ book's `INEXACT` flag. They were imported as `WinLossDraw`, with evaluation-sized values such as −18. `recalc` kept every `WinLossDraw` value that its new search could not solve, so these leaves kept their C++-era values through the first 2.0 recalculation too.
 
-The fix (d21e42f): only a value beyond ±32,600, a proven win or loss, is kept when the new search does not solve the position. Anything else gets the new value. A proven draw has the value 0, which the rule cannot tell from an unproven value, so the 5 proven draws of the book were searched again too and became heuristic ([chapter 12](12-book-tool.md#comparing-two-books-compare)).
+The fix (d21e42f): only a value beyond ±32,600, a proven win or loss, is kept when the new search does not solve the position. Anything else gets the new value. A proven draw has the value 0, which the rule cannot tell from an unproven value, so the 5 proven draws of the book were searched again too and became heuristic ([chapter 12](12-book-tool.md#comparing-two-books-compare)). This was fixed after the release: a draw that Stello solved now counts as a proof as well.
 
 ### The run
 

@@ -69,11 +69,11 @@ internal sealed class BookRecalculator
                 {
                     foreach (BookEntry entry in leaf.Entries.Where(NeedsSearch))
                     {
-                        // A proven win or loss is kept when the new search could not solve the position. A
+                        // A proven result is kept when the new search could not solve the position: a win or loss
+                        // (beyond ±32 600), or a draw that Stello itself solved (its effort has an engine version). A
                         // win/loss/draw entry with an evaluation-sized value (from the C++ book's INEXACT flag) is
                         // not a proof and gets the new value.
-                        if (entry.Origin == BookOrigin.WinLossDraw && Math.Abs((int)entry.Value) > SearchEngine.WinScore
-                            && origin == BookOrigin.Heuristic)
+                        if (entry.Origin == BookOrigin.WinLossDraw && IsProof(entry) && origin == BookOrigin.Heuristic)
                         {
                             entry.Set(entry.Value, BookOrigin.WinLossDraw, effort);
                         }
@@ -103,6 +103,11 @@ internal sealed class BookRecalculator
             && entry.Effort.EngineVersion == OpeningBook.EngineVersion
             && entry.Effort.Kind == _target.Kind
             && entry.Effort.Amount >= _target.Amount);
+
+    // A win or loss is stored beyond ±32 600; a draw is 0, so it is a proof only if Stello searched it.
+    private static bool IsProof(BookEntry entry) =>
+        Math.Abs((int)entry.Value) > SearchEngine.WinScore
+        || (entry.Value == 0 && entry.Effort.EngineVersion > 0);
 
     // In the order of the text book, so the leaves nearest the start come first.
     private static List<Leaf> CollectLeaves(OpeningBook book)

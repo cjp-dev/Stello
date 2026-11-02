@@ -84,7 +84,7 @@ flowchart TD
 ```
 
 - **The search** is the one used in a game (`SearchEngine.Search` through `BookSearch.PositionValue`, chapter 06): with 60 s per move it deepens the midgame search and switches to the endgame solver when it gets near enough to the end (chapter 08). The kind of result gives the origin: `Heuristic`, `WinLossDraw` or `Exact`. A position with a single legal move is searched too; for a position where the player must pass, the opponent's position is searched; a finished game gets its disc count.
-- **A proven result is kept.** If a leaf was `WinLossDraw` with a value beyond ±32 600 (`SearchEngine.WinScore`), a proven win or loss, and the new search only gives a heuristic value, the old value stays, with the new effort. A `WinLossDraw` value of evaluation size (from the C++ book's `INEXACT` flag, chapter 10) is no proof and gets the new value and origin. A new result that is solved (win/loss/draw or exact) always replaces the old one. A proven draw has the value 0, which the rule cannot tell from an unproven value, so it is not kept either.
+- **A proven result is kept.** If a leaf was `WinLossDraw` with a proof and the new search only gives a heuristic value, the old value stays, with the new effort. A proof is a value beyond ±32 600 (`SearchEngine.WinScore`), a win or loss, or a draw (value 0) that Stello itself solved, which its effort shows by an engine version (`IsProof`). A `WinLossDraw` value of evaluation size (from the C++ book's `INEXACT` flag, chapter 10) is no proof and gets the new value and origin. A new result that is solved (win/loss/draw or exact) always replaces the old one.
 - **The same result with any number of workers.** Each search starts with a clean hash table, so a value does not depend on which searches the worker did before.
 - **Stop and continue.** The text book is the checkpoint: it is saved every `--save-every` searches (default 10) and when the run stops. Running `recalc` again skips what is already done, because those leaves now have the effort of this run.
 - **The end.** The values are backed up and sorted (`BookMinimax`, as in Evaluate Book), so `verify` gives no more warnings, and `<book>.report.txt` is written (see `compare`). Then run `build`.
@@ -129,7 +129,7 @@ d3e3f4 g3:-150 c3:-775
 ...
 ```
 
-The title line is the one `recalc` writes; `compare` writes "Comparison of <old> (old) and <new> (new)" instead. The `WinLossDraw -> Heuristic` row is the rule above at work: 2 718 of those values came from the C++ book's `INEXACT` flag and had no proof, and 5 were proven draws (value 0); the new search gave them all a heuristic value. The 38 proven wins and losses were solved exactly this time.
+The title line is the one `recalc` writes; `compare` writes "Comparison of <old> (old) and <new> (new)" instead. The `WinLossDraw -> Heuristic` row is the rule above at work: 2 718 of those values came from the C++ book's `INEXACT` flag and had no proof, and 5 were proven draws (value 0); the new search gave them all a heuristic value. The draws were lost because the rule then kept only values beyond ±32 600; it now keeps a draw that Stello solved too. The 38 proven wins and losses were solved exactly this time.
 
 Everything except the changed positions is a comment, so the report can be given to `match` as its list of start positions.
 
@@ -237,7 +237,7 @@ Only the 1 091 exact values from the C++ book have no known effort; all other le
 
 The tool itself has no tests; the code it calls is tested in [OpeningBookTests.cs](../../Stello.Net/Stello.Engine.Tests/OpeningBookTests.cs) (chapter 10), including the two tests on the shipped files above, and in [BookRecalculatorTests.cs](../../Stello.Net/Stello.Engine.Tests/BookRecalculatorTests.cs):
 
-- `recalc` searches only the leaves that are not good enough, searches a transposed leaf once, keeps a proven result the search cannot solve, replaces a win/loss/draw value that is no proof, gives the same book with 1 and 4 workers (and a consistent book after back-up), and continues where a stopped run stopped, with checkpoints;
+- `recalc` searches only the leaves that are not good enough, searches a transposed leaf once, keeps a proven result the search cannot solve, keeps a draw that Stello solved but replaces an imported one, replaces a win/loss/draw value that is no proof, gives the same book with 1 and 4 workers (and a consistent book after back-up), and continues where a stopped run stopped, with checkpoints;
 - `compare` reports the changed values and first moves, and its report gives the start positions;
 - `match` with the same book on both sides scores exactly 50 % with the colours swapped and finished, legal games; an illegal start position is rejected; the summary and its interval; reading start positions.
 

@@ -24,9 +24,6 @@ public sealed partial class SearchEngine
     /// <summary>A finished game in the midgame search scores this plus the disc difference (C++: the same).</summary>
     internal const int WinScore = 32600;
 
-    // With this few empty squares the solver tries the empty squares directly instead of generating moves.
-    private const int ShallowEmpties = 6;
-
     // Quadrants a1-d4, e1-h4, a5-d8, e5-h8; squares in regions with an odd number of empties are tried first.
     private static readonly ulong[] Quadrants = [0x0000_0000_0F0F_0F0FUL, 0x0000_0000_F0F0_F0F0UL, 0x0F0F_0F0F_0000_0000UL, 0xF0F0_F0F0_0000_0000UL];
 

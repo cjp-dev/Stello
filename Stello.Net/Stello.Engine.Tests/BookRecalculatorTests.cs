@@ -72,6 +72,33 @@ public class BookRecalculatorTests
     }
 
     [Fact]
+    public void Run_KeepsADrawThatStelloSolved()
+    {
+        OpeningBook book = Book("d3 c5 f6 f5");
+        BookEntry f5 = BookTestData.Entry(book, "d3 c5 f6", "f5");
+        var solved = new BookEffort(EffortKind.Time, 60_000, 20, 3);
+        f5.Set(0, BookOrigin.WinLossDraw, solved);
+
+        new BookRecalculator(book, SearchLimits.FixedDepth(1), workers: 1, hashBits: 10).Run(null, null, 0, CancellationToken.None);
+
+        Assert.Equal(BookOrigin.WinLossDraw, f5.Origin);
+        Assert.Equal(0, f5.Value);
+        Assert.Equal(EffortKind.Depth, f5.Effort.Kind);
+    }
+
+    [Fact]
+    public void Run_ReplacesAnImportedDraw()
+    {
+        OpeningBook book = Book("d3 c5 f6 f5");
+        BookEntry f5 = BookTestData.Entry(book, "d3 c5 f6", "f5");
+        f5.Set(0, BookOrigin.WinLossDraw);
+
+        new BookRecalculator(book, SearchLimits.FixedDepth(1), workers: 1, hashBits: 10).Run(null, null, 0, CancellationToken.None);
+
+        Assert.Equal(BookOrigin.Heuristic, f5.Origin);
+    }
+
+    [Fact]
     public void Run_GivesTheSameBookWithAnyNumberOfWorkers()
     {
         string text = BookTestData.WriteText(RandomBook());

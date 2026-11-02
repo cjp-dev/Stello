@@ -279,8 +279,6 @@ The web app plays sounds through the Web Audio API (`BrowserSoundService`); **Op
 * **Win:** a rising fanfare when the human beats the computer, when a two-player game has a winner, or when the computer runs out of time.
 * **Loss:** a falling chime when the computer wins, or when the human runs out of time.
 
-`SoundWaves` also has a `Flip` sound, which the view model does not play.
-
 ---
 
 ## Keyboard shortcuts reference
@@ -318,7 +316,7 @@ The WPF app ([MainWindow.xaml](../../Stello.Net/Stello.Net/MainWindow.xaml)) run
 
 - **The board** (`BoardView`) is green (`#1E7A3C`), with a dark dot on each legal move and a red dot (`#E03030`) on the last move; it is sized to the window and centred together with the panels.
 - **Status** shows the status text (with the notices of chapter 14), the disc count (`Black 5 – White 5`), the human's colour (`You play Black`), and in `TimePerGame` mode the computer's clock (`Computer time left: 4:40`).
-- **Analysis** has seven fields: Move, Depth, Value, Best move, Nodes, Evaluations and Time. Value and Evaluations are bound to `AnalysisViewModel.Value` and `Evaluations`, aliases of `Score` and `Speed` kept for the WPF window. The view model raises no change notification for the aliases, so WPF does not update these two fields; the other five show the same text as in the web app.
+- **Analysis** has seven fields: Move, Depth, Score, Best move, Nodes, Speed and Time, bound to the `AnalysisViewModel` properties of the same names. They show the same text as in the web app.
 - **Settings** ([SettingsWindow.xaml](../../Stello.Net/Stello.Net/Views/SettingsWindow.xaml)) has the groups "Thinking Limits" (the three modes with sliders) and "Stello Opening Book & Transposition Table" (the checkbox "Enable Stello Opening Book (11,200 canonical positions)" and a "Table Capacity" slider over the same five sizes as the web app's list).
 - There are no game modes, board styles, sound, quick action buttons, move history or Help pages. The window position and size are saved with the settings (chapter 14).
 

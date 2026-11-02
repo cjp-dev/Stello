@@ -32,10 +32,6 @@ public sealed partial class AnalysisViewModel : ObservableObject
     [ObservableProperty]
     private string _time = "";
 
-    // Backward-compatibility aliases for existing WPF / tests
-    public string Value => Score;
-    public string Evaluations => Speed;
-
     public void Clear()
     {
         Move = Depth = Score = BestMove = Nodes = Speed = Time = "";

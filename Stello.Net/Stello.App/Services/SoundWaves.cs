@@ -19,7 +19,6 @@ public static class SoundWaves
                 wav = ToWav(sound switch
                 {
                     SoundType.Move => Sweep(520, 220, 0.06, 0.75),
-                    SoundType.Flip => Sweep(420, 260, 0.05, 0.6),
                     SoundType.Pass => DoubleClack(0.12),
                     SoundType.Win => Notes([523.25, 659.25, 783.99, 1046.50, 1318.5], 0.12, 0.75),
                     SoundType.Loss => Notes([392.00, 311.13, 261.63], 0.18, 0.6),
