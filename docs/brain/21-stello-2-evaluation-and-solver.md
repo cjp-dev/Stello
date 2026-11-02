@@ -4,7 +4,7 @@
 
 ## In short
 
-Stello 2.0 keeps Stello's midgame search ([chapter 06](06-midgame-search.md)) and replaces the two parts that [chapter 20](20-engine-comparison.md) found weakest:
+Stello 2.0 keeps Stello's midgame search ([chapter 06](06-midgame-search.md)) and replaces the two parts that [chapter 20](19-stello-1-against-egaroucid.md) found weakest:
 
 - **The evaluation** is now a **pattern evaluation**: 15 patterns of squares in 62 places on the board, with one trained weight for every way the squares can be filled, in 10 stages of the game. The weights were trained by Stello's own C# trainer on 500 million positions from Egaroucid's training data. The file is 0.99 MB. Its error on held-out games is **5.47 discs**, against 12.14 for Stello 1's evaluation and 5.05 for Egaroucid's.
 - **The endgame solver** is adapted from Egaroucid. The last 13 empty squares use Egaroucid's code; above that a new null-window search runs on Stello's transposition table, ordered by the pattern evaluation. FFO #40–49 take **47.1 s**, against 369 s for Stello 1 and 25.6 s for the Egaroucid port.
@@ -21,7 +21,7 @@ The working documents are [improve-stello-strength-plan.md](../../Plans/improve-
 
 ## Why
 
-The comparison with the Egaroucid port ([chapter 20](20-engine-comparison.md#what-explains-the-difference)) showed:
+The comparison with the Egaroucid port ([chapter 20](19-stello-1-against-egaroucid.md#what-explains-the-difference)) showed:
 
 - **The evaluation was the main cause of the gap.** Stello 1's error was 11.1 discs against Egaroucid's 4.0 (on `eval-compare`'s sample), and its best scale drifted 5-fold over the game. With 20 times more thinking time, Stello 1's moves hardly improved.
 - **The endgame solver was 14 times slower** than Egaroucid's.
@@ -40,7 +40,7 @@ The evaluation had to come first: the new solver's ordering above 13 empty squar
 |---|---|---|---|
 | Stello 1 | [Stello.Engine.V1](../../Stello.Net/Stello.Engine.V1) | `engine=stello-v1` | The engine before 2.0 (commit a261a6d), frozen as the baseline |
 | Stello 2 | [Stello.Engine](../../Stello.Net/Stello.Engine) | `engine=stello` (the default) | The engine of the apps |
-| Egaroucid | [Egaroucid.Engine](../../Stello.Net/Egaroucid.Engine) | `engine=egaroucid` | The C# port of Egaroucid 7.9 ([chapter 19](19-the-egaroucid-port.md)), the reference |
+| Egaroucid | [Egaroucid.Engine](../../Stello.Net/Egaroucid.Engine) | `engine=egaroucid` | The C# port of Egaroucid 7.9 ([chapter 19](18-the-egaroucid-port.md)), the reference |
 
 Stello 1 and Stello 2 share the board, the moves, the limits, the results and the opening book code. Stello 2's midgame search, move ordering, transposition table and time control are Stello 1's, unchanged.
 
@@ -113,7 +113,7 @@ This needs no BMI2 or AVX2 instructions, so it runs at the same speed in WebAsse
 
 The trainer is the console tool [Stello.Trainer](../../Stello.Net/tools/Stello.Trainer). The machine has no GPU and no Python libraries, so it is written in C# and runs on all CPU cores.
 
-**The data.** Egaroucid's training data ([chapter 17](17-references.md#21-stello-2-the-pattern-evaluation-and-the-new-endgame-solver)) is free to use for training, but its terms forbid redistribution. It is not in the repository. It lives in the git-ignored folder `Traning data/`.
+**The data.** Egaroucid's training data ([chapter 17](26-references.md#21-stello-2-the-pattern-evaluation-and-the-new-endgame-solver)) is free to use for training, but its terms forbid redistribution. It is not in the repository. It lives in the git-ignored folder `Traning data/`.
 
 - **`convert`** turns it into 17-byte records (own discs, opponent's discs, final score) in `Traning data/stello-bin`, one file per split and disc count. That folder is git-ignored too.
   - `0001`: 25.5 M positions with final scores (Egaroucid's self-play), all kept.
@@ -263,7 +263,7 @@ Each layer searches its children one empty square lower, so a null-window search
 
 ### The last 13 empty squares: Egaroucid's
 
-This part is adapted from the port's [EndSearch.cs](../../Stello.Net/Egaroucid.Engine/EndSearch.cs), which is node for node Egaroucid's `endsearch_nws.hpp` and its helpers ([chapter 19](19-the-egaroucid-port.md)). It needs no midgame evaluation.
+This part is adapted from the port's [EndSearch.cs](../../Stello.Net/Egaroucid.Engine/EndSearch.cs), which is node for node Egaroucid's `endsearch_nws.hpp` and its helpers ([chapter 19](18-the-egaroucid-port.md)). It needs no midgame evaluation.
 
 - **`Last4` … `Last1`:** special code for the last 4 squares. `Last1` counts the flips of the last square without playing it. A square alone in its region is tried first.
 - **`EndFast` (5–6 squares):** the moves on **lone empty squares** (no empty neighbour) first, then the others. No move list is sorted.
@@ -315,7 +315,7 @@ Above 13 empty squares, Egaroucid's solver is its midgame search, ordered by its
 
 ## Measurements
 
-All on 1 thread, on the Intel i7-12850HX laptop VM of [chapter 20](20-engine-comparison.md#how-it-was-measured). Matches have 1,180 games from the 590 start positions, no books, with 95 % intervals.
+All on 1 thread, on the Intel i7-12850HX laptop VM of [chapter 20](19-stello-1-against-egaroucid.md#how-it-was-measured). Matches have 1,180 games from the 590 start positions, no books, with 95 % intervals.
 
 ### The evaluation (phase 2 gate)
 
@@ -330,7 +330,7 @@ Stello 2 with `stello-eval.bin` in the old search, with Stello 1's solver, selec
 
 Reports: [100 ms](../../Plans/benchmark-results/match_v2-p2-eval-vs-v1-100ms.md) and [500 ms](../../Plans/benchmark-results/match_v2-p2-eval-vs-v1-500ms.md) against Stello 1; [100 ms](../../Plans/benchmark-results/match_v2-p2-eval-vs-egaroucid-100ms.md) and [500 ms](../../Plans/benchmark-results/match_v2-p2-eval-vs-egaroucid-500ms.md) against Egaroucid.
 
-`mid-quality` ([chapter 20](20-engine-comparison.md#midgame-quality-mid-quality)): the discs a move loses against perfect play, on 300 positions, lower is better ([result](../../Plans/benchmark-results/v2-p2-mid-quality.md)):
+`mid-quality` ([chapter 20](19-stello-1-against-egaroucid.md#midgame-quality-mid-quality)): the discs a move loses against perfect play, on 300 positions, lower is better ([result](../../Plans/benchmark-results/v2-p2-mid-quality.md)):
 
 | ms/move | Stello 1 | Stello 2 | Egaroucid | Stello 1 − Stello 2 | Stello 2 − Egaroucid |
 |---:|---:|---:|---:|---:|---:|
@@ -405,7 +405,7 @@ Eight positions from Stello 2's games, with 20 and 22 empty squares, were opened
 
 ### How to compare engines
 
-The benchmark tool ([chapter 18](18-measuring-the-engine.md)) plays all three engines:
+The benchmark tool ([chapter 18](17-measuring-the-engine.md)) plays all three engines:
 
 ```text
 dotnet run -c Release --project Stello.Net/tools/Stello.Benchmark -- <command> [options]
@@ -422,7 +422,7 @@ dotnet run -c Release --project Stello.Net/tools/Stello.Benchmark -- <command> [
 
 - **Side keys for Stello 2:** `eval=<file>` (another evaluation file; `default` is the built-in one), `soft-pct=` (the soft time limit) and `mpc=` (Multi-ProbCut's t × 100, from Stello 2.x; 2.0 had `sel-margin=` and `sel-percent=` for its fixed selective margin instead). They are not allowed for Stello 1 or Egaroucid.
 - **Gone:** `eval=classic`, `danger=` and `endgame=` (and `--endgame`) were the switches of phases 2 and 3. They went with the old evaluation and solver, which only Stello 1 has now. To play the old evaluation or solver, play `engine=stello-v1`.
-- **`eval-compare`** measures Stello 1's evaluation against Egaroucid's ([chapter 20](20-engine-comparison.md#evaluation-eval-compare)). A trained model is measured with the trainer's `report` instead:
+- **`eval-compare`** measures Stello 1's evaluation against Egaroucid's ([chapter 20](19-stello-1-against-egaroucid.md#evaluation-eval-compare)). A trained model is measured with the trainer's `report` instead:
 
 ```text
 dotnet run -c Release --project Stello.Net/tools/Stello.Trainer -- report --model Stello.Net/Book/stello-eval.bin
@@ -506,4 +506,4 @@ In [Stello.Engine.Tests](../../Stello.Net/Stello.Engine.Tests):
 
 ---
 
-Previous: [20 Comparing Stello with Egaroucid](20-engine-comparison.md) · Next: [Index](README.md)
+Previous: [20 Comparing Stello with Egaroucid](19-stello-1-against-egaroucid.md) · Next: [Index](README.md)

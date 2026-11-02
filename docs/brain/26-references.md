@@ -1,4 +1,4 @@
-# 17 – References
+# 26 – References
 
 [Back to the index](README.md)
 
@@ -144,4 +144,4 @@ Articles, papers and source code on the internet that explain the techniques use
 
 ---
 
-Previous: [16 Glossary](16-glossary.md) · Next: [Index](README.md)
+Previous: [16 Glossary](25-glossary.md) · Next: [Index](README.md)

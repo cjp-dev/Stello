@@ -1,10 +1,10 @@
-# 20 – Comparing Stello with Egaroucid
+# 19 – Comparing Stello with Egaroucid
 
 [Back to the index](README.md)
 
 ## In short
 
-The C# port of Egaroucid ([chapter 19](19-the-egaroucid-port.md)) was measured against Stello one component at a time, on 1 thread each. The result:
+The C# port of Egaroucid ([chapter 19](18-the-egaroucid-port.md)) was measured against Stello one component at a time, on 1 thread each. The result:
 
 - **Egaroucid is far stronger.** It scores **87 % at 100 ms per move** (+331 Elo) and **95 % at 500 ms** (+497 Elo), winning by about 14 discs a game. The gap grows with time.
 - **The evaluation is the main cause.** Egaroucid's pattern evaluation predicts the final score about 2.8 times better, and its moves get better with more time. Stello's hardly do.
@@ -22,7 +22,7 @@ The full report is [egaroucid-comparison-report.md](../../Plans/egaroucid-compar
 - **Threads:** both engines search on 1 thread.
   - Matches and `mid-quality` run 12 searches at a time, with nothing else heavy on the machine.
   - The speed benchmarks run one search at a time.
-- **Tool:** [Stello.Benchmark](../../Stello.Net/tools/Stello.Benchmark) ([chapter 18](18-measuring-the-engine.md)). Every number can be measured again with the commands [below](#reproducing-the-results).
+- **Tool:** [Stello.Benchmark](../../Stello.Net/tools/Stello.Benchmark) ([chapter 18](17-measuring-the-engine.md)). Every number can be measured again with the commands [below](#reproducing-the-results).
 
 ## The results per component
 
@@ -42,7 +42,7 @@ The games start from the 590 positions in `starts.txt`, each played twice with t
 | Time per searched move, Stello / Egaroucid: average | 66 / 71 ms | 313 / 294 ms | 305 / 295 ms |
 | Time per searched move, Stello / Egaroucid: longest | 118 / 488 ms | 518 / 531 ms | 520 / 1,003 ms |
 
-- **At 100 ms, Egaroucid thinks 20 % longer per game.** Its clog search has no time limit, and its slowest move took 488 ms. That extra time is worth a few tens of Elo: twice the time gave Stello +91 Elo ([chapter 18](18-measuring-the-engine.md#strength-what-more-time-is-worth)). It doesn't explain +331.
+- **At 100 ms, Egaroucid thinks 20 % longer per game.** Its clog search has no time limit, and its slowest move took 488 ms. That extra time is worth a few tens of Elo: twice the time gave Stello +91 Elo ([chapter 18](17-measuring-the-engine.md#strength-what-more-time-is-worth)). It doesn't explain +331.
 - **At 500 ms, the two use the same time** within 3 %. Egaroucid's single 1,003 ms move is the move after leaving the book, whose two searches each get the full limit.
 - **The books:** Egaroucid's holds 1.3 million positions, Stello's about 11,000. The start positions come from Stello's own book, so Stello knows them best. Even so, the result is the same as without books.
 
@@ -122,7 +122,7 @@ FFO #40–49 solved exactly on 1 thread. All scores and moves are correct for bo
 - **The port solves these 14 times faster than Stello.** Part of that may be the staging: the selective passes at 74 % … 99.9 % fill the table before the exact pass.
 - **In games the gap matters less.** At 500 ms both engines first solve at about 20 empty squares, because Egaroucid's time mode solves at 74 % and spends its time on the midgame. At 100 ms Stello even solves slightly earlier (18.4 against 17.8 empty squares).
 
-Results: `solve-bench_egaroucid_ffo40-49.json` and `solve-bench_egaroucid_ffo40-49_hash25.json`; Stello's is `baseline-solve-bench.json` ([chapter 18](18-measuring-the-engine.md#endgame-solve-bench---to-49)).
+Results: `solve-bench_egaroucid_ffo40-49.json` and `solve-bench_egaroucid_ffo40-49_hash25.json`; Stello's is `baseline-solve-bench.json` ([chapter 18](17-measuring-the-engine.md#endgame-solve-bench---to-49)).
 
 ## What explains the difference
 
@@ -142,7 +142,7 @@ In order of weight:
 - **Egaroucid's midgame depth includes selective endgame searches.** The adapter counts them as midgame because they aren't exact. This raises its average at 500 ms.
 - **The clog search ignores the time limit.** On 1 thread it takes 25–190 ms, sometimes more than a whole 100 ms move. So Egaroucid gets about 20 % more time at 100 ms, and about 40 % more in `mid-quality` at 50 ms.
 - **`eval-compare` favours Egaroucid,** as explained above.
-- **Timings vary by up to about 8 %** on this machine; the `--compare` check of [chapter 18](18-measuring-the-engine.md) applies within one engine only.
+- **Timings vary by up to about 8 %** on this machine; the `--compare` check of [chapter 18](17-measuring-the-engine.md) applies within one engine only.
 
 ## Reproducing the results
 
@@ -150,7 +150,7 @@ In order of weight:
 dotnet run -c Release --project Stello.Net/tools/Stello.Benchmark -- <command> [options]
 ```
 
-Egaroucid's resources must be in `Egaroucid-main/bin/resources` or in `$EGAROUCID_RESOURCES` ([chapter 19](19-the-egaroucid-port.md#running-it)). `engine=stello` is now Stello 2.0 ([chapter 21](21-stello-2-evaluation-and-solver.md)), so use **`stello-v1`** to measure the engine of this chapter.
+Egaroucid's resources must be in `Egaroucid-main/bin/resources` or in `$EGAROUCID_RESOURCES` ([chapter 19](18-the-egaroucid-port.md#running-it)). `engine=stello` is now Stello 2.0 ([chapter 21](21-stello-2-evaluation-and-solver.md)), so use **`stello-v1`** to measure the engine of this chapter.
 
 | What | Command |
 |---|---|
@@ -163,7 +163,7 @@ Egaroucid's resources must be in `Egaroucid-main/bin/resources` or in `$EGAROUCI
 | Midgame speed | `mid-bench --engine stello-v1`, `mid-bench --engine egaroucid`, `mid-bench --engine egaroucid --mpc 74` |
 | Endgame | `solve-bench --engine stello-v1 --to 49`, `solve-bench --engine egaroucid --to 49` (add `--hash-bits 25` for the C++ table size) |
 
-- **The side keys:** `engine=stello|stello-v1|egaroucid`, plus `time-ms`, `game-s`, `depth` (Stello) or `level` (Egaroucid), `hash-bits`, `book=on|off`, and for Egaroucid `book-acc` and `seed`. Chapter 19 [explains Egaroucid's keys](19-the-egaroucid-port.md#in-the-benchmark-tool).
+- **The side keys:** `engine=stello|stello-v1|egaroucid`, plus `time-ms`, `game-s`, `depth` (Stello) or `level` (Egaroucid), `hash-bits`, `book=on|off`, and for Egaroucid `book-acc` and `seed`. Chapter 19 [explains Egaroucid's keys](18-the-egaroucid-port.md#in-the-benchmark-tool).
 - **`--engine`** chooses the engine for `solve-bench` and `mid-bench`; `mid-quality` takes a list in `--engines`.
 - **`eval-compare`** scores Stello 1's evaluation, which Stello 1 keeps in `Stello.Engine.V1`. Stello 2's trained evaluation is measured with the trainer's `report` ([chapter 21](21-stello-2-evaluation-and-solver.md#training)).
 - **The training data is not in the repository** (its terms forbid redistribution), so `eval-compare` needs a local copy. `make-exact`'s output is committed, so `mid-quality` runs without it.
@@ -192,4 +192,4 @@ Each step is measured against Stello 1 (`engine=stello-v1`) and Egaroucid (`engi
 
 ---
 
-Previous: [19 The Egaroucid port](19-the-egaroucid-port.md) · Next: [21 Stello 2: the pattern evaluation and the new endgame solver](21-stello-2-evaluation-and-solver.md)
+Previous: [19 The Egaroucid port](18-the-egaroucid-port.md) · Next: [21 Stello 2: the pattern evaluation and the new endgame solver](21-stello-2-evaluation-and-solver.md)

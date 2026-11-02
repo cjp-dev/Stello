@@ -54,11 +54,11 @@ The time limit can stop the search at any point; the best move found so far is t
 | 13 | [Game record](13-game-record.md) | Move history, undo/redo, the text file format |
 | 14 | [App integration](14-app-integration.md) | The game loop, threading, engine hosts, WebAssembly worker, settings, book files |
 | 15 | [GUI and settings](15-gui-and-settings.md) | Interface layout, menu commands, settings dialog, opening book and TT memory, real-time analysis |
-| 16 | [Glossary](16-glossary.md) | The terms used in these documents |
-| 17 | [References](17-references.md) | Articles, papers and source code on the internet |
-| 18 | [Measuring the engine](18-measuring-the-engine.md) | Engine matches, the FFO endgame benchmark, the midgame benchmark, and the baseline numbers |
-| 19 | [The Egaroucid port](19-the-egaroucid-port.md) | The C# port of Egaroucid: licence, pipeline, C++ to C# file map, node-for-node parity with the C++ original, deliberate differences, how to run it |
-| 20 | [Comparing Stello with Egaroucid](20-engine-comparison.md) | Matches, evaluation error, midgame quality, midgame and endgame speed; what explains the gap, and what it means for Stello 2.0 |
+| 16 | [Glossary](25-glossary.md) | The terms used in these documents |
+| 17 | [References](26-references.md) | Articles, papers and source code on the internet |
+| 18 | [Measuring the engine](17-measuring-the-engine.md) | Engine matches, the FFO endgame benchmark, the midgame benchmark, and the baseline numbers |
+| 19 | [The Egaroucid port](18-the-egaroucid-port.md) | The C# port of Egaroucid: licence, pipeline, C++ to C# file map, node-for-node parity with the C++ original, deliberate differences, how to run it |
+| 20 | [Comparing Stello with Egaroucid](19-stello-1-against-egaroucid.md) | Matches, evaluation error, midgame quality, midgame and endgame speed; what explains the gap, and what it means for Stello 2.0 |
 | 21 | [Stello 2: the pattern evaluation and the new endgame solver](21-stello-2-evaluation-and-solver.md) | Patterns, symmetries and stages; the trainer and its experiments; the file format; the solver's layers by empty squares; the measurements against Stello 1 and Egaroucid; Stello 1 as the baseline; what comes next |
 
 ## Reading paths

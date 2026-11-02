@@ -1,4 +1,4 @@
-# 16 – Glossary
+# 25 – Glossary
 
 [Back to the index](README.md)
 
@@ -74,4 +74,4 @@ The terms used in these documents. The last column gives the chapter that explai
 
 ---
 
-Previous: [15 GUI and settings](15-gui-and-settings.md) · Next: [17 References](17-references.md)
+Previous: [15 GUI and settings](15-gui-and-settings.md) · Next: [17 References](26-references.md)

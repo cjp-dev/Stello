@@ -1,4 +1,4 @@
-# 18 – Measuring the engine
+# 17 – Measuring the engine
 
 [Back to the index](README.md)
 
@@ -98,7 +98,7 @@ Stello.Benchmark mid-bench --compare before.json      (with the new code)
 
 ## Comparing engines
 
-Since the Egaroucid port ([chapter 19](19-the-egaroucid-port.md)), the tool can measure three engines. A match side chooses one with the key `engine=`, and `solve-bench` and `mid-bench` with `--engine`:
+Since the Egaroucid port ([chapter 19](18-the-egaroucid-port.md)), the tool can measure three engines. A match side chooses one with the key `engine=`, and `solve-bench` and `mid-bench` with `--engine`:
 
 | Value | Engine |
 |---|---|
@@ -116,7 +116,7 @@ Three commands compare the engines part by part:
 | `make-exact [--games 100] [--empties 28,26,24]` | Writes midgame positions with every move solved exactly by the port, to `Data/midgame-exact.txt`. |
 | `mid-quality [--times 50,200,1000] [--engines stello,stello-v1,egaroucid \| --sides "<side>;<side>"]` | Measures the discs each engine's move loses against perfect play, at a fixed time per move, with paired differences for every pair. `--sides` takes match sides, for example with `eval=`. |
 
-[Chapter 20](20-engine-comparison.md) gives the results for Stello 1 against Egaroucid and the exact commands.
+[Chapter 20](19-stello-1-against-egaroucid.md) gives the results for Stello 1 against Egaroucid and the exact commands.
 
 ### Stello 1 against Stello 2
 

@@ -1,4 +1,4 @@
-# 19 – The Egaroucid port
+# 18 – The Egaroucid port
 
 [Back to the index](README.md)
 
@@ -10,7 +10,7 @@
 - **Exact:** on 1 thread the port gives the same evaluations, moves, values, depths and **node counts** as the C++ original. A C++ reference harness and test fixtures prove it.
 - **Where it runs:** in the tools and tests only ([Stello.Benchmark](../../Stello.Net/tools/Stello.Benchmark) and [Egaroucid.Engine.Tests](../../Stello.Net/Egaroucid.Engine.Tests)). The WPF and web apps keep Stello's engine.
 
-This chapter explains how the port is built, how it was proven exact, and how to run it. [Chapter 20](20-engine-comparison.md) gives what the comparison found. The working documents are [egaroucid-port-plan.md](../../Plans/egaroucid-port-plan.md) and [egaroucid-port-findings.md](../../Plans/egaroucid-port-findings.md).
+This chapter explains how the port is built, how it was proven exact, and how to run it. [Chapter 20](19-stello-1-against-egaroucid.md) gives what the comparison found. The working documents are [egaroucid-port-plan.md](../../Plans/egaroucid-port-plan.md) and [egaroucid-port-findings.md](../../Plans/egaroucid-port-findings.md).
 
 ## Licence
 
@@ -18,7 +18,7 @@ This chapter explains how the port is built, how it was proven exact, and how to
 - **Every ported file** starts with `// SPDX-License-Identifier: GPL-3.0-only` and names its C++ original: "Ported from Egaroucid src/engine/…, © Takuto Yamana, GPL-3.0-or-later".
 - **Egaroucid's source and resources are not in git.** The source goes in `Egaroucid-main/` in the repository root, which is git-ignored.
 - **The training data is not in git either.** Its terms allow its use but forbid redistribution. It lives in the git-ignored folder `Traning data/` and is only used to measure evaluations.
-- The credits are in [THIRD-PARTY-NOTICES.md](../../THIRD-PARTY-NOTICES.md) and [chapter 17](17-references.md#19-the-egaroucid-port-20-comparing-stello-with-egaroucid).
+- The credits are in [THIRD-PARTY-NOTICES.md](../../THIRD-PARTY-NOTICES.md) and [chapter 17](26-references.md#19-the-egaroucid-port-20-comparing-stello-with-egaroucid).
 
 The resources the port reads, from `Egaroucid-main/bin/resources`:
 
@@ -238,7 +238,7 @@ If they are not found, the tool stops with a message that says where to put them
 
 ### In the benchmark tool
 
-`engine=egaroucid` on a match side, or `--engine egaroucid` for a benchmark, chooses the port ([chapter 18](18-measuring-the-engine.md)):
+`engine=egaroucid` on a match side, or `--engine egaroucid` for a benchmark, chooses the port ([chapter 18](17-measuring-the-engine.md)):
 
 ```text
 dotnet run -c Release --project Stello.Net/tools/Stello.Benchmark -- <command> [options]
@@ -260,7 +260,7 @@ mid-bench --engine egaroucid --level 21
 | `seed=1` | seeds the book's choice anew every game |
 | `--mpc 74` … `--mpc 100` | `mid-bench` only: the selectivity of a fixed-depth search (100 = none, the default) |
 
-`eval-compare`, `make-exact` and `mid-quality` also use the port; [chapter 20](20-engine-comparison.md#reproducing-the-results) shows them.
+`eval-compare`, `make-exact` and `mid-quality` also use the port; [chapter 20](19-stello-1-against-egaroucid.md#reproducing-the-results) shows them.
 
 ### Tests
 
@@ -274,7 +274,7 @@ dotnet test Stello.Net/Egaroucid.Engine.Tests
 
 ## Status
 
-- **Done (phases 0–5):** licence, reference harness, foundations, single-threaded search, time management and book, and the comparison with Stello ([chapter 20](20-engine-comparison.md)).
+- **Done (phases 0–5):** licence, reference harness, foundations, single-threaded search, time management and book, and the comparison with Stello ([chapter 20](19-stello-1-against-egaroucid.md)).
 - **Single-threaded only.** The parallel paths throw `NotSupportedException`, and the transposition table has no locks.
 - **Phase 6 (YBWC multi-threading) is postponed.** It can be resumed later. The work continues with Stello 2.0 in [improve-stello-strength-plan.md](../../Plans/improve-stello-strength-plan.md).
 
@@ -312,4 +312,4 @@ The port is 1.45× slower than C++ in the endgame and 1.12× in the midgame, and
 
 ---
 
-Previous: [18 Measuring the engine](18-measuring-the-engine.md) · Next: [20 Comparing Stello with Egaroucid](20-engine-comparison.md)
+Previous: [18 Measuring the engine](17-measuring-the-engine.md) · Next: [20 Comparing Stello with Egaroucid](19-stello-1-against-egaroucid.md)
