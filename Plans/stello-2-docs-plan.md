@@ -112,8 +112,26 @@ The user's goals are in [Update documentation for Stello 2 release.md](../Update
 
 All matches are 1,180 games from `starts.txt`. The results are named `match_v2-final-*` and `v2-final-solve-bench-40-49.json`.
 
+## Code fixes after the docs (user, 2026-11-02)
+
+The agents found these while checking the docs against the code. They are fixed in a separate commit after the docs, and the docs are updated to match:
+1. `BookRecalculator`: a proven draw (value 0) is replaced, because only win/loss/draw values beyond ±32,600 are kept. Keep 0 too when Stello searched the entry (its effort has an engine version).
+2. WPF analysis: "Value" and "Evaluations" never update (aliases without change notification; "Evaluations" shows the speed).
+3. Outdated comments:
+   - `OpeningBook.cs` says "version 3 is Stello 2.0";
+   - `Stello.BookTool/Program.cs` points to chapter 13 instead of 12;
+   - comments name old chapter numbers.
+   - the trainer's usage text (`TrainerProgram.cs`) gives `--rate 0.5` and `--patience 30`, but the code defaults are 0.05 and 20.
+4. Dead code: `ShallowEmpties`, `MoveOrdering.BaseScore`, `SoundType.Flip`.
+5. GUI details:
+   - Open does not clear "game modified";
+   - Undo/Redo are not re-evaluated when the computer starts or stops thinking.
+- **Noted only, not fixed now:** `GameMode.ComputerVsComputer` cannot be reached from any menu.
+
 ## Status
 
 - Step 1: done (9009cce).
 - Step 2: done. Archive in `docs/brain/stello-1/`: 19 pages and 19 images from `a261a6d`, an archive note on each page, and 0 broken links.
-- Step 3: in progress.
+- Step 3: done (4f9c225, 9d16511). The numbers of 06's two worked examples are still to be regenerated.
+- Step 4: done (b582b2d renumbering, 9772925 Part 2). Chapter 24 is still to be written.
+- Step 5: in progress.

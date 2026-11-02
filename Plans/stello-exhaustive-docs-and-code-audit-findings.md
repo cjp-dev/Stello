@@ -58,7 +58,7 @@ The audit covered:
   - Directional masks verified: `NotColumnA` (`0xFEFE_FEFE_FEFE_FEFEUL`), `NotColumnH` (`0x7F7F_7F7F_7F7F_7F7FUL`), `InnerColumns` (`0x7E7E_7E7E_7E7E_7E7EUL`), `InnerRows` (`0x00FF_FFFF_FFFF_FF00UL`), and `Inner` (`InnerColumns & InnerRows`).
 - **Documentation Update:**
   - Enhanced [`docs/brain/03-rules-and-move-generation.md`](../docs/brain/03-rules-and-move-generation.md) to explicitly document the Edax broadword shift lineage.
-  - Updated [`docs/brain/17-references.md`](../docs/brain/17-references.md) under Chapter 02/03 to cite Richard Delorme's `board.c`.
+  - Updated [`docs/brain/17-references.md`](../docs/brain/stello-1/17-references.md) under Chapter 02/03 to cite Richard Delorme's `board.c`.
 - **Perft Validation:** Re-verified perft node counts against Aart Bik's standard test suite: Depth 1 = 4, Depth 2 = 12, Depth 3 = 56, Depth 4 = 244, Depth 5 = 1,396, Depth 6 = 8,200, Depth 7 = 55,010, Depth 8 = 390,216.
 
 ---
@@ -176,7 +176,7 @@ The audit covered:
     11. [`docs/brain/14-app-integration.md`](../docs/brain/14-app-integration.md#L242)
     12. [`docs/brain/README.md`](../docs/brain/README.md#L11-L65)
   - Re-checked with PowerShell regex; zero broken links remain.
-- **Glossary Enhancements ([`docs/brain/16-glossary.md`](../docs/brain/16-glossary.md)):**
+- **Glossary Enhancements ([`docs/brain/16-glossary.md`](../docs/brain/stello-1/16-glossary.md)):**
   - Added definition for `Dumb7Fill`: "Broadword parallel bitboard fill technique (Delorme, Edax) used for directional ray casting in move generation."
   - Added definition for `Frontier disc`: "A disc adjacent to at least one empty square; potential mobility measures empty squares bordering opponent frontier discs."
 - **Master Index & Reading Paths ([`docs/brain/README.md`](../docs/brain/README.md)):**
