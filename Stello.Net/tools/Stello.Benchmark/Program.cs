@@ -35,6 +35,13 @@ internal static class Program
                                     The discs each engine's move loses against perfect play, at fixed time per move.
           make-starts [--book <book.txt>] [--plies 10-12] [--max-value 40] [--out <file>]
                                     Write balanced start positions for match from the opening book.
+          parity-data [--out <folder>] [--games 30] [--seed 1] [--eval <file>]
+                                    Write the fixtures that the Rust engine (Stello.Rust/stello-core/tests/data by default) is
+                                    checked against: positions with legal moves, flips and Stello 2.0's evaluation, the pattern
+                                    sets, and perft counts.
+          parity-data --split <folder>|default [--max-per-discs 20000|all] [--eval <file>]
+                                    Stello 2.0's evaluation over the trainer's test split (default: Traning data/stello-bin):
+                                    the count and FNV-1a checksums to compare with `stello eval-split`, and the speed.
           make-positions [--starts <file>] [--games 20] [--depth 6] [--empties 48,42,36,30,26] [--out <file>]
                                     Write the midgame positions for mid-bench from games the engine plays against itself.
 
@@ -72,6 +79,7 @@ internal static class Program
                 "eval-compare" => EvalCommands.EvalCompare(options),
                 "make-exact" => QualityCommands.MakeExact(options),
                 "mid-quality" => QualityCommands.MidQuality(options),
+                "parity-data" => ParityCommands.ParityData(options),
                 _ => Fail(Usage),
             };
         }

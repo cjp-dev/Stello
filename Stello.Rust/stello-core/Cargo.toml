@@ -8,3 +8,5 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
+# gzip for stello-eval.bin; the default (pure Rust) backend also builds for wasm32.
+flate2 = "1.1"

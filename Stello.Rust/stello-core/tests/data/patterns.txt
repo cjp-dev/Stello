@@ -1,0 +1,51 @@
+# Parity fixture for Stello.Rust/stello-core (Stello.Benchmark parity-data): the pattern sets of Stello.Engine.V2.
+# set name features raw-size symmetries; FNV-1a 64 of the features' indices (PatternSet.Indices, each int as 4 bytes
+#   little-endian) over all positions of positions.txt, for the side to move, in order
+# shape name size placements representatives FNV-1a(fold)
+# weights set stages units-per-disc stage-of-discs FNV-1a(all stages' weights by raw index, each short as 2 bytes)
+set classic11 46 167265 0,2,4,5,0,2,4,5,0,2,4,5,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,0,2,4,5,0,1,2,3,4,5,6,7,0,1,2,3 82fbdcdbcd4bbbe9
+shape row2 6561 0,2,4,5 3321 fceb2df6ce6a24c7
+shape row3 6561 0,2,4,5 3321 fceb2df6ce6a24c7
+shape row4 6561 0,2,4,5 3321 fceb2df6ce6a24c7
+shape diagonal4 81 0,1,2,3 45 dfd626ffcb1bc6ed
+shape diagonal5 243 0,1,2,3 135 bf22ec3136a0e836
+shape diagonal6 729 0,1,2,3 378 d734da4b9c298296
+shape diagonal7 2187 0,1,2,3 1134 3833a5ce411b7d51
+shape diagonal8 6561 0,1 3321 fceb2df6ce6a24c7
+shape edge+2x 59049 0,2,4,5 29646 c8ee8f294fc18b74
+shape corner2x5 59049 0,1,2,3,4,5,6,7 59049 f2faf37e00d4a513
+shape corner3x3 19683 0,1,2,3 10206 352c2e583942a97c
+set plus15 62 403461 0,2,4,5,0,2,4,5,0,2,4,5,0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1,0,2,4,5,0,1,2,3,4,5,6,7,0,1,2,3,0,1,2,3,0,2,4,5,0,1,2,3,0,2,4,5 a786537c7a014634
+shape row2 6561 0,2,4,5 3321 fceb2df6ce6a24c7
+shape row3 6561 0,2,4,5 3321 fceb2df6ce6a24c7
+shape row4 6561 0,2,4,5 3321 fceb2df6ce6a24c7
+shape diagonal4 81 0,1,2,3 45 dfd626ffcb1bc6ed
+shape diagonal5 243 0,1,2,3 135 bf22ec3136a0e836
+shape diagonal6 729 0,1,2,3 378 d734da4b9c298296
+shape diagonal7 2187 0,1,2,3 1134 3833a5ce411b7d51
+shape diagonal8 6561 0,1 3321 fceb2df6ce6a24c7
+shape edge+2x 59049 0,2,4,5 29646 c8ee8f294fc18b74
+shape corner2x5 59049 0,1,2,3,4,5,6,7 59049 f2faf37e00d4a513
+shape corner3x3 19683 0,1,2,3 10206 352c2e583942a97c
+shape triangle 59049 0,1,2,3 29889 196e757dea819529
+shape corner+block 59049 0,2,4,5 29646 df3469e55f8fdaa7
+shape cross 59049 0,1,2,3 30618 2c04dca1cf288f0
+shape edge+y 59049 0,2,4,5 29646 d05e70cedc7cbda3
+set egaroucid16 64 612360 0,2,4,5,0,1,2,3,0,2,4,5,0,1,2,3,0,2,4,5,0,1,2,3,0,1,2,3,0,1,2,3,0,2,4,5,0,1,2,3,0,2,4,5,0,1,2,3,0,2,4,5,0,1,2,3,0,1,2,3,0,2,4,5 da234b6b38e782d0
+shape hv2 6561 0,2,4,5 3321 fceb2df6ce6a24c7
+shape d6+2c+x 19683 0,1,2,3 9963 e626f290d5df65a6
+shape hv3 6561 0,2,4,5 3321 fceb2df6ce6a24c7
+shape d7+2corner 19683 0,1,2,3 9963 e626f290d5df65a6
+shape hv4 6561 0,2,4,5 3321 fceb2df6ce6a24c7
+shape corner9 19683 0,1,2,3 10206 352c2e583942a97c
+shape d5+2x 2187 0,1,2,3 1134 3833a5ce411b7d51
+shape d8+2c 59049 0,1,2,3 39366 183c83ff39732f4c
+shape edge+2x 59049 0,2,4,5 29646 d05e70cedc7cbda3
+shape triangle 59049 0,1,2,3 29889 196e757dea819529
+shape corner+block 59049 0,2,4,5 29646 df3469e55f8fdaa7
+shape cross 59049 0,1,2,3 30618 2c04dca1cf288f0
+shape edge+y 59049 0,2,4,5 29646 d05e70cedc7cbda3
+shape narrow-triangle 59049 0,1,2,3 29889 127623cbb758dde
+shape fish 59049 0,1,2,3 30618 e6a293096d8cd0b8
+shape anvil 59049 0,2,4,5 29646 d05e70cedc7cbda3
+weights plus15 10 8 0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,5,5,5,5,5,5,6,6,6,6,6,6,7,7,7,7,7,7,8,8,8,8,8,8,9,9,9,9,9,9 12d9499f519e5776

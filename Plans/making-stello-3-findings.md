@@ -10,7 +10,7 @@ What the work on Stello 3.0 teaches us, written down as we go: the decisions, th
 | Phase | State | What it showed |
 |---|---|---|
 | 0 Set-up and the frozen Stello 2.0 | done (2026-11-02) | Stello.Engine.V2 searches node for node like 2.0; the Rust workspace builds for Linux, Windows and WASM, and .NET and Node call it |
-| 1 The core in Rust | not started | |
+| 1 The core in Rust | in progress | Steps 1–2 (board and rules, evaluation): identical to C# on 6,214 fixture positions, perft 1–8 and the whole test split; Rust perft 4.2× and evaluation 1.3–1.4× faster |
 | 2 Desktop and tools on Rust | not started | |
 | 3 The web app on Rust | not started | |
 | 4 Release (3.0 preview) | not started | |
@@ -67,3 +67,46 @@ Installed in the sandbox (Ubuntu 26.04). The PATH is set in `/etc/sandbox-persis
 
 ### Noted
 - The host's Visual Studio and the sandbox share the `obj/` folders. After a restore on Windows, the Linux build failed with "Unable to find fallback package folder 'C:\Program Files (x86)\…\NuGetPackages'". A `dotnet restore` here fixes it, and the reverse may happen on Windows.
+
+## Phase 1, steps 1–2: board, rules and evaluation (2026-11-02)
+
+### What was ported
+About 1,780 lines in `Stello.Rust/stello-core/src/`. Each item names its C# original.
+- **Board and rules:** `square.rs` (`Square`, `Move`), `board.rs` (`Player`, `Board`, perft) and `bits.rs` (`Bitboards`).
+- **The endgame's move generator** (`endgame/bits.rs`, C# `EndgameBits`), ported now because the midgame ordering already uses its weighted moves and potential mobility.
+- **Evaluation:** `eval/` holds the three pattern sets, symmetries, folding, the `stello-eval.bin` reader (gzip with `flate2`, pure Rust), `evaluate`, and the search's scale (`pattern_score`: × 100 / units, clamped to ±64 discs).
+- **Default evaluation:** the shipped file is embedded with `include_bytes!`.
+
+### Parity
+- **Fixtures** (`stello-core/tests/data`, 1.5 MB, written by the new `Stello.Benchmark parity-data` command from `Stello.Engine.V2`):
+  - 6,214 positions from 30 random games, `midgame.txt`, the FFO positions and edge cases, including 78 positions where the side to move must pass and 170 finished games;
+  - for each position: legal moves for both sides, the potential mobilities, parity, stage, the evaluation, `PatternScore`, the endgame's ordering value, and for every move its flips and the evaluation after it (over 30,000 moves);
+  - pattern checksums (indices, folding, weights).
+
+  Regenerating gives byte-identical files.
+- **`cargo test -p stello-core`:** 12 unit tests and 3 parity tests pass. Changing a single value made each parity test fail, so the tests catch differences.
+- **Perft:** depths 1–8 from the start position are equal (390,216 at depth 8), as are 14 `midgame.txt` and FFO positions at depth 5.
+- **The test split:** evaluated by both sides with identical checksums.
+
+| Set | Positions | Checksum of the scores (FNV-1a) |
+|---|---:|---|
+| The trainer report's subset (20,000 per disc count) | 1,040,276 | `2228830d28881a49` |
+| The whole test split | 9,973,199 | `d6d58ebf91e5794f` |
+
+- **Other builds:** the WASM build gives the fixture's evaluations and the right perft(8) under Node.
+
+### Speed (informational, 1 thread)
+| | Rust | C# 2.0 |
+|---|---:|---:|
+| Evaluations per second, whole test split | 4.89 M | 3.67 M (1.33×) |
+| Evaluations per second, report subset | 4.6–4.8 M | 3.3–3.6 M |
+| perft(8) | 8.9–9.6 ms | 38–41 ms (4.2×) |
+| perft(8), WASM in Node | 11 ms | — |
+
+C#'s move generation is slower partly because `Bitboards.Flips` calls its eight `Ray` helpers without `AggressiveInlining`. The frozen engine stays as it is.
+
+### Notes
+- **The test-split numbers:** the plan's "1.04 M test positions" is the trainer report's subset. Both it and the whole split were checked.
+- **Two move generators:** the C# has two with identical results, Stello's `Bitboards` for the midgame and Egaroucid's `EndgameBits` for the solver. Both are ported and both are checked.
+- **Not yet tested:** the endgame's tables (flip neighbours, quadrants, stability thresholds) were copied by script and are untested until the endgame step's node parity.
+- **Size in the browser:** the embedded evaluation makes the WASM module about 1.1 MB. Phase 3 may pass the bytes to `init` instead.
