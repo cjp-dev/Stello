@@ -210,6 +210,9 @@ The Egaroucid port did not port this; its YBWC phase was postponed.
   - FFO #40–49.
 - **Release:** docs (Part 1 updated, Part 3 chapters), About 3.0, fast-forward main, deploy, live check.
 
+## After the plan (user, 2026-11-02)
+- **Align the WPF GUI with the web apps.** This comes after phase 9, once the plan is finished.
+
 ## Working rules (as for 2.0)
 - **Git:**
   - one commit per step, with the identity `-c user.name=cjp-dev -c user.email=cjp230364@gmail.com` and the trailer `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`;
@@ -238,4 +241,4 @@ The Egaroucid port did not port this; its YBWC phase was postponed.
 - Plan written on 2 November 2026.
 - **Phase 0: done (2026-11-02).** Toolchain installed (Rust 1.99.1, wasm-bindgen 0.2.130, MinGW 13). `Stello.Engine.V2` is identical to 2.0 on mid-bench depth 10 and FFO #40–49, with 105 recorded signatures tested for both engines. `Stello.Rust` builds the Linux library, the Windows DLL and the WASM package, and .NET and Node call them. Details in the findings.
 - **Phase 1: done (2026-11-02).** The Rust core (board, evaluation, midgame search, endgame solver) is node-for-node identical to C# 2.0 on mid-bench depth 10 and 12, FFO #40–49, 1,000 random midgame and 1,800 random endgame positions, and the hand-over to the solver. The evaluation is equal on the whole test split. Speed on one thread: 1.27–1.37× without any speed work.
-- **Phase 2: done (2026-11-02, 8fd3f98 wrapper, 8220705 speed pass).** `Stello.Engine.SearchEngine` calls the Rust core through a C ABI with the same API; MSBuild builds it with Cargo on Linux and Windows. Identical to 2.0 through the wrapper on every parity run and a whole-book recalculation. After a speed pass with identical nodes it is 2.8–3.1× faster in the midgame and 1.75× on FFO #40–49, and 3.0 beats 2.0 at 500 ms with 59.6 % (+68 Elo, 1,180 games). The user is still to test WPF on Windows.
+- **Phase 2: done (2026-11-02, 8fd3f98 wrapper, 8220705 speed pass).** `Stello.Engine.SearchEngine` calls the Rust core through a C ABI with the same API; MSBuild builds it with Cargo on Linux and Windows. Identical to 2.0 through the wrapper on every parity run and a whole-book recalculation. After a speed pass with identical nodes it is 2.8–3.1× faster in the midgame and 1.75× on FFO #40–49, and 3.0 beats 2.0 at 500 ms with 59.6 % (+68 Elo, 1,180 games). The user tested WPF on Windows (VS Code, `dotnet run`): it builds the MSVC DLL with Cargo and plays.

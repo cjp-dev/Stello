@@ -332,7 +332,7 @@ Every change keeps the nodes identical. It was checked through the wrapper after
 | ≥ 1.5× native speed (target) | 2.8–3.1× midgame, 1.75× FFO, 1.56× whole-book recalc |
 | 500 ms match of 3.0 against 2.0 > 50 % | 59.6 % (57.3–61.9) |
 | Book recalc sample gives identical values | the whole book at depth 10: identical books and reports, both before and after the speed pass |
-| WPF builds | yes (`-p:EnableWindowsTargeting=true`, Windows DLL cross-built with MinGW), with `stello_engine.dll` in its output; the user's own test on Windows is pending |
+| WPF builds | yes (`-p:EnableWindowsTargeting=true`, Windows DLL cross-built with MinGW), with `stello_engine.dll` in its output. The user tested it on Windows: built in VS Code with `dotnet run`, Cargo built the MSVC DLL, and the app plays, stops and solves |
 
 **Environment note:** a cross-built DLL that Cargo had hard-linked into `target/.../release` gave "Stale file handle" on the mount. Deleting both links and rebuilding fixed it.
 
