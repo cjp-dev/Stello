@@ -21,7 +21,7 @@ What the work on Stello 2.0 teaches us, written down as we go: the decisions, th
 | 2 Evaluation 2.0 | done | 15 patterns × 10 stages in 0.99 MB: 5.47 discs error; +400 Elo against Stello 1 at 100 and 500 ms, +67 against Egaroucid at 100 ms, −84 at 500 ms |
 | 3 Endgame solver | done | FFO #40–49 in 47.1 s (Stello 1 369 s, Egaroucid port 25.6 s); in games as strong as the old solver (51.1 % at 500 ms) |
 | 4 Release 2.0 in the apps | done | The engine is Stello 2 with a book recalculated by it; with books on it scores 88.9 % (+362) against Stello 1 at 500 ms, and the new book is as good as the old one (49.2 %); in the browser 22 empty squares solve in 0.6–1.3 s (Stello 1: 1.1–4.5 s) |
-| 5 Search improvements (2.x) | in progress (branch `feature/stello-v2.x`) | Item 1 (time use): no gain, the 2/3 rule stays. Item 2: PVS in every node +28/+30 Elo, kept; a table with both bounds and two moves gave nothing; item 3 Multi-ProbCut +120 at 500 ms; item 4 ordering and ETC kept; item 5 rejected; the book recalculated with 2.x: 51.7 % against the 2.0 book |
+| 5 Search improvements (2.x) | in progress (branch `feature/stello-v2.x`) | Item 1 (time use): no gain, the 2/3 rule stays. Item 2: PVS in every node +28/+30 Elo, kept; a table with both bounds and two moves gave nothing; item 3 Multi-ProbCut +120 at 500 ms; item 4 ordering and ETC kept; item 5 rejected; the book recalculated with 2.x: 51.7 % against the 2.0 book; item 6 (book exit check) rejected |
 
 ## Stello 1, the frozen baseline
 
@@ -478,6 +478,28 @@ Egaroucid's evaluation has a test error of 5.05 for comparison. The 10-stage run
   - `egaroucid16` has more patterns, so the search ran at 3.66 M nodes per second against 4.41 M (−17 %). The midgame depth fell from 16.75 to 16.39.
   - The more accurate evaluation roughly pays for its slower speed, and no more ([result](benchmark-results/match_v2x-eval-e16-s60-3m-500ms.md)).
 - **Not pursued.** The final 10 M model, its own Multi-ProbCut fit (about 2 h) and a 2 s match could add a few Elo at most, for an 8 MB file. Size alone does not close the gap to Egaroucid's 5.05: with Egaroucid's own 16 pattern shapes and 60 stages, Stello's trainer reaches 5.23. The rest must come from Egaroucid's other inputs or from its training.
+
+### Item 6: checking the moves outside the book (2026-11-02)
+
+A book move costs no time. So in a book position, `ComputerPlayer` used that move's normal time to search the moves the book does not have, the same search as for any other move, restricted to those moves. It played the best of them if its score beat the book move's value by a margin, 1 disc in these matches.
+- **Two modes:**
+  - `exit`: only when the book move leads out of the book;
+  - `all`: in every book position.
+- **Matches:** against the default, both with the 2.x book, 100 ms per move, 1,180 games from `starts.txt`.
+
+| Variant | Score (95 %) | Elo |
+|---|---|---:|
+| `exit`, margin 1 disc | 49.6 % (47.5–51.6) | −3 |
+| `all`, margin 1 disc | 50.4 % (48.2–52.6) | +3 |
+
+- **Why nothing shows:** the games start at ply 10–12, so each side plays only about 1.2 book moves per game. A count over 100 start positions (200 games):
+  - `exit` searched 101 times, found a better move than the book's 26 times, and switched (more than 1 disc better) 14 times;
+  - `all` searched 245 times and switched 24 times.
+
+  A change in 7–12 % of the games, each worth a fraction of a disc, is far below what 1,180 games can measure.
+- **Rejected.** Neither mode passes the 100 ms gate, so the code was removed; it is in history as 124cf2d ([exit](benchmark-results/match_v2x-p5-item6-exit-m100-100ms.md), [all](benchmark-results/match_v2x-p5-item6-all-m100-100ms.md)).
+  - In the apps, games start from the first move and stay in the book much longer, so the check would run more often. But a 0.1–1 s search that overrules a 60 s book value is more likely noise than a find.
+  - A better use of the idea is in the book itself: the book tool could search the missing moves of each book position for 60 s and add the good ones, as C++'s calclib did ("the best move not yet in the book", the `onlyMoves` search that `BookSearch` already uses).
 
 ## Measurements
 

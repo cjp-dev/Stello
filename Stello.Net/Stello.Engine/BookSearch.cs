@@ -9,7 +9,12 @@ internal static class BookSearch
     {
         SearchResult result = engine.Search(board, player, limits, cancellationToken: cancellationToken, onlyMoves: moves);
 
-        int value = BookValue(result);
+        // Solved positions are stored as wins/losses beyond the evaluation range, as in C++.
+        int value = result.Kind is ScoreKind.Exact or ScoreKind.WinLossDraw
+            ? result.Score > 0 ? SearchEngine.WinScore + result.Score
+                : result.Score < 0 ? result.Score - SearchEngine.WinScore
+                : 0
+            : result.Score;
 
         BookOrigin origin = result.Kind switch
         {
@@ -20,13 +25,6 @@ internal static class BookSearch
 
         return (value, origin, BookEffort.For(limits, result.Depth), result.Move.Square!.Value);
     }
-
-    /// <summary>A search score on the book's scale: solved positions are wins/losses beyond the evaluation range, as in C++.</summary>
-    public static int BookValue(SearchResult result) => result.Kind is ScoreKind.Exact or ScoreKind.WinLossDraw
-        ? result.Score > 0 ? SearchEngine.WinScore + result.Score
-            : result.Score < 0 ? result.Score - SearchEngine.WinScore
-            : 0
-        : result.Score;
 
     /// <summary>
     /// The value of the position for the player to move (C++: getvalue): a search, the opponent's value after a

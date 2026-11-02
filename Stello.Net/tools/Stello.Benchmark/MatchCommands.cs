@@ -131,8 +131,6 @@ internal static class MatchCommands
         string? bookFile = null;
         int? softTimePercent = null;
         int? probCutPercent = null;
-        BookCheck? bookCheck = null;
-        int? bookMargin = null;
         var keys = new HashSet<string>();
         foreach (string part in text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
@@ -194,18 +192,6 @@ internal static class MatchCommands
                 case "mpc":
                     probCutPercent = Number(key, value, 1, 1000);
                     break;
-                case "book-check":
-                    bookCheck = value switch
-                    {
-                        "off" => BookCheck.Off,
-                        "exit" => BookCheck.Exit,
-                        "all" => BookCheck.All,
-                        _ => throw new ArgumentException($"book-check must be off, exit or all in the side \"{text}\"."),
-                    };
-                    break;
-                case "book-margin":
-                    bookMargin = Number(key, value, 0, 6400);
-                    break;
                 default:
                     throw new ArgumentException($"Unknown key in the side \"{text}\": {key}");
             }
@@ -223,8 +209,6 @@ internal static class MatchCommands
             ("book-file", !egaroucid),
             ("soft-pct", engine == EngineKind.Stello),
             ("mpc", engine == EngineKind.Stello),
-            ("book-check", engine == EngineKind.Stello),
-            ("book-margin", engine == EngineKind.Stello),
         })
         {
             if (keys.Contains(key) && !allowed)
@@ -256,7 +240,7 @@ internal static class MatchCommands
             string description = $"{limitText}, hash bits {bits}, {(useBook ? "book" : "no book")}";
             return engine == EngineKind.StelloV1
                 ? new MatchSide(name ?? text, limits, bits, CreatePlayer: () => new V1MatchPlayer(bits, book), Description: $"Stello 1, {description}")
-                : StelloSide(name ?? text, limits, bits, book, description, evalFile, softTimePercent, probCutPercent, bookCheck, bookMargin);
+                : StelloSide(name ?? text, limits, bits, book, description, evalFile, softTimePercent, probCutPercent);
         }
 
         // 2^21 slots of 24 bytes take as much memory as Stello's default: two tables of 2^19 slots of two 24-byte entries.
@@ -299,14 +283,12 @@ internal static class MatchCommands
 
     /// <summary>A Stello side with its search options: the evaluation file and the switches of Stello 2's work.</summary>
     private static MatchSide StelloSide(string name, SearchLimits limits, int bits, OpeningBook? book, string description,
-        string? evalFile, int? softTimePercent, int? probCutPercent, BookCheck? bookCheck, int? bookMargin)
+        string? evalFile, int? softTimePercent, int? probCutPercent)
     {
         SearchOptions options = (evalFile is null or "default" ? SearchOptions.Default : PatternOptions(evalFile)) with
         {
             SoftTimePercent = softTimePercent,
             ProbCutPercent = probCutPercent,
-            BookCheck = bookCheck ?? SearchOptions.Default.BookCheck,
-            BookCheckMargin = bookMargin ?? SearchOptions.Default.BookCheckMargin,
         };
         if (options == SearchOptions.Default)
         {
@@ -315,8 +297,7 @@ internal static class MatchCommands
 
         string extra = (evalFile is null or "default" ? "" : $", evaluation {Path.GetFileName(evalFile)}")
             + (softTimePercent is null ? "" : $", soft limit {softTimePercent} %")
-            + (probCutPercent is null ? "" : $", Multi-ProbCut t = {probCutPercent / 100.0:0.00}")
-            + (bookCheck is null && bookMargin is null ? "" : $", book check {options.BookCheck.ToString().ToLowerInvariant()} (margin {options.BookCheckMargin / 100.0:0.##} discs)");
+            + (probCutPercent is null ? "" : $", Multi-ProbCut t = {probCutPercent / 100.0:0.00}");
         return new MatchSide(name, limits, bits, book, CreatePlayer: () => new StelloMatchPlayer(bits, book, options),
             Description: $"Stello, {description}{extra}", Options: options);
     }

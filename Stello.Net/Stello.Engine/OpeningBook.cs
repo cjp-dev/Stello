@@ -94,54 +94,30 @@ public sealed class OpeningBook
     /// Finds a book move for <paramref name="player"/> (C++: getlib). Black's first move is chosen at random;
     /// later the first move in book order is used.
     /// </summary>
-    public bool TryGetMove(Board board, Player player, Random random, out BookMove move) =>
-        TryGetMove(board, player, random, out move, out _, out _);
-
-    /// <inheritdoc cref="TryGetMove(Board, Player, Random, out BookMove)"/>
-    /// <param name="bookMoves">All squares the book has a move for in this position.</param>
-    /// <param name="leavesBook">The position after <paramref name="move"/> is not in the book.</param>
-    internal bool TryGetMove(Board board, Player player, Random random, out BookMove move, out ulong bookMoves, out bool leavesBook)
+    public bool TryGetMove(Board board, Player player, Random random, out BookMove move)
     {
         ArgumentNullException.ThrowIfNull(random);
 
         if (board == Board.Initial && player == Player.Black)
         {
             move = new BookMove(FirstMoves[random.Next(FirstMoves.Length)], 0);
-            bookMoves = board.LegalMoves(player);
-            leavesBook = false;
             return true;
         }
 
-        move = default;
-        bookMoves = 0;
-        leavesBook = false;
-        if (!TryGetReplies(board, player, out List<BookEntry>? replies, out Symmetry symmetry))
+        if (TryGetReplies(board, player, out List<BookEntry>? replies, out Symmetry symmetry))
         {
-            return false;
-        }
-
-        bool found = false;
-        foreach (BookEntry reply in replies)
-        {
-            if (reply.Move.Square is { } square)
+            foreach (BookEntry reply in replies)
             {
-                Square onBoard = Transform(square, symmetry);
-                bookMoves |= onBoard.Bit;
-                if (!found)
+                if (reply.Move.Square is { } square)
                 {
-                    move = new BookMove(onBoard, reply.Value);
-                    found = true;
+                    move = new BookMove(Transform(square, symmetry), reply.Value);
+                    return true;
                 }
             }
         }
 
-        if (found)
-        {
-            (Board next, Player toMove) = Play(board, player, new Move(move.Square));
-            leavesBook = !Contains(next, toMove);
-        }
-
-        return found;
+        move = default;
+        return false;
     }
 
     /// <summary>The book moves in the position, and the symmetry between the board and the book's frame.</summary>

@@ -28,26 +28,4 @@ internal sealed record SearchOptions
     /// Null: <see cref="SearchEngine.DefaultProbCutPercent"/>. Kept as a switch to retune t when the search changes.
     /// </summary>
     public int? ProbCutPercent { get; init; }
-
-    /// <summary>
-    /// Phase 5 item 6: in a book position, search the moves the book does not have and play the best of them if it
-    /// beats the book move's value by <see cref="BookCheckMargin"/>.
-    /// </summary>
-    public BookCheck BookCheck { get; init; }
-
-    /// <summary>How much better (1/100 disc) a searched move must be than the book move.</summary>
-    public int BookCheckMargin { get; init; } = 100;
-}
-
-/// <summary>When <see cref="ComputerPlayer"/> searches the moves outside the book.</summary>
-internal enum BookCheck
-{
-    /// <summary>Never: a book move is played without a search.</summary>
-    Off,
-
-    /// <summary>When the book move leads out of the book.</summary>
-    Exit,
-
-    /// <summary>In every book position.</summary>
-    All,
 }
