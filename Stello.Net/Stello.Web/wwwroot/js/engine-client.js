@@ -1,9 +1,6 @@
 // The page's side of the engine worker: starts and terminates it and matches responses to requests.
 const workerUrl = new URL('./engine-worker.js', import.meta.url);
 
-// Resolved through the page's import map, so the worker gets the fingerprinted file.
-const dotnetUrl = import.meta.resolve('../_framework/dotnet.js');
-
 const canShareMemory = typeof SharedArrayBuffer !== 'undefined' && self.crossOriginIsolated;
 const signalBuffer = canShareMemory ? new SharedArrayBuffer(4) : null;
 const signalView = signalBuffer ? new Int32Array(signalBuffer) : null;
@@ -33,12 +30,10 @@ function post(command, args, includeBuffer = false) {
     return response;
 }
 
-// Starts a new worker and initialises it with the book; resolves when it is ready.
-export function start(progressTarget, book, hashBits) {
+// Starts a new worker and makes its engine; resolves with the engine's version when it is ready.
+export function start(progressTarget, hashBits) {
     terminate();
-    const url = new URL(workerUrl);
-    url.searchParams.set('dotnet', dotnetUrl);
-    const current = new Worker(url, { type: 'module' });
+    const current = new Worker(workerUrl, { type: 'module' });
 
     current.addEventListener('message', e => {
         if (current !== worker) {
@@ -66,7 +61,7 @@ export function start(progressTarget, book, hashBits) {
     });
 
     worker = current;
-    return post('init', [book, hashBits], true);
+    return post('init', [hashBits], true);
 }
 
 export function call(command, ...args) {

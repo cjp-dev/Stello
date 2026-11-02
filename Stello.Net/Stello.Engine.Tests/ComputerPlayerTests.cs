@@ -62,4 +62,26 @@ public class ComputerPlayerTests
         Assert.True(result.Move.IsPass);
         Assert.True(player.BookTracker.ShouldConsult);
     }
+
+    [Fact]
+    public void TryChooseBookMove_IsTheBookStepOfChooseMove()
+    {
+        // The web app calls it on the page and searches in its worker; the engine here never searches.
+        var player = new ComputerPlayer(new SearchEngine(hashBits: 12), Book, new Random(0));
+        (Board outside, Player toMove) = TestPositions.RandomPositions(seed: 5, count: 1, plies: 40).Single();
+
+        Assert.True(player.TryChooseBookMove(TestGames.Play("d3").Board, Player.White, SearchLimits.FixedDepth(4), out SearchResult? book));
+        Assert.Equal(ScoreKind.Book, book.Kind);
+        Assert.Equal(new Move(Square.Parse("c5")), book.Move);
+        Assert.False(player.TryChooseBookMove(TestGames.Play("d3").Board, Player.White, SearchLimits.FixedDepth(4, useOpeningBook: false), out _));
+
+        for (int i = 0; i < 3; i++)
+        {
+            Assert.False(player.TryChooseBookMove(outside, toMove, SearchLimits.FixedDepth(4), out SearchResult? none));
+            Assert.Null(none);
+        }
+
+        Assert.False(player.BookTracker.ShouldConsult);
+        Assert.False(player.TryChooseBookMove(TestGames.Play("d3").Board, Player.White, SearchLimits.FixedDepth(4), out _));
+    }
 }

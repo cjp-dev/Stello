@@ -7,6 +7,7 @@ on:
       - 'Stello.Net/Stello.Web/**'
       - 'Stello.Net/Stello.App/**'
       - 'Stello.Net/Stello.Engine/**'
+      - 'Stello.Rust/**'
       - 'Stello.Net/Book/**'
       - 'docs/**'
       - 'Stello.Net/Images/**'
@@ -35,8 +36,27 @@ jobs:
       - name: Install WebAssembly build tools
         run: dotnet workload install wasm-tools
 
+      # The engine in the browser is the Rust engine (Stello.Rust/stello-wasm), which the Stello.Web build compiles
+      # for wasm32-unknown-unknown and packages with wasm-bindgen.
+      - name: Install Rust and the WebAssembly target
+        run: |
+          rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown
+          rustup default stable
+          cargo --version
+
+      # A prebuilt wasm-bindgen-cli; its version must equal the wasm-bindgen crate's (=0.2.130 in Stello.Rust/Cargo.toml).
+      - name: Install wasm-bindgen
+        env:
+          WASM_BINDGEN_VERSION: '0.2.130'
+        run: |
+          name="wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl"
+          curl -sSfL "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/${name}.tar.gz" | tar -xz -C "$RUNNER_TEMP"
+          install -m 755 "$RUNNER_TEMP/${name}/wasm-bindgen" "$HOME/.cargo/bin/wasm-bindgen"
+          wasm-bindgen --version
+
+      # StelloNativeEngine=false: the web app does not need Stello.Engine's native library (stello-ffi).
       - name: Publish (AOT)
-        run: dotnet publish Stello.Net/Stello.Web/Stello.Web.csproj -c Release -o publish
+        run: dotnet publish Stello.Net/Stello.Web/Stello.Web.csproj -c Release -o publish -p:StelloNativeEngine=false
 
       # The app is already built, so the action only uploads the static files.
       - name: Deploy to Azure Static Web Apps

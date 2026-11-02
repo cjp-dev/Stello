@@ -7,8 +7,10 @@ using Stello.Web.Worker;
 namespace Stello.Web.Services;
 
 /// <summary>
-/// Runs the engine in a Web Worker so the page stays responsive. A running search is stopped cooperatively
-/// via a SharedArrayBuffer signal (preserving the hash tables), falling back to restarting the worker if needed.
+/// Runs the engine in a Web Worker so the page stays responsive: Stello's Rust engine compiled to WebAssembly
+/// (wwwroot/js/engine-worker.js). The opening book stays on the page: the book move and the added games are handled
+/// here, and the worker only searches. A running search is stopped cooperatively via a SharedArrayBuffer signal
+/// (preserving the hash tables), falling back to restarting the worker if needed.
 /// </summary>
 public sealed class WebEngineHost : IEngineHost
 {
@@ -16,8 +18,12 @@ public sealed class WebEngineHost : IEngineHost
 
     private readonly IJSRuntime _js;
     private readonly LocalStorageBookStore _bookStore;
+    private readonly OpeningBook _book;
     private readonly DotNetObjectReference<WebEngineHost> _self;
-    private byte[] _book;
+
+    // Only its book step runs here (TryChooseBookMove); its engine never searches, so it needs no native library.
+    private readonly ComputerPlayer _computer;
+    private int _workerHashBits = HashBits;
     private IJSInProcessObjectReference? _client;
     private Task _started;
     private Action<SearchInfo>? _progress;
@@ -26,12 +32,11 @@ public sealed class WebEngineHost : IEngineHost
     {
         _js = js;
         _bookStore = bookStore;
+        _book = book;
         _self = DotNetObjectReference.Create(this);
-        using var stream = new MemoryStream();
-        book.Save(stream);
-        _book = stream.ToArray();
+        _computer = new ComputerPlayer(new SearchEngine(), book, new Random());
 
-        // Start at once, so the worker is usually ready before the computer's first move.
+        // Start at once, so the worker is usually ready before the computer's first search.
         _started = StartAsync();
     }
 
@@ -47,6 +52,19 @@ public sealed class WebEngineHost : IEngineHost
     {
         cancellationToken.ThrowIfCancellationRequested();
         var clock = Stopwatch.StartNew();
+
+        // The worker of Stello 2.0 made a new ComputerPlayer, with a new book tracker, for other hash bits.
+        if (limits.HashBits != _workerHashBits)
+        {
+            _workerHashBits = limits.HashBits;
+            _computer.BookTracker.Reset();
+        }
+
+        if (_computer.TryChooseBookMove(board, player, limits, out SearchResult? bookMove))
+        {
+            return bookMove;
+        }
+
         IJSInProcessObjectReference client = await StartedAsync();
 
         SearchInfo? last = null;
@@ -59,12 +77,12 @@ public sealed class WebEngineHost : IEngineHost
             last = info;
             progress?.Report(info);
         };
-        Task<string> search = client.InvokeAsync<string>("call", "chooseMove", EngineProtocol.WriteRequest(board, player, limits)).AsTask();
+        Task<string> search = client.InvokeAsync<string>("call", "search", EngineProtocol.WriteRequest(board, player, limits)).AsTask();
         try
         {
             if (await Task.WhenAny(search, stopped.Task) == search)
             {
-                return EngineProtocol.ReadResult(await search);
+                return EngineProtocol.ReadResult(await Searched(search, client));
             }
 
             bool isMoveNow = await stopped.Task;
@@ -105,21 +123,13 @@ public sealed class WebEngineHost : IEngineHost
         }
     }
 
-    public void ResetBookTracker()
-    {
-        // A worker that is still starting has a fresh tracker anyway.
-        if (_client is not null && _started.IsCompletedSuccessfully)
-        {
-            Forget(_client.InvokeVoidAsync("call", "resetBookTracker").AsTask());
-        }
-    }
+    public void ResetBookTracker() => _computer.BookTracker.Reset();
 
-    public async Task<BookUpdate> AddGameToBookAsync(IReadOnlyList<Move> moves, GameResult result)
+    public Task<BookUpdate> AddGameToBookAsync(IReadOnlyList<Move> moves, GameResult result)
     {
-        IJSInProcessObjectReference client = await StartedAsync();
-        int nodeCount = await client.InvokeAsync<int>("call", "addGame", string.Join(' ', moves), (int)result);
-        _book = await client.InvokeAsync<byte[]>("call", "getBook");
-        return new BookUpdate(nodeCount, _bookStore.Save(_book));
+        // Adding a game does not search, so the limits do not matter, and the engine never loads its native library.
+        new BookLearner(_book, new SearchEngine(hashBits: 10), SearchLimits.FixedDepth(1), new Random()).AddGame(moves, result);
+        return Task.FromResult(new BookUpdate(_book.NodeCount, _bookStore.Save(_book)));
     }
 
     public Task<BookLearningSummary> LearnAsync(
@@ -135,6 +145,21 @@ public sealed class WebEngineHost : IEngineHost
     private static void Forget(Task task) =>
         task.ContinueWith(static t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
 
+    // A search that fails (the WebAssembly engine trapped) may leave the engine unusable, so the next search gets a
+    // new worker.
+    private async Task<string> Searched(Task<string> search, IJSInProcessObjectReference client)
+    {
+        try
+        {
+            return await search;
+        }
+        catch (JSException)
+        {
+            Restart(client);
+            throw;
+        }
+    }
+
     private async Task<IJSInProcessObjectReference> StartedAsync()
     {
         if (_started.IsFaulted)
@@ -149,7 +174,7 @@ public sealed class WebEngineHost : IEngineHost
     private async Task StartAsync()
     {
         _client ??= await _js.InvokeAsync<IJSInProcessObjectReference>("import", "./js/engine-client.js");
-        await _client.InvokeVoidAsync("start", _self, _book, HashBits);
+        await _client.InvokeAsync<string>("start", _self, HashBits);
     }
 
     private void Restart(IJSInProcessObjectReference client)
@@ -157,5 +182,9 @@ public sealed class WebEngineHost : IEngineHost
         client.InvokeVoid("terminate");
         _started = StartAsync();
         Forget(_started);
+
+        // The worker of Stello 2.0 kept the book tracker, so a new worker started with a new one (for HashBits).
+        _workerHashBits = HashBits;
+        _computer.BookTracker.Reset();
     }
 }

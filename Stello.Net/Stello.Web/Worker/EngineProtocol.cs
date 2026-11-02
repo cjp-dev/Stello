@@ -5,7 +5,9 @@ using Stello.Engine;
 
 namespace Stello.Web.Worker;
 
-// Messages between the page and the engine worker; plain values only, so 64-bit boards and ticks stay exact.
+// Messages between the page and the engine worker; plain values only, so 64-bit boards and ticks stay exact. The
+// worker's Rust engine reads and writes the same JSON (Stello.Rust/stello-wasm/src/protocol.rs). UseOpeningBook is
+// not read there: the page looks up the book itself (WebEngineHost).
 internal sealed record MoveRequest(ulong Black, ulong White, Player Player, TimeControlMode Mode, int Depth, long TimeTicks, bool UseOpeningBook = true, int HashBits = 19);
 
 internal sealed record MoveResponse(int Square, int Score, ScoreKind Kind, int Depth, long Nodes, long Evaluations, long ElapsedTicks);

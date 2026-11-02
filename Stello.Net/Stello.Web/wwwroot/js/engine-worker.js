@@ -1,18 +1,19 @@
-// Web Worker that runs the engine in its own .NET runtime, loaded from the app's _framework folder.
-// The page passes the (fingerprinted) URL of dotnet.js in the query string.
-const dotnetUrl = new URL(self.location.href).searchParams.get('dotnet');
+// Web Worker that runs the engine: Stello's Rust engine compiled to WebAssembly (Stello.Rust/stello-wasm, built into
+// ../engine by Stello.Web's build). The page looks up the opening book itself and sends only searches.
+//
+// A search runs to the end inside search(), so this worker cannot receive a message while it runs. The page stops it
+// through the SharedArrayBuffer it sends with 'init' instead (1 = Move Now, 2 = cancel), which the engine reads with
+// signal() every 1024 nodes.
+import load, { init, search, version } from '../engine/stello_wasm.js';
+
 let signalView = null;
 
-const started = (async () => {
-    const { dotnet } = await import(dotnetUrl);
-    const runtime = await dotnet.create();
-    runtime.setModuleImports('engine-worker', {
-        postProgress: json => self.postMessage({ type: 'progress', json }),
-        pollSignal: () => signalView ? Atomics.load(signalView, 0) : 0,
-    });
-    const exports = await runtime.getAssemblyExports(runtime.getConfig().mainAssemblyName);
-    return exports.Stello.Web.Worker.EngineWorker;
-})();
+const host = {
+    progress: json => self.postMessage({ type: 'progress', json }),
+    signal: () => (signalView ? Atomics.load(signalView, 0) : 0),
+};
+
+const started = load({ module_or_path: new URL('../engine/stello_wasm_bg.wasm', import.meta.url) });
 
 self.addEventListener('message', async e => {
     const { id, command, args, signalBuffer } = e.data;
@@ -20,14 +21,13 @@ self.addEventListener('message', async e => {
         signalView = new Int32Array(signalBuffer);
     }
     try {
-        const engine = await started;
+        await started;
         let result;
         switch (command) {
-            case 'init': result = engine.Init(...args); break;
-            case 'chooseMove': result = engine.ChooseMove(...args); break;
-            case 'resetBookTracker': result = engine.ResetBookTracker(); break;
-            case 'addGame': result = engine.AddGame(...args); break;
-            case 'getBook': result = engine.GetBook(); break;
+            // args: hash bits. The built-in evaluation is part of the WebAssembly module.
+            case 'init': init(undefined, args[0]); result = version(); break;
+            // args: the JSON of a MoveRequest; returns the JSON of a MoveResponse (EngineProtocol).
+            case 'search': result = search(args[0], host); break;
             default: throw new Error(`Unknown engine command: ${command}`);
         }
         self.postMessage({ type: 'response', id, result });

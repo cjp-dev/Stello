@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Stello.Engine;
 
 /// <summary>
@@ -18,7 +20,17 @@ public sealed class ComputerPlayer(SearchEngine engine, OpeningBook? book, Rando
         SearchLimits limits,
         IProgress<SearchInfo>? progress = null,
         CancellationToken cancellationToken = default,
-        CancellationToken moveNowToken = default)
+        CancellationToken moveNowToken = default) =>
+        TryChooseBookMove(board, player, limits, out SearchResult? bookMove)
+            ? bookMove
+            : Engine.Search(board, player, limits, progress, cancellationToken, moveNowToken);
+
+    /// <summary>
+    /// The first step of <see cref="ChooseMove"/>: the book move, if the limits allow the book and the game is still
+    /// in it. Records the lookup in <see cref="BookTracker"/>. The web app calls it on the page and sends only the
+    /// searches to its engine worker.
+    /// </summary>
+    public bool TryChooseBookMove(Board board, Player player, SearchLimits limits, [NotNullWhen(true)] out SearchResult? result)
     {
         if (limits.UseOpeningBook && Book is not null && board.HasLegalMove(player) && BookTracker.ShouldConsult)
         {
@@ -26,10 +38,12 @@ public sealed class ComputerPlayer(SearchEngine engine, OpeningBook? book, Rando
             BookTracker.Record(found);
             if (found)
             {
-                return new SearchResult(new Move(move.Square), move.Value, ScoreKind.Book, 0, 0, 0, TimeSpan.Zero);
+                result = new SearchResult(new Move(move.Square), move.Value, ScoreKind.Book, 0, 0, 0, TimeSpan.Zero);
+                return true;
             }
         }
 
-        return Engine.Search(board, player, limits, progress, cancellationToken, moveNowToken);
+        result = null;
+        return false;
     }
 }
