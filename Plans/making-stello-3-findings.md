@@ -15,7 +15,7 @@ What the work on Stello 3.0 teaches us, written down as we go: the decisions, th
 | 3 The web app on Rust | done (2026-11-02) | The browser searches with the Rust engine in WebAssembly, node for node like 2.0; in Chromium 2.3–2.4× faster than the .NET AOT worker in the midgame and 1.59× on FFO #40–44 (1.86× overall); the worker starts in 92 ms instead of 680, Stop and Move Now answer in under 1 ms, and the first visit is 1.07 MB smaller |
 | 4 Release (3.0 preview) | done (2026-11-02) | About shows 3.0; docs Part 1 describes the Rust engine and Part 3 begins (chapter 25); main = c9aa054, deploy 41504303682 succeeded; the live site plays, stops and solves on the Rust engine |
 | 5 Threads and a shared hash table | done (2026-11-02) | A thread pool and a seqlocked shared hash table (64-byte slots); `Threads` from C# to Rust, the CLI and the Benchmark; threads = 1 identical to 2.0 on every parity run, at most +2.2 % slower; 2–16 threads give exact solves; no speed-up yet (phase 6) |
-| 6 Lazy SMP | not started | |
+| 6 Lazy SMP | done (2026-11-02) | Helpers run their own iterative deepening 1 + ctz(i+1) plies ahead, and up to 3 help each solve pass; 4 threads beat 1 with 55.3 % (+37 Elo) and 8 threads with 53.0 % (+21) at 500 ms; time to depth 1.53× (4 threads) and 1.66–1.76× (8); FFO only about 10 % faster (YBWC is phase 7) |
 | 7 YBWC | not started | |
 | 8 Threads in the browser | not started | |
 | 9 Threads setting and the 3.0 release | not started | |
@@ -482,3 +482,55 @@ Speed: the old build is b132d6f (the .NET AOT worker running Stello 2.0), and ea
 - **Phase 6** replaces the helper closure with per-depth helper searches (depth + ctz(i+1), as in Egaroucid), started in a scope around each main iteration and stopped by its flag.
 - **Matches with threads** must set `--workers` so that workers × threads ≤ cores, because the default number of workers is cores / 2.
 - **The docs for the 3.0 release:** chapter 07 (slot layout and concurrency), 14 (ABI 2), and 06 and 08 (the shared table).
+
+## Phase 6: Lazy SMP (2026-11-02)
+
+### Design
+- **Midgame:** one pool scope covers all the midgame iterations. Helper i (from 0) runs its own iterative deepening on the root, 1 + ctz(i+1) plies ahead of the main thread (+1, +2, +1, +3, +1, +2, +1). It reads the main depth from an atomic and jumps ahead when the main thread catches up, capped at the last midgame depth. Helpers use the main thread's selectivity and stop through a flag when the midgame iterations end (a drop guard, so also on a panic). Their nodes and evaluations are counted; the result is the main thread's.
+- **Solve:** each solve pass (win/loss/draw, then exact) gets at most 3 helpers, which solve the same window with the root moves rotated into the shared endgame table. The ordering iterations in Solve mode run without helpers.
+- **Few empty squares:** with too few empty squares for a midgame iteration no helper is started (a guard added in review, with a test: 1–10 empties, depth and time limits, 8 threads give the single-threaded score).
+- **The helpers' response killers** are cleared at the start of each search. The phase 5 interim helpers are removed.
+- **Not as planned:** the plan said "helpers at main depths up to 10", as in Egaroucid. Here they run at all midgame depths, because the limit gave no gain without YBWC: the deep iterations take nearly all the time, and Egaroucid relies on YBWC there.
+
+### What was measured before choosing (CLI, mid-bench time to depth; 1 thread 3.03 s at depth 14)
+| Scheme | 4 threads | 8 threads |
+|---|---|---|
+| Egaroucid's: per-iteration helpers at depth + ctz(i+1) with an MPC ladder, main depth ≤ 10 | 2.93–3.14 s (no gain) | |
+| The same at all depths | 2.22 s | 2.27 s (1.35×) |
+| Deeper-only, or rotated same-depth helpers | about 1.4× | about 1.4× |
+| **Helpers with their own iterative deepening ahead (chosen)** | **2.00 s** | **1.83 s** (1.5–1.65×) |
+
+Other ways of choosing how far ahead a helper goes were the same or worse.
+
+- **The machine limits the scaling:** N single-threaded copies in parallel at depth 12 take 1.16 s alone, 1.31 s each with 4, 1.50 s with 8 and 2.03 s with 16 (12 %, 27 % and 75 % slower). The VM's P/E cores and SMT are the cause.
+- **Endgame helpers** (FFO #40–47, 1 thread 10.1 s): 3 or 7 rotated helpers on the same window take 9.0–9.4 s with 4 threads and 6.5–6.7 s with 8. An exact window is no better. On FFO #40–49, 7 helpers made #49 take 15 s instead of 8.8 s by filling the table with less useful entries. With 8 threads: 0 helpers 26.1 s, 3 helpers 23.5 s with no position slower, 5 helpers 25.7 s. So 3 helpers.
+
+### Numbers (through the wrapper, unpinned, machine idle)
+Time to depth, the mean wall time of 3 mid-bench passes (100 positions):
+
+| Threads | Depth 14 | Speed-up | Nodes/s | Depth 16 | Speed-up | Nodes/s |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 3.22 s | 1.00× | 9.9 M | 8.48 s | 1.00× | 9.5 M |
+| 2 | 2.57 s | 1.25× | 18.0 M | 6.89 s | 1.23× | 17.7 M |
+| 4 | 2.10 s | 1.53× | 34.0 M | 5.31 s | 1.60× | 33.7 M |
+| 8 | 1.94 s | 1.66× | 58.0 M | 4.81 s | 1.76× | 57.9 M |
+| 16 | 1.97 s | 1.63× | 83.7 M | 5.01 s | 1.69× | 81.5 M |
+
+FFO #40–49: 1 thread 25.4 s (identical to 2.0), 4 threads 23.6 s, 8 threads 23.1 s, every score and move correct.
+
+### Gate P6: passed
+500 ms per move, 1,180 games, engine=stello on both sides, hash bits 19, no book ([4 threads](benchmark-results/match_v3p6-4t-vs-1t-500ms.md), [8 threads](benchmark-results/match_v3p6-8t-vs-1t-500ms.md)):
+
+| Match | Games at a time | Score of N threads (95 %) | Elo | Midgame depth | Nodes/s | Wall time |
+|---|---:|---|---|---|---|---:|
+| 4 threads vs 1 | 5 | **55.3 %** (53.1–57.4), +552 =200 −428 | +37 (+22 to +52) | 19.41 vs 18.50 | 39.4 M vs 10.4 M | 50 min |
+| 8 threads vs 1 | 2 | **53.0 %** (50.9–55.0), +524 =202 −454 | +21 (+6 to +35) | 20.20 vs 18.97 | 70.2 M vs 13.4 M | 2 h 04 min |
+
+- **8 threads passes, but only just,** and scores below 4 threads. The two matches are not directly comparable: with only 2 games at a time, the 1-thread side ran faster (13.4 M against 10.4 M nodes/s). The confidence intervals overlap. Accepted, since the gate is a lower bound above 50 %. The real test of 8 threads comes with YBWC.
+- **Parity with 1 thread:** mid-bench depth 12 and FFO identical to 2.0 (re-checked after the review).
+- **Tests:** 69 `cargo test` tests (new: a time per move with 8 threads, the handover with 4 threads with Multi-ProbCut on and off, and few empty squares with 8 threads), 487 engine tests and 10 Node tests; clippy clean, also for wasm32. Miri and ThreadSanitizer were not re-run, because the pool and the table did not change.
+- **Not verified:** Windows with MSVC, and matches at 2 s.
+
+### Notes for phase 7
+- The Lazy SMP helpers hold N−1 workers for the whole midgame, so YBWC tasks would find no idle worker. Phase 7 will probably cap the helpers by depth (as Egaroucid does: helpers up to depth 10, YBWC deeper) or give them fewer workers.
+- In the solve, 4 of 8 threads are idle today, ready for YBWC.

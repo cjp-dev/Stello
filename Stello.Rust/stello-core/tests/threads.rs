@@ -196,3 +196,64 @@ fn stop_signals_stop_all_threads() {
     let result = engine.search_simple(&Board::INITIAL, Player::Black, &threads(SearchLimits::fixed_depth(6), 8));
     assert_eq!(result.depth, 6);
 }
+
+/// A time per move with 8 threads is kept (the helpers stop with the main thread's iterations and solves), and the
+/// result is a legal move from a search that reached some depth.
+#[test]
+fn several_threads_keep_a_time_per_move() {
+    let positions = benchmark_positions("midgame.txt");
+    let mut engine = SearchEngine::new(18, SearchOptions::default());
+    for (id, board, player, _) in positions.iter().step_by(25) {
+        let clock = Instant::now();
+        let result = engine.search_simple(board, *player, &threads(SearchLimits::time_per_move_ms(150), 8));
+        let elapsed = clock.elapsed();
+        assert!(elapsed < Duration::from_millis(150 + 40), "{id}: {elapsed:?}");
+        assert!(result.depth >= 4, "{id}: depth {}", result.depth);
+        assert!(board.legal_moves(*player) & result.mv.0.unwrap().bit() != 0, "{id}");
+    }
+}
+
+/// Midgame searches that hand over to the solver (18–26 empty squares at depth 12), with 4 threads and with Multi-ProbCut
+/// on and off: a win/loss/draw or exact result is that of 1 thread.
+#[test]
+fn several_threads_hand_over_to_the_solver_like_one() {
+    let positions = benchmark_positions("midgame-handover.txt");
+    for selective in [true, false] {
+        let options = SearchOptions { selective, ..SearchOptions::default() };
+        let (mut single, mut threaded) = (SearchEngine::new(16, options.clone()), SearchEngine::new(16, options));
+        let mut solved = 0;
+        for (id, board, player, _) in positions.iter().filter(|p| p.1.empty_count() <= 20).take(24) {
+            single.clear_hash();
+            threaded.clear_hash();
+            let one = single.search_simple(board, *player, &SearchLimits::fixed_depth(12));
+            let four = threaded.search_simple(board, *player, &threads(SearchLimits::fixed_depth(12), 4));
+            assert_eq!(one.kind, four.kind, "{id}");
+            match one.kind {
+                ScoreKind::Exact => assert_eq!(one.score, four.score, "{id}"),
+                ScoreKind::WinLossDraw => assert_eq!(one.score.signum(), four.score.signum(), "{id}"),
+                _ => continue,
+            }
+            solved += 1;
+        }
+        assert!(solved >= 6, "{solved} solved");
+    }
+}
+
+/// Positions with too few empty squares for a midgame iteration (the search goes straight to the solver): with a
+/// depth limit and a time per move, several threads give the single-threaded score.
+#[test]
+fn several_threads_with_few_empty_squares_solve_like_one() {
+    let mut seed = 0x2545_F491_4F6C_DD1Du64;
+    let (mut single, mut threaded) =
+        (SearchEngine::new(14, SearchOptions::default()), SearchEngine::new(14, SearchOptions::default()));
+    for empties in 1..=10 {
+        for _ in 0..4 {
+            let Some((board, player)) = random_position(&mut seed, empties) else { continue };
+            for limits in [SearchLimits::fixed_depth(12), SearchLimits::time_per_move_ms(100)] {
+                let one = single.search_simple(&board, player, &limits);
+                let eight = threaded.search_simple(&board, player, &threads(limits, 8));
+                assert_eq!((eight.score, eight.kind), (one.score, one.kind), "{board} ({empties} empties)");
+            }
+        }
+    }
+}

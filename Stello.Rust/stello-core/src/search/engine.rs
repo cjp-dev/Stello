@@ -9,7 +9,7 @@
 //!
 //! C# throws to stop a search; here every search function returns `Result<_, Abort>` and `?` unwinds.
 
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU64, Ordering};
 use std::time::Duration;
 
 use super::limits::{ScoreKind, SearchInfo, SearchLimits, SearchResult, TimeControlMode};
@@ -230,6 +230,50 @@ impl<'a> SearchContext<'a> {
     }
 }
 
+/// The most helpers in a solve. On FFO #40–49 with 8 threads, 3 helpers made the solve 1.1 times faster and no
+/// position slower; 7 made some positions faster but filled the endgame table so that FFO #49 took 15 s instead of
+/// 8.8 s. The other threads stay idle (for YBWC in phase 7).
+const SOLVE_HELPERS: usize = 3;
+
+/// What the main thread needs to start its helpers: the pool, what the helpers read, and where they count.
+#[derive(Clone, Copy)]
+pub(crate) struct Helpers<'a> {
+    pool: &'a ThreadPool<ThreadState>,
+    context: SearchContext<'a>,
+    /// The helpers to start: the threads but this one.
+    count: usize,
+    nodes: &'a AtomicU64,
+    evaluations: &'a AtomicU64,
+}
+
+impl<'a> Helpers<'a> {
+    /// A helper's search on a worker: no progress, no time limit, its nodes counted for the main thread.
+    fn searcher<'b>(&self, state: &'b mut ThreadState, stop: &'b FlagStop<'b>) -> Searcher<'b>
+    where
+        'a: 'b,
+    {
+        let mut searcher = Searcher::new(self.context, state, stop);
+        searcher.node_sink = Some(self.nodes);
+        searcher
+    }
+
+    /// Adds a helper's last nodes and its evaluations to the search's counts.
+    fn finish(&self, helper: &mut Searcher<'_>) {
+        helper.flush_nodes();
+        self.evaluations.fetch_add(helper.evaluations, Ordering::Relaxed);
+    }
+}
+
+/// Stops the helpers when it is dropped: at the end of the main thread's part of a scope, also if it panics (else the
+/// scope would wait for the helpers for ever).
+struct StopHelpers<'a>(&'a AtomicBool);
+
+impl Drop for StopHelpers<'_> {
+    fn drop(&mut self) {
+        self.0.store(true, Ordering::Relaxed);
+    }
+}
+
 /// Whether this build can start threads: not WebAssembly without atomics (the single-threaded web build; phase 8
 /// brings threads to the browser).
 const THREADS_AVAILABLE: bool = !cfg!(all(target_arch = "wasm32", not(target_feature = "atomics")));
@@ -304,10 +348,10 @@ impl SearchEngine {
     /// - `only_moves`: search only these moves, even if just one is left (C++ calclib: the best move not yet in the
     ///   book).
     ///
-    /// With more than 1 thread ([`SearchLimits::threads`]) the other threads search the same position into the
-    /// shared hash tables while this thread searches as with 1 thread, starting with the root moves in another order
-    /// each (a first, plain parallel search, to be replaced by Lazy SMP and YBWC). They stop when this thread's search
-    /// ends; the result is this thread's, with the nodes and evaluations of all threads.
+    /// With more than 1 thread ([`SearchLimits::threads`]) this thread searches as with 1, and the others help it
+    /// through the shared hash tables (Lazy SMP): in the midgame they search the root a few plies deeper
+    /// ([`Searcher::lazy_smp_midgame`]), in the solve they solve the root starting with other moves
+    /// ([`Searcher::solve_iteration`]). The result is this thread's, with the nodes and evaluations of all threads.
     pub fn search(
         &mut self,
         board: &Board,
@@ -346,47 +390,22 @@ impl SearchEngine {
         } = self;
         let context = SearchContext::new(options, probcut_errors.as_deref(), midgame_table, endgame_table, *clock);
         let pool = &pool.as_ref().expect("the pool was started above").1;
-        let (helpers_stop, helper_nodes, helper_evaluations) =
-            (AtomicBool::new(false), AtomicU64::new(0), AtomicU64::new(0));
-        let (board, limits) = (*board, *limits);
-        let result = pool.scope(|scope| {
-            for helper in 1..threads as usize {
-                let (helpers_stop, helper_nodes, helper_evaluations) =
-                    (&helpers_stop, &helper_nodes, &helper_evaluations);
-                let started = scope.try_spawn(move |state: &mut ThreadState| {
-                    let stop = FlagStop(helpers_stop);
-                    let mut searcher = Searcher::new(context, state, &stop);
-                    searcher.root_rotation = helper;
-                    searcher.node_sink = Some(helper_nodes);
-                    // A helper's result is not used: it searched to fill the shared tables.
-                    let _ = searcher.run(&board, player, &limits, only_moves);
-                    searcher.flush_nodes();
-                    helper_evaluations.fetch_add(searcher.evaluations, Ordering::Relaxed);
-                });
-                if !started {
-                    break;
-                }
-            }
+        // The response killers of the helpers come from other positions; each search starts them afresh, as the
+        // main thread's.
+        pool.for_each_state(|state| state.ordering.clear_responses());
+        let (nodes, evaluations) = (AtomicU64::new(0), AtomicU64::new(0));
+        let helpers = Helpers { pool, context, count: threads as usize - 1, nodes: &nodes, evaluations: &evaluations };
 
-            // The helpers stop when this thread's search ends, also if it panics (else the scope would wait for them).
-            struct StopHelpers<'a>(&'a AtomicBool);
-            impl Drop for StopHelpers<'_> {
-                fn drop(&mut self) {
-                    self.0.store(true, Ordering::Relaxed);
-                }
-            }
-            let _stop_helpers = StopHelpers(&helpers_stop);
-
-            let mut searcher = Searcher::new(context, main, stop);
-            searcher.progress = progress;
-            searcher.iteration_done = iteration_done.as_deref_mut();
-            searcher.node_source = Some(&helper_nodes);
-            searcher.run(&board, player, &limits, only_moves)
-        });
+        let mut searcher = Searcher::new(context, main, stop);
+        searcher.progress = progress;
+        searcher.iteration_done = iteration_done.as_deref_mut();
+        searcher.helpers = Some(helpers);
+        searcher.node_source = Some(&nodes);
+        let result = searcher.run(board, player, limits, only_moves);
 
         result.map(|mut result| {
-            result.nodes += helper_nodes.load(Ordering::Relaxed);
-            result.evaluations += helper_evaluations.load(Ordering::Relaxed);
+            result.nodes += nodes.load(Ordering::Relaxed);
+            result.evaluations += evaluations.load(Ordering::Relaxed);
             result
         })
     }
@@ -451,9 +470,9 @@ pub(crate) struct Searcher<'a> {
     clock: Clock,
     start: Duration,
     soft_time_percent: Option<i32>,
-    /// A helper thread starts with its root moves rotated by this much, so that the threads begin in different
-    /// subtrees (0 on the main thread).
-    root_rotation: usize,
+    /// The main thread's helpers in a search with more than 1 thread (Lazy SMP); `None` with 1 thread and in the
+    /// helpers themselves.
+    helpers: Option<Helpers<'a>>,
     /// A helper adds its nodes here at each abort check ([`Searcher::flush_nodes`]); the main thread reports its own
     /// nodes plus these.
     node_sink: Option<&'a AtomicU64>,
@@ -491,7 +510,7 @@ impl<'a> Searcher<'a> {
             clock: context.clock,
             start: (context.clock)(),
             soft_time_percent: context.soft_time_percent,
-            root_rotation: 0,
+            helpers: None,
             node_sink: None,
             node_source: None,
             flushed_nodes: 0,
@@ -544,9 +563,6 @@ impl<'a> Searcher<'a> {
         let count = fill(&mut root, moves);
         let root_moves = &mut root[..count];
         self.ordering.order(root_moves, -1, -1, player, board);
-        if self.root_rotation > 0 {
-            root_moves.rotate_left(self.root_rotation % count);
-        }
 
         let mut best = Best { mv: root_moves[0], score: 0, kind: ScoreKind::None, depth: 0 };
         match self.iterate(board, player, limits, root_moves, &mut best) {
@@ -570,20 +586,12 @@ impl<'a> Searcher<'a> {
         self.hard_limit_ms = budget.hard_ms;
 
         if limits.mode() != TimeControlMode::Solve {
-            let mut look = 0;
-            while empties - 1 - look > ENDGAME_DISTANCE {
-                self.hash_get_height = look - 1;
-                self.hash_put_height = look;
-                self.search_root(board, player, look, root_moves, best)?;
-                if let Some(callback) = self.iteration_done.as_mut() {
-                    callback(look + 1, best.score);
-                }
-
-                if self.stop_iterating(limits, budget, look + 1) {
-                    return Ok(());
-                }
-
-                look += 1;
+            let done = match self.helpers {
+                Some(helpers) => self.lazy_smp_midgame(helpers, board, player, limits, budget, root_moves, best)?,
+                None => self.midgame_iterations(board, player, limits, budget, root_moves, best, None)?,
+            };
+            if done {
+                return Ok(());
             }
         } else {
             let mut look = 0;
@@ -599,7 +607,7 @@ impl<'a> Searcher<'a> {
         self.hard_limit_ms = budget.hard_ms;
 
         // Win/loss/draw first with a null window around 0; it is much faster than the exact score.
-        let (wld, wld_move) = self.solve_root(board, player, -1, 1, ScoreKind::WinLossDraw, root_moves, best)?;
+        let (wld, wld_move) = self.solve_iteration(board, player, -1, 1, ScoreKind::WinLossDraw, root_moves, best)?;
         let keep_midgame_move = wld < 0 && best.kind == ScoreKind::Heuristic;
         *best = Best {
             mv: if keep_midgame_move { best.mv } else { wld_move },
@@ -613,9 +621,155 @@ impl<'a> Searcher<'a> {
         }
 
         let (alpha, beta) = if wld > 0 { (wld - 1, 65) } else { (-65, wld + 1) };
-        let (exact, exact_move) = self.solve_root(board, player, alpha, beta, ScoreKind::Exact, root_moves, best)?;
+        let (exact, exact_move) =
+            self.solve_iteration(board, player, alpha, beta, ScoreKind::Exact, root_moves, best)?;
         *best = Best { mv: exact_move, score: exact, kind: ScoreKind::Exact, depth: empties };
         Ok(())
+    }
+
+    /// [`Searcher::solve_root`], with up to [`SOLVE_HELPERS`] helpers on the other threads: each solves the same
+    /// window, its root moves rotated by its number plus one, so that the threads begin with different moves. They
+    /// fill the shared endgame table and stop when this thread's solve ends; their results are not used. Egaroucid
+    /// has no helpers in its last iteration, and splits the endgame with YBWC instead (phase 7).
+    #[allow(clippy::too_many_arguments)]
+    fn solve_iteration(
+        &mut self,
+        board: &Board,
+        player: Player,
+        alpha: i32,
+        beta: i32,
+        kind: ScoreKind,
+        root_moves: &mut [i32],
+        best: &mut Best,
+    ) -> Result<(i32, i32), Abort> {
+        let Some(helpers) = self.helpers else {
+            return self.solve_root(board, player, alpha, beta, kind, root_moves, best);
+        };
+
+        let stop = AtomicBool::new(false);
+        let (board, count, start) = (*board, root_moves.len(), *best);
+        let mut order = [0i32; MAX_MOVES];
+        order[..count].copy_from_slice(root_moves);
+        helpers.pool.scope(|scope| {
+            for i in 0..helpers.count.min(SOLVE_HELPERS) {
+                let stop = &stop;
+                let started = scope.try_spawn(move |state: &mut ThreadState| {
+                    let flag = FlagStop(stop);
+                    let mut helper = helpers.searcher(state, &flag);
+                    let (mut moves, mut best) = (order, start);
+                    moves[..count].rotate_left((i + 1) % count);
+                    // Stopped or not, what it solved is in the table; the result is not used.
+                    let _ = helper.solve_root(&board, player, alpha, beta, kind, &mut moves[..count], &mut best);
+                    helpers.finish(&mut helper);
+                });
+                if !started {
+                    break;
+                }
+            }
+
+            let _stop_helpers = StopHelpers(&stop);
+            self.solve_root(&board, player, alpha, beta, kind, root_moves, best)
+        })
+    }
+
+    /// The midgame iterations with Lazy SMP helpers on the other threads (Egaroucid's ai.hpp, with the helpers'
+    /// depths from there): each helper runs an iterative deepening of its own on the root, 1 + ctz(i + 1) plies ahead
+    /// of this thread (helper i from 0: +1, +2, +1, +3, +1, +2, +1, ...), and jumps ahead again when this thread
+    /// catches up. They fill the shared hash table, which this thread reads, and stop when its iterations end; their
+    /// results are not used. Returns what [`Searcher::midgame_iterations`] returns.
+    ///
+    /// Egaroucid restarts its helpers at each iteration of the main search and only up to depth 10 (deeper, its main
+    /// search splits with YBWC), the helpers at the main depth searching with less Multi-ProbCut. Here that did not
+    /// reach depth 14 any faster; helpers that keep searching across the main iterations did (1.5 times with 4 and 8
+    /// threads, Plans/making-stello-3-findings.md).
+    #[allow(clippy::too_many_arguments)]
+    fn lazy_smp_midgame(
+        &mut self,
+        helpers: Helpers<'a>,
+        board: &Board,
+        player: Player,
+        limits: &SearchLimits,
+        budget: TimeBudget,
+        root_moves: &mut [i32],
+        best: &mut Best,
+    ) -> Result<bool, Abort> {
+        let stop = AtomicBool::new(false);
+        let main_look = AtomicI32::new(0);
+        // The last midgame iteration: below it the solver takes over.
+        let last_look = board.empty_count() as i32 - 2 - ENDGAME_DISTANCE;
+        if last_look < 0 {
+            // No midgame iteration: the search goes straight to the solver, so no helper is started here.
+            return self.midgame_iterations(board, player, limits, budget, root_moves, best, None);
+        }
+        let (board, count, start) = (*board, root_moves.len(), *best);
+        let mut order = [0i32; MAX_MOVES];
+        order[..count].copy_from_slice(root_moves);
+        helpers.pool.scope(|scope| {
+            for i in 0..helpers.count {
+                let ahead = 1 + (i as u32 + 1).trailing_zeros() as i32;
+                let (stop, main_look) = (&stop, &main_look);
+                let started = scope.try_spawn(move |state: &mut ThreadState| {
+                    let flag = FlagStop(stop);
+                    let mut helper = helpers.searcher(state, &flag);
+                    let (mut moves, mut best) = (order, start);
+                    let mut look = 0;
+                    loop {
+                        look = look.max(main_look.load(Ordering::Relaxed) + ahead).min(last_look);
+                        helper.hash_get_height = look - 1;
+                        helper.hash_put_height = look;
+                        // Stopped or not, what it found is in the table.
+                        if helper.search_root(&board, player, look, &mut moves[..count], &mut best).is_err()
+                            || look == last_look
+                        {
+                            break;
+                        }
+                        look += 1;
+                    }
+                    helpers.finish(&mut helper);
+                });
+                if !started {
+                    break;
+                }
+            }
+
+            let _stop_helpers = StopHelpers(&stop);
+            self.midgame_iterations(&board, player, limits, budget, root_moves, best, Some(&main_look))
+        })
+    }
+
+    /// The midgame iterations; true if the search is done (no solve after them). `main_look` gets the look of each
+    /// iteration, for the helpers.
+    #[allow(clippy::too_many_arguments)]
+    fn midgame_iterations(
+        &mut self,
+        board: &Board,
+        player: Player,
+        limits: &SearchLimits,
+        budget: TimeBudget,
+        root_moves: &mut [i32],
+        best: &mut Best,
+        main_look: Option<&AtomicI32>,
+    ) -> Result<bool, Abort> {
+        let empties = board.empty_count() as i32;
+        let mut look = 0;
+        while empties - 1 - look > ENDGAME_DISTANCE {
+            if let Some(main_look) = main_look {
+                main_look.store(look, Ordering::Relaxed);
+            }
+            self.hash_get_height = look - 1;
+            self.hash_put_height = look;
+            self.search_root(board, player, look, root_moves, best)?;
+            if let Some(callback) = self.iteration_done.as_mut() {
+                callback(look + 1, best.score);
+            }
+
+            if self.stop_iterating(limits, budget, look + 1) {
+                return Ok(true);
+            }
+
+            look += 1;
+        }
+        Ok(false)
     }
 
     fn search_root(
