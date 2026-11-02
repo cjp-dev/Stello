@@ -21,7 +21,7 @@ What the work on Stello 2.0 teaches us, written down as we go: the decisions, th
 | 2 Evaluation 2.0 | done | 15 patterns × 10 stages in 0.99 MB: 5.47 discs error; +400 Elo against Stello 1 at 100 and 500 ms, +67 against Egaroucid at 100 ms, −84 at 500 ms |
 | 3 Endgame solver | done | FFO #40–49 in 47.1 s (Stello 1 369 s, Egaroucid port 25.6 s); in games as strong as the old solver (51.1 % at 500 ms) |
 | 4 Release 2.0 in the apps | done | The engine is Stello 2 with a book recalculated by it; with books on it scores 88.9 % (+362) against Stello 1 at 500 ms, and the new book is as good as the old one (49.2 %); in the browser 22 empty squares solve in 0.6–1.3 s (Stello 1: 1.1–4.5 s) |
-| 5 Search improvements (2.x) | in progress (branch `feature/stello-v2.x`) | Item 1 (time use): no gain, the 2/3 rule stays. Item 2: PVS in every node +28/+30 Elo, kept; a table with both bounds and two moves gave nothing; item 3 Multi-ProbCut +120 at 500 ms; item 4 ordering and ETC kept; item 5 rejected; the book recalculated with 2.x: 51.7 % against the 2.0 book; item 6 (book exit check) rejected |
+| 5 Search improvements (final 2.0) | in progress (branch `feature/stello-v2.x`) | Item 1 (time use): no gain, the 2/3 rule stays. Item 2: PVS in every node +28/+30 Elo, kept; a table with both bounds and two moves gave nothing; item 3 Multi-ProbCut +120 at 500 ms; item 4 ordering and ETC kept; item 5 rejected; the book recalculated with the phase 5 search: 51.7 % against the first 2.0 release's book; item 6 (book exit check) rejected |
 
 ## Stello 1, the frozen baseline
 
@@ -209,8 +209,8 @@ The chosen model is `Stello.Net/Book/stello-eval.bin` ([report](benchmark-result
 - **The book:**
   - `OpeningBook.EngineVersion` is 3, so `recalc` searches every heuristic leaf again (8,397 of 11,613 leaves; the 3,216 exact ones are kept). The heuristic values are in 1/100 disc and the solved ones stay ±(32600 + discs). A first try with 30 s per position already reached depth 17–18, as deep as Stello 1's last recalculation in 60 s; the run uses 60 s, like Stello 1's.
   - The recalculation ran on a second computer (Ryzen 7 7800X3D, 8 workers, about 16 hours), so it did not disturb timed matches here. 11,322 values changed (5,634 leaves, 5,688 backed up), 219 more leaves were solved exactly (3,435 in all) and 1,307 positions got another first move. White's replies to d3: c5 −0.25, c3 −0.62, e3 −1.50 discs. The main line from the start is 15 moves, as before up to g5. `verify` passes.
-  - One leaf had −65 discs, as the midgame evaluation was not capped; Stello 2.x caps it at ±64.
-  - **Flaw found afterwards:** 2,718 leaves carry the C++ book's `INEXACT` flag, imported as win/loss/draw, with evaluation-sized values (e.g. −18). `recalc` kept every win/loss/draw value it could not solve, so these kept their C++-era values in this recalculation too (`WinLossDraw -> WinLossDraw 2,744 (0)`). Fixed on `feature/stello-v2.x` (d21e42f): only values beyond ±32,600 are kept. The 2.x recalculation replaces them.
+  - One leaf had −65 discs, as the midgame evaluation was not capped; the final 2.0 caps it at ±64.
+  - **Flaw found afterwards:** 2,718 leaves carry the C++ book's `INEXACT` flag, imported as win/loss/draw, with evaluation-sized values (e.g. −18). `recalc` kept every win/loss/draw value it could not solve, so these kept their C++-era values in this recalculation too (`WinLossDraw -> WinLossDraw 2,744 (0)`). Fixed on `feature/stello-v2.x` (d21e42f): only values beyond ±32,600 are kept. The second recalculation replaces them.
   - `Book/opening-book-stello1.txt` keeps the old book for Stello 1's match sides (`engine=stello-v1,book=on`).
 - **The GUI** shows heuristic scores in discs with one decimal ("+1.2 discs"). The About box describes the new evaluation and solver and credits Egaroucid. Its version text already said "Stello Version 2.0" (from the C# port) and is unchanged.
 - **The book-learning worked example** (chapter 11, `BookLearnerTests`) has new values: with Stello 2, c5 (−62) stays ahead of e3 (−275) at the root.
@@ -246,7 +246,7 @@ All scores are the same. In the browser Stello 2 runs at 8–22 M nodes per seco
 
 ## Search improvements (phase 5)
 
-Phase 5 runs on `feature/stello-v2.x`, so the 2.0 release keeps exactly the engine that recalculated the book. Each change is behind a `SearchOptions` switch and plays 1,180 games at 100 ms per move against the current Stello 2. To be kept it needs a lower bound above 50 %, confirmed at 500 ms.
+Phase 5 runs on `feature/stello-v2.x`, so the first 2.0 release keeps exactly the engine that recalculated the book. Each change is behind a `SearchOptions` switch and plays 1,180 games at 100 ms per move against the current Stello 2. To be kept it needs a lower bound above 50 %, confirmed at 500 ms.
 
 ### Item 1: time use
 
@@ -429,16 +429,16 @@ Matches, 1,180 games each:
 - **The clog search was not tried.** It finds forced early game ends, mostly wipeouts. Egaroucid needs it because its selective endgame can miss them. With no selective endgame there is nothing for it to fix, and wipeouts are rare in these games.
 - **Kept:** the trainer's `mpc-end` command, with the single-move fix in both commands, for a later try, for example with Egaroucid's staged levels (74 % … 100 %) or at longer time controls.
 
-### The 2.x opening book (2026-11-02)
+### The book recalculated again for the final 2.0 (2026-11-02)
 
-The user recalculated the book on the other PC with the 2.x search: engine version 4, 60 s per position, 8 workers, about 14 hours (merged as abb5160).
+The user recalculated the book on the other PC with the phase 5 search: engine version 4, 60 s per position, 8 workers, about 14 hours (merged as abb5160).
 
 - **The searches went deeper:** 22–29 plies, mostly 24–26, against 17–19 with the 2.0 search.
 - **Every leaf without a proof was searched,** including the 2,718 old `WinLossDraw` leaves that the 2.0 recalculation had kept (the bug fixed in d21e42f).
 - **What changed:** 15,776 values. 606 heuristic leaves became exact and 595 became proven wins or losses, and the first move changed in 1,694 positions.
 - **The values look right.** The Egaroucid port searched sampled leaves at level 21; the table gives each book's average distance from its scores.
 
-  | Leaves | 2.0 book | 2.x book |
+  | Leaves | first 2.0 book | final 2.0 book |
   |---|---:|---:|
   | 200 random leaves, heuristic in both books | 2.19 discs (correlation 0.93) | 2.02 discs (0.94) |
   | 100 random former stale `WinLossDraw` leaves | 3.80 discs (0.80) | 2.02 discs (0.93) |
@@ -448,7 +448,7 @@ The user recalculated the book on the other PC with the 2.x search: engine versi
 - **The opening:** the replies to d3 are c5 −0.87, c3 −2.62 and e3 −7.75. Egaroucid's level 21 gives 0, 0 and −6.
   - The main line now leaves the tiger at move 3: c5 rather than c3 after f5 d6, rated +0.87 against +0.75.
   - It follows "Rotating Flat (Kling Continuation)" for 18 moves, out of 19 in all.
-- **In play** (books on, 500 ms per move, 1,180 games from `starts.txt`), the 2.x book against the 2.0 book scored 51.7 % (49.7–53.6), +11 Elo. That is not significant, but not worse ([result](benchmark-results/match_v2x-book2x-vs-book20-500ms.md)). As in phase 4, the start positions at ply 10–12 leave the book little room. Item 6, checking the moves outside the book when leaving it, comes next.
+- **In play** (books on, 500 ms per move, 1,180 games from `starts.txt`), the final book against the first 2.0 release's book scored 51.7 % (49.7–53.6), +11 Elo. That is not significant, but not worse ([result](benchmark-results/match_v2x-book2x-vs-book20-500ms.md)). As in phase 4, the start positions at ply 10–12 leave the book little room. Item 6, checking the moves outside the book when leaving it, comes next.
 
 ### Side experiment: a larger evaluation for the desktop (2026-11-01)
 
@@ -485,7 +485,7 @@ A book move costs no time. So in a book position, `ComputerPlayer` used that mov
 - **Two modes:**
   - `exit`: only when the book move leads out of the book;
   - `all`: in every book position.
-- **Matches:** against the default, both with the 2.x book, 100 ms per move, 1,180 games from `starts.txt`.
+- **Matches:** against the default, both with the final book, 100 ms per move, 1,180 games from `starts.txt`.
 
 | Variant | Score (95 %) | Elo |
 |---|---|---:|
@@ -519,8 +519,8 @@ All on 1 thread, on the same Intel i7-12850HX laptop VM as the port's measuremen
 | Match against Stello 1, 100 / 500 ms per move, no books | — | 90.9 % (+400) / 90.6 % (+393) | — | phase 2, `stello-eval.bin` ([100 ms](benchmark-results/match_v2-p2-eval-vs-v1-100ms.md), [500 ms](benchmark-results/match_v2-p2-eval-vs-v1-500ms.md)) |
 | Stello 2 against Egaroucid, 100 / 500 ms per move | — | 59.5 % (+67) / 38.2 % (−84) | — | phase 2 ([100 ms](benchmark-results/match_v2-p2-eval-vs-egaroucid-100ms.md), [500 ms](benchmark-results/match_v2-p2-eval-vs-egaroucid-500ms.md)) |
 | `mid-quality`, loss in discs at 50 / 200 / 1000 ms | 1.59 / 1.59 / 1.39 | 1.33 / 0.91 / 0.68 | 1.18 / 0.94 / 0.54 | phase 2 ([result](benchmark-results/v2-p2-mid-quality.md)) |
-| Stello 2.x (phase 5 items 1–4) against Egaroucid, 100 / 500 / 2000 ms per move, no books | — | 76.4 % (+204) / 57.7 % (55.4–59.9, +54) / 40.8 % (38.7–43.0, −64) | — | phase 5; depth 13.9 / 16.8 / 19.2 against Egaroucid's 8.7 / 13.4 / 21.5 nominal; first solve at 2 s: 24.0 empties against 22.9. Egaroucid's longest move at 100 ms took 590 ms. The engines are even somewhere between 500 ms and 2 s; Egaroucid's better evaluation pays off with depth. At 2 s Stello's 2^19-entry table (Egaroucid: 2^21) may also be too small ([100 ms](benchmark-results/match_v2x-p5-item4-vs-egaroucid-100ms.md), [500 ms](benchmark-results/match_v2x-p5-item4-vs-egaroucid-500ms.md), [2000 ms](benchmark-results/match_v2x-p5-item4-vs-egaroucid-2000ms.md)) |
-| Stello 2.x against itself with twice the time, no books | — | 200 against 100 ms: 61.8 % (59.5–64.1), +84; 1 s against 500 ms: 55.4 % (53.3–57.6), +38 | — | what a 2× faster engine is worth; depth +1.4 / +1.3 plies ([100/200](benchmark-results/match_v2x-timeodds-100-vs-200ms.md), [500/1000](benchmark-results/match_v2x-timeodds-500-vs-1000ms.md)). The C++/C# comparison is in [cpp-vs-csharp-speed.md](cpp-vs-csharp-speed.md) |
+| Stello 2.0 after phase 5 items 1–4 against Egaroucid, 100 / 500 / 2000 ms per move, no books | — | 76.4 % (+204) / 57.7 % (55.4–59.9, +54) / 40.8 % (38.7–43.0, −64) | — | phase 5; depth 13.9 / 16.8 / 19.2 against Egaroucid's 8.7 / 13.4 / 21.5 nominal; first solve at 2 s: 24.0 empties against 22.9. Egaroucid's longest move at 100 ms took 590 ms. The engines are even somewhere between 500 ms and 2 s; Egaroucid's better evaluation pays off with depth. At 2 s Stello's 2^19-entry table (Egaroucid: 2^21) may also be too small ([100 ms](benchmark-results/match_v2x-p5-item4-vs-egaroucid-100ms.md), [500 ms](benchmark-results/match_v2x-p5-item4-vs-egaroucid-500ms.md), [2000 ms](benchmark-results/match_v2x-p5-item4-vs-egaroucid-2000ms.md)) |
+| Stello 2.0 (phase 5) against itself with twice the time, no books | — | 200 against 100 ms: 61.8 % (59.5–64.1), +84; 1 s against 500 ms: 55.4 % (53.3–57.6), +38 | — | what a 2× faster engine is worth; depth +1.4 / +1.3 plies ([100/200](benchmark-results/match_v2x-timeodds-100-vs-200ms.md), [500/1000](benchmark-results/match_v2x-timeodds-500-vs-1000ms.md)). The C++/C# comparison is in [cpp-vs-csharp-speed.md](cpp-vs-csharp-speed.md) |
 
 ## Ideas for later
 

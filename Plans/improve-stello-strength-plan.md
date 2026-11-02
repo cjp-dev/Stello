@@ -21,7 +21,7 @@ The user's order:
 All three must be able to play matches against each other.
 
 **Decisions (user):**
-- 2.0 replaces the engine in the WPF and web apps once evaluation and solver pass their gates. The search work then follows as 2.x releases.
+- 2.0 replaces the engine in the WPF and web apps once evaluation and solver pass their gates. The search work then follows. It became part of 2.0: the first 2.0 release (2026-11-01) had the new evaluation, solver and book, and the final 2.0 (2026-11-02) added the phase 5 search (the user's numbering: Stello C++ → Stello .NET 1.0 → Stello .NET 2.0).
 - The opening book is recalculated with v2, so its values are v2 scores in discs.
 - The port's YBWC phase (6) is postponed and can be resumed later.
 
@@ -144,7 +144,7 @@ All three must be able to play matches against each other.
 - **Docs:** a chapter `docs/brain/21-stello-2-evaluation-and-solver.md`, plus updates to 01, 18 and README.
 - Fast-forward main, push and check the deploy run.
 
-## Phase 5: Search improvements (2.x)
+## Phase 5: Search improvements (final 2.0)
 Each change is a separate commit behind a `SearchOptions` flag and is measured on its own. The order follows the findings' expected gain:
 1. **Time use:** no new iteration after 2/3 of the time, so Stello uses 313 of 500 ms. Use a cost estimate of the next iteration instead.
 2. PVS throughout, and a transposition table with bounds and two moves, cleared by importance instead of two tables.
@@ -157,7 +157,7 @@ Each change is a separate commit behind a `SearchOptions` flag and is measured o
 - **Gate per change:**
   - a 1,180-game match against the previous best v2 at 100 ms with a lower bound above 50 %, confirmed at 500 ms;
   - a speed-only change may pass on `mid-bench` / `solve-bench --compare` instead, with no match regression.
-- Kept changes become the default and their flags are removed; 2.x releases follow phase 4's release steps.
+- Kept changes become the default and their flags are removed; the release follows phase 4's release steps.
 
 ## Working rules (unchanged)
 - **Git:**
@@ -212,7 +212,7 @@ Each change is a separate commit behind a `SearchOptions` flag and is measured o
   - The engine is Stello 2 (720f224); the GUI shows scores in discs (5414efb); docs chapter 21 and updates (689bfbf).
   - The book was recalculated with Stello 2 on the second computer (60 s per position, 8 workers, about 16 h): 11,322 values changed, 1,307 positions got another first move, `verify` passes (153baa2). `book-file=` lets a match side use another book (b8bc973).
   - Gate: with books on at 500 ms, Stello 2 + new book scored 88.9 % (+362) against Stello 1 + its book, and 49.2 % (47.3–51.2 %) against Stello 2 + the old book, not worse.
-  - Found afterwards: 2,718 leaves marked win/loss/draw by the C++ book kept their old values; fixed for the 2.x recalculation (d21e42f on `feature/stello-v2.x`).
+  - Found afterwards: 2,718 leaves marked win/loss/draw by the C++ book kept their old values; fixed for the second recalculation (d21e42f on `feature/stello-v2.x`).
   - Live site after the deploy (Playwright, headless Chromium): the About box shows the 2.0 text; the computer played 15 book moves, then searched depth 14–15 in 1 s with scores in discs; Move Now during a 60 s search moved within 0.11 s (with the browser driver's delay); 22 empty squares solved in 0.59 s (+12 discs). No page errors.
 - **Phase 5: in progress, on `feature/stello-v2.x` (based on `feature/stello-v2`).** Details are in the findings.
   - Item 1, time use: no variant passed (soft limit 80–100 %: +4 to +14, not significant; predicting the next iteration: −25 to −37). The 2/3 rule stays; `SoftTimePercent` (`soft-pct=`) stays as a switch.
@@ -221,7 +221,7 @@ Each change is a separate commit behind a `SearchOptions` flag and is measured o
   - Item 3, Multi-ProbCut with an error model fitted by the trainer's `mpc` command (11,700 positions to depth 13): kept with t = 1.0. Against the old selective search: 67.3 % (+126) at 100 ms and 66.6 % (+120) at 500 ms, and 52.2 % against t = 1.3 at 500 ms. Depth at 500 ms 13.6 → 16.6. The old selective search and its switches are removed; `mpc=` stays to retune t.
   - Item 4, ordering and midgame ETC: kept the evaluation ordering from look 4 (Egaroucid's depth-0 key, no killers) with ETC from look 4. 3.9 % fewer nodes at depth 12; 53.3 % (+23) at 100 ms and 51.9 % (49.9–53.9, +13) at 500 ms, so it was kept as a speed change. IID and ordering by a shallow search were dropped. `mid-bench --side` counts nodes with any side's switches.
   - Item 5, a selective endgame (Multi-ProbCut in the solver from 14 empties, error model from the trainer's new `mpc-end` command) and the solve start: no variant passed (selective pass −14 to −1 Elo; solve start 5–9 squares: −10 to +7). The engine code was removed; `mpc-end` stays. The clog search was not tried.
-  - The 2.x book (before item 6): the user recalculated the book with the 2.x search (`OpeningBook.EngineVersion` 4, 60 s per position, depths 22–29; merged as abb5160). The 2,718 stale win/loss/draw leaves were searched too, after the fix in d21e42f. With books on at 500 ms, the new book against the 2.0 book: 51.7 % (49.7–53.6), +11 Elo, so not worse.
+  - The final 2.0 book (before item 6): the user recalculated the book with the phase 5 search (`OpeningBook.EngineVersion` 4, 60 s per position, depths 22–29; merged as abb5160). The 2,718 stale win/loss/draw leaves were searched too, after the fix in d21e42f. With books on at 500 ms, the new book against the first 2.0 release's book: 51.7 % (49.7–53.6), +11 Elo, so not worse.
   - Item 6, checking the moves outside the book (a book move's time spent on the moves the book lacks, played if 1 disc better): `exit` 49.6 % (−3), `all` 50.4 % (+3) at 100 ms with books on. Only 7–12 % of the games had a switched move, because the games start at ply 10–12. Rejected; the code is in 124cf2d and was removed.
   - Side experiment, a larger desktop evaluation (9b1ee56): the best model has 5.23 discs test error in 8.3 MB, but only +9 Elo (not significant) against the shipped one at 500 ms, because the search ran 17 % fewer nodes per second. Not pursued.
   - Against Egaroucid after item 4: 76.4 % (+204) at 100 ms, 57.7 % (+54) at 500 ms and 40.8 % (−64) at 2 s (phase 2: +67 and −84 at 100 and 500 ms).
