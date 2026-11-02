@@ -130,22 +130,26 @@ pub fn square_scores(board: &Board, player: Player) -> [i8; 64] {
     scores
 }
 
-/// Stable insertion sort, highest key first (as the C++ linear sort). C#: `MoveOrdering.SortDescending`.
+/// Stable sort, highest key first (as the C++ linear sort). C#: `MoveOrdering.SortDescending`, an insertion sort.
+///
+/// Each move goes straight to its place in the stable order: the number of keys that are higher, or equal and
+/// before it. The comparisons have no branches to mispredict, which pays for their n² count on short move lists.
 #[inline]
 pub fn sort_descending(moves: &mut [i32], keys: &mut [i32]) {
-    for i in 1..moves.len() {
-        let mv = moves[i];
-        let key = keys[i];
-        let mut j = i;
-        while j > 0 && keys[j - 1] < key {
-            moves[j] = moves[j - 1];
-            keys[j] = keys[j - 1];
-            j -= 1;
-        }
-
-        moves[j] = mv;
-        keys[j] = key;
+    let count = moves.len();
+    debug_assert!(count <= 64 && keys.len() == count);
+    let keys_in = &keys[..count];
+    let mut sorted_moves = [0i32; 64];
+    let mut sorted_keys = [0i32; 64];
+    for (i, (&mv, &key)) in moves.iter().zip(keys_in).enumerate() {
+        let before = keys_in[..i].iter().map(|&other| (other >= key) as usize).sum::<usize>();
+        let after = keys_in[i + 1..].iter().map(|&other| (other > key) as usize).sum::<usize>();
+        sorted_moves[before + after] = mv;
+        sorted_keys[before + after] = key;
     }
+
+    moves.copy_from_slice(&sorted_moves[..count]);
+    keys.copy_from_slice(&sorted_keys[..count]);
 }
 
 #[inline]

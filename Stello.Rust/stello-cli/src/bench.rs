@@ -96,6 +96,13 @@ fn number<T: std::str::FromStr + PartialOrd + std::fmt::Display>(
 pub(crate) fn engine_options(options: &Options) -> Result<(SearchOptions, String), String> {
     let mut search = SearchOptions::default();
     let mut text = String::new();
+    // Not in the report's text: the results are the same either way.
+    match options.text("cpu") {
+        None | Some("auto") => {}
+        Some("portable") => stello_core::cpu::set_portable_only(true),
+        Some(_) => return Err("--cpu must be auto or portable.".to_string()),
+    }
+
     if let Some(path) = options.text("eval").filter(|&p| p != "default") {
         let weights =
             EvalWeights::load(path).map_err(|e| format!("{path}: {e}"))?.map_err(|e| format!("{path}: {e}"))?;
@@ -134,7 +141,7 @@ fn positions_path(options: &Options, default: &str) -> Result<PathBuf, String> {
 }
 
 pub(crate) fn solve_bench(args: &[String]) -> Result<(), String> {
-    let options = Options::parse(args, &["positions", "from", "to", "passes", "hash-bits", "eval", "out"])?;
+    let options = Options::parse(args, &["positions", "from", "to", "passes", "hash-bits", "eval", "out", "cpu"])?;
     let all = load_positions(&positions_path(&options, "ffo-40-59.txt")?)?;
     let from = number(&options, "from", 40, 0, i32::MAX)?;
     let to = number(&options, "to", 44, 0, i32::MAX)?;
@@ -191,7 +198,7 @@ pub(crate) fn solve_bench(args: &[String]) -> Result<(), String> {
 pub(crate) fn mid_bench(args: &[String]) -> Result<(), String> {
     let options = Options::parse(
         args,
-        &["positions", "depth", "passes", "hash-bits", "eval", "selective", "probcut-pct", "out"],
+        &["positions", "depth", "passes", "hash-bits", "eval", "selective", "probcut-pct", "out", "cpu"],
     )?;
     let positions = load_positions(&positions_path(&options, "midgame.txt")?)?;
     let depth = number(&options, "depth", 10, 1, 60)?;

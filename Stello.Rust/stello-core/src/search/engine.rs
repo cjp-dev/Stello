@@ -557,6 +557,9 @@ impl Searcher<'_> {
         let hash_get = ply <= self.hash_get_height;
         let hash_put = ply <= self.hash_put_height;
         let tag = player.index() as i32;
+        if hash_put && !hash_get {
+            self.midgame_table.prefetch(own, other, tag);
+        }
 
         if hash_get
             && let Some(entry) = self.midgame_table.get(own, other, tag)

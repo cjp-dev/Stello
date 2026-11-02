@@ -13,6 +13,7 @@
 
 pub mod bits;
 pub mod board;
+pub mod cpu;
 pub mod endgame;
 pub mod eval;
 pub mod search;

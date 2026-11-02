@@ -29,18 +29,11 @@ pub fn legal_moves(own: u64, opponent: u64) -> u64 {
 }
 
 /// The discs `own` flips by playing `square` (0 if none). The square is not checked for being empty.
-/// C#: `Bitboards.Flips`.
+/// C#: `Bitboards.Flips`, which walks each of the eight rays square by square; this is the same function computed
+/// as the endgame's [`crate::endgame::bits::flips`] does, with the rays as masks.
 #[inline]
 pub fn flips(own: u64, opponent: u64, square: u32) -> u64 {
-    let bit = 1u64 << square;
-    ray_left(own, opponent, bit, 1, NOT_COLUMN_A)
-        | ray_left(own, opponent, bit, 7, NOT_COLUMN_H)
-        | ray_left(own, opponent, bit, 8, u64::MAX)
-        | ray_left(own, opponent, bit, 9, NOT_COLUMN_A)
-        | ray_right(own, opponent, bit, 1, NOT_COLUMN_H)
-        | ray_right(own, opponent, bit, 7, NOT_COLUMN_A)
-        | ray_right(own, opponent, bit, 8, u64::MAX)
-        | ray_right(own, opponent, bit, 9, NOT_COLUMN_H)
+    crate::endgame::bits::flips(own, opponent, square)
 }
 
 /// The number of (empty square, direction) pairs where the neighbour is an opponent disc (C++: countmov potential).
@@ -78,28 +71,4 @@ fn scan_right(own: u64, mask: u64, shift: u32) -> u64 {
     run |= mask & (run >> shift);
     run |= mask & (run >> shift);
     run >> shift
-}
-
-#[inline(always)]
-fn ray_left(own: u64, opponent: u64, bit: u64, shift: u32, mask: u64) -> u64 {
-    let mut line = 0;
-    let mut next = (bit << shift) & mask;
-    while next & opponent != 0 {
-        line |= next;
-        next = (next << shift) & mask;
-    }
-
-    if next & own != 0 { line } else { 0 }
-}
-
-#[inline(always)]
-fn ray_right(own: u64, opponent: u64, bit: u64, shift: u32, mask: u64) -> u64 {
-    let mut line = 0;
-    let mut next = (bit >> shift) & mask;
-    while next & opponent != 0 {
-        line |= next;
-        next = (next >> shift) & mask;
-    }
-
-    if next & own != 0 { line } else { 0 }
 }

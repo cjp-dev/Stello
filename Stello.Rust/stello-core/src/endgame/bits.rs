@@ -97,13 +97,11 @@ pub fn flips(own: u64, opponent: u64, square: u32) -> u64 {
     }
 
     for &ray in &rays[4..] {
-        let outflank = ray & not_opponent;
-        if outflank != 0 {
-            let top = 1u64 << (63 - outflank.leading_zeros());
-            if top & own != 0 {
-                flipped |= ray & !((top << 1).wrapping_sub(1));
-            }
-        }
+        // The highest square of the ray that is not the opponent's, without branches: if there is none, `| 1` makes
+        // `top` square a1, and then `top & ray & own` is 0 (a1 is on the ray only as an opponent's disc).
+        let top = 0x8000_0000_0000_0000u64 >> (ray & not_opponent | 1).leading_zeros();
+        let outflanked = 0u64.wrapping_sub((top & ray & own != 0) as u64);
+        flipped |= ray & (top.wrapping_neg() << 1) & outflanked;
     }
 
     flipped

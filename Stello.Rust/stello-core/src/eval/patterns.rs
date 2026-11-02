@@ -1,6 +1,6 @@
 //! Pattern shapes and pattern sets. C#: `Stello.Engine.V2.Evaluation.PatternShape` and `PatternSet` (Patterns.cs).
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ops::Range;
 use std::sync::OnceLock;
 
@@ -293,6 +293,8 @@ pub struct PatternSet {
     symmetries: Vec<usize>,
     /// The parts of all features in feature order, so [`PatternSet::indices`] walks one array.
     parts: Vec<Part>,
+    /// The features read straight from the position, for [`PatternSet::sum_weights`].
+    direct: Direct,
 }
 
 impl PatternSet {
@@ -318,7 +320,8 @@ impl PatternSet {
         let mut symmetries: Vec<usize> = features.iter().map(|f| f.symmetry).collect();
         symmetries.sort_unstable();
         symmetries.dedup();
-        PatternSet { name: name.to_string(), shapes, offsets, raw_size, features, symmetries, parts }
+        let direct = Direct::new(&shapes, &features);
+        PatternSet { name: name.to_string(), shapes, offsets, raw_size, features, symmetries, parts, direct }
     }
 
     /// C#: `PatternSet.Name`.
@@ -446,22 +449,288 @@ impl PatternSet {
     /// The sum of `weights` (one stage, by raw index plus offset) over the indices of all features: the fused form of
     /// [`PatternSet::indices`] and the sum in C#'s `EvalWeights.Evaluate`. Integer addition, so the order does not
     /// change the result.
+    ///
+    /// The features are read straight from the position, not from its turned copies: with BMI2 `pext` where it is
+    /// fast ([`crate::cpu::fast_pext`]), otherwise with shifts and multiplications. Both give C#'s indices exactly.
     #[inline]
     pub(crate) fn sum_weights(&self, own: u64, opponent: u64, weights: &[i16]) -> i32 {
-        let (turned_own, turned_opponent) = self.turned(own, opponent);
-        let mut sum = 0i32;
-        for feature in &self.features {
-            let (o, p) = (turned_own[feature.symmetry], turned_opponent[feature.symmetry]);
-            let mut index = feature.offset;
-            for part in &self.parts[feature.parts.clone()] {
-                index += part.index(o, p);
+        // Every index is below `raw_size` by construction, which the unchecked reads rely on.
+        assert!(weights.len() == self.raw_size, "one stage's weights");
+        #[cfg(target_arch = "x86_64")]
+        if crate::cpu::fast_pext() {
+            // SAFETY: the processor has BMI2 (checked by fast_pext).
+            return unsafe { self.direct.sum_pext(own, opponent, weights) };
+        }
+
+        self.direct.sum_portable(own, opponent, weights)
+    }
+}
+
+/// A part of a feature read straight from the untouched position: the squares of one row (a shift), one column or
+/// one diagonal (gathered into the top byte by a multiplication). The byte is turned into base-3 digits by a table
+/// in [`Direct::digits`].
+#[derive(Clone, Copy, Debug)]
+struct DirectPart {
+    mask: u64,
+    multiplier: u64,
+    shift: u32,
+    /// Where the part's 256 digit values start in [`Direct::digits`].
+    table: u32,
+}
+
+/// The features with the same number of parts: their offsets, and their parts one feature after the other.
+#[derive(Clone, Debug)]
+struct PartGroup {
+    count: usize,
+    offsets: Vec<u32>,
+    parts: Vec<DirectPart>,
+}
+
+/// A feature for BMI2 (x86-64 only): `pext` gathers its squares from the position in board order, and a table of 2^squares
+/// entries in [`Direct::pext_tables`] turns them into base-3 digits.
+#[cfg(target_arch = "x86_64")]
+#[derive(Clone, Copy, Debug)]
+struct PextFeature {
+    mask: u64,
+    table: u32,
+    offset: u32,
+}
+
+/// The features of a [`PatternSet`] read without turning the position. A feature's squares on the turned position
+/// are other squares of the original one, so each feature gets its own masks and digit tables; features with the same
+/// tables share them.
+#[derive(Clone, Debug)]
+struct Direct {
+    /// The features by their number of parts, so that each group's loop has a fixed length.
+    groups: Vec<PartGroup>,
+    digits: Vec<u16>,
+    #[cfg(target_arch = "x86_64")]
+    pext: Vec<PextFeature>,
+    #[cfg(target_arch = "x86_64")]
+    pext_tables: Vec<u16>,
+}
+
+impl Direct {
+    fn new(shapes: &[PatternShape], features: &[Feature]) -> Direct {
+        let mut direct = Direct {
+            groups: Vec::new(),
+            digits: Vec::new(),
+            #[cfg(target_arch = "x86_64")]
+            pext: Vec::new(),
+            #[cfg(target_arch = "x86_64")]
+            pext_tables: Vec::new(),
+        };
+        let mut digit_tables: HashMap<Vec<u16>, u32> = HashMap::new();
+        #[cfg(target_arch = "x86_64")]
+        let mut pext_tables: HashMap<Vec<u16>, u32> = HashMap::new();
+        let share = |pool: &mut Vec<u16>, tables: &mut HashMap<Vec<u16>, u32>, table: Vec<u16>| -> u32 {
+            *tables.entry(table).or_insert_with_key(|table| {
+                let start = pool.len() as u32;
+                pool.extend_from_slice(table);
+                start
+            })
+        };
+
+        for feature in features {
+            let shape = &shapes[feature.shape];
+            // The square of the original position that lands on each of the pattern's squares.
+            let original: Vec<u32> = shape
+                .squares
+                .iter()
+                .map(|&target| (0..64).find(|&q| symmetry::map_square(q, feature.symmetry) == target).unwrap())
+                .collect();
+            let power = |square: u32| 3u16.pow(original.iter().position(|&q| q == square).unwrap() as u32);
+
+            let groups = direct_groups(&original);
+            let at = match direct.groups.iter().position(|g| g.count == groups.len()) {
+                Some(at) => at,
+                None => {
+                    direct.groups.push(PartGroup { count: groups.len(), offsets: Vec::new(), parts: Vec::new() });
+                    direct.groups.len() - 1
+                }
+            };
+            direct.groups[at].offsets.push(feature.offset);
+            for group in groups {
+                let (mask, multiplier, shift) = line_extraction(&group);
+                let extract = |discs: u64| ((discs & mask).wrapping_mul(multiplier) >> shift & 0xFF) as usize;
+                let mut table = vec![0u16; 256];
+                for subset in 0..1u32 << group.len() {
+                    let (mut discs, mut digits) = (0u64, 0u16);
+                    for (i, &square) in group.iter().enumerate() {
+                        if subset & (1 << i) != 0 {
+                            discs |= 1u64 << square;
+                            digits += power(square);
+                        }
+                    }
+
+                    table[extract(discs)] = digits;
+                }
+
+                let table = share(&mut direct.digits, &mut digit_tables, table);
+                direct.groups[at].parts.push(DirectPart { mask, multiplier, shift, table });
             }
 
-            sum += weights[index as usize] as i32;
+            // pext: bit k of the gathered value is the k-th lowest square of the mask.
+            #[cfg(target_arch = "x86_64")]
+            {
+                let mask = original.iter().fold(0u64, |m, &q| m | (1u64 << q));
+                let mut sorted = original.clone();
+                sorted.sort_unstable();
+                let table: Vec<u16> = (0..1usize << sorted.len())
+                    .map(|bits| (0..sorted.len()).filter(|k| bits & (1 << k) != 0).map(|k| power(sorted[k])).sum())
+                    .collect();
+                let table = share(&mut direct.pext_tables, &mut pext_tables, table);
+                direct.pext.push(PextFeature { mask, table, offset: feature.offset });
+            }
+        }
+
+        direct
+    }
+
+    /// The portable form of [`PatternSet::sum_weights`] (also WebAssembly's).
+    #[inline]
+    fn sum_portable(&self, own: u64, opponent: u64, weights: &[i16]) -> i32 {
+        let mut sum = 0i32;
+        for group in &self.groups {
+            sum += match group.count {
+                1 => self.sum_group::<1>(group, own, opponent, weights),
+                2 => self.sum_group::<2>(group, own, opponent, weights),
+                3 => self.sum_group::<3>(group, own, opponent, weights),
+                4 => self.sum_group::<4>(group, own, opponent, weights),
+                _ => self.sum_any(group, own, opponent, weights),
+            };
         }
 
         sum
     }
+
+    #[inline(always)]
+    fn sum_group<const N: usize>(&self, group: &PartGroup, own: u64, opponent: u64, weights: &[i16]) -> i32 {
+        let mut sum = 0i32;
+        for (parts, &offset) in group.parts.as_chunks::<N>().0.iter().zip(&group.offsets) {
+            let mut index = offset;
+            for part in parts {
+                index += self.part_digits(part, own, opponent);
+            }
+
+            // SAFETY: a feature's index is below its shape's offset plus size, at most raw_size = weights.len().
+            sum += unsafe { *weights.get_unchecked(index as usize) } as i32;
+        }
+
+        sum
+    }
+
+    #[inline(never)]
+    fn sum_any(&self, group: &PartGroup, own: u64, opponent: u64, weights: &[i16]) -> i32 {
+        let mut sum = 0i32;
+        for (parts, &offset) in group.parts.chunks_exact(group.count).zip(&group.offsets) {
+            let index = offset + parts.iter().map(|part| self.part_digits(part, own, opponent)).sum::<u32>();
+            // SAFETY: as in sum_group.
+            sum += unsafe { *weights.get_unchecked(index as usize) } as i32;
+        }
+
+        sum
+    }
+
+    /// The base-3 digits of one part: own discs count 1, the opponent's 2.
+    #[inline(always)]
+    fn part_digits(&self, part: &DirectPart, own: u64, opponent: u64) -> u32 {
+        let own_byte = ((own & part.mask).wrapping_mul(part.multiplier) >> part.shift) & 0xFF;
+        let opponent_byte = ((opponent & part.mask).wrapping_mul(part.multiplier) >> part.shift) & 0xFF;
+        // SAFETY: every part's table has 256 entries in `digits`.
+        let (own_digits, opponent_digits) = unsafe {
+            (
+                *self.digits.get_unchecked(part.table as usize + own_byte as usize),
+                *self.digits.get_unchecked(part.table as usize + opponent_byte as usize),
+            )
+        };
+        own_digits as u32 + 2 * opponent_digits as u32
+    }
+
+    /// [`PatternSet::sum_weights`] with BMI2 `pext`.
+    #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "bmi2")]
+    fn sum_pext(&self, own: u64, opponent: u64, weights: &[i16]) -> i32 {
+        use std::arch::x86_64::_pext_u64;
+
+        let mut sum = 0i32;
+        for feature in &self.pext {
+            let table = feature.table as usize;
+            // SAFETY: a feature's table has 2^(squares in its mask) entries, and pext returns fewer bits than that;
+            // its index is below raw_size = weights.len() as in sum_portable.
+            unsafe {
+                let own_digits = *self.pext_tables.get_unchecked(table + _pext_u64(own, feature.mask) as usize);
+                let opponent_digits =
+                    *self.pext_tables.get_unchecked(table + _pext_u64(opponent, feature.mask) as usize);
+                let index = feature.offset + own_digits as u32 + 2 * opponent_digits as u32;
+                sum += *weights.get_unchecked(index as usize) as i32;
+            }
+        }
+
+        sum
+    }
+}
+
+/// The parts of a feature on the original position. Squares in different columns can share a part (one
+/// multiplication adds up the rows, see [`line_extraction`]), and so can squares of one column; a feature gets the
+/// fewer parts of the two ways (columns on a tie). Within a part the squares keep the feature's order.
+fn direct_groups(original: &[u32]) -> Vec<Vec<u32>> {
+    let column_of = |s: u32| s & 7;
+    // Each square goes into the first part without a square of its column.
+    let mut across: Vec<Vec<u32>> = Vec::new();
+    for &square in original {
+        match across.iter_mut().find(|group| group.iter().all(|&s| column_of(s) != column_of(square))) {
+            Some(group) => group.push(square),
+            None => across.push(vec![square]),
+        }
+    }
+
+    let mut columns: Vec<Vec<u32>> = Vec::new();
+    for &square in original {
+        match columns.iter_mut().find(|group| column_of(group[0]) == column_of(square)) {
+            Some(group) => group.push(square),
+            None => columns.push(vec![square]),
+        }
+    }
+
+    if columns.len() < across.len() { columns } else { across }
+}
+
+/// The mask, multiplier and shift that bring the squares of one row, column or diagonal into the low byte, each on
+/// its own bit and without carries (checked on every subset of the squares).
+fn line_extraction(group: &[u32]) -> (u64, u64, u32) {
+    let (row_of, column_of) = (|s: u32| s >> 3, |s: u32| s & 7);
+    let mask = group.iter().fold(0u64, |m, &s| m | (1u64 << s));
+    let first = group[0];
+    let (multiplier, shift) = if group.len() > 1 && group.iter().all(|&s| column_of(s) == column_of(first)) {
+        // One column: square (column c, row r) times 2^(56 - c - 7r) lands on bit 56 + r; every other product lands
+        // on a bit of its own below 56 or beyond 63, so nothing carries into the top byte.
+        let c = column_of(first);
+        ((0..8).fold(0u64, |m, r| m | (1u64 << (56 - c - 7 * r))), 56)
+    } else if group.iter().all(|&s| row_of(s) == row_of(first)) {
+        (1, 8 * row_of(first))
+    } else {
+        // Squares in different columns: multiplying by 0x0101...01 adds up the rows, and as no two squares share a
+        // column the sums have no carries; the top byte has each square on the bit of its column.
+        (DIAGONAL_MULTIPLIER, 56)
+    };
+
+    let extract = |discs: u64| ((discs & mask).wrapping_mul(multiplier) >> shift) & 0xFF;
+    let bits: Vec<u64> = group.iter().map(|&s| extract(1u64 << s)).collect();
+    assert!(bits.iter().all(|b| b.count_ones() == 1), "A square of a direct part cannot be extracted.");
+    for subset in 0..1u32 << group.len() {
+        let (mut discs, mut expected) = (0u64, 0u64);
+        for (i, &square) in group.iter().enumerate() {
+            if subset & (1 << i) != 0 {
+                discs |= 1u64 << square;
+                expected |= bits[i];
+            }
+        }
+
+        assert!(extract(discs) == expected, "A direct part's extraction is not carry-free.");
+    }
+
+    (mask, multiplier, shift)
 }
 
 fn classic11_shapes() -> Vec<PatternShape> {
@@ -534,6 +803,39 @@ mod tests {
                     let slow = shape.slow_index(symmetry::apply(own, s), symmetry::apply(opponent, s));
                     let offset = set.offsets()[set.shapes().iter().position(|x| std::ptr::eq(x, shape)).unwrap()];
                     assert_eq!(index as usize, offset + slow as usize, "{} feature {feature}", set.name());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn direct_sums_equal_the_sum_over_the_indices() {
+        let mut state = 0x2545_F491_4F6C_DD1Du64;
+        let mut next = || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+        for set in sets() {
+            // Weights that differ for every raw index.
+            let weights: Vec<i16> = (0..set.raw_size()).map(|i| (i.wrapping_mul(2_654_435_761) >> 7) as i16).collect();
+            let mut indices = vec![0u32; set.feature_count()];
+            for round in 0..3000 {
+                let occupied = match round % 3 {
+                    0 => next() | next(),
+                    1 => next(),
+                    _ => next() & next(),
+                };
+                let own = occupied & next();
+                let opponent = occupied & !own;
+                set.indices(own, opponent, &mut indices);
+                let expected: i32 = indices.iter().map(|&i| weights[i as usize] as i32).sum();
+                assert_eq!(set.direct.sum_portable(own, opponent, &weights), expected, "{}", set.name());
+                #[cfg(target_arch = "x86_64")]
+                if std::arch::is_x86_feature_detected!("bmi2") {
+                    // SAFETY: BMI2 is there.
+                    assert_eq!(unsafe { set.direct.sum_pext(own, opponent, &weights) }, expected, "{}", set.name());
                 }
             }
         }
