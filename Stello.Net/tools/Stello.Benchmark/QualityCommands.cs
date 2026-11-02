@@ -136,9 +136,9 @@ internal static class QualityCommands
         string[] sideTexts = options.Text("sides") is { } sidesText
             ? sidesText.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             : (options.Text("engines") ?? "stello,egaroucid").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                .Select(engine => engine is "stello" or "stello-v1" or "egaroucid"
+                .Select(engine => engine is "stello" or "stello-v2" or "stello-v1" or "egaroucid"
                     ? $"engine={engine},name={engine}"
-                    : throw new ArgumentException("--engines must be a list of stello, stello-v1 and egaroucid."))
+                    : throw new ArgumentException("--engines must be a list of stello, stello-v2, stello-v1 and egaroucid."))
                 .ToArray();
         int workers = options.Number("workers", Math.Max(1, Environment.ProcessorCount / 2), 1, 256);
         string name = options.Text("name") ?? "mid-quality";

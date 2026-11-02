@@ -113,8 +113,8 @@ internal static class MatchCommands
 
     /// <summary>
     /// A side such as <c>time-ms=100</c>, <c>depth=8</c>, <c>game-s=60,hash-bits=20,name=new</c> or
-    /// <c>engine=egaroucid,time-ms=100,book=on</c>. The engines are <c>stello</c> (Stello 2, the default), <c>stello-v1</c>
-    /// (Stello 1, frozen) and <c>egaroucid</c> (the port).
+    /// <c>engine=egaroucid,time-ms=100,book=on</c>. The engines are <c>stello</c> (the engine being developed, the default),
+    /// <c>stello-v2</c> (Stello 2.0's C# engine, frozen), <c>stello-v1</c> (Stello 1, frozen) and <c>egaroucid</c> (the port).
     /// </summary>
     /// <exception cref="ArgumentException">The text is not a valid side.</exception>
     public static MatchSide ParseSide(string text)
@@ -145,8 +145,9 @@ internal static class MatchCommands
                     {
                         "stello" => EngineKind.Stello,
                         "stello-v1" => EngineKind.StelloV1,
+                        "stello-v2" => EngineKind.StelloV2,
                         "egaroucid" => EngineKind.Egaroucid,
-                        _ => throw new ArgumentException($"engine must be stello, stello-v1 or egaroucid in the side \"{text}\"."),
+                        _ => throw new ArgumentException($"engine must be stello, stello-v2, stello-v1 or egaroucid in the side \"{text}\"."),
                     };
                     break;
                 case "time-ms":
@@ -213,7 +214,7 @@ internal static class MatchCommands
         {
             if (keys.Contains(key) && !allowed)
             {
-                throw new ArgumentException($"{key} is only for {(egaroucid ? "engine=stello and stello-v1" : "engine=egaroucid")} (side \"{text}\").");
+                throw new ArgumentException($"{key} is only for {(egaroucid ? "engine=stello, stello-v2 and stello-v1" : "engine=egaroucid")} (side \"{text}\").");
             }
         }
 
@@ -238,9 +239,12 @@ internal static class MatchCommands
                 ? OpeningBook.Load(bookFile ?? Program.DataFile(engine == EngineKind.StelloV1 ? "opening-book-stello1.txt" : "opening-book.txt"))
                 : null;
             string description = $"{limitText}, hash bits {bits}, {(useBook ? "book" : "no book")}";
-            return engine == EngineKind.StelloV1
-                ? new MatchSide(name ?? text, limits, bits, CreatePlayer: () => new V1MatchPlayer(bits, book), Description: $"Stello 1, {description}")
-                : StelloSide(name ?? text, limits, bits, book, description, evalFile, softTimePercent, probCutPercent);
+            return engine switch
+            {
+                EngineKind.StelloV1 => new MatchSide(name ?? text, limits, bits, CreatePlayer: () => new V1MatchPlayer(bits, book), Description: $"Stello 1, {description}"),
+                EngineKind.StelloV2 => new MatchSide(name ?? text, limits, bits, CreatePlayer: () => new Stello.Engine.V2.V2MatchPlayer(bits, book), Description: $"Stello 2.0 (C#), {description}"),
+                _ => StelloSide(name ?? text, limits, bits, book, description, evalFile, softTimePercent, probCutPercent),
+            };
         }
 
         // 2^21 slots of 24 bytes take as much memory as Stello's default: two tables of 2^19 slots of two 24-byte entries.
@@ -378,11 +382,14 @@ internal static class MatchCommands
 /// <summary>The engine of a match side or benchmark.</summary>
 internal enum EngineKind
 {
-    /// <summary>Stello.Engine: Stello 2 as it develops.</summary>
+    /// <summary>Stello.Engine: the engine as it develops (Stello 3.0).</summary>
     Stello,
 
     /// <summary>Stello.Engine.V1: Stello 1, frozen as the baseline.</summary>
     StelloV1,
+
+    /// <summary>Stello.Engine.V2: Stello 2.0's C# engine, frozen as the baseline for Stello 3.0.</summary>
+    StelloV2,
 
     /// <summary>Egaroucid.Engine: the port of Egaroucid 7.9.</summary>
     Egaroucid,

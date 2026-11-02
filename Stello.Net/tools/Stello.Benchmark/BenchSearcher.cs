@@ -76,6 +76,29 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                     return v1.Search(position.Board, position.Player, limits);
                 });
 
+            case "stello-v2":
+                if (options.Text("mpc") is not null || options.Text("level") is not null || options.Text("side") is not null)
+                {
+                    throw new ArgumentException("--mpc and --level are only for --engine egaroucid, --side only for --engine stello.");
+                }
+
+                int v2Bits = options.Number("hash-bits", SearchLimits.DefaultHashBits, 10, 26);
+                string? v2Eval = options.Text("eval");
+                var v2Options = v2Eval is null or "default"
+                    ? Stello.Engine.V2.Search.SearchOptions.Default
+                    : new Stello.Engine.V2.Search.SearchOptions { Pattern = Stello.Engine.V2.Evaluation.EvalWeights.Load(v2Eval) };
+                if (v2Eval is not null and not "default")
+                {
+                    limitText += $", evaluation {Path.GetFileName(v2Eval)}";
+                }
+
+                var v2 = new Stello.Engine.V2.SearchEngine(v2Bits, v2Options);
+                return new BenchSearcher(engine, limitText, v2Bits, position =>
+                {
+                    v2.ClearHash();
+                    return v2.Search(position.Board, position.Player, limits);
+                });
+
             case "egaroucid":
                 if (options.Text("eval") is not null)
                 {
@@ -113,7 +136,7 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                 });
 
             default:
-                throw new ArgumentException("--engine must be stello, stello-v1 or egaroucid.");
+                throw new ArgumentException("--engine must be stello, stello-v2, stello-v1 or egaroucid.");
         }
     }
 

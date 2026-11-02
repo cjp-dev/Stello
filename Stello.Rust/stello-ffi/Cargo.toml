@@ -1,0 +1,15 @@
+[package]
+name = "stello-ffi"
+description = "C ABI for Stello's engine, called by Stello.Engine's SearchEngine wrapper in .NET"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lib]
+name = "stello_engine"
+crate-type = ["cdylib"]
+
+[dependencies]
+stello-core.workspace = true

@@ -1,0 +1,15 @@
+[package]
+name = "stello-cli"
+description = "Parity and speed runs of Stello's Rust engine without .NET"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "stello"
+path = "src/main.rs"
+
+[dependencies]
+stello-core.workspace = true

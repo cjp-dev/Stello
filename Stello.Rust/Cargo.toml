@@ -1,0 +1,27 @@
+# Stello 3.0's engine core in Rust (Plans/making-stello-3-plan.md).
+#   stello-core  the engine (board and rules, evaluation, midgame search, endgame solver, hash table, time control)
+#   stello-ffi   a C ABI library for .NET (Stello.Engine's SearchEngine wrapper)
+#   stello-wasm  the wasm-bindgen package for the web app's Web Worker
+#   stello-cli   parity and speed runs without .NET
+[workspace]
+resolver = "3"
+members = ["stello-core", "stello-ffi", "stello-wasm", "stello-cli"]
+
+[workspace.package]
+version = "3.0.0"
+edition = "2024"
+license = "GPL-3.0-only"
+authors = ["Claus Pedersen"]
+repository = "https://github.com/cjp-dev/Stello"
+
+[workspace.dependencies]
+stello-core = { path = "stello-core" }
+# The version must equal the installed wasm-bindgen-cli (cargo install wasm-bindgen-cli --version 0.2.130 --locked).
+wasm-bindgen = "=0.2.130"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+# A panic must not unwind into .NET or JavaScript.
+panic = "abort"

@@ -235,4 +235,5 @@ The Egaroucid port did not port this; its YBWC phase was postponed.
 | P9 | Threads setting; final measurements; 3.0 live |
 
 ## Status
-- Plan written on 2 November 2026. Waiting for the user's go-ahead.
+- Plan written on 2 November 2026.
+- **Phase 0: done (2026-11-02).** Toolchain installed (Rust 1.99.1, wasm-bindgen 0.2.130, MinGW 13). `Stello.Engine.V2` is identical to 2.0 on mid-bench depth 10 and FFO #40–49, with 105 recorded signatures tested for both engines. `Stello.Rust` builds the Linux library, the Windows DLL and the WASM package, and .NET and Node call them. Details in the findings.

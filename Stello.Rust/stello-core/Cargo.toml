@@ -1,0 +1,10 @@
+[package]
+name = "stello-core"
+description = "Stello's Othello engine: board and rules, pattern evaluation, midgame search and endgame solver"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]

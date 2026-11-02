@@ -1,0 +1,15 @@
+[package]
+name = "stello-wasm"
+description = "Stello's engine for the web app's Web Worker (wasm-bindgen)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+stello-core.workspace = true
+wasm-bindgen.workspace = true

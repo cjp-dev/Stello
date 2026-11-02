@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Stello 2.0: the C# engine as released on 2 November 2026 (main 6e08ec5, fixes ac666d6), frozen as the baseline
+    for Stello 3.0, whose engine core is written in Rust (Plans/making-stello-3-plan.md). Only the tools and tests use
+    it. Do not change its search or evaluation. It shares Board, Move, the limits, the results and the opening book with
+    Stello.Engine.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Stello.Engine\Stello.Engine.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Stello.Engine.Tests" />
+    <InternalsVisibleTo Include="Stello.Benchmark" />
+    <InternalsVisibleTo Include="Stello.Trainer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The same trained evaluation as Stello.Engine (EvalWeights.Default). -->
+    <EmbeddedResource Include="..\Book\stello-eval.bin" LogicalName="Stello.Engine.V2.stello-eval.bin" />
+  </ItemGroup>
+
+</Project>
