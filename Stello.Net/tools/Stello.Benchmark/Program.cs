@@ -43,6 +43,10 @@ internal static class Program
           parity-data --midgame <file> [--count 1000] [--seed 1] [--min-empties 16]
                                     Write random midgame positions for parity runs of mid-bench: one random position from each
                                     of --count random games, with at least --min-empties empty squares and two legal moves.
+          parity-data --endgame <file> [--count 500] [--seed 1] [--min-empties 14] [--max-empties 24] [--pass-within 0]
+                                    Write random endgame positions for parity runs of solve-bench: from random games, one random
+                                    position with --min-empties to --max-empties empty squares and two legal moves, until there
+                                    are --count; with --pass-within N, only where the game has a pass within N plies.
           parity-data --split <folder>|default [--max-per-discs 20000|all] [--eval <file>]
                                     Stello 2.0's evaluation over the trainer's test split (default: Traning data/stello-bin):
                                     the count and FNV-1a checksums to compare with `stello eval-split`, and the speed.

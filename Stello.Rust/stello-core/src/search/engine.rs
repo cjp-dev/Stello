@@ -187,6 +187,9 @@ impl SearchEngine {
     /// unless `hash_bits` is 10–26 (C# throws `ArgumentOutOfRangeException`).
     pub fn new(hash_bits: u32, options: SearchOptions) -> SearchEngine {
         assert!((10..=26).contains(&hash_bits), "hash bits must be 10-26");
+        // The solver's stable-disc tables, once per process, outside the first search's time (C#: the static
+        // constructor of StableDiscs, which runs in the first search).
+        endgame::stable::init();
         let probcut_errors = options
             .selective
             .then(|| probcut_errors(options.probcut_percent.unwrap_or(DEFAULT_PROBCUT_PERCENT) as f64 / 100.0));
@@ -322,9 +325,7 @@ pub(crate) struct Searcher<'a> {
     pub(crate) pattern: &'a EvalWeights,
     probcut_errors: Option<&'a ProbCutErrors>,
     pub(crate) midgame_table: &'a mut TranspositionTable,
-    #[allow(dead_code)] // Read by the solver (phase 1 step 4); remove then.
     pub(crate) endgame_table: &'a mut TranspositionTable,
-    #[allow(dead_code)] // Read by the solver (phase 1 step 4); remove then.
     pub(crate) endgame: &'a mut EndgameState,
     pub(crate) ordering: &'a mut MoveOrdering,
     progress: Option<&'a mut dyn FnMut(&SearchInfo)>,

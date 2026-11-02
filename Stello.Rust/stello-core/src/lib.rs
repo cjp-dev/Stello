@@ -9,7 +9,7 @@
 //! - [`endgame::bits`]: C# `EndgameBits` (the solver's bit helpers, also used by the midgame ordering);
 //! - [`eval`]: C# `Evaluation/` (`EvalWeights`, the pattern sets, the symmetries) and `SearchEngine.PatternScore`;
 //! - [`search`]: C# `SearchEngine` (the midgame search), `Search/` and the shared `SearchLimits`/`SearchResult` types;
-//! - [`endgame::search`]: C# Endgame/SearchEngine.Endgame.cs, the solver (phase 1 step 4).
+//! - [`endgame`]: C# Endgame/ (`SearchEngine.Endgame.cs`, `LocalTable`, `StableDiscs`), the exact solver.
 
 pub mod bits;
 pub mod board;

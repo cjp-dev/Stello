@@ -1,5 +1,6 @@
-//! `mid-bench`: C#'s `Stello.Benchmark mid-bench` (tools/Stello.Benchmark/BenchCommands.cs) for the Rust engine, with
-//! the same position files and the same JSON (`BenchRun`), so that the C# tool's `--compare` checks parity.
+//! `solve-bench` and `mid-bench`: C#'s `Stello.Benchmark solve-bench` and `mid-bench`
+//! (tools/Stello.Benchmark/BenchCommands.cs) for the Rust engine, with the same position files and the same JSON
+//! (`BenchRun`), so that the C# tool's `--compare` checks parity.
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
@@ -12,12 +13,15 @@ use stello_core::{Board, Player};
 
 use crate::{Options, repository_folder};
 
-/// A benchmark position: C#'s `BenchmarkPosition` (`<id> <64 squares> <X|O>[; A2:+38; ...]`; the move scores are
-/// not needed here).
+/// A benchmark position: C#'s `BenchmarkPosition` (`<id> <64 squares> <X|O>[; A2:+38; ...]`).
 pub(crate) struct Position {
     pub id: String,
     pub board: Board,
     pub player: Player,
+    /// The best score of the move list, if there is one (C#: `Score`).
+    pub score: Option<i32>,
+    /// The moves with that score, lower case (C#: `BestMoves`).
+    pub best_moves: Vec<String>,
 }
 
 /// C#: `BenchmarkPosition.Load`.
@@ -29,7 +33,8 @@ pub(crate) fn load_positions(path: &Path) -> Result<Vec<Position>, String> {
             continue;
         }
 
-        let head: Vec<&str> = line.split(';').next().unwrap_or("").split_whitespace().collect();
+        let mut parts = line.split(';').map(str::trim).filter(|p| !p.is_empty());
+        let head: Vec<&str> = parts.next().unwrap_or("").split_whitespace().collect();
         let [id, squares, side] = head[..] else { return Err(format!("Not a position: {line}")) };
         if squares.len() != 64 {
             return Err(format!("Not a position: {line}"));
@@ -41,7 +46,18 @@ pub(crate) fn load_positions(path: &Path) -> Result<Vec<Position>, String> {
             "O" | "o" => Player::White,
             _ => return Err(format!("The side to move must be X or O: {line}")),
         };
-        positions.push(Position { id: id.to_string(), board, player });
+        let mut scored: Vec<(String, i32)> = Vec::new();
+        for part in parts {
+            let parsed = part.split_once(':').and_then(|(mv, score)| {
+                let score = score.strip_prefix('+').unwrap_or(score).parse::<i32>().ok()?;
+                stello_core::Square::parse(&mv.to_lowercase()).map(|m| (m.to_string(), score))
+            });
+            scored.push(parsed.ok_or(format!("Not a move with a score: {part}"))?);
+        }
+
+        let score = scored.iter().map(|&(_, s)| s).max();
+        let best_moves = scored.iter().filter(|&&(_, s)| Some(s) == score).map(|(m, _)| m.clone()).collect();
+        positions.push(Position { id: id.to_string(), board, player, score, best_moves });
     }
 
     Ok(positions)
@@ -106,22 +122,78 @@ pub(crate) fn engine_options(options: &Options) -> Result<(SearchOptions, String
     Ok((search, text))
 }
 
+/// The positions file: `--positions`, or `default` in the benchmark's data folder.
+fn positions_path(options: &Options, default: &str) -> Result<PathBuf, String> {
+    match options.text("positions") {
+        Some(path) => Ok(path.into()),
+        None => Ok(repository_folder()
+            .ok_or("No --positions given and no repository found.")?
+            .join("Stello.Net/tools/Stello.Benchmark/Data")
+            .join(default)),
+    }
+}
+
+pub(crate) fn solve_bench(args: &[String]) -> Result<(), String> {
+    let options = Options::parse(args, &["positions", "from", "to", "passes", "hash-bits", "eval", "out"])?;
+    let all = load_positions(&positions_path(&options, "ffo-40-59.txt")?)?;
+    let from = number(&options, "from", 40, 0, i32::MAX)?;
+    let to = number(&options, "to", 44, 0, i32::MAX)?;
+    // C#: ids that are not numbers are always searched.
+    let positions: Vec<Position> =
+        all.into_iter().filter(|p| p.id.parse::<i32>().map_or(true, |id| id >= from && id <= to)).collect();
+    let passes = number(&options, "passes", 1, 1, 100)?;
+    let hash_bits = number(&options, "hash-bits", 19u32, 10, 26)?;
+    let (search_options, options_text) = engine_options(&options)?;
+    let limits_text = format!("solve{options_text}");
+    let mut engine = SearchEngine::new(hash_bits, search_options);
+    let results = run("solve-bench", &positions, &mut engine, &SearchLimits::SOLVE, &limits_text, hash_bits, passes)?;
+
+    let mut wrong = 0;
+    println!();
+    println!("| # | Empty | Score | Move | Nodes | Time | Nodes/s |");
+    println!("|---|---:|---:|---|---:|---:|---:|");
+    for (position, result) in positions.iter().zip(&results) {
+        let score_ok = position.score.is_none_or(|s| result.kind == "Exact" && result.score == s);
+        let move_ok = position.best_moves.is_empty() || position.best_moves.contains(&result.mv);
+        if !score_ok || !move_ok {
+            wrong += 1;
+        }
+
+        println!(
+            "| {} | {} | {}{} | {}{} | {} | {} | {} |",
+            result.id,
+            result.empties,
+            signed(result.score),
+            if score_ok { String::new() } else { format!(" (should be {})", signed(position.score.unwrap())) },
+            result.mv,
+            if move_ok { "" } else { " (wrong)" },
+            result.nodes,
+            seconds(result.ms),
+            speed(result.nodes, result.ms)
+        );
+    }
+
+    let nodes: u64 = results.iter().map(|r| r.nodes).sum();
+    let ms: f64 = results.iter().map(|r| r.ms).sum();
+    println!("| **Total** | | | | **{nodes}** | **{}** | **{}** |", seconds(ms), speed(nodes, ms));
+    println!(
+        "{}",
+        if wrong == 0 {
+            "All scores and moves are correct.".to_string()
+        } else {
+            format!("{wrong} positions have a wrong score or move.")
+        }
+    );
+    save(&options, "solve-bench", &limits_text, hash_bits, passes, &results)?;
+    if wrong == 0 { Ok(()) } else { Err(format!("{wrong} wrong.")) }
+}
+
 pub(crate) fn mid_bench(args: &[String]) -> Result<(), String> {
     let options = Options::parse(
         args,
         &["positions", "depth", "passes", "hash-bits", "eval", "selective", "probcut-pct", "out"],
     )?;
-    let path: PathBuf = match options.text("positions") {
-        Some(path) => path.into(),
-        None => repository_folder()
-            .ok_or("No --positions given and no repository found.")?
-            .join("Stello.Net/tools/Stello.Benchmark/Data/midgame.txt"),
-    };
-    let positions = load_positions(&path)?;
-    if positions.is_empty() {
-        return Err("No positions to search.".to_string());
-    }
-
+    let positions = load_positions(&positions_path(&options, "midgame.txt")?)?;
     let depth = number(&options, "depth", 10, 1, 60)?;
     let passes = number(&options, "passes", 3, 1, 100)?;
     let hash_bits = number(&options, "hash-bits", 19u32, 10, 26)?;
@@ -129,19 +201,53 @@ pub(crate) fn mid_bench(args: &[String]) -> Result<(), String> {
     let limits_text = format!("depth {depth}{options_text}");
     let limits = SearchLimits::fixed_depth(depth);
     let mut engine = SearchEngine::new(hash_bits, search_options);
+    let results = run("mid-bench", &positions, &mut engine, &limits, &limits_text, hash_bits, passes)?;
+
+    println!();
+    println!("| Empty squares | Positions | Nodes | Time | Nodes/s |");
+    println!("|---:|---:|---:|---:|---:|");
+    let mut empties: Vec<u32> = results.iter().map(|r| r.empties).collect();
+    empties.sort_unstable_by(|a, b| b.cmp(a));
+    empties.dedup();
+    for e in empties {
+        let group: Vec<&BenchResult> = results.iter().filter(|r| r.empties == e).collect();
+        let nodes: u64 = group.iter().map(|r| r.nodes).sum();
+        let ms: f64 = group.iter().map(|r| r.ms).sum();
+        println!("| {e} | {} | {nodes} | {} | {} |", group.len(), seconds(ms), speed(nodes, ms));
+    }
+
+    let nodes: u64 = results.iter().map(|r| r.nodes).sum();
+    let ms: f64 = results.iter().map(|r| r.ms).sum();
+    println!("| **Total** | {} | **{nodes}** | **{}** | **{}** |", results.len(), seconds(ms), speed(nodes, ms));
+    save(&options, "mid-bench", &limits_text, hash_bits, passes, &results)
+}
+
+/// C#: `BenchCommands.Run`. Interleaved passes, the fastest time of each position counts; each search starts with
+/// empty hash tables.
+fn run(
+    command: &str,
+    positions: &[Position],
+    engine: &mut SearchEngine,
+    limits: &SearchLimits,
+    limits_text: &str,
+    hash_bits: u32,
+    passes: u32,
+) -> Result<Vec<BenchResult>, String> {
+    if positions.is_empty() {
+        return Err("No positions to search.".to_string());
+    }
+
     println!(
-        "mid-bench: {} positions, stello-rust, {limits_text}, hash bits {hash_bits}, {passes} pass(es).",
+        "{command}: {} positions, stello-rust, {limits_text}, hash bits {hash_bits}, {passes} pass(es).",
         positions.len()
     );
-
-    // Interleaved passes, the fastest time of each position counts; each search starts with empty hash tables.
     let mut best: Vec<Option<BenchResult>> = (0..positions.len()).map(|_| None).collect();
     for pass in 1..=passes {
         let clock = std::time::Instant::now();
         let mut nodes = 0;
         for (position, slot) in positions.iter().zip(best.iter_mut()) {
             engine.clear_hash();
-            let result = engine.search_simple(&position.board, position.player, &limits);
+            let result = engine.search_simple(&position.board, position.player, limits);
             let current = BenchResult {
                 id: position.id.clone(),
                 empties: position.board.empty_count(),
@@ -163,6 +269,17 @@ pub(crate) fn mid_bench(args: &[String]) -> Result<(), String> {
                 );
             }
 
+            if command == "solve-bench" && positions.len() <= 100 {
+                println!(
+                    "  pass {pass} #{}: {} {} in {} ({} nodes)",
+                    current.id,
+                    signed(current.score),
+                    current.mv,
+                    seconds(current.ms),
+                    current.nodes
+                );
+            }
+
             if slot.as_ref().is_none_or(|old| old.ms > current.ms) {
                 *slot = Some(current);
             }
@@ -171,31 +288,28 @@ pub(crate) fn mid_bench(args: &[String]) -> Result<(), String> {
         println!("  pass {pass}: {nodes} nodes in {:.2} s", clock.elapsed().as_secs_f64());
     }
 
-    let results: Vec<BenchResult> = best.into_iter().map(|r| r.expect("every position was searched")).collect();
-    println!();
-    println!("| Empty squares | Positions | Nodes | Time | Nodes/s |");
-    println!("|---:|---:|---:|---:|---:|");
-    let mut empties: Vec<u32> = results.iter().map(|r| r.empties).collect();
-    empties.sort_unstable_by(|a, b| b.cmp(a));
-    empties.dedup();
-    for e in empties {
-        let group: Vec<&BenchResult> = results.iter().filter(|r| r.empties == e).collect();
-        let nodes: u64 = group.iter().map(|r| r.nodes).sum();
-        let ms: f64 = group.iter().map(|r| r.ms).sum();
-        println!("| {e} | {} | {nodes} | {} | {} |", group.len(), seconds(ms), speed(nodes, ms));
-    }
+    Ok(best.into_iter().map(|r| r.expect("every position was searched")).collect())
+}
 
-    let nodes: u64 = results.iter().map(|r| r.nodes).sum();
-    let ms: f64 = results.iter().map(|r| r.ms).sum();
-    println!("| **Total** | {} | **{nodes}** | **{}** | **{}** |", results.len(), seconds(ms), speed(nodes, ms));
-
+fn save(
+    options: &Options,
+    command: &str,
+    limits_text: &str,
+    hash_bits: u32,
+    passes: u32,
+    results: &[BenchResult],
+) -> Result<(), String> {
     if let Some(out) = options.text("out") {
-        let json = bench_run_json("mid-bench", &limits_text, hash_bits, passes, &results);
+        let json = bench_run_json(command, limits_text, hash_bits, passes, results);
         std::fs::write(out, json).map_err(|e| format!("{out}: {e}"))?;
         println!("Saved to {out}.");
     }
 
     Ok(())
+}
+
+fn signed(score: i32) -> String {
+    if score > 0 { format!("+{score}") } else { score.to_string() }
 }
 
 /// C#: `BenchRun` as `JsonSerializer.Serialize(run, new() { WriteIndented = true })` writes it.

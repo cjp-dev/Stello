@@ -21,6 +21,13 @@ Usage: stello <command> [options]
                             Evaluate and PatternScore in order, to compare with
                             `Stello.Benchmark parity-data --split`, then the evaluation speed and perft(8)'s time.
                             --max-per-discs takes evenly spread positions per number of discs, as the trainer's report.
+  solve-bench [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits 19] [--eval <file>]
+              [--out <file.json>]
+                            Solve the positions (default Stello.Net/tools/Stello.Benchmark/Data/ffo-40-59.txt; ids that
+                            are numbers only from --from to --to), each with cleared hash tables: score, move, nodes and
+                            speed of each, checked against the scores in the file. --out writes the JSON of
+                            `Stello.Benchmark solve-bench --out`, for `Stello.Benchmark solve-bench --engine stello-v2
+                            --compare <file.json>`.
   mid-bench [--positions <file>] [--depth 10] [--passes 3] [--hash-bits 19] [--eval <file>]
             [--selective on|off] [--probcut-pct N] [--out <file.json>]
                             Search the midgame positions (default Stello.Net/tools/Stello.Benchmark/Data/midgame.txt)
@@ -41,6 +48,7 @@ fn main() -> ExitCode {
         }
         Some("perft") => perft(&args[1..]),
         Some("eval-split") => eval_split(&args[1..]),
+        Some("solve-bench") => bench::solve_bench(&args[1..]),
         Some("mid-bench") => bench::mid_bench(&args[1..]),
         _ => Err(USAGE.to_string()),
     };

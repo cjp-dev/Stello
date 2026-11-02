@@ -25,7 +25,17 @@ internal static class ParityCommands
 
     public static int ParityData(Options options)
     {
-        options.Allow("out", "games", "seed", "split", "max-per-discs", "eval", "midgame", "count", "min-empties");
+        options.Allow("out", "games", "seed", "split", "max-per-discs", "eval", "midgame", "count", "min-empties", "endgame", "max-empties", "pass-within");
+        if (options.Text("endgame") is { } endgamePath)
+        {
+            int count = options.Number("count", 500, 1, 1_000_000);
+            int minEmpties = options.Number("min-empties", 14, 1, 60);
+            int maxEmpties = options.Number("max-empties", 24, minEmpties, 60);
+            int passWithin = options.Number("pass-within", 0, 0, 60);
+            WriteEndgamePositions(endgamePath, count, options.Number("seed", 1, 0, int.MaxValue), minEmpties, maxEmpties, passWithin);
+            return 0;
+        }
+
         if (options.Text("midgame") is { } midgamePath)
         {
             int count = options.Number("count", 1000, 1, 1_000_000);
@@ -149,6 +159,74 @@ internal static class ParityCommands
 
             (Board chosen, Player side) = candidates[random.Next(candidates.Count)];
             lines.Add(new BenchmarkPosition($"r{game:0000}e{chosen.EmptyCount}", chosen, side, null, []).Format());
+        }
+
+        File.WriteAllLines(path, lines);
+        Console.WriteLine($"Wrote {count:N0} positions to {path}.");
+    }
+
+    /// <summary>
+    /// Positions for solve-bench's parity runs of the Rust engine's solver: from random games, one random position with
+    /// <paramref name="minEmpties"/> to <paramref name="maxEmpties"/> empty squares and two legal moves, until there are
+    /// <paramref name="count"/>. With <paramref name="passWithin"/> above 0, only positions where the random game has a
+    /// pass within that many plies, so the solver meets passes in its upper layers too.
+    /// </summary>
+    private static void WriteEndgamePositions(string path, int count, int seed, int minEmpties, int maxEmpties, int passWithin)
+    {
+        var random = new Random(seed);
+        var lines = new List<string>
+        {
+            $"# Random endgame positions for solve-bench parity runs (Stello.Benchmark parity-data --endgame --count {count} --seed {seed} " +
+            $"--min-empties {minEmpties} --max-empties {maxEmpties} --pass-within {passWithin}):",
+            $"# from random games, one random position with {minEmpties}-{maxEmpties} empty squares and two legal moves" +
+            (passWithin > 0 ? $", and a pass in the game within {passWithin} plies." : "."),
+        };
+        var states = new List<(Board Board, Player Player, bool Pass)>();
+        var candidates = new List<(Board Board, Player Player)>();
+        for (int game = 1; lines.Count - 2 < count; game++)
+        {
+            states.Clear();
+            Board board = Board.Initial;
+            Player player = Player.Black;
+            while (!board.IsGameOver)
+            {
+                ulong moves = board.LegalMoves(player);
+                states.Add((board, player, moves == 0));
+                if (moves == 0)
+                {
+                    player = player.Opponent();
+                    continue;
+                }
+
+                Square[] squares = Square.InMask(moves).ToArray();
+                board = board.Play(player, squares[random.Next(squares.Length)]);
+                player = player.Opponent();
+            }
+
+            candidates.Clear();
+            for (int i = 0; i < states.Count; i++)
+            {
+                (Board b, Player p, _) = states[i];
+                if (b.EmptyCount < minEmpties || b.EmptyCount > maxEmpties || BitOperations.PopCount(b.LegalMoves(p)) < 2)
+                {
+                    continue;
+                }
+
+                if (passWithin > 0 && !states.Skip(i + 1).Take(passWithin).Any(s => s.Pass))
+                {
+                    continue;
+                }
+
+                candidates.Add((b, p));
+            }
+
+            if (candidates.Count == 0)
+            {
+                continue;
+            }
+
+            (Board chosen, Player side) = candidates[random.Next(candidates.Count)];
+            lines.Add(new BenchmarkPosition($"r{game:00000}e{chosen.EmptyCount}", chosen, side, null, []).Format());
         }
 
         File.WriteAllLines(path, lines);

@@ -237,3 +237,4 @@ The Egaroucid port did not port this; its YBWC phase was postponed.
 ## Status
 - Plan written on 2 November 2026.
 - **Phase 0: done (2026-11-02).** Toolchain installed (Rust 1.99.1, wasm-bindgen 0.2.130, MinGW 13). `Stello.Engine.V2` is identical to 2.0 on mid-bench depth 10 and FFO #40–49, with 105 recorded signatures tested for both engines. `Stello.Rust` builds the Linux library, the Windows DLL and the WASM package, and .NET and Node call them. Details in the findings.
+- **Phase 1: done (2026-11-02).** The Rust core (board, evaluation, midgame search, endgame solver) is node-for-node identical to C# 2.0 on mid-bench depth 10 and 12, FFO #40–49, 1,000 random midgame and 1,800 random endgame positions, and the hand-over to the solver. The evaluation is equal on the whole test split. Speed on one thread: 1.27–1.37× without any speed work.

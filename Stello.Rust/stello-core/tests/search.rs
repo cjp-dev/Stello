@@ -34,8 +34,8 @@ fn position(file: &str, id: &str) -> (Board, Player) {
 }
 
 /// Every 5th of the 100 `midgame.txt ... depth=10` signatures (all 100 are checked against C# by
-/// `stello mid-bench --out` and `Stello.Benchmark mid-bench --engine stello-v2 --compare`). The `solve` lines need
-/// the endgame solver (phase 1 step 4).
+/// `stello mid-bench --out` and `Stello.Benchmark mid-bench --engine stello-v2 --compare`). The `solve` lines are
+/// [`solve_signatures_match_stello_2`].
 #[test]
 fn midgame_signatures_match_stello_2() {
     let signatures = repository_file("Stello.Net/Stello.Engine.Tests/Data/stello-v2-signatures.txt");
@@ -59,6 +59,132 @@ fn midgame_signatures_match_stello_2() {
     }
 
     assert_eq!(checked, 20);
+}
+
+/// The 5 `ffo-40-59.txt ... solve` signatures (FFO #40–44, 92 M nodes; about 3 s in release, 15 s in debug).
+#[test]
+fn solve_signatures_match_stello_2() {
+    let signatures = repository_file("Stello.Net/Stello.Engine.Tests/Data/stello-v2-signatures.txt");
+    let positions = benchmark_positions("ffo-40-59.txt");
+    let mut engine = SearchEngine::new(19, SearchOptions::default());
+    let lines: Vec<&str> = signatures.lines().filter(|l| l.starts_with("ffo-40-59.txt ")).collect();
+    assert_eq!(lines.len(), 5);
+    for line in &lines {
+        let fields: Vec<&str> = line.split(' ').collect();
+        assert_eq!(fields[2], "solve");
+        let (_, board, player) = positions.iter().find(|(id, _, _)| id == fields[1]).unwrap();
+        engine.clear_hash();
+        let result = engine.search_simple(board, *player, &SearchLimits::SOLVE);
+        let actual = format!(
+            "{} {} {} {} {} {} {} {}",
+            fields[0], fields[1], fields[2], result.mv, result.score, result.kind, result.depth, result.nodes
+        );
+        assert_eq!(actual, *line);
+    }
+}
+
+// Plain minimax to the end, the empty squares going to the winner.
+fn exact_score(board: &Board, player: Player, passed: bool) -> i32 {
+    let moves = board.legal_moves(player);
+    if moves == 0 {
+        if passed {
+            let (own, other) = (board.count(player) as i32, board.count(player.opponent()) as i32);
+            let empty = board.empty_count() as i32;
+            return match own.cmp(&other) {
+                std::cmp::Ordering::Greater => own - other + empty,
+                std::cmp::Ordering::Less => own - other - empty,
+                std::cmp::Ordering::Equal => 0,
+            };
+        }
+
+        return -exact_score(board, player.opponent(), true);
+    }
+
+    Square::in_mask(moves)
+        .map(|square| -exact_score(&board.play_unchecked(player, square.index() as u32), player.opponent(), false))
+        .max()
+        .unwrap()
+}
+
+/// The solver's score and move are exact on random endings with 2–11 empty squares (every layer from the shallow
+/// solver to EndLocal), against a plain minimax. Node parity with C# is checked by `stello solve-bench` and
+/// `Stello.Benchmark solve-bench --compare`.
+#[test]
+fn solver_finds_the_exact_score_of_random_endings() {
+    let mut engine = SearchEngine::new(14, SearchOptions::default());
+    let mut seed = 0x9E37_79B9_7F4A_7C15u64;
+    let mut random = move |n: u32| {
+        seed ^= seed << 13;
+        seed ^= seed >> 7;
+        seed ^= seed << 17;
+        (seed % n as u64) as u32
+    };
+    let max_empties = if cfg!(debug_assertions) { 9 } else { 11 };
+    let mut checked = 0;
+    for game in 0..120 {
+        let target = 2 + game % (max_empties - 1);
+        let (mut board, mut player) = (Board::INITIAL, Player::Black);
+        while board.empty_count() > target && !board.is_game_over() {
+            let moves = board.legal_moves(player);
+            if moves != 0 {
+                let squares: Vec<Square> = Square::in_mask(moves).collect();
+                board = board.play_unchecked(player, squares[random(squares.len() as u32) as usize].index() as u32);
+            }
+            player = player.opponent();
+        }
+
+        if board.legal_moves(player) == 0 {
+            continue;
+        }
+
+        engine.clear_hash();
+        let result = engine.search_simple(&board, player, &SearchLimits::SOLVE);
+        let score = exact_score(&board, player, false);
+        assert_eq!((result.score, result.kind), (score, ScoreKind::Exact), "{board}");
+        let square = result.mv.0.unwrap();
+        let after = board.play_unchecked(player, square.index() as u32);
+        assert_eq!(-exact_score(&after, player.opponent(), false), score, "{board} {square}");
+        checked += 1;
+    }
+
+    assert!(checked > 100, "{checked}");
+}
+
+/// Move Now and cancel in the middle of a solve (FFO #49, 26 empty squares, about 12 s): Move Now returns a legal
+/// move at once, cancel returns no result.
+#[test]
+fn move_now_and_cancel_stop_a_solve() {
+    let (board, player) = position("ffo-40-59.txt", "49");
+    // Loading the built-in evaluation takes a while in a debug build; not in the search's time.
+    EvalWeights::built_in();
+    for move_now in [true, false] {
+        let signals = Arc::new(SearchSignals::new());
+        let clock = Instant::now();
+        let setter = {
+            let signals = Arc::clone(&signals);
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_millis(300));
+                if move_now { signals.move_now() } else { signals.cancel() }
+            })
+        };
+
+        let mut engine = SearchEngine::new(16, SearchOptions::default());
+        let mut nodes = 0;
+        let mut progress = |info: &SearchInfo| nodes = info.nodes;
+        let result = engine.search(&board, player, &SearchLimits::SOLVE, Some(&mut progress), signals.as_ref(), None);
+        let elapsed = clock.elapsed();
+        setter.join().unwrap();
+        assert!(elapsed >= Duration::from_millis(300) && elapsed < Duration::from_secs(3), "{elapsed:?}");
+        // The solver was running (the 4-ply presearch takes a few hundred nodes); the heartbeats report its nodes.
+        assert!(nodes > 100_000, "{nodes}");
+        if move_now {
+            let result = result.unwrap();
+            assert!(board.legal_moves(player) & result.mv.0.unwrap().bit() != 0);
+            assert!(result.nodes > 0);
+        } else {
+            assert_eq!(result, Err(SearchError::Cancelled));
+        }
+    }
 }
 
 #[test]
@@ -221,6 +347,8 @@ fn time_per_move_stops_within_the_limit() {
 
 fn search_until_signal(signal: fn(&SearchSignals)) -> (Result<SearchResult, SearchError>, Duration) {
     let signals = Arc::new(SearchSignals::new());
+    // The clock starts before the signal's thread, so the search runs at least its 100 ms.
+    let clock = Instant::now();
     let setter = {
         let signals = Arc::clone(&signals);
         std::thread::spawn(move || {
@@ -231,7 +359,6 @@ fn search_until_signal(signal: fn(&SearchSignals)) -> (Result<SearchResult, Sear
 
     let mut engine = SearchEngine::new(16, SearchOptions::default());
     let (board, player) = position("midgame.txt", "g03e48");
-    let clock = Instant::now();
     // 40 plies would take far longer than the test.
     let result = engine.search(&board, player, &SearchLimits::fixed_depth(40), None, signals.as_ref(), None);
     let elapsed = clock.elapsed();

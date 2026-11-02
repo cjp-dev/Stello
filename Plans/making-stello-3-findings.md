@@ -10,7 +10,7 @@ What the work on Stello 3.0 teaches us, written down as we go: the decisions, th
 | Phase | State | What it showed |
 |---|---|---|
 | 0 Set-up and the frozen Stello 2.0 | done (2026-11-02) | Stello.Engine.V2 searches node for node like 2.0; the Rust workspace builds for Linux, Windows and WASM, and .NET and Node call it |
-| 1 The core in Rust | in progress | Steps 1–2 (board and rules, evaluation): identical to C# on 6,214 fixture positions, perft 1–8 and the whole test split; Rust perft 4.2× and evaluation 1.3–1.4× faster. Steps 3 and 5 (midgame search, stopping, progress): node-for-node identical in 9 mid-bench comparisons; 1.27–1.31× faster |
+| 1 The core in Rust | done (2026-11-02) | Board, evaluation, midgame search and endgame solver node-for-node identical to C# 2.0 (mid-bench, FFO #40–49, 3,100 random midgame and endgame positions, the whole test split); 1.27–1.37× faster on one thread |
 | 2 Desktop and tools on Rust | not started | |
 | 3 The web app on Rust | not started | |
 | 4 Release (3.0 preview) | not started | |
@@ -169,3 +169,58 @@ The midgame is limited by the evaluation, which runs at 4.9 M evaluations per se
 - **The ProbCut flag:** `_inProbCut` is reset in a `finally`; Rust resets it on the stop path too.
 - **Overflow:** the response table is an `int` that can overflow in very long searches. Rust uses wrapping addition, as C#'s unchecked arithmetic does.
 - **The clock in the browser:** `std::time::Instant` is always zero on `wasm32-unknown-unknown`, so the web build must set its own clock (`performance.now()`).
+
+## Phase 1, step 4: the endgame solver, and the phase 1 gate (2026-11-02)
+
+### What was ported
+About 1,480 lines in `stello-core/src/endgame/`:
+- `search.rs`: `solve_child`, `EndWindow`, `EndDeep`, `EndLocal`, `EndSimple`, `EndFast`, the endgame ETC, the ordering with `OrderingValue`, and the stable-disc cutoff;
+- `last.rs`: `Last4`–`Last1`;
+- `local.rs`: the local table;
+- `stable.rs`: the stable-disc edge tables, built once per process (about 2 ms).
+
+`stello-cli solve-bench` writes the benchmark's JSON.
+
+### Parity
+C#'s `--compare` reported "identical" (same nodes, moves and scores) in every run:
+
+| Run | Searches |
+|---|---:|
+| FFO #40–49, `solve-bench` | 10 (1,099,769,823 nodes) |
+| Random endgames, 14–24 empty squares (`Data/endgame-random.txt`, from `parity-data --endgame`) | 500 (27.7 G nodes) |
+| Random endgames, 2–13 empty squares (`endgame-random-low.txt`) | 1,000 |
+| Random endgames with a pass within 4 plies (`endgame-random-pass.txt`) | 300 |
+| The midgame's hand-over to the solver, `mid-bench` depth 12 and 14 on `midgame-handover.txt` (65 and 136 of them went through the win/loss/draw and exact passes) | 2 × 300 |
+| Also `mid-bench` depth 8 and depth 3 on the endgame files | 300 + 1,000 |
+
+- **The endgame tables:** the four copied in step 1 are equal to C#'s value for value.
+- **Tests:** 40 Rust tests pass in debug and release, including the 5 FFO signatures, random endings against a plain minimax, and Move Now and cancel during the solve of FFO #49 from another thread.
+- **In the browser's engine:** WebAssembly solves FFO #40 in 0.44 s under Node, with the same nodes.
+
+### The phase 1 gate: passed
+| Gate item | Result |
+|---|---|
+| Identical on `mid-bench` depth 10 and 12 | yes |
+| Identical on FFO #40–49 | yes |
+| Identical on 1,000 random positions at depth 8 | yes, plus 1,800 random endgames and the hand-over |
+| Evaluation equal on the whole test split | yes, 9,973,199 positions |
+| Speed measured | below |
+
+### Speed (1 thread, Release)
+| | Rust | C# 2.0 | Rust faster by |
+|---|---:|---:|---:|
+| FFO #40–49 | 34.0–34.4 s, 32.3 M nodes/s | 47.1–47.8 s, 23.3 M nodes/s | 1.37× |
+| mid-bench depth 10 / 12 | 0.84 s / 2.35 s | 1.06 s / 3.07 s | 1.27× / 1.31× |
+| Random endgames, 14–24 empty squares | 715 s | 929 s | 1.30× (rough: other jobs ran at the same time) |
+
+This is a straight port with no speed work. The plan's phase 2 target is 1.5× natively, so the next work is profiling, starting with the evaluation, plus AVX2/BMI2 paths on the desktop, all with the nodes unchanged.
+
+### Notes from the C#
+- **Inconsistent evaluation counts:** `EndWindow`/`EndDeep` count an evaluation at a final score, but `EndLocal`, `EndSimple` and `EndFast` don't. `OrderingValue` counts a node without an abort check, and `Last4`–`Last1` count each pass level as a node. All are kept.
+- **Sorting:** in `EndLocal`/`EndSimple`, moves already decided by the local table stay in the sort and can change the order of the rest. Kept.
+- **A shift by −1:** `StableDiscs.PlayOnLine` shifts by −1 when place = 0. C# masks the shift count to 31; Rust does the same explicitly.
+
+### Environment notes
+- **Incremental builds:** Cargo's incremental builds fail on the host mount ("unable to copy .o"). Build with `CARGO_INCREMENTAL=0`.
+- **`git stash`** is unreliable on the mount (a stash pop failed once with "unable to read tree", then worked).
+- **A test fix:** two cancel tests measured their time from after the signalling thread started and failed in release builds (96 ms against an asserted 100 ms). The clock now starts before the thread.
