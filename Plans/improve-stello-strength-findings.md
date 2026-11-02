@@ -21,7 +21,7 @@ What the work on Stello 2.0 teaches us, written down as we go: the decisions, th
 | 2 Evaluation 2.0 | done | 15 patterns × 10 stages in 0.99 MB: 5.47 discs error; +400 Elo against Stello 1 at 100 and 500 ms, +67 against Egaroucid at 100 ms, −84 at 500 ms |
 | 3 Endgame solver | done | FFO #40–49 in 47.1 s (Stello 1 369 s, Egaroucid port 25.6 s); in games as strong as the old solver (51.1 % at 500 ms) |
 | 4 Release 2.0 in the apps | done | The engine is Stello 2 with a book recalculated by it; with books on it scores 88.9 % (+362) against Stello 1 at 500 ms, and the new book is as good as the old one (49.2 %); in the browser 22 empty squares solve in 0.6–1.3 s (Stello 1: 1.1–4.5 s) |
-| 5 Search improvements (2.x) | in progress (branch `feature/stello-v2.x`) | Item 1 (time use): no gain, the 2/3 rule stays. Item 2: PVS in every node +28/+30 Elo, kept; a table with both bounds and two moves gave nothing |
+| 5 Search improvements (2.x) | in progress (branch `feature/stello-v2.x`) | Item 1 (time use): no gain, the 2/3 rule stays. Item 2: PVS in every node +28/+30 Elo, kept; a table with both bounds and two moves gave nothing; item 3 Multi-ProbCut +120 at 500 ms; item 4 ordering and ETC kept; item 5 rejected; the book recalculated with 2.x: 51.7 % against the 2.0 book |
 
 ## Stello 1, the frozen baseline
 
@@ -428,6 +428,27 @@ Matches, 1,180 games each:
 - **When to start solving is flat** around today's rule (the midgame stops when its next iteration would leave 7 or fewer empty squares). The rule stays.
 - **The clog search was not tried.** It finds forced early game ends, mostly wipeouts. Egaroucid needs it because its selective endgame can miss them. With no selective endgame there is nothing for it to fix, and wipeouts are rare in these games.
 - **Kept:** the trainer's `mpc-end` command, with the single-move fix in both commands, for a later try, for example with Egaroucid's staged levels (74 % … 100 %) or at longer time controls.
+
+### The 2.x opening book (2026-11-02)
+
+The user recalculated the book on the other PC with the 2.x search: engine version 4, 60 s per position, 8 workers, about 14 hours (merged as abb5160).
+
+- **The searches went deeper:** 22–29 plies, mostly 24–26, against 17–19 with the 2.0 search.
+- **Every leaf without a proof was searched,** including the 2,718 old `WinLossDraw` leaves that the 2.0 recalculation had kept (the bug fixed in d21e42f).
+- **What changed:** 15,776 values. 606 heuristic leaves became exact and 595 became proven wins or losses, and the first move changed in 1,694 positions.
+- **The values look right.** The Egaroucid port searched sampled leaves at level 21; the table gives each book's average distance from its scores.
+
+  | Leaves | 2.0 book | 2.x book |
+  |---|---:|---:|
+  | 200 random leaves, heuristic in both books | 2.19 discs (correlation 0.93) | 2.02 discs (0.94) |
+  | 100 random former stale `WinLossDraw` leaves | 3.80 discs (0.80) | 2.02 discs (0.93) |
+
+  The average heuristic leaf grew from 3.2 to 4.9 discs. This comes from the stale leaves: their old values averaged 0.77 discs, against 4.39 from Egaroucid. It is not a bias of the deeper search: on the leaves that were heuristic in both books, the averages are 5.08 and 5.10 discs.
+  - Both books rate the move that leads to the leaf about 0.7–0.8 discs higher than Egaroucid does. Book moves are the ones Stello liked best, so some optimism is expected.
+- **The opening:** the replies to d3 are c5 −0.87, c3 −2.62 and e3 −7.75. Egaroucid's level 21 gives 0, 0 and −6.
+  - The main line now leaves the tiger at move 3: c5 rather than c3 after f5 d6, rated +0.87 against +0.75.
+  - It follows "Rotating Flat (Kling Continuation)" for 18 moves, out of 19 in all.
+- **In play** (books on, 500 ms per move, 1,180 games from `starts.txt`), the 2.x book against the 2.0 book scored 51.7 % (49.7–53.6), +11 Elo. That is not significant, but not worse ([result](benchmark-results/match_v2x-book2x-vs-book20-500ms.md)). As in phase 4, the start positions at ply 10–12 leave the book little room. Item 6, checking the moves outside the book when leaving it, comes next.
 
 ### Side experiment: a larger evaluation for the desktop (2026-11-01)
 
