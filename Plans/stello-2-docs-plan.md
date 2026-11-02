@@ -68,9 +68,9 @@ The user's goals are in [Update documentation for Stello 2 release.md](../Update
 - **Contents:** README and chapters 01–18 exactly as at `a261a6d`, the last commit before the 2.0 work, with their images in `stello-1/images/`.
 - **A note at the top of each page:** "Stello 1 documentation (archive): this describes the engine before 2.0, kept in `Stello.Engine.V1`".
 - **Links are repointed:**
-  - for the code Stello 1 keeps (`SearchEngine.cs`, `Search/*`, `Evaluation/*`), to `Stello.Engine.V1`;
-  - for the shared code (board, book, apps), to the current files;
-  - between chapters, within the archive.
+  - code links go to GitHub permalinks at `a261a6d`, so they show exactly the code the archive describes, line numbers included. Most of those files have changed since, and `Stello.Engine.V1` keeps only the search, evaluation and `ComputerPlayer`;
+  - links to `Plans/` get one more `../`;
+  - links between chapters stay within the archive.
 
 ## Steps and commits (branch `docs/stello-2.0`)
 
@@ -114,4 +114,6 @@ All matches are 1,180 games from `starts.txt`. The results are named `match_v2-f
 
 ## Status
 
-- Step 1: in progress.
+- Step 1: done (9009cce).
+- Step 2: done. Archive in `docs/brain/stello-1/`: 19 pages and 19 images from `a261a6d`, an archive note on each page, and 0 broken links.
+- Step 3: in progress.

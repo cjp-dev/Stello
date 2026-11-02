@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 464 474" width="464" height="474" font-family="sans-serif">
+<title>Start position</title>
+<desc>The start position: white discs on d4 and e5, black discs on e4 and d5. Yellow dots mark black's four legal moves d3, c4, f5 and e6.</desc>
+<rect x="0" y="0" width="464" height="474" fill="#FFFFFF"/>
+<text x="64" y="34" font-size="17" text-anchor="middle" fill="#000000">a</text>
+<text x="34" y="69.66666666666667" font-size="17" text-anchor="end" fill="#000000">1</text>
+<text x="112" y="34" font-size="17" text-anchor="middle" fill="#000000">b</text>
+<text x="34" y="117.66666666666667" font-size="17" text-anchor="end" fill="#000000">2</text>
+<text x="160" y="34" font-size="17" text-anchor="middle" fill="#000000">c</text>
+<text x="34" y="165.66666666666666" font-size="17" text-anchor="end" fill="#000000">3</text>
+<text x="208" y="34" font-size="17" text-anchor="middle" fill="#000000">d</text>
+<text x="34" y="213.66666666666666" font-size="17" text-anchor="end" fill="#000000">4</text>
+<text x="256" y="34" font-size="17" text-anchor="middle" fill="#000000">e</text>
+<text x="34" y="261.6666666666667" font-size="17" text-anchor="end" fill="#000000">5</text>
+<text x="304" y="34" font-size="17" text-anchor="middle" fill="#000000">f</text>
+<text x="34" y="309.6666666666667" font-size="17" text-anchor="end" fill="#000000">6</text>
+<text x="352" y="34" font-size="17" text-anchor="middle" fill="#000000">g</text>
+<text x="34" y="357.6666666666667" font-size="17" text-anchor="end" fill="#000000">7</text>
+<text x="400" y="34" font-size="17" text-anchor="middle" fill="#000000">h</text>
+<text x="34" y="405.6666666666667" font-size="17" text-anchor="end" fill="#000000">8</text>
+<rect x="40" y="40" width="384" height="384" fill="#1B7F3B" stroke="#0B4D22" stroke-width="2"/>
+<line x1="88" y1="40" x2="88" y2="424" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="88" x2="424" y2="88" stroke="#0B4D22" stroke-width="1"/>
+<line x1="136" y1="40" x2="136" y2="424" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="136" x2="424" y2="136" stroke="#0B4D22" stroke-width="1"/>
+<line x1="184" y1="40" x2="184" y2="424" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="184" x2="424" y2="184" stroke="#0B4D22" stroke-width="1"/>
+<line x1="232" y1="40" x2="232" y2="424" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="232" x2="424" y2="232" stroke="#0B4D22" stroke-width="1"/>
+<line x1="280" y1="40" x2="280" y2="424" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="280" x2="424" y2="280" stroke="#0B4D22" stroke-width="1"/>
+<line x1="328" y1="40" x2="328" y2="424" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="328" x2="424" y2="328" stroke="#0B4D22" stroke-width="1"/>
+<line x1="376" y1="40" x2="376" y2="424" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="376" x2="424" y2="376" stroke="#0B4D22" stroke-width="1"/>
+<circle cx="208" cy="208" r="19.200000000000003" fill="#F5F5F5" stroke="#333333" stroke-width="1.5"/>
+<circle cx="256" cy="256" r="19.200000000000003" fill="#F5F5F5" stroke="#333333" stroke-width="1.5"/>
+<circle cx="256" cy="208" r="19.200000000000003" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="208" cy="256" r="19.200000000000003" fill="#111111" stroke="#111111" stroke-width="1.5"/>
+<circle cx="208" cy="160" r="6.720000000000001" fill="#FFC107" stroke="#7A5C00" stroke-width="1"/>
+<circle cx="160" cy="208" r="6.720000000000001" fill="#FFC107" stroke="#7A5C00" stroke-width="1"/>
+<circle cx="304" cy="256" r="6.720000000000001" fill="#FFC107" stroke="#7A5C00" stroke-width="1"/>
+<circle cx="256" cy="304" r="6.720000000000001" fill="#FFC107" stroke="#7A5C00" stroke-width="1"/>
+<text x="232" y="456" font-size="14" text-anchor="middle" fill="#000000">Black to move; the dots are black's legal moves d3, c4, f5 and e6</text>
+</svg>

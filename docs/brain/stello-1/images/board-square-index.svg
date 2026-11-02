@@ -1,0 +1,165 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 464 474" width="464" height="474" font-family="sans-serif">
+<title>C# square index</title>
+<desc>An 8 by 8 board with a1 in the top-left corner. Each square shows its index: a1 = 0, b1 = 1, ..., h1 = 7, a2 = 8, ..., h8 = 63.</desc>
+<rect x="0" y="0" width="464" height="474" fill="#FFFFFF"/>
+<text x="64" y="34" font-size="17" text-anchor="middle" fill="#000000">a</text>
+<text x="34" y="69.66666666666667" font-size="17" text-anchor="end" fill="#000000">1</text>
+<text x="112" y="34" font-size="17" text-anchor="middle" fill="#000000">b</text>
+<text x="34" y="117.66666666666667" font-size="17" text-anchor="end" fill="#000000">2</text>
+<text x="160" y="34" font-size="17" text-anchor="middle" fill="#000000">c</text>
+<text x="34" y="165.66666666666666" font-size="17" text-anchor="end" fill="#000000">3</text>
+<text x="208" y="34" font-size="17" text-anchor="middle" fill="#000000">d</text>
+<text x="34" y="213.66666666666666" font-size="17" text-anchor="end" fill="#000000">4</text>
+<text x="256" y="34" font-size="17" text-anchor="middle" fill="#000000">e</text>
+<text x="34" y="261.6666666666667" font-size="17" text-anchor="end" fill="#000000">5</text>
+<text x="304" y="34" font-size="17" text-anchor="middle" fill="#000000">f</text>
+<text x="34" y="309.6666666666667" font-size="17" text-anchor="end" fill="#000000">6</text>
+<text x="352" y="34" font-size="17" text-anchor="middle" fill="#000000">g</text>
+<text x="34" y="357.6666666666667" font-size="17" text-anchor="end" fill="#000000">7</text>
+<text x="400" y="34" font-size="17" text-anchor="middle" fill="#000000">h</text>
+<text x="34" y="405.6666666666667" font-size="17" text-anchor="end" fill="#000000">8</text>
+<rect x="40" y="40" width="384" height="384" fill="#DCEFD9" stroke="#0B4D22" stroke-width="2"/>
+<line x1="88" y1="40" x2="88" y2="424" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="88" x2="424" y2="88" stroke="#0B4D22" stroke-width="1"/>
+<line x1="136" y1="40" x2="136" y2="424" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="136" x2="424" y2="136" stroke="#0B4D22" stroke-width="1"/>
+<line x1="184" y1="40" x2="184" y2="424" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="184" x2="424" y2="184" stroke="#0B4D22" stroke-width="1"/>
+<line x1="232" y1="40" x2="232" y2="424" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="232" x2="424" y2="232" stroke="#0B4D22" stroke-width="1"/>
+<line x1="280" y1="40" x2="280" y2="424" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="280" x2="424" y2="280" stroke="#0B4D22" stroke-width="1"/>
+<line x1="328" y1="40" x2="328" y2="424" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="328" x2="424" y2="328" stroke="#0B4D22" stroke-width="1"/>
+<line x1="376" y1="40" x2="376" y2="424" stroke="#0B4D22" stroke-width="1"/>
+<line x1="40" y1="376" x2="424" y2="376" stroke="#0B4D22" stroke-width="1"/>
+<text x="64" y="64" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">0</text>
+<text x="64" y="80.8" font-size="12" text-anchor="middle" fill="#666666">a1</text>
+<text x="112" y="64" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">1</text>
+<text x="112" y="80.8" font-size="12" text-anchor="middle" fill="#666666">b1</text>
+<text x="160" y="64" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">2</text>
+<text x="160" y="80.8" font-size="12" text-anchor="middle" fill="#666666">c1</text>
+<text x="208" y="64" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">3</text>
+<text x="208" y="80.8" font-size="12" text-anchor="middle" fill="#666666">d1</text>
+<text x="256" y="64" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">4</text>
+<text x="256" y="80.8" font-size="12" text-anchor="middle" fill="#666666">e1</text>
+<text x="304" y="64" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">5</text>
+<text x="304" y="80.8" font-size="12" text-anchor="middle" fill="#666666">f1</text>
+<text x="352" y="64" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">6</text>
+<text x="352" y="80.8" font-size="12" text-anchor="middle" fill="#666666">g1</text>
+<text x="400" y="64" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">7</text>
+<text x="400" y="80.8" font-size="12" text-anchor="middle" fill="#666666">h1</text>
+<text x="64" y="112" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">8</text>
+<text x="64" y="128.8" font-size="12" text-anchor="middle" fill="#666666">a2</text>
+<text x="112" y="112" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">9</text>
+<text x="112" y="128.8" font-size="12" text-anchor="middle" fill="#666666">b2</text>
+<text x="160" y="112" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">10</text>
+<text x="160" y="128.8" font-size="12" text-anchor="middle" fill="#666666">c2</text>
+<text x="208" y="112" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">11</text>
+<text x="208" y="128.8" font-size="12" text-anchor="middle" fill="#666666">d2</text>
+<text x="256" y="112" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">12</text>
+<text x="256" y="128.8" font-size="12" text-anchor="middle" fill="#666666">e2</text>
+<text x="304" y="112" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">13</text>
+<text x="304" y="128.8" font-size="12" text-anchor="middle" fill="#666666">f2</text>
+<text x="352" y="112" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">14</text>
+<text x="352" y="128.8" font-size="12" text-anchor="middle" fill="#666666">g2</text>
+<text x="400" y="112" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">15</text>
+<text x="400" y="128.8" font-size="12" text-anchor="middle" fill="#666666">h2</text>
+<text x="64" y="160" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">16</text>
+<text x="64" y="176.8" font-size="12" text-anchor="middle" fill="#666666">a3</text>
+<text x="112" y="160" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">17</text>
+<text x="112" y="176.8" font-size="12" text-anchor="middle" fill="#666666">b3</text>
+<text x="160" y="160" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">18</text>
+<text x="160" y="176.8" font-size="12" text-anchor="middle" fill="#666666">c3</text>
+<text x="208" y="160" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">19</text>
+<text x="208" y="176.8" font-size="12" text-anchor="middle" fill="#666666">d3</text>
+<text x="256" y="160" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">20</text>
+<text x="256" y="176.8" font-size="12" text-anchor="middle" fill="#666666">e3</text>
+<text x="304" y="160" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">21</text>
+<text x="304" y="176.8" font-size="12" text-anchor="middle" fill="#666666">f3</text>
+<text x="352" y="160" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">22</text>
+<text x="352" y="176.8" font-size="12" text-anchor="middle" fill="#666666">g3</text>
+<text x="400" y="160" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">23</text>
+<text x="400" y="176.8" font-size="12" text-anchor="middle" fill="#666666">h3</text>
+<text x="64" y="208" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">24</text>
+<text x="64" y="224.8" font-size="12" text-anchor="middle" fill="#666666">a4</text>
+<text x="112" y="208" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">25</text>
+<text x="112" y="224.8" font-size="12" text-anchor="middle" fill="#666666">b4</text>
+<text x="160" y="208" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">26</text>
+<text x="160" y="224.8" font-size="12" text-anchor="middle" fill="#666666">c4</text>
+<text x="208" y="208" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">27</text>
+<text x="208" y="224.8" font-size="12" text-anchor="middle" fill="#666666">d4</text>
+<text x="256" y="208" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">28</text>
+<text x="256" y="224.8" font-size="12" text-anchor="middle" fill="#666666">e4</text>
+<text x="304" y="208" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">29</text>
+<text x="304" y="224.8" font-size="12" text-anchor="middle" fill="#666666">f4</text>
+<text x="352" y="208" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">30</text>
+<text x="352" y="224.8" font-size="12" text-anchor="middle" fill="#666666">g4</text>
+<text x="400" y="208" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">31</text>
+<text x="400" y="224.8" font-size="12" text-anchor="middle" fill="#666666">h4</text>
+<text x="64" y="256" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">32</text>
+<text x="64" y="272.8" font-size="12" text-anchor="middle" fill="#666666">a5</text>
+<text x="112" y="256" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">33</text>
+<text x="112" y="272.8" font-size="12" text-anchor="middle" fill="#666666">b5</text>
+<text x="160" y="256" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">34</text>
+<text x="160" y="272.8" font-size="12" text-anchor="middle" fill="#666666">c5</text>
+<text x="208" y="256" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">35</text>
+<text x="208" y="272.8" font-size="12" text-anchor="middle" fill="#666666">d5</text>
+<text x="256" y="256" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">36</text>
+<text x="256" y="272.8" font-size="12" text-anchor="middle" fill="#666666">e5</text>
+<text x="304" y="256" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">37</text>
+<text x="304" y="272.8" font-size="12" text-anchor="middle" fill="#666666">f5</text>
+<text x="352" y="256" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">38</text>
+<text x="352" y="272.8" font-size="12" text-anchor="middle" fill="#666666">g5</text>
+<text x="400" y="256" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">39</text>
+<text x="400" y="272.8" font-size="12" text-anchor="middle" fill="#666666">h5</text>
+<text x="64" y="304" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">40</text>
+<text x="64" y="320.8" font-size="12" text-anchor="middle" fill="#666666">a6</text>
+<text x="112" y="304" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">41</text>
+<text x="112" y="320.8" font-size="12" text-anchor="middle" fill="#666666">b6</text>
+<text x="160" y="304" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">42</text>
+<text x="160" y="320.8" font-size="12" text-anchor="middle" fill="#666666">c6</text>
+<text x="208" y="304" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">43</text>
+<text x="208" y="320.8" font-size="12" text-anchor="middle" fill="#666666">d6</text>
+<text x="256" y="304" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">44</text>
+<text x="256" y="320.8" font-size="12" text-anchor="middle" fill="#666666">e6</text>
+<text x="304" y="304" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">45</text>
+<text x="304" y="320.8" font-size="12" text-anchor="middle" fill="#666666">f6</text>
+<text x="352" y="304" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">46</text>
+<text x="352" y="320.8" font-size="12" text-anchor="middle" fill="#666666">g6</text>
+<text x="400" y="304" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">47</text>
+<text x="400" y="320.8" font-size="12" text-anchor="middle" fill="#666666">h6</text>
+<text x="64" y="352" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">48</text>
+<text x="64" y="368.8" font-size="12" text-anchor="middle" fill="#666666">a7</text>
+<text x="112" y="352" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">49</text>
+<text x="112" y="368.8" font-size="12" text-anchor="middle" fill="#666666">b7</text>
+<text x="160" y="352" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">50</text>
+<text x="160" y="368.8" font-size="12" text-anchor="middle" fill="#666666">c7</text>
+<text x="208" y="352" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">51</text>
+<text x="208" y="368.8" font-size="12" text-anchor="middle" fill="#666666">d7</text>
+<text x="256" y="352" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">52</text>
+<text x="256" y="368.8" font-size="12" text-anchor="middle" fill="#666666">e7</text>
+<text x="304" y="352" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">53</text>
+<text x="304" y="368.8" font-size="12" text-anchor="middle" fill="#666666">f7</text>
+<text x="352" y="352" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">54</text>
+<text x="352" y="368.8" font-size="12" text-anchor="middle" fill="#666666">g7</text>
+<text x="400" y="352" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">55</text>
+<text x="400" y="368.8" font-size="12" text-anchor="middle" fill="#666666">h7</text>
+<text x="64" y="400" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">56</text>
+<text x="64" y="416.8" font-size="12" text-anchor="middle" fill="#666666">a8</text>
+<text x="112" y="400" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">57</text>
+<text x="112" y="416.8" font-size="12" text-anchor="middle" fill="#666666">b8</text>
+<text x="160" y="400" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">58</text>
+<text x="160" y="416.8" font-size="12" text-anchor="middle" fill="#666666">c8</text>
+<text x="208" y="400" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">59</text>
+<text x="208" y="416.8" font-size="12" text-anchor="middle" fill="#666666">d8</text>
+<text x="256" y="400" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">60</text>
+<text x="256" y="416.8" font-size="12" text-anchor="middle" fill="#666666">e8</text>
+<text x="304" y="400" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">61</text>
+<text x="304" y="416.8" font-size="12" text-anchor="middle" fill="#666666">f8</text>
+<text x="352" y="400" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">62</text>
+<text x="352" y="416.8" font-size="12" text-anchor="middle" fill="#666666">g8</text>
+<text x="400" y="400" font-size="17" text-anchor="middle" font-family="monospace" fill="#333333">63</text>
+<text x="400" y="416.8" font-size="12" text-anchor="middle" fill="#666666">h8</text>
+<text x="232" y="456" font-size="15" text-anchor="middle" fill="#000000">index = row × 8 + column (row and column counted from 0)</text>
+</svg>

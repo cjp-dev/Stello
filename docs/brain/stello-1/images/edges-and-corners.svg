@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 764 514" width="764" height="514" font-family="sans-serif">
+<title>Edges, corners, X-squares and C-squares</title>
+<desc>The board with its four edges read in a fixed direction: edge 0 is row 1 from a1 to h1, edge 1 is column h from h1 to h8, edge 2 is row 8 from a8 to h8 and edge 3 is column a from a1 to a8. The corners are green, the X-squares diagonally next to the corners are red and the C-squares next to the corners along the edges are orange.</desc>
+<rect x="0" y="0" width="764" height="514" fill="#FFFFFF"/>
+<defs><marker id="head-1565C0" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1565C0"/></marker></defs>
+<text x="154" y="54" font-size="17" text-anchor="middle" fill="#000000">a</text>
+<text x="124" y="89.66666666666667" font-size="17" text-anchor="end" fill="#000000">1</text>
+<text x="202" y="54" font-size="17" text-anchor="middle" fill="#000000">b</text>
+<text x="124" y="137.66666666666666" font-size="17" text-anchor="end" fill="#000000">2</text>
+<text x="250" y="54" font-size="17" text-anchor="middle" fill="#000000">c</text>
+<text x="124" y="185.66666666666666" font-size="17" text-anchor="end" fill="#000000">3</text>
+<text x="298" y="54" font-size="17" text-anchor="middle" fill="#000000">d</text>
+<text x="124" y="233.66666666666666" font-size="17" text-anchor="end" fill="#000000">4</text>
+<text x="346" y="54" font-size="17" text-anchor="middle" fill="#000000">e</text>
+<text x="124" y="281.6666666666667" font-size="17" text-anchor="end" fill="#000000">5</text>
+<text x="394" y="54" font-size="17" text-anchor="middle" fill="#000000">f</text>
+<text x="124" y="329.6666666666667" font-size="17" text-anchor="end" fill="#000000">6</text>
+<text x="442" y="54" font-size="17" text-anchor="middle" fill="#000000">g</text>
+<text x="124" y="377.6666666666667" font-size="17" text-anchor="end" fill="#000000">7</text>
+<text x="490" y="54" font-size="17" text-anchor="middle" fill="#000000">h</text>
+<text x="124" y="425.6666666666667" font-size="17" text-anchor="end" fill="#000000">8</text>
+<rect x="130" y="60" width="384" height="384" fill="#DCEFD9" stroke="#0B4D22" stroke-width="2"/>
+<rect x="130" y="60" width="48" height="48" fill="#81C784"/>
+<rect x="178" y="60" width="48" height="48" fill="#FFCC80"/>
+<rect x="226" y="60" width="48" height="48" fill="#C8E6C9"/>
+<rect x="274" y="60" width="48" height="48" fill="#C8E6C9"/>
+<rect x="322" y="60" width="48" height="48" fill="#C8E6C9"/>
+<rect x="370" y="60" width="48" height="48" fill="#C8E6C9"/>
+<rect x="418" y="60" width="48" height="48" fill="#FFCC80"/>
+<rect x="466" y="60" width="48" height="48" fill="#81C784"/>
+<rect x="130" y="108" width="48" height="48" fill="#FFCC80"/>
+<rect x="178" y="108" width="48" height="48" fill="#EF9A9A"/>
+<rect x="418" y="108" width="48" height="48" fill="#EF9A9A"/>
+<rect x="466" y="108" width="48" height="48" fill="#FFCC80"/>
+<rect x="130" y="156" width="48" height="48" fill="#C8E6C9"/>
+<rect x="466" y="156" width="48" height="48" fill="#C8E6C9"/>
+<rect x="130" y="204" width="48" height="48" fill="#C8E6C9"/>
+<rect x="466" y="204" width="48" height="48" fill="#C8E6C9"/>
+<rect x="130" y="252" width="48" height="48" fill="#C8E6C9"/>
+<rect x="466" y="252" width="48" height="48" fill="#C8E6C9"/>
+<rect x="130" y="300" width="48" height="48" fill="#C8E6C9"/>
+<rect x="466" y="300" width="48" height="48" fill="#C8E6C9"/>
+<rect x="130" y="348" width="48" height="48" fill="#FFCC80"/>
+<rect x="178" y="348" width="48" height="48" fill="#EF9A9A"/>
+<rect x="418" y="348" width="48" height="48" fill="#EF9A9A"/>
+<rect x="466" y="348" width="48" height="48" fill="#FFCC80"/>
+<rect x="130" y="396" width="48" height="48" fill="#81C784"/>
+<rect x="178" y="396" width="48" height="48" fill="#FFCC80"/>
+<rect x="226" y="396" width="48" height="48" fill="#C8E6C9"/>
+<rect x="274" y="396" width="48" height="48" fill="#C8E6C9"/>
+<rect x="322" y="396" width="48" height="48" fill="#C8E6C9"/>
+<rect x="370" y="396" width="48" height="48" fill="#C8E6C9"/>
+<rect x="418" y="396" width="48" height="48" fill="#FFCC80"/>
+<rect x="466" y="396" width="48" height="48" fill="#81C784"/>
+<line x1="178" y1="60" x2="178" y2="444" stroke="#0B4D22" stroke-width="1"/>
+<line x1="130" y1="108" x2="514" y2="108" stroke="#0B4D22" stroke-width="1"/>
+<line x1="226" y1="60" x2="226" y2="444" stroke="#0B4D22" stroke-width="1"/>
+<line x1="130" y1="156" x2="514" y2="156" stroke="#0B4D22" stroke-width="1"/>
+<line x1="274" y1="60" x2="274" y2="444" stroke="#0B4D22" stroke-width="1"/>
+<line x1="130" y1="204" x2="514" y2="204" stroke="#0B4D22" stroke-width="1"/>
+<line x1="322" y1="60" x2="322" y2="444" stroke="#0B4D22" stroke-width="1"/>
+<line x1="130" y1="252" x2="514" y2="252" stroke="#0B4D22" stroke-width="1"/>
+<line x1="370" y1="60" x2="370" y2="444" stroke="#0B4D22" stroke-width="1"/>
+<line x1="130" y1="300" x2="514" y2="300" stroke="#0B4D22" stroke-width="1"/>
+<line x1="418" y1="60" x2="418" y2="444" stroke="#0B4D22" stroke-width="1"/>
+<line x1="130" y1="348" x2="514" y2="348" stroke="#0B4D22" stroke-width="1"/>
+<line x1="466" y1="60" x2="466" y2="444" stroke="#0B4D22" stroke-width="1"/>
+<line x1="130" y1="396" x2="514" y2="396" stroke="#0B4D22" stroke-width="1"/>
+<text x="154" y="89.75999999999999" font-size="16" text-anchor="middle" font-family="monospace" fill="#333333">corner</text>
+<text x="202" y="89.75999999999999" font-size="16" text-anchor="middle" font-family="monospace" fill="#333333">C</text>
+<text x="442" y="89.75999999999999" font-size="16" text-anchor="middle" font-family="monospace" fill="#333333">C</text>
+<text x="490" y="89.75999999999999" font-size="16" text-anchor="middle" font-family="monospace" fill="#333333">corner</text>
+<text x="154" y="137.76" font-size="16" text-anchor="middle" font-family="monospace" fill="#333333">C</text>
+<text x="202" y="137.76" font-size="16" text-anchor="middle" font-family="monospace" fill="#333333">X</text>
+<text x="442" y="137.76" font-size="16" text-anchor="middle" font-family="monospace" fill="#333333">X</text>
+<text x="490" y="137.76" font-size="16" text-anchor="middle" font-family="monospace" fill="#333333">C</text>
+<text x="154" y="377.76" font-size="16" text-anchor="middle" font-family="monospace" fill="#333333">C</text>
+<text x="202" y="377.76" font-size="16" text-anchor="middle" font-family="monospace" fill="#333333">X</text>
+<text x="442" y="377.76" font-size="16" text-anchor="middle" font-family="monospace" fill="#333333">X</text>
+<text x="490" y="377.76" font-size="16" text-anchor="middle" font-family="monospace" fill="#333333">C</text>
+<text x="154" y="425.76" font-size="16" text-anchor="middle" font-family="monospace" fill="#333333">corner</text>
+<text x="202" y="425.76" font-size="16" text-anchor="middle" font-family="monospace" fill="#333333">C</text>
+<text x="442" y="425.76" font-size="16" text-anchor="middle" font-family="monospace" fill="#333333">C</text>
+<text x="490" y="425.76" font-size="16" text-anchor="middle" font-family="monospace" fill="#333333">corner</text>
+<line x1="136" y1="34" x2="508" y2="34" stroke="#1565C0" stroke-width="3" marker-end="url(#head-1565C0)"/>
+<text x="322" y="28" font-size="14" text-anchor="middle" fill="#1565C0">edge 0: row 1, a1 → h1</text>
+<line x1="540" y1="66" x2="540" y2="438" stroke="#1565C0" stroke-width="3" marker-end="url(#head-1565C0)"/>
+<text x="548" y="252" font-size="14" fill="#1565C0">edge 1: column h, h1 → h8</text>
+<line x1="136" y1="470" x2="508" y2="470" stroke="#1565C0" stroke-width="3" marker-end="url(#head-1565C0)"/>
+<text x="322" y="490" font-size="14" text-anchor="middle" fill="#1565C0">edge 2: row 8, a8 → h8</text>
+<line x1="96" y1="66" x2="96" y2="438" stroke="#1565C0" stroke-width="3" marker-end="url(#head-1565C0)"/>
+<text x="86" y="252" font-size="14" text-anchor="end" fill="#1565C0">edge 3</text>
+<text x="86" y="270" font-size="13" text-anchor="end" fill="#1565C0">column a,</text>
+<text x="86" y="286" font-size="13" text-anchor="end" fill="#1565C0">a1 → a8</text>
+<text x="548" y="340" font-size="13" fill="#000000">Each corner is the first or last</text>
+<text x="548" y="358" font-size="13" fill="#000000">square of two edges:</text>
+<text x="548" y="380" font-size="13" fill="#000000">a1: first of edges 0 and 3</text>
+<text x="548" y="398" font-size="13" fill="#000000">h1: last of 0, first of 1</text>
+<text x="548" y="416" font-size="13" fill="#000000">h8: last of 1 and 2</text>
+<text x="548" y="434" font-size="13" fill="#000000">a8: last of 3, first of 2</text>
+</svg>
