@@ -13,7 +13,7 @@ What the work on Stello 3.0 teaches us, written down as we go: the decisions, th
 | 1 The core in Rust | done (2026-11-02) | Board, evaluation, midgame search and endgame solver node-for-node identical to C# 2.0 (mid-bench, FFO #40–49, 3,100 random midgame and endgame positions, the whole test split); 1.27–1.37× faster on one thread |
 | 2 Desktop and tools on Rust | done (2026-11-02) | The C# `SearchEngine` calls Rust, identical to 2.0 (mid-bench, random positions, FFO, handover, 500 random endgames, a whole book recalculation); after a speed pass 2.8–3.1× faster in the midgame and 1.75× on FFO; 3.0 beats 2.0 at 500 ms with 59.6 % (+68 Elo) |
 | 3 The web app on Rust | done (2026-11-02) | The browser searches with the Rust engine in WebAssembly, node for node like 2.0; in Chromium 2.3–2.4× faster than the .NET AOT worker in the midgame and 1.59× on FFO #40–44 (1.86× overall); the worker starts in 92 ms instead of 680, Stop and Move Now answer in under 1 ms, and the first visit is 1.07 MB smaller |
-| 4 Release (3.0 preview) | in progress | About shows 3.0; docs Part 1 describes the Rust engine, Part 3 begins with chapter 25 (glossary and references now 26 and 27); 0 broken links, all 46 Mermaid diagrams render in the docs viewer |
+| 4 Release (3.0 preview) | done (2026-11-02) | About shows 3.0; docs Part 1 describes the Rust engine and Part 3 begins (chapter 25); main = c9aa054, deploy 41504303682 succeeded; the live site plays, stops and solves on the Rust engine |
 | 5 Threads and a shared hash table | not started | |
 | 6 Lazy SMP | not started | |
 | 7 YBWC | not started | |
@@ -416,3 +416,21 @@ Speed: the old build is b132d6f (the .NET AOT worker running Stello 2.0), and ea
   - `simd128` (2 %). The .NET AOT build already requires WebAssembly SIMD, so this adds no new browser requirement;
   - a different flip algorithm, such as Edax's per-square `flip_carry` functions with outflank tables (about 1,500 lines);
   - SIMD flips for the four upward rays. WebAssembly SIMD has no per-lane variable shifts and no 64-bit `clz`, so the downward rays stay scalar.
+
+## Phase 4: the 3.0 preview release (2026-11-02, c9aa054)
+
+- **About** shows "Stello Version 3.0", and its text says the brain is written in Rust since 3.0.
+- **The docs:**
+  - Part 1 (01–15) describes the Rust engine: code links, names, constants and the 3.0 numbers, plus new sections on `pext`, the generation-cleared table, the flips, the stop signals and clock, and how each app gets the engine.
+  - Part 3 begins with [chapter 25](../docs/25-phases-0-4-the-engine-in-rust.md). The glossary and references are now 26 and 27.
+  - The link check finds 0 broken links in `docs/`, and all 46 Mermaid diagrams render in the docs viewer.
+  - A new result file, [v3p2-solve-bench-40-49.json](benchmark-results/v3p2-solve-bench-40-49.json), has FFO #40–49 with 3.0 (26.1 s).
+- **The release:** main was fast-forwarded to c9aa054. Deploy run 41504303682 succeeded, including the new Rust steps (rustup with wasm32, prebuilt wasm-bindgen 0.2.130).
+- **The live check** (headless Chromium, polite-sky-0e9899910.3.azurestaticapps.net):
+  - `crossOriginIsolated` is true, and `engine/stello_wasm_bg.wasm` and `stello_wasm.js` are served;
+  - About shows 3.0, and chapter 25 opens in the docs viewer;
+  - a whole game, computer against computer at 1 s per move with the book, gave 19 book moves and 41 searches. Add Game to Book saved 22,916 positions;
+  - Move Now answered in 28–29 ms and New Game during a search in 29–33 ms, click to board;
+  - a 22-empty position was solved in 0.26 s at 25.2 M nodes/s (2.0 in the browser: 0.49 s at 12.9 M);
+  - there were no page errors.
+
