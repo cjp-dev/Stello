@@ -9,12 +9,13 @@
 //!
 //! C# throws to stop a search; here every search function returns `Result<_, Abort>` and `?` unwinds.
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 
 use super::limits::{ScoreKind, SearchInfo, SearchLimits, SearchResult, TimeControlMode};
 use super::options::SearchOptions;
 use super::ordering::{self, MoveOrdering};
+use super::pool::{Spawner, ThreadPool, std_spawner};
 use super::table::{Bound, TranspositionTable};
 use super::time::{self, TimeBudget};
 use crate::bits;
@@ -170,17 +171,68 @@ pub(crate) enum Abort {
 
 /// C#: `SearchEngine`. An instance runs one search at a time; it keeps its hash tables between searches until
 /// [`SearchEngine::clear_hash`].
+///
+/// A search with [`SearchLimits::threads`] above 1 runs on this thread and on workers of a [`ThreadPool`] that the
+/// engine starts at the first such search and keeps for the next ones with as many threads. All threads share the
+/// two hash tables; each has its own [`ThreadState`]. With 1 thread no pool is used, and the search is exactly the
+/// single-threaded one.
 pub struct SearchEngine {
     hash_bits: u32,
     options: SearchOptions,
     probcut_errors: Option<Box<ProbCutErrors>>,
     midgame_table: TranspositionTable,
     endgame_table: TranspositionTable,
-    endgame: EndgameState,
-    ordering: MoveOrdering,
+    /// The calling thread's state; the pool's workers have their own.
+    main: ThreadState,
+    /// The workers for searches with more than 1 thread, and the thread count they were started for.
+    pool: Option<(u32, ThreadPool<ThreadState>)>,
+    spawner: Spawner,
     clock: Clock,
     iteration_done: Option<Box<dyn FnMut(i32, i32) + Send>>,
 }
+
+/// What each search thread keeps from search to search: the solver's local table (C#: `_localTable`) and the
+/// response killers (C#: `_ordering`). Only [`SearchEngine::clear_hash`] clears the local table.
+#[derive(Default)]
+pub struct ThreadState {
+    pub(crate) endgame: EndgameState,
+    pub(crate) ordering: MoveOrdering,
+}
+
+/// What all threads of one search read: the evaluation, the Multi-ProbCut errors, the shared hash tables and the
+/// options of the clock.
+#[derive(Clone, Copy)]
+pub(crate) struct SearchContext<'a> {
+    pattern: &'a EvalWeights,
+    probcut_errors: Option<&'a ProbCutErrors>,
+    midgame_table: &'a TranspositionTable,
+    endgame_table: &'a TranspositionTable,
+    clock: Clock,
+    soft_time_percent: Option<i32>,
+}
+
+impl<'a> SearchContext<'a> {
+    fn new(
+        options: &'a SearchOptions,
+        probcut_errors: Option<&'a ProbCutErrors>,
+        midgame_table: &'a TranspositionTable,
+        endgame_table: &'a TranspositionTable,
+        clock: Clock,
+    ) -> SearchContext<'a> {
+        SearchContext {
+            pattern: options.pattern.as_deref().unwrap_or_else(|| EvalWeights::built_in()),
+            probcut_errors,
+            midgame_table,
+            endgame_table,
+            clock,
+            soft_time_percent: options.soft_time_percent,
+        }
+    }
+}
+
+/// Whether this build can start threads: not WebAssembly without atomics (the single-threaded web build; phase 8
+/// brings threads to the browser).
+const THREADS_AVAILABLE: bool = !cfg!(all(target_arch = "wasm32", not(target_feature = "atomics")));
 
 impl SearchEngine {
     /// Each of the two hash tables gets 2^`hash_bits` slots of two entries (C++: HASHSIZE 19, one entry). Panics
@@ -199,8 +251,9 @@ impl SearchEngine {
             probcut_errors,
             midgame_table: TranspositionTable::new(hash_bits),
             endgame_table: TranspositionTable::new(hash_bits),
-            endgame: EndgameState::default(),
-            ordering: MoveOrdering::default(),
+            main: ThreadState::default(),
+            pool: None,
+            spawner: std_spawner,
             clock: system_clock,
             iteration_done: None,
         }
@@ -220,12 +273,21 @@ impl SearchEngine {
     pub fn clear_hash(&mut self) {
         self.midgame_table.clear();
         self.endgame_table.clear();
-        self.endgame.clear();
+        self.main.endgame.clear();
+        if let Some((_, pool)) = &self.pool {
+            pool.for_each_state(|state| state.endgame.clear());
+        }
     }
 
     /// The clock that times the search (default [`system_clock`]).
     pub fn set_clock(&mut self, clock: Clock) {
         self.clock = clock;
+    }
+
+    /// How the engine starts the threads of searches with more than 1 thread (default [`std_spawner`]); for a build
+    /// whose threads are not `std` threads, such as Web Workers. Applies from the next pool the engine starts.
+    pub fn set_spawner(&mut self, spawner: Spawner) {
+        self.spawner = spawner;
     }
 
     /// Called after each finished midgame iteration with its depth and score (for the Multi-ProbCut fit).
@@ -241,6 +303,11 @@ impl SearchEngine {
     /// - `stop`: cancel returns [`SearchError::Cancelled`]; Move Now returns the best move found so far;
     /// - `only_moves`: search only these moves, even if just one is left (C++ calclib: the best move not yet in the
     ///   book).
+    ///
+    /// With more than 1 thread ([`SearchLimits::threads`]) the other threads search the same position into the
+    /// shared hash tables while this thread searches as with 1 thread, starting with the root moves in another order
+    /// each (a first, plain parallel search, to be replaced by Lazy SMP and YBWC). They stop when this thread's search
+    /// ends; the result is this thread's, with the nodes and evaluations of all threads.
     pub fn search(
         &mut self,
         board: &Board,
@@ -255,59 +322,108 @@ impl SearchEngine {
         }
 
         let progress = progress.map(|p| p as &mut dyn FnMut(&SearchInfo));
-        self.searcher(progress, stop).run(board, player, limits, only_moves)
-    }
+        let threads = if THREADS_AVAILABLE { limits.threads() } else { 1 };
+        if threads == 1 {
+            return self.searcher(progress, stop).run(board, player, limits, only_moves);
+        }
 
-    /// A new search on this engine's tables, with the counters at zero and the clock started (C#: the start of
-    /// `Search`). The endgame's tests call the solver through it.
-    pub(crate) fn searcher<'a>(
-        &'a mut self,
-        progress: Option<&'a mut dyn FnMut(&SearchInfo)>,
-        stop: &'a dyn StopSignal,
-    ) -> Searcher<'a> {
+        if self.pool.as_ref().is_none_or(|(size, _)| *size != threads) {
+            // The old workers end first, so there are never more threads than asked for.
+            self.pool = None;
+            self.pool = Some((threads, ThreadPool::new(threads as usize - 1, self.spawner, ThreadState::default)));
+        }
+
         let SearchEngine {
             options,
             probcut_errors,
             midgame_table,
             endgame_table,
-            endgame,
-            ordering,
+            main,
+            pool,
             clock,
             iteration_done,
             ..
         } = self;
-        Searcher {
-            pattern: options.pattern.as_deref().unwrap_or_else(|| EvalWeights::built_in()),
-            probcut_errors: probcut_errors.as_deref(),
-            midgame_table,
-            endgame_table,
-            endgame,
-            ordering,
-            progress,
-            iteration_done: iteration_done.as_deref_mut(),
-            stop,
-            clock: *clock,
-            start: clock(),
-            soft_time_percent: options.soft_time_percent,
-            nodes: 0,
-            evaluations: 0,
-            next_abort_check: 1024,
-            hard_limit_ms: i64::MAX,
-            hash_get_height: 0,
-            hash_put_height: 0,
-            in_probcut: false,
-            last_heartbeat_ms: 0,
-            report_depth: 0,
-            report_move: -1,
-            report_best_move: -1,
-            report_score: 0,
-            report_kind: ScoreKind::None,
-        }
+        let context = SearchContext::new(options, probcut_errors.as_deref(), midgame_table, endgame_table, *clock);
+        let pool = &pool.as_ref().expect("the pool was started above").1;
+        let (helpers_stop, helper_nodes, helper_evaluations) =
+            (AtomicBool::new(false), AtomicU64::new(0), AtomicU64::new(0));
+        let (board, limits) = (*board, *limits);
+        let result = pool.scope(|scope| {
+            for helper in 1..threads as usize {
+                let (helpers_stop, helper_nodes, helper_evaluations) =
+                    (&helpers_stop, &helper_nodes, &helper_evaluations);
+                let started = scope.try_spawn(move |state: &mut ThreadState| {
+                    let stop = FlagStop(helpers_stop);
+                    let mut searcher = Searcher::new(context, state, &stop);
+                    searcher.root_rotation = helper;
+                    searcher.node_sink = Some(helper_nodes);
+                    // A helper's result is not used: it searched to fill the shared tables.
+                    let _ = searcher.run(&board, player, &limits, only_moves);
+                    searcher.flush_nodes();
+                    helper_evaluations.fetch_add(searcher.evaluations, Ordering::Relaxed);
+                });
+                if !started {
+                    break;
+                }
+            }
+
+            // The helpers stop when this thread's search ends, also if it panics (else the scope would wait for them).
+            struct StopHelpers<'a>(&'a AtomicBool);
+            impl Drop for StopHelpers<'_> {
+                fn drop(&mut self) {
+                    self.0.store(true, Ordering::Relaxed);
+                }
+            }
+            let _stop_helpers = StopHelpers(&helpers_stop);
+
+            let mut searcher = Searcher::new(context, main, stop);
+            searcher.progress = progress;
+            searcher.iteration_done = iteration_done.as_deref_mut();
+            searcher.node_source = Some(&helper_nodes);
+            searcher.run(&board, player, &limits, only_moves)
+        });
+
+        result.map(|mut result| {
+            result.nodes += helper_nodes.load(Ordering::Relaxed);
+            result.evaluations += helper_evaluations.load(Ordering::Relaxed);
+            result
+        })
+    }
+
+    /// A new search on this thread with this engine's tables, with the counters at zero and the clock started (C#:
+    /// the start of `Search`). The endgame's tests call the solver through it.
+    pub(crate) fn searcher<'a>(
+        &'a mut self,
+        progress: Option<&'a mut dyn FnMut(&SearchInfo)>,
+        stop: &'a dyn StopSignal,
+    ) -> Searcher<'a> {
+        let SearchEngine { options, probcut_errors, midgame_table, endgame_table, main, clock, iteration_done, .. } =
+            self;
+        let context = SearchContext::new(options, probcut_errors.as_deref(), midgame_table, endgame_table, *clock);
+        let mut searcher = Searcher::new(context, main, stop);
+        searcher.progress = progress;
+        searcher.iteration_done = iteration_done.as_deref_mut();
+        searcher
     }
 
     /// [`SearchEngine::search`] without progress reports or stop signals.
     pub fn search_simple(&mut self, board: &Board, player: Player, limits: &SearchLimits) -> SearchResult {
         self.search(board, player, limits, None, &NoStop, None).expect("a search without stop signals finishes")
+    }
+}
+
+/// The stop signal of a helper thread: Move Now once the main search has ended.
+struct FlagStop<'a>(&'a AtomicBool);
+
+impl StopSignal for FlagStop<'_> {
+    fn is_cancelled(&self) -> bool {
+        false
+    }
+
+    #[inline]
+    fn is_move_now(&self) -> bool {
+        self.0.load(Ordering::Relaxed)
     }
 }
 
@@ -320,12 +436,13 @@ pub(crate) struct Best {
     pub depth: i32,
 }
 
-/// One running search of a [`SearchEngine`]: C#'s per-search fields, with borrows of the engine's tables.
+/// One running search on one thread: C#'s per-search fields, with borrows of the engine's shared tables and of the
+/// thread's own [`ThreadState`].
 pub(crate) struct Searcher<'a> {
     pub(crate) pattern: &'a EvalWeights,
     probcut_errors: Option<&'a ProbCutErrors>,
-    pub(crate) midgame_table: &'a mut TranspositionTable,
-    pub(crate) endgame_table: &'a mut TranspositionTable,
+    pub(crate) midgame_table: &'a TranspositionTable,
+    pub(crate) endgame_table: &'a TranspositionTable,
     pub(crate) endgame: &'a mut EndgameState,
     pub(crate) ordering: &'a mut MoveOrdering,
     progress: Option<&'a mut dyn FnMut(&SearchInfo)>,
@@ -334,6 +451,14 @@ pub(crate) struct Searcher<'a> {
     clock: Clock,
     start: Duration,
     soft_time_percent: Option<i32>,
+    /// A helper thread starts with its root moves rotated by this much, so that the threads begin in different
+    /// subtrees (0 on the main thread).
+    root_rotation: usize,
+    /// A helper adds its nodes here at each abort check ([`Searcher::flush_nodes`]); the main thread reports its own
+    /// nodes plus these.
+    node_sink: Option<&'a AtomicU64>,
+    node_source: Option<&'a AtomicU64>,
+    flushed_nodes: u64,
 
     pub(crate) nodes: u64,
     pub(crate) evaluations: u64,
@@ -351,7 +476,41 @@ pub(crate) struct Searcher<'a> {
     pub(crate) report_kind: ScoreKind,
 }
 
-impl Searcher<'_> {
+impl<'a> Searcher<'a> {
+    fn new(context: SearchContext<'a>, thread: &'a mut ThreadState, stop: &'a dyn StopSignal) -> Searcher<'a> {
+        Searcher {
+            pattern: context.pattern,
+            probcut_errors: context.probcut_errors,
+            midgame_table: context.midgame_table,
+            endgame_table: context.endgame_table,
+            endgame: &mut thread.endgame,
+            ordering: &mut thread.ordering,
+            progress: None,
+            iteration_done: None,
+            stop,
+            clock: context.clock,
+            start: (context.clock)(),
+            soft_time_percent: context.soft_time_percent,
+            root_rotation: 0,
+            node_sink: None,
+            node_source: None,
+            flushed_nodes: 0,
+            nodes: 0,
+            evaluations: 0,
+            next_abort_check: 1024,
+            hard_limit_ms: i64::MAX,
+            hash_get_height: 0,
+            hash_put_height: 0,
+            in_probcut: false,
+            last_heartbeat_ms: 0,
+            report_depth: 0,
+            report_move: -1,
+            report_best_move: -1,
+            report_score: 0,
+            report_kind: ScoreKind::None,
+        }
+    }
+
     fn run(
         &mut self,
         board: &Board,
@@ -385,6 +544,9 @@ impl Searcher<'_> {
         let count = fill(&mut root, moves);
         let root_moves = &mut root[..count];
         self.ordering.order(root_moves, -1, -1, player, board);
+        if self.root_rotation > 0 {
+            root_moves.rotate_left(self.root_rotation % count);
+        }
 
         let mut best = Best { mv: root_moves[0], score: 0, kind: ScoreKind::None, depth: 0 };
         match self.iterate(board, player, limits, root_moves, &mut best) {
@@ -841,6 +1003,7 @@ impl Searcher<'_> {
     /// The heartbeat, then the stop signals and the hard time limit. C#: `CheckAbort`.
     #[cold]
     pub(crate) fn check_abort(&mut self) -> Result<(), Abort> {
+        self.flush_nodes();
         if self.progress.is_some() && self.report_move >= 0 && self.elapsed_ms() - self.last_heartbeat_ms >= 100 {
             self.report(
                 self.report_depth,
@@ -862,6 +1025,14 @@ impl Searcher<'_> {
         Ok(())
     }
 
+    /// Adds a helper's nodes since the last flush to the main thread's count.
+    fn flush_nodes(&mut self) {
+        if let Some(sink) = self.node_sink {
+            sink.fetch_add(self.nodes - self.flushed_nodes, Ordering::Relaxed);
+            self.flushed_nodes = self.nodes;
+        }
+    }
+
     /// C#: `Report`.
     pub(crate) fn report(&mut self, depth: i32, mv: i32, best_move: i32, score: i32, kind: ScoreKind) {
         let Some(progress) = self.progress.as_mut() else { return };
@@ -873,7 +1044,7 @@ impl Searcher<'_> {
             best_move: (best_move >= 0).then(|| Square::new(best_move as u8)),
             score,
             kind,
-            nodes: self.nodes,
+            nodes: self.nodes + self.node_source.map_or(0, |helpers| helpers.load(Ordering::Relaxed)),
             evaluations: self.evaluations,
             elapsed,
         });
@@ -984,6 +1155,84 @@ mod tests {
         send::<SearchEngine>();
         send::<SearchSignals>();
         sync::<SearchSignals>();
+    }
+
+    /// Random endings with 12–18 empty squares and a legal move for the side to move.
+    fn random_endings(count: usize) -> Vec<(Board, Player)> {
+        let mut seed = 0x9E37_79B9_7F4A_7C15u64;
+        let mut endings = Vec::new();
+        while endings.len() < count {
+            let empties = 12 + endings.len() as u32 % 7;
+            let (mut board, mut player) = (Board::INITIAL, Player::Black);
+            while board.empty_count() > empties && !board.is_game_over() {
+                let mut moves = board.legal_moves(player);
+                if moves != 0 {
+                    seed ^= seed << 13;
+                    seed ^= seed >> 7;
+                    seed ^= seed << 17;
+                    for _ in 0..seed % moves.count_ones() as u64 {
+                        moves &= moves - 1;
+                    }
+                    board = board.play_unchecked(player, moves.trailing_zeros());
+                }
+                player = player.opponent();
+            }
+            if board.empty_count() == empties && board.legal_moves(player) != 0 {
+                endings.push((board, player));
+            }
+        }
+        endings
+    }
+
+    /// Eight threads solve different positions at the same time on one engine's small tables, twice each without
+    /// clearing them, so entries of all of them replace each other in the same slots all the time: every score is
+    /// the single-threaded solver's.
+    #[test]
+    fn threads_solving_different_positions_on_one_table_get_exact_scores() {
+        let endings = random_endings(48);
+        let expected: Vec<i32> = endings
+            .iter()
+            .map(|(board, player)| {
+                SearchEngine::new(16, SearchOptions::default())
+                    .search_simple(board, *player, &SearchLimits::SOLVE)
+                    .score
+            })
+            .collect();
+
+        const THREADS: usize = 8;
+        let mut engine = SearchEngine::new(10, SearchOptions::default());
+        let pool = ThreadPool::new(THREADS - 1, std_spawner, ThreadState::default);
+        let SearchEngine { options, probcut_errors, midgame_table, endgame_table, main, clock, .. } = &mut engine;
+        let context = SearchContext::new(options, probcut_errors.as_deref(), midgame_table, endgame_table, *clock);
+        let solve = |thread: usize, state: &mut ThreadState| -> Vec<(usize, i32)> {
+            let mut scores = Vec::new();
+            for _ in 0..2 {
+                for (i, (board, player)) in endings.iter().enumerate().filter(|(i, _)| i % THREADS == thread) {
+                    let mut searcher = Searcher::new(context, state, &NoStop);
+                    scores.push((i, searcher.run(board, *player, &SearchLimits::SOLVE, None).unwrap().score));
+                }
+            }
+            scores
+        };
+
+        let results = std::sync::Mutex::new(Vec::new());
+        pool.scope(|scope| {
+            for thread in 1..THREADS {
+                let (solve, results) = (&solve, &results);
+                assert!(scope.try_spawn(move |state: &mut ThreadState| {
+                    let scores = solve(thread, state);
+                    results.lock().unwrap().extend(scores);
+                }));
+            }
+            let scores = solve(0, main);
+            results.lock().unwrap().extend(scores);
+        });
+
+        let results = results.into_inner().unwrap();
+        assert_eq!(results.len(), 2 * endings.len());
+        for (i, score) in results {
+            assert_eq!(score, expected[i], "{}", endings[i].0);
+        }
     }
 
     #[test]

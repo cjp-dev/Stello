@@ -64,11 +64,11 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public string TranspositionTableEntriesText => TranspositionTableEntries switch
     {
-        <= 65_536 => "65,536 (3 MB)",
-        <= 262_144 => "262,144 (12 MB)",
-        <= 1_048_576 => "1,048,576 (48 MB) - Default",
-        <= 4_194_304 => "4,194,304 (192 MB)",
-        _ => "16,777,216 (768 MB)",
+        <= 65_536 => "65,536 (4 MB)",
+        <= 262_144 => "262,144 (16 MB)",
+        <= 1_048_576 => "1,048,576 (64 MB) - Default",
+        <= 4_194_304 => "4,194,304 (256 MB)",
+        _ => "16,777,216 (1,024 MB)",
     };
 
     partial void OnTranspositionTableEntriesChanged(int value)

@@ -35,9 +35,9 @@ function positions(file) {
 }
 
 // As EngineProtocol.WriteRequest writes it (System.Text.Json): the boards are 64-bit integers.
-function request({ black, white, player }, { mode = 0, depth = 0, timeMs = 0, hashBits = 19 } = {}) {
+function request({ black, white, player }, { mode = 0, depth = 0, timeMs = 0, hashBits = 19, threads = 1 } = {}) {
     return `{"Black":${black},"White":${white},"Player":${player},"Mode":${mode},"Depth":${depth},` +
-        `"TimeTicks":${timeMs * 10000},"UseOpeningBook":true,"HashBits":${hashBits}}`;
+        `"TimeTicks":${timeMs * 10000},"UseOpeningBook":true,"HashBits":${hashBits},"Threads":${threads}}`;
 }
 
 const kinds = ['None', 'Heuristic', 'WinLossDraw', 'Exact', 'Book'];
@@ -72,6 +72,16 @@ test('solves equal Stello 2.0 node for node (FFO #40 and #41)', () => {
     for (const line of signatures.filter(line => / (40|41) solve /.test(line))) {
         checkSignature(line, files);
     }
+});
+
+test('a request for more threads is accepted and searched with 1 (no threads in this build)', () => {
+    const position = positions('midgame.txt').get('g01e36');
+    engine.init(undefined, 19);
+    const one = run(request(position, { mode: 0, depth: 8 }));
+    engine.init(undefined, 19);
+    const eight = run(request(position, { mode: 0, depth: 8, threads: 8 }));
+    assert.deepEqual({ ...eight, ElapsedTicks: 0 }, { ...one, ElapsedTicks: 0 });
+    assert.throws(() => run(request(position, { mode: 0, depth: 8, threads: 0 })), /Threads must be 1-256/);
 });
 
 test('progress is posted for new depths and best moves, otherwise at most every 100 ms', () => {

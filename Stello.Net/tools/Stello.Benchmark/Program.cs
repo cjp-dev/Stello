@@ -14,17 +14,18 @@ internal static class Program
                                     A side is a list such as "time-ms=100", "depth=8", "game-s=60,hash-bits=20,name=new"
                                     or "engine=egaroucid,time-ms=100,book=on": engine (stello, stello-v2 = Stello 2.0 in C#, stello-v1 = Stello 1 or egaroucid), time-ms
                                     (per move), game-s (per game), depth (Stello) or level (Egaroucid), eval (Stello: another pattern evaluation file), soft-pct (1-100) and mpc (Multi-ProbCut t × 100) (Stello 2's
-                                    search switches), hash-bits
+                                    search switches), threads (Stello: 1-256 threads sharing the hash tables, 1), hash-bits
                                     (Stello 19; Egaroucid 21, the same memory), book (on/off, off), book-file (Stello: another text book, turns the book on), book-acc (Egaroucid, 0),
                                     seed (Egaroucid's book choice, 1), name.
           solve-bench [--engine stello|stello-v2|stello-v1|egaroucid] [--eval <file>] [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits N]
-                      [--out <file.json>] [--compare <file.json>]
+                      [--threads N] [--out <file.json>] [--compare <file.json>]
                                     Solve the FFO positions exactly: score check, nodes, time to solve.
           mid-bench [--engine stello|stello-v2|stello-v1|egaroucid] [--eval <file>] [--side <Stello side keys>] [--positions <file>] [--depth 10] [--mpc 100 | --level L] [--passes 3]
-                    [--hash-bits N] [--selective on|off] [--probcut-pct N] [--out <file.json>] [--compare <file.json>]
+                    [--hash-bits N] [--selective on|off] [--probcut-pct N] [--threads N] [--out <file.json>] [--compare <file.json>]
                                     Search the midgame positions to a fixed depth: nodes, move and score of each search, speed.
                                     --mpc (Egaroucid's selectivity: 74, 88, 93, 98, 99, 99.9 or 100) and --level are for Egaroucid.
                                     --selective (Multi-ProbCut) and --probcut-pct (its t × 100) are for stello and stello-v2, as in `stello mid-bench`.
+                                    --threads (both benches, stello only, 1-256, default 1): threads sharing the hash tables; with more than 1 the nodes vary.
           eval-compare [--data <folder>] [--files N] [--per-empties 5000] [--name <name>]
                                     Both evaluations against the final scores of Egaroucid's training games (not in the
                                     repository: Traning data/Egaroucid_Train_Data/0001_egaroucid_7_5_1_lv17 by default).

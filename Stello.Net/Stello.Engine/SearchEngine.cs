@@ -12,7 +12,8 @@ namespace Stello.Engine;
 /// adapted from Egaroucid. Since Stello 3.0 the search runs in Rust (<c>Stello.Rust/stello-core</c>, node for node
 /// the C# engine of Stello 2.0, which <c>Stello.Engine.V2</c> keeps); this class calls it through the C ABI of
 /// <c>stello_engine</c> (<see cref="StelloNative"/>). An instance runs one search at a time; instances on different
-/// threads are independent.
+/// threads are independent. A search with <see cref="SearchLimits.Threads"/> above 1 also runs on worker threads of the
+/// Rust engine, which share its hash tables; they are started at the first such search and kept for the next ones.
 /// </summary>
 /// <remarks>
 /// The Rust engine and its hash tables are made at the first search, so an engine that never searches (such as the
@@ -26,11 +27,14 @@ public sealed class SearchEngine
     /// <summary>Multi-ProbCut's t × 100 when <see cref="SearchOptions.ProbCutPercent"/> is null.</summary>
     internal const int DefaultProbCutPercent = 100;
 
-    // Two hash tables of 2^hashBits slots of two 24-byte entries.
-    private const int HashBytesPerSlot = 2 * 2 * 24;
+    // Two hash tables of 2^hashBits slots of 64 bytes (two 24-byte entries and the slot's lock, one cache line).
+    private const int HashBytesPerSlot = 2 * 64;
 
     private EngineHandle? _engine;
     private SignalsHandle? _signals;
+
+    // The threads the Rust engine was last set to (a new one uses 1).
+    private int _threads = 1;
 
     /// <param name="hashBits">Each of the two hash tables gets 2^hashBits slots of two entries (C++: HASHSIZE 19, one entry).</param>
     public SearchEngine(int hashBits = 19)
@@ -101,6 +105,12 @@ public sealed class SearchEngine
         {
             nint user = GCHandle.ToIntPtr(handle);
             StelloNative.ResetSignals(signals);
+            if (limits.Threads != _threads)
+            {
+                Check(StelloNative.SetThreads(engine, limits.Threads));
+                _threads = limits.Threads;
+            }
+
             if (state.IterationDone is not null)
             {
                 Check(StelloNative.SetIterationDone(engine, &OnIterationDone, user));

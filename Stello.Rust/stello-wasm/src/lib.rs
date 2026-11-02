@@ -84,7 +84,8 @@ pub fn init(evaluation: Option<Vec<u8>>, hash_bits: u32) -> Result<(), JsError> 
 /// Finds the best move (C#: `SearchEngine.Search`) for `request`, the JSON of `EngineProtocol`'s `MoveRequest`,
 /// and returns the JSON of a `MoveResponse`. Progress goes to `host.progress()`: new depths and new best moves at
 /// once, other reports at most every 100 ms. A request with other hash bits than the engine's makes a new engine
-/// (empty hash tables), as `ComputerPlayer` did in the worker of Stello 2.0.
+/// (empty hash tables), as `ComputerPlayer` did in the worker of Stello 2.0. The request's `Threads` is checked, but
+/// this build has no threads and searches with 1 (threads in the browser are phase 8 of Plans/making-stello-3-plan.md).
 ///
 /// Throws if the engine is not initialised, the request is not valid, or the search was cancelled ("cancelled").
 #[wasm_bindgen]

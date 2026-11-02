@@ -129,6 +129,13 @@ pub(crate) fn engine_options(options: &Options) -> Result<(SearchOptions, String
     Ok((search, text))
 }
 
+/// `--threads` (default 1) applied to `limits`, and its text for the report (none for 1 thread).
+fn with_threads(options: &Options, limits: SearchLimits) -> Result<(SearchLimits, String), String> {
+    let threads = number(options, "threads", 1u32, 1, SearchLimits::MAX_THREADS)?;
+    let limits = limits.with_threads(threads).expect("the range was checked");
+    Ok((limits, if threads > 1 { format!(", {threads} threads") } else { String::new() }))
+}
+
 /// The positions file: `--positions`, or `default` in the benchmark's data folder.
 fn positions_path(options: &Options, default: &str) -> Result<PathBuf, String> {
     match options.text("positions") {
@@ -141,7 +148,8 @@ fn positions_path(options: &Options, default: &str) -> Result<PathBuf, String> {
 }
 
 pub(crate) fn solve_bench(args: &[String]) -> Result<(), String> {
-    let options = Options::parse(args, &["positions", "from", "to", "passes", "hash-bits", "eval", "out", "cpu"])?;
+    let options =
+        Options::parse(args, &["positions", "from", "to", "passes", "hash-bits", "eval", "out", "cpu", "threads"])?;
     let all = load_positions(&positions_path(&options, "ffo-40-59.txt")?)?;
     let from = number(&options, "from", 40, 0, i32::MAX)?;
     let to = number(&options, "to", 44, 0, i32::MAX)?;
@@ -151,9 +159,10 @@ pub(crate) fn solve_bench(args: &[String]) -> Result<(), String> {
     let passes = number(&options, "passes", 1, 1, 100)?;
     let hash_bits = number(&options, "hash-bits", 19u32, 10, 26)?;
     let (search_options, options_text) = engine_options(&options)?;
-    let limits_text = format!("solve{options_text}");
+    let (limits, threads_text) = with_threads(&options, SearchLimits::SOLVE)?;
+    let limits_text = format!("solve{options_text}{threads_text}");
     let mut engine = SearchEngine::new(hash_bits, search_options);
-    let results = run("solve-bench", &positions, &mut engine, &SearchLimits::SOLVE, &limits_text, hash_bits, passes)?;
+    let results = run("solve-bench", &positions, &mut engine, &limits, &limits_text, hash_bits, passes)?;
 
     let mut wrong = 0;
     println!();
@@ -198,15 +207,15 @@ pub(crate) fn solve_bench(args: &[String]) -> Result<(), String> {
 pub(crate) fn mid_bench(args: &[String]) -> Result<(), String> {
     let options = Options::parse(
         args,
-        &["positions", "depth", "passes", "hash-bits", "eval", "selective", "probcut-pct", "out", "cpu"],
+        &["positions", "depth", "passes", "hash-bits", "eval", "selective", "probcut-pct", "out", "cpu", "threads"],
     )?;
     let positions = load_positions(&positions_path(&options, "midgame.txt")?)?;
     let depth = number(&options, "depth", 10, 1, 60)?;
     let passes = number(&options, "passes", 3, 1, 100)?;
     let hash_bits = number(&options, "hash-bits", 19u32, 10, 26)?;
     let (search_options, options_text) = engine_options(&options)?;
-    let limits_text = format!("depth {depth}{options_text}");
-    let limits = SearchLimits::fixed_depth(depth);
+    let (limits, threads_text) = with_threads(&options, SearchLimits::fixed_depth(depth))?;
+    let limits_text = format!("depth {depth}{options_text}{threads_text}");
     let mut engine = SearchEngine::new(hash_bits, search_options);
     let results = run("mid-bench", &positions, &mut engine, &limits, &limits_text, hash_bits, passes)?;
 
@@ -267,7 +276,9 @@ fn run(
             };
             nodes += result.nodes;
 
+            // With more threads the nodes (and in the midgame the move and score) vary from run to run.
             if let Some(previous) = slot.as_ref()
+                && limits.threads() == 1
                 && (previous.nodes != current.nodes || previous.mv != current.mv || previous.score != current.score)
             {
                 println!(

@@ -167,6 +167,47 @@ public class NativeEngineTests
     }
 
     [Fact]
+    public void Threads_AreOneByDefaultAndChecked()
+    {
+        Assert.Equal(1, SearchLimits.FixedDepth(5).Threads);
+        Assert.Equal(1, SearchLimits.Solve.Threads);
+        Assert.Equal(8, (SearchLimits.Solve with { Threads = 8 }).Threads);
+        Assert.Throws<ArgumentOutOfRangeException>(() => SearchLimits.Solve with { Threads = 0 });
+        Assert.Throws<ArgumentOutOfRangeException>(() => SearchLimits.Solve with { Threads = SearchLimits.MaxThreads + 1 });
+    }
+
+    [Fact]
+    public void SeveralThreads_SolveExactly_AndOneThreadIsUnchangedAfterwards()
+    {
+        // The same engine switches between 4 threads and 1; with 1 it must search as Stello 2.0 again.
+        var engine = new SearchEngine(16);
+        var v2 = new V2.SearchEngine(16);
+        foreach ((Board board, Player player) in TestPositions.RandomPositions(seed: 36, count: 6, plies: 42))
+        {
+            engine.ClearHash();
+            v2.ClearHash();
+            SearchResult expected = v2.Search(board, player, SearchLimits.Solve);
+            SearchResult threaded = engine.Search(board, player, SearchLimits.Solve with { Threads = 4 });
+            Assert.Equal((expected.Score, expected.Kind), (threaded.Score, threaded.Kind));
+
+            SearchResult midgame = engine.Search(board, player, SearchLimits.FixedDepth(8) with { Threads = 3 });
+            Assert.True(midgame.Move.IsPass ? !board.HasLegalMove(player) : board.IsLegal(player, midgame.Move.Square!.Value));
+
+            engine.ClearHash();
+            Assert.Equal(Signature(expected), Signature(engine.Search(board, player, SearchLimits.Solve)));
+        }
+    }
+
+    [Fact]
+    public void StelloTwo_IgnoresThreads()
+    {
+        var v2 = new V2.SearchEngine(16);
+        SearchResult one = v2.Search(Midgame, Player.Black, SearchLimits.FixedDepth(7));
+        v2.ClearHash();
+        Assert.Equal(Signature(one), Signature(v2.Search(Midgame, Player.Black, SearchLimits.FixedDepth(7) with { Threads = 4 })));
+    }
+
+    [Fact]
     public void Constructor_RejectsOptionsTheRustEngineDoesNotTake()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new SearchEngine(9));

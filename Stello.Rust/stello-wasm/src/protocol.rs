@@ -31,6 +31,7 @@ pub fn read_request(json: &str) -> Result<MoveRequest, String> {
     let mut depth = 0i64;
     let mut time_ticks = 0i64;
     let mut hash_bits = DEFAULT_HASH_BITS as i64;
+    let mut threads = 1i64;
 
     for (name, value) in Reader::new(json).object()? {
         match name {
@@ -41,6 +42,7 @@ pub fn read_request(json: &str) -> Result<MoveRequest, String> {
             "Depth" => depth = value.integer(name)?,
             "TimeTicks" => time_ticks = value.integer(name)?,
             "HashBits" => hash_bits = value.integer(name)?,
+            "Threads" => threads = value.integer(name)?,
             _ => {}
         }
     }
@@ -68,6 +70,12 @@ pub fn read_request(json: &str) -> Result<MoveRequest, String> {
     let time_ms = time_ticks / 10_000;
     let limits =
         SearchLimits::from_parts(mode, depth, time_ms).ok_or_else(|| "The limits are not valid.".to_string())?;
+    // Checked as C#'s SearchLimits.Threads does; this single-threaded build then searches with 1 (the engine ignores
+    // the count where threads are not available).
+    let limits = u32::try_from(threads)
+        .ok()
+        .and_then(|threads| limits.with_threads(threads))
+        .ok_or_else(|| format!("Threads must be 1-{}, not {threads}.", SearchLimits::MAX_THREADS))?;
     let hash_bits = match u32::try_from(hash_bits) {
         Ok(bits @ 10..=26) => bits,
         _ => return Err(format!("Hash bits must be 10-26, not {hash_bits}.")),
@@ -268,6 +276,8 @@ mod tests {
         assert_eq!(read_request(json).unwrap().limits, SearchLimits::time_per_move_ms(500));
         let json = r#"{"Black":1,"White":2,"Player":0,"Mode":3,"Depth":0,"TimeTicks":0,"UseOpeningBook":false}"#;
         assert_eq!(read_request(json).unwrap().limits, SearchLimits::SOLVE);
+        let json = r#"{"Black":1,"White":2,"Player":0,"Mode":3,"Depth":0,"TimeTicks":0,"HashBits":19,"Threads":8}"#;
+        assert_eq!(read_request(json).unwrap().limits, SearchLimits::SOLVE.with_threads(8).unwrap());
     }
 
     #[test]
@@ -282,6 +292,8 @@ mod tests {
             r#"{"Black":1,"White":2,"Player":0,"Mode":4,"Depth":4}"#,
             r#"{"Black":1,"White":2,"Player":0,"Mode":0,"Depth":61}"#,
             r#"{"Black":1,"White":2,"Player":0,"Mode":0,"Depth":4,"HashBits":9}"#,
+            r#"{"Black":1,"White":2,"Player":0,"Mode":0,"Depth":4,"Threads":0}"#,
+            r#"{"Black":1,"White":2,"Player":0,"Mode":0,"Depth":4,"Threads":257}"#,
             r#"{"Black":-1,"White":2,"Player":0,"Mode":0,"Depth":4}"#,
             r#"{"Black":"1","White":2,"Player":0,"Mode":0,"Depth":4}"#,
             r#"{"White":2,"Player":0,"Mode":0,"Depth":4}"#,

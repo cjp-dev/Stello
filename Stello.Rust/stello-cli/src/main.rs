@@ -22,20 +22,22 @@ Usage: stello <command> [options]
                             `Stello.Benchmark parity-data --split`, then the evaluation speed and perft(8)'s time.
                             --max-per-discs takes evenly spread positions per number of discs, as the trainer's report.
   solve-bench [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits 19] [--eval <file>]
-              [--out <file.json>] [--cpu auto|portable]
+              [--out <file.json>] [--cpu auto|portable] [--threads 1]
                             Solve the positions (default Stello.Net/tools/Stello.Benchmark/Data/ffo-40-59.txt; ids that
                             are numbers only from --from to --to), each with cleared hash tables: score, move, nodes and
                             speed of each, checked against the scores in the file. --out writes the JSON of
                             `Stello.Benchmark solve-bench --out`, for `Stello.Benchmark solve-bench --engine stello-v2
                             --compare <file.json>`.
   mid-bench [--positions <file>] [--depth 10] [--passes 3] [--hash-bits 19] [--eval <file>]
-            [--selective on|off] [--probcut-pct N] [--out <file.json>] [--cpu auto|portable]
+            [--selective on|off] [--probcut-pct N] [--out <file.json>] [--cpu auto|portable] [--threads 1]
                             Search the midgame positions (default Stello.Net/tools/Stello.Benchmark/Data/midgame.txt)
                             to a fixed depth, each with cleared hash tables: nodes, move and score of each search, speed.
                             --out writes the JSON of `Stello.Benchmark mid-bench --out`, so that
                             `Stello.Benchmark mid-bench --engine stello-v2 --compare <file.json>` checks parity.
                             --cpu portable (both benches) keeps to the portable code that WebAssembly runs, instead of
                             the processor's fast paths (BMI2, AVX2); the results are the same.
+                            --threads N (both benches, 1-256) searches with N threads sharing the hash tables; with
+                            more than 1 the nodes vary from run to run.
 ";
 
 const FNV_OFFSET: u64 = 14_695_981_039_346_656_037;

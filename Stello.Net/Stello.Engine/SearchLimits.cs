@@ -19,6 +19,9 @@ public sealed record SearchLimits
 {
     public const int DefaultHashBits = 19;
 
+    /// <summary>The most threads a search may use (<see cref="Threads"/>).</summary>
+    public const int MaxThreads = 256;
+
     private SearchLimits(TimeControlMode mode, int depth, TimeSpan time, bool useOpeningBook = true, int hashBits = DefaultHashBits)
     {
         Mode = mode;
@@ -43,6 +46,23 @@ public sealed record SearchLimits
 
     /// <summary>Hash table size (log2 slots) for the search engine.</summary>
     public int HashBits { get; }
+
+    /// <summary>
+    /// The threads the search uses, 1 to <see cref="MaxThreads"/> (default 1), set with <c>limits with { Threads = n }</c>.
+    /// The threads share the engine's hash tables. Only <see cref="SearchEngine"/> (the Rust engine) reads it; the frozen
+    /// engines of Stello 1 and 2.0 always search with 1.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">The value is outside 1 to <see cref="MaxThreads"/>.</exception>
+    public int Threads
+    {
+        get;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(value, 1);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value, MaxThreads);
+            field = value;
+        }
+    } = 1;
 
     public static SearchLimits FixedDepth(int plies, bool useOpeningBook = true, int hashBits = DefaultHashBits)
     {

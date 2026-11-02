@@ -29,41 +29,56 @@ pub struct SearchLimits {
     mode: TimeControlMode,
     depth: i32,
     time_ms: i64,
+    threads: u32,
 }
 
 impl SearchLimits {
+    /// The most threads a search may use ([`SearchLimits::with_threads`]). C#: `SearchLimits.MaxThreads`.
+    pub const MAX_THREADS: u32 = 256;
+
     /// C#: `SearchLimits.Solve`.
-    pub const SOLVE: SearchLimits = SearchLimits { mode: TimeControlMode::Solve, depth: 0, time_ms: 0 };
+    pub const SOLVE: SearchLimits = SearchLimits { mode: TimeControlMode::Solve, depth: 0, time_ms: 0, threads: 1 };
 
     /// C#: `SearchLimits.FixedDepth`. Panics unless `plies` is 1–60 (C# throws `ArgumentOutOfRangeException`).
     pub fn fixed_depth(plies: i32) -> SearchLimits {
         assert!((1..=60).contains(&plies), "a fixed depth is 1-60 plies");
-        SearchLimits { mode: TimeControlMode::FixedDepth, depth: plies, time_ms: 0 }
+        SearchLimits { mode: TimeControlMode::FixedDepth, depth: plies, time_ms: 0, threads: 1 }
     }
 
     /// C#: `SearchLimits.TimePerMove`. Panics unless the time is positive (C# throws `ArgumentOutOfRangeException`).
     pub fn time_per_move_ms(time_ms: i64) -> SearchLimits {
         assert!(time_ms > 0, "the time per move must be positive");
-        SearchLimits { mode: TimeControlMode::TimePerMove, depth: 0, time_ms }
+        SearchLimits { mode: TimeControlMode::TimePerMove, depth: 0, time_ms, threads: 1 }
     }
 
     /// C#: `SearchLimits.TimePerGame`: the time left on the computer's clock, which may be negative.
     pub fn time_per_game_ms(remaining_ms: i64) -> SearchLimits {
-        SearchLimits { mode: TimeControlMode::TimePerGame, depth: 0, time_ms: remaining_ms }
+        SearchLimits { mode: TimeControlMode::TimePerGame, depth: 0, time_ms: remaining_ms, threads: 1 }
     }
 
     /// The limits from their parts, as a wrapper gets them from C#, or `None` if they are not valid: a fixed depth
     /// needs 1–60 plies, a time per move a time of at least 0 ms (C# requires a positive `TimeSpan`, which
     /// `(long)TotalMilliseconds` may round down to 0). The parts a mode does not use are ignored, as C# keeps them at
-    /// zero.
+    /// zero. The limits use 1 thread.
     pub fn from_parts(mode: TimeControlMode, depth: i32, time_ms: i64) -> Option<SearchLimits> {
         match mode {
-            TimeControlMode::FixedDepth if (1..=60).contains(&depth) => Some(SearchLimits { mode, depth, time_ms: 0 }),
-            TimeControlMode::TimePerMove if time_ms >= 0 => Some(SearchLimits { mode, depth: 0, time_ms }),
-            TimeControlMode::TimePerGame => Some(SearchLimits { mode, depth: 0, time_ms }),
+            TimeControlMode::FixedDepth if (1..=60).contains(&depth) => {
+                Some(SearchLimits { mode, depth, time_ms: 0, threads: 1 })
+            }
+            TimeControlMode::TimePerMove if time_ms >= 0 => Some(SearchLimits { mode, depth: 0, time_ms, threads: 1 }),
+            TimeControlMode::TimePerGame => Some(SearchLimits { mode, depth: 0, time_ms, threads: 1 }),
             TimeControlMode::Solve => Some(SearchLimits::SOLVE),
             _ => None,
         }
+    }
+
+    /// The same limits searched with `threads` threads (1 by default), or `None` unless it is 1 to
+    /// [`SearchLimits::MAX_THREADS`]. C#: `SearchLimits.Threads`.
+    ///
+    /// With 1 thread the search runs on the caller's thread alone. More threads share the hash tables; a build
+    /// without threads (WebAssembly without atomics) always searches with 1.
+    pub fn with_threads(self, threads: u32) -> Option<SearchLimits> {
+        (1..=SearchLimits::MAX_THREADS).contains(&threads).then_some(SearchLimits { threads, ..self })
     }
 
     /// C#: `SearchLimits.Mode`.
@@ -79,6 +94,11 @@ impl SearchLimits {
     /// Time for this move, or the time left for the whole game, in milliseconds. C#: `(long)SearchLimits.Time.TotalMilliseconds`.
     pub fn time_ms(&self) -> i64 {
         self.time_ms
+    }
+
+    /// The threads to search with, 1 to [`SearchLimits::MAX_THREADS`]. C#: `SearchLimits.Threads`.
+    pub fn threads(&self) -> u32 {
+        self.threads
     }
 }
 

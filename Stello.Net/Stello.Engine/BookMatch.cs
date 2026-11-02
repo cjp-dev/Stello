@@ -191,7 +191,10 @@ internal sealed class EngineMatch(MatchSide a, MatchSide b, int workers)
             bool isB = toMove == colourB;
             MatchSide side = isB ? B : A;
             SearchLimits limits = side.Limits.Mode == TimeControlMode.TimePerGame
-                ? SearchLimits.TimePerGame(side.Limits.Time - (isB ? usedB : usedA), side.Limits.UseOpeningBook, side.HashBits)
+                ? SearchLimits.TimePerGame(side.Limits.Time - (isB ? usedB : usedA), side.Limits.UseOpeningBook, side.HashBits) with
+                {
+                    Threads = side.Limits.Threads,
+                }
                 : side.Limits;
 
             int empties = board.EmptyCount;

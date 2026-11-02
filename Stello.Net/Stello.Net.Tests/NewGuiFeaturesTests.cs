@@ -178,14 +178,14 @@ public sealed class NewGuiFeaturesTests
         Assert.True(vm.UseOpeningBook);
         Assert.Equal(GameSettings.DefaultTranspositionTableEntries, vm.TranspositionTableEntries);
         Assert.Equal(20, vm.TranspositionTablePower);
-        Assert.Equal("1,048,576 (48 MB) - Default", vm.TranspositionTableEntriesText);
+        Assert.Equal("1,048,576 (64 MB) - Default", vm.TranspositionTableEntriesText);
 
         vm.UseOpeningBook = false;
         vm.TranspositionTableEntries = 262_144;
 
         Assert.False(vm.UseOpeningBook);
         Assert.Equal(18, vm.TranspositionTablePower);
-        Assert.Equal("262,144 (12 MB)", vm.TranspositionTableEntriesText);
+        Assert.Equal("262,144 (16 MB)", vm.TranspositionTableEntriesText);
 
         GameSettings saved = vm.ToSettings();
         Assert.False(saved.UseOpeningBook);

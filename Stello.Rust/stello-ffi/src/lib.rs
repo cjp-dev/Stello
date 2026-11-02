@@ -5,7 +5,8 @@
 //! - An **engine** ([`StelloEngine`], an opaque handle) is a [`stello_core::SearchEngine`]: its hash tables, options and
 //!   evaluation. [`stello_engine_create`] makes one and [`stello_engine_destroy`] frees it. It runs one search at a
 //!   time; engines on different threads are independent (they share only tables that are built once per process and
-//!   then only read).
+//!   then only read). [`stello_engine_set_threads`] sets the threads of its next searches (1 by default); with more
+//!   than 1 the engine starts worker threads of its own, which end when it is destroyed.
 //! - **Signals** ([`SearchSignals`], an opaque handle) are two atomic flags, cancel and Move Now, that a running search
 //!   reads every 1024 nodes. Any thread may set them while a search runs ([`stello_signals_cancel`],
 //!   [`stello_signals_move_now`]); [`stello_signals_reset`] clears them for the next search.
@@ -49,11 +50,16 @@ pub const STELLO_INVALID_EVALUATION: i32 = 4;
 pub const STELLO_INTERNAL_ERROR: i32 = 5;
 
 /// The version of this ABI (functions, structs, codes). .NET checks it before it uses the library.
-pub const ABI_VERSION: u32 = 1;
+///
+/// - 1: the engine, signals and search functions (Stello 3.0 preview);
+/// - 2: [`stello_engine_set_threads`]; the functions of version 1 are unchanged.
+pub const ABI_VERSION: u32 = 2;
 
 /// An engine: C# `SearchEngine`'s state (hash tables, options, evaluation). Opaque to the caller.
 pub struct StelloEngine {
     engine: SearchEngine,
+    /// The threads of the next searches ([`stello_engine_set_threads`]).
+    threads: u32,
 }
 
 /// Progress of a running search (C#: `SearchInfo`), passed to the progress callback. 48 bytes.
@@ -152,7 +158,7 @@ unsafe fn set_status(status: *mut i32, value: i32) {
 /// `status` ([`STELLO_INVALID_ARGUMENT`], [`STELLO_INVALID_EVALUATION`]); `status` gets [`STELLO_OK`] on success and
 /// may be null.
 ///
-/// - `hash_bits`: 10–26; each of the two hash tables gets 2^`hash_bits` slots of two 24-byte entries;
+/// - `hash_bits`: 10–26; each of the two hash tables gets 2^`hash_bits` slots of 64 bytes (two entries);
 /// - `selective`: 0 turns Multi-ProbCut off (C#: `SearchOptions.Selective`), anything else keeps it on;
 /// - `probcut_percent`: Multi-ProbCut's t × 100, or -1 for the default (C#: `SearchOptions.ProbCutPercent`), 0–100000;
 /// - `soft_time_percent`: no new iteration after this share (0–100) of the hard time limit, or -1 for 2/3
@@ -198,7 +204,8 @@ pub unsafe extern "C" fn stello_engine_create(
             selective: selective != 0,
             probcut_percent: (probcut_percent >= 0).then_some(probcut_percent),
         };
-        engine = Box::into_raw(Box::new(StelloEngine { engine: SearchEngine::new(hash_bits as u32, options) }));
+        engine =
+            Box::into_raw(Box::new(StelloEngine { engine: SearchEngine::new(hash_bits as u32, options), threads: 1 }));
         STELLO_OK
     });
 
@@ -232,6 +239,26 @@ pub unsafe extern "C" fn stello_engine_clear_hash(engine: *mut StelloEngine) -> 
         engine.engine.clear_hash();
         STELLO_OK
     })
+}
+
+/// Sets the threads that the engine's next searches use (C#: `SearchLimits.Threads`), 1 to
+/// `SearchLimits::MAX_THREADS` (256); a new engine uses 1. With 1 the search runs on the calling thread alone; with
+/// more the engine starts the other threads at the next search and keeps them for the searches after it. Returns
+/// [`STELLO_OK`], or [`STELLO_INVALID_ARGUMENT`] for a null engine or a count outside the range.
+///
+/// # Safety
+/// `engine` is null or a valid engine that no other thread uses during the call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn stello_engine_set_threads(engine: *mut StelloEngine, threads: i32) -> i32 {
+    // SAFETY: the caller passes null or a valid engine used by this thread only.
+    let Some(engine) = (unsafe { engine.as_mut() }) else { return STELLO_INVALID_ARGUMENT };
+    match u32::try_from(threads) {
+        Ok(threads @ 1..=SearchLimits::MAX_THREADS) => {
+            engine.threads = threads;
+            STELLO_OK
+        }
+        _ => STELLO_INVALID_ARGUMENT,
+    }
 }
 
 /// A pointer that the iteration callback carries; the caller is responsible for it (see
@@ -335,6 +362,8 @@ pub unsafe extern "C" fn stello_signals_reset(signals: *const SearchSignals) {
 ///   the time is `(long)SearchLimits.Time.TotalMilliseconds`, as C#'s time control uses it;
 /// - `only_moves`, `has_only_moves`: if `has_only_moves` is not 0, search only these moves, even if just one is left
 ///   (C#: `onlyMoves`);
+/// - the threads are the engine's ([`stello_engine_set_threads`]); progress counts the nodes of all of them, and
+///   the callbacks still run on the calling thread only;
 /// - `signals`: the stop signals read during the search, or null for none;
 /// - `progress`, `progress_user`: the progress callback (see [`StelloProgressCallback`]) and its user pointer, or a
 ///   null callback for no reports (and no heartbeats);
@@ -380,7 +409,10 @@ pub unsafe extern "C" fn stello_engine_search(
         3 => TimeControlMode::Solve,
         _ => return STELLO_INVALID_ARGUMENT,
     };
-    let Some(limits) = SearchLimits::from_parts(mode, depth, time_ms) else { return STELLO_INVALID_ARGUMENT };
+    let Some(limits) = SearchLimits::from_parts(mode, depth, time_ms).and_then(|l| l.with_threads(engine.threads))
+    else {
+        return STELLO_INVALID_ARGUMENT;
+    };
 
     guarded(|| {
         // SAFETY: the caller passes null or signals valid for the whole call.
@@ -552,6 +584,42 @@ mod tests {
         );
         // SAFETY: made above, not used again.
         unsafe { stello_engine_destroy(engine) };
+    }
+
+    #[test]
+    fn threads_are_checked_and_searches_with_them_finish() {
+        let (engine, _) = create(12);
+        // SAFETY: the engine is valid until it is destroyed at the end; null is checked.
+        unsafe {
+            assert_eq!(stello_engine_set_threads(std::ptr::null_mut(), 2), STELLO_INVALID_ARGUMENT);
+            assert_eq!(stello_engine_set_threads(engine, 0), STELLO_INVALID_ARGUMENT);
+            assert_eq!(stello_engine_set_threads(engine, 257), STELLO_INVALID_ARGUMENT);
+            assert_eq!(stello_engine_set_threads(engine, 4), STELLO_OK);
+            let initial = Board::INITIAL;
+            let mut result = StelloSearchResult::default();
+            for depth in [6, 8] {
+                let code = stello_engine_search(
+                    engine,
+                    initial.black(),
+                    initial.white(),
+                    0,
+                    0,
+                    depth,
+                    0,
+                    0,
+                    0,
+                    std::ptr::null(),
+                    None,
+                    std::ptr::null_mut(),
+                    &mut result,
+                );
+                assert_eq!(code, STELLO_OK);
+                assert_eq!(result.depth, depth);
+                assert!(initial.legal_moves(Player::Black) & (1 << result.mv) != 0);
+            }
+            assert_eq!(stello_engine_set_threads(engine, 1), STELLO_OK);
+            stello_engine_destroy(engine);
+        }
     }
 
     #[test]

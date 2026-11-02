@@ -14,7 +14,7 @@ What the work on Stello 3.0 teaches us, written down as we go: the decisions, th
 | 2 Desktop and tools on Rust | done (2026-11-02) | The C# `SearchEngine` calls Rust, identical to 2.0 (mid-bench, random positions, FFO, handover, 500 random endgames, a whole book recalculation); after a speed pass 2.8–3.1× faster in the midgame and 1.75× on FFO; 3.0 beats 2.0 at 500 ms with 59.6 % (+68 Elo) |
 | 3 The web app on Rust | done (2026-11-02) | The browser searches with the Rust engine in WebAssembly, node for node like 2.0; in Chromium 2.3–2.4× faster than the .NET AOT worker in the midgame and 1.59× on FFO #40–44 (1.86× overall); the worker starts in 92 ms instead of 680, Stop and Move Now answer in under 1 ms, and the first visit is 1.07 MB smaller |
 | 4 Release (3.0 preview) | done (2026-11-02) | About shows 3.0; docs Part 1 describes the Rust engine and Part 3 begins (chapter 25); main = c9aa054, deploy 41504303682 succeeded; the live site plays, stops and solves on the Rust engine |
-| 5 Threads and a shared hash table | not started | |
+| 5 Threads and a shared hash table | done (2026-11-02) | A thread pool and a seqlocked shared hash table (64-byte slots); `Threads` from C# to Rust, the CLI and the Benchmark; threads = 1 identical to 2.0 on every parity run, at most +2.2 % slower; 2–16 threads give exact solves; no speed-up yet (phase 6) |
 | 6 Lazy SMP | not started | |
 | 7 YBWC | not started | |
 | 8 Threads in the browser | not started | |
@@ -434,3 +434,51 @@ Speed: the old build is b132d6f (the .NET AOT worker running Stello 2.0), and ea
   - a 22-empty position was solved in 0.26 s at 25.2 M nodes/s (2.0 in the browser: 0.49 s at 12.9 M);
   - there were no page errors.
 
+## Phase 5: threads and a shared hash table (2026-11-02)
+
+### The hash table: a seqlock per slot
+- **The slot** is one 64-byte cache line: a sequence word plus the two entries. Each entry is three 64-bit words (own discs, opponent discs, and one packed word with value, depth, bound, move, tag and generation).
+- **A store** takes the slot's lock with a compare-and-swap, keeps the old replacement rules, and releases with sequence + 2.
+- **A probe** returns a miss if the slot is locked. On a hit it reads the sequence again, and a read that overlapped a write counts as a miss. So a torn entry is never taken for a valid one, and with 1 thread nothing changes.
+- **The variants measured on 1 thread** (CLI, one pinned CPU, fastest of 3 passes; mid-bench depth 10 / depth 12 / random depth 8 / FFO #40–49):
+
+  | Variant | Time | Cost |
+  |---|---|---|
+  | Unchanged (single-threaded) | 0.346 / 1.001 / 0.856 / 25.0 s | — |
+  | **Seqlock, 64-byte slot (chosen)** | 0.345 / 1.007 / 0.855 / 24.9 s | 0–0.6 % |
+  | Spin lock per slot on probe and store (Egaroucid) | 0.351 / 1.021 / 0.865 / 25.0 s | 1.5–2 % |
+  | Hyatt XOR check, 48-byte slot | 0.341 / 1.008 / 0.848 / 25.1 s | about 0 %, but only probabilistic: two positions that differ in one disc's colour can let a torn read pass |
+
+- **The cost is memory:** a third more, so the default 19 hash bits take 64 MB instead of 48. The Settings labels in both apps now say 4, 16, 64, 256 and 1,024 MB. The docs tables (chapters 07 and 15, the glossary) are updated with the 3.0 docs in phase 9.
+
+### The thread pool (`search/pool.rs`), shaped like Egaroucid's `thread_pool.hpp`
+- **The workers** are fixed, and each has its own state: the solver's local table and the move-ordering killers. The pool is started at the first search with N > 1 threads and kept for later searches with the same N.
+- **Tasks run in a scope,** which, as with `std::thread::scope`, waits for them (also if its body panics) and passes a task's panic on. So tasks may borrow the position, the shared tables and stop flags.
+- **`try_spawn`** hands a task to an idle worker, or refuses at once when all are busy. That is what YBWC needs (phase 7): split only where a thread is free.
+- **A `Spawner` hook,** `std::thread` by default, is for Web Workers in phase 8. On wasm32 without atomics the engine always uses 1 thread and starts no thread.
+- **The interim N-thread search:** N−1 helpers each run the same root search with the root moves rotated, into the shared tables. They stop when the main search ends (a drop guard makes sure of that even if it panics), and their nodes and evaluations are counted.
+- **This is not faster:** FFO #40–49 takes 27–31 s against 25 s on 1 thread, and mid-bench depth 12 with 8 threads takes the same time as with 1 (1.03 against 1.11 s). Speed-up is the work of phases 6 and 7.
+
+### `Threads` through every layer
+- **Rust:** `SearchLimits::with_threads(n)`, 1–256, default 1.
+- **FFI:** ABI version 2 adds `stello_engine_set_threads`. The version-1 functions are unchanged, and C# requires version 2.
+- **C#:** `SearchLimits.Threads` (init, validated 1–256, default 1). The wrapper sets it only when it changes, and V1 and V2 ignore it.
+- **Web:** `EngineProtocol.MoveRequest.Threads`. stello-wasm checks it and searches with 1 thread until phase 8.
+- **Tools:** `stello-cli` and `Stello.Benchmark` `mid-bench`/`solve-bench --threads N`, the match side key `threads=` (engine=stello only), and the threads of each side in the match header.
+
+### Gate P5: passed
+
+| Gate | Result |
+|---|---|
+| threads = 1 identical | Identical to the V2 reference JSONs through the wrapper: mid-bench depth 10 and 12, random depth 8, FFO #40–49, handover (300) and random endgames (500); also with `--cpu portable`. Re-checked after the review: mid-bench depth 12 identical. The 105 signatures pass |
+| N threads give the right results | FFO #40–49 with 2, 4, 8 and 16 threads, and 500 random endgames with 4 and 8 threads: every score exact. Midgame with 4–16 threads: no wrong score kind or depth, and the WLD and exact solves agree |
+| Overhead on 1 thread ≤ 3 % | Through the wrapper, one pinned CPU, best of 2 interleaved rounds: depth 10 +1.5 %, depth 12 +0.7 %, random depth 8 +2.2 %, FFO −0.4 % |
+
+- **The tests:** 66 `cargo test` tests, including a hammer test (8 threads on 1,024 slots, every field checked against its key; with the check disabled it fails 2 runs in 3), 8 threads solving different positions on one small table, FFO and random endings with 2–8 threads, and Move Now and cancel stopping 8 threads in under 200 ms. Also 487 engine tests, 34 Egaroucid tests and 10 Node tests.
+- **Checked with Miri and ThreadSanitizer** (nightly, only for these checks): the table and pool tests pass under Miri, and the library and thread tests give no ThreadSanitizer reports.
+- **Not verified:** Windows with MSVC (only the MinGW cross-build), and matches with threads.
+
+### Notes for the next phases
+- **Phase 6** replaces the helper closure with per-depth helper searches (depth + ctz(i+1), as in Egaroucid), started in a scope around each main iteration and stopped by its flag.
+- **Matches with threads** must set `--workers` so that workers × threads ≤ cores, because the default number of workers is cores / 2.
+- **The docs for the 3.0 release:** chapter 07 (slot layout and concurrency), 14 (ABI 2), and 06 and 08 (the shared table).

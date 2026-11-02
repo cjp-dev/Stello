@@ -7,6 +7,7 @@
 //! - [`table`]: C# `TranspositionTable`, `Bound`;
 //! - [`ordering`]: C# `MoveOrdering`;
 //! - [`time`]: C# `TimeControl`, `TimeBudget`;
+//! - [`pool`]: the worker threads of a search with more than one thread (not in C#);
 //! - [`engine`]: C# `SearchEngine` (the midgame search and the root of the solver), with the stop signals and the
 //!   clock.
 
@@ -14,12 +15,14 @@ pub mod engine;
 pub mod limits;
 pub mod options;
 pub mod ordering;
+pub mod pool;
 pub mod table;
 pub mod time;
 
 pub use engine::{
-    Clock, DEFAULT_PROBCUT_PERCENT, NoStop, SearchEngine, SearchError, SearchSignals, StopSignal, WIN_SCORE,
-    system_clock,
+    Clock, DEFAULT_PROBCUT_PERCENT, NoStop, SearchEngine, SearchError, SearchSignals, StopSignal, ThreadState,
+    WIN_SCORE, system_clock,
 };
 pub use limits::{ScoreKind, SearchInfo, SearchLimits, SearchResult, TimeControlMode};
 pub use options::SearchOptions;
+pub use pool::{Spawner, ThreadPool, std_spawner};

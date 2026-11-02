@@ -12,7 +12,7 @@ namespace Stello.Benchmark;
 
 /// <summary>
 /// The engine a benchmark searches with (<c>--engine stello|stello-v1|egaroucid</c>): one search per position, each with empty hash
-/// tables, on 1 thread.
+/// tables, on 1 thread (Stello: <c>--threads N</c>).
 /// </summary>
 /// <param name="Engine">stello, stello-v1 or egaroucid.</param>
 /// <param name="Limits">The limits as text, for the report.</param>
@@ -30,6 +30,11 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
     public static BenchSearcher Create(Options options, SearchLimits limits, string limitText)
     {
         string engine = options.Text("engine") ?? "stello";
+        if (engine != "stello" && options.Text("threads") is not null)
+        {
+            throw new ArgumentException("--threads is only for --engine stello.");
+        }
+
         switch (engine)
         {
             case "stello":
@@ -56,6 +61,15 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
 
                 // --selective and --probcut-pct, as for stello-v2: the parity runs of the Rust engine against Stello 2.0.
                 (searchOptions, limitText) = SearchSwitches(options, searchOptions, limitText);
+
+                // --threads: the threads share the hash tables; with more than 1 the nodes vary from run to run.
+                int threads = options.Number("threads", 1, 1, SearchLimits.MaxThreads);
+                if (threads > 1)
+                {
+                    limits = limits with { Threads = threads };
+                    limitText += $", {threads} threads";
+                }
+
                 var stello = new SearchEngine(bits, searchOptions);
 
                 return new BenchSearcher(engine, limitText, bits, position =>

@@ -7,8 +7,9 @@ namespace Stello.Web.Worker;
 
 // Messages between the page and the engine worker; plain values only, so 64-bit boards and ticks stay exact. The
 // worker's Rust engine reads and writes the same JSON (Stello.Rust/stello-wasm/src/protocol.rs). UseOpeningBook is
-// not read there: the page looks up the book itself (WebEngineHost).
-internal sealed record MoveRequest(ulong Black, ulong White, Player Player, TimeControlMode Mode, int Depth, long TimeTicks, bool UseOpeningBook = true, int HashBits = 19);
+// not read there: the page looks up the book itself (WebEngineHost). Threads is read, but the WebAssembly engine has
+// no threads yet and searches with 1 (Plans/making-stello-3-plan.md, phase 8).
+internal sealed record MoveRequest(ulong Black, ulong White, Player Player, TimeControlMode Mode, int Depth, long TimeTicks, bool UseOpeningBook = true, int HashBits = 19, int Threads = 1);
 
 internal sealed record MoveResponse(int Square, int Score, ScoreKind Kind, int Depth, long Nodes, long Evaluations, long ElapsedTicks);
 
@@ -22,7 +23,7 @@ internal sealed partial class EngineProtocolJson : JsonSerializerContext;
 internal static class EngineProtocol
 {
     public static string WriteRequest(Board board, Player player, SearchLimits limits) => JsonSerializer.Serialize(
-        new MoveRequest(board.Black, board.White, player, limits.Mode, limits.Depth, limits.Time.Ticks, limits.UseOpeningBook, limits.HashBits),
+        new MoveRequest(board.Black, board.White, player, limits.Mode, limits.Depth, limits.Time.Ticks, limits.UseOpeningBook, limits.HashBits, limits.Threads),
         EngineProtocolJson.Default.MoveRequest);
 
     public static (Board Board, Player Player, SearchLimits Limits) ReadRequest(string json)
@@ -36,7 +37,7 @@ internal static class EngineProtocol
             TimeControlMode.TimePerGame => SearchLimits.TimePerGame(time, request.UseOpeningBook, request.HashBits),
             _ => SearchLimits.Solve,
         };
-        return (new Board(request.Black, request.White), request.Player, limits);
+        return (new Board(request.Black, request.White), request.Player, limits with { Threads = request.Threads });
     }
 
     public static string WriteResult(SearchResult result) => JsonSerializer.Serialize(

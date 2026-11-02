@@ -32,7 +32,11 @@ internal static class MatchCommands
         string name = options.Text("name") ?? $"{FileName(a.Name)}_vs_{FileName(b.Name)}";
 
         Console.WriteLine($"match: A = {a.Name} ({Describe(a)}), B = {b.Name} ({Describe(b)})");
-        Console.WriteLine($"{starts.Count:N0} start positions, 2 games each, {workers} games at a time, 1 thread per engine.");
+        // With threads=N sides, --workers × N should not exceed the cores (each game's engines search in turn).
+        string threads = a.Limits.Threads == b.Limits.Threads
+            ? $"{a.Limits.Threads} thread{(a.Limits.Threads == 1 ? "" : "s")} per engine"
+            : $"{a.Limits.Threads} threads for A and {b.Limits.Threads} for B";
+        Console.WriteLine($"{starts.Count:N0} start positions, 2 games each, {workers} games at a time, {threads}.");
 
         var pairs = new List<MatchPair>();
         var clock = Stopwatch.StartNew();
@@ -131,6 +135,7 @@ internal static class MatchCommands
         string? bookFile = null;
         int? softTimePercent = null;
         int? probCutPercent = null;
+        int threads = 1;
         var keys = new HashSet<string>();
         foreach (string part in text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
@@ -193,6 +198,9 @@ internal static class MatchCommands
                 case "mpc":
                     probCutPercent = Number(key, value, 1, 1000);
                     break;
+                case "threads":
+                    threads = Number(key, value, 1, SearchLimits.MaxThreads);
+                    break;
                 default:
                     throw new ArgumentException($"Unknown key in the side \"{text}\": {key}");
             }
@@ -202,6 +210,12 @@ internal static class MatchCommands
         if (mode is null)
         {
             throw new ArgumentException($"The side \"{text}\" needs time-ms, game-s, {(egaroucid ? "level" : "depth")}.");
+        }
+
+        // Only the Rust engine searches with threads; the frozen engines and the Egaroucid port use 1.
+        if (keys.Contains("threads") && engine != EngineKind.Stello)
+        {
+            throw new ArgumentException($"threads is only for engine=stello (side \"{text}\").");
         }
 
         foreach ((string key, bool allowed) in new[]
@@ -223,13 +237,13 @@ internal static class MatchCommands
             TimeControlMode.TimePerMove => SearchLimits.TimePerMove(TimeSpan.FromMilliseconds(amount), useBook),
             TimeControlMode.TimePerGame => SearchLimits.TimePerGame(TimeSpan.FromSeconds(amount), useBook),
             _ => SearchLimits.FixedDepth(amount, useBook),
-        };
+        } with { Threads = threads };
         string limitText = mode switch
         {
             TimeControlMode.TimePerMove => $"{amount} ms/move",
             TimeControlMode.TimePerGame => $"{amount} s/game",
             _ => egaroucid ? $"level {amount}" : $"depth {amount}",
-        };
+        } + (threads > 1 ? $", {threads} threads" : "");
 
         if (!egaroucid)
         {
@@ -334,7 +348,7 @@ internal static class MatchCommands
         }
     }
 
-    /// <summary>The transposition table size of an Egaroucid side: as much memory as Stello's default hash size.</summary>
+    /// <summary>The transposition table size of an Egaroucid side: as much memory as Stello 2.0's default hash size (48 MB; 3.0's slots of 64 bytes take 64 MB).</summary>
     public const int EgaroucidDefaultTableBits = 21;
 
     /// <summary>Loads Egaroucid's resources (see <see cref="EgaroucidResources.FindDirectory"/>) before the first Egaroucid search.</summary>
