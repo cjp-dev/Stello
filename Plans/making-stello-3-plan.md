@@ -29,7 +29,7 @@ This plan follows [improve-stello-strength-plan.md](improve-stello-strength-plan
 | Web engine | Rust compiled to WebAssembly with wasm-bindgen, running in a small JavaScript Web Worker. The Blazor UI keeps its engine host. The .NET worker goes. |
 | Boundary | The search core moves to Rust: board and rules, evaluation, midgame search, endgame solver, hash table and time control. A thin C# `SearchEngine` wrapper keeps today's API, so the book code, game records, apps and tools need no changes. The C# engine is frozen as **Stello 2.0** (`Stello.Engine.V2`) for matches, as Stello 1 was. |
 | Releases | The apps get the Rust engine after Part 1 and the threaded one after Part 2. About shows 3.0 once Part 1 is live. 3.0 is final after Part 2. |
-| Windows DLL | Cross-compiled in the sandbox (`x86_64-pc-windows-gnu`, MinGW linker). It can only be run on the user's PC. |
+| Windows DLL | Built on the user's PC by Cargo itself, called from MSBuild like in the sandbox (the user installed rustup on Windows, 2026-11-02; the default MSVC toolchain needs Visual Studio's C++ build tools). The sandbox still cross-compiles `x86_64-pc-windows-gnu` with MinGW as a check. Each OS has its own Cargo target folder, because the repository folder is shared. Nothing binary is committed. |
 | Part 1 gate | Node-for-node identical to the C# 2.0 engine: the same moves, scores and node counts. SIMD speed-ups must keep the node counts. |
 | Threads in the apps | A "Threads" setting in both apps. The default is the number of cores minus one on the desktop, and `navigator.hardwareConcurrency` in the browser. Matches and tools get a `threads=` key. |
 

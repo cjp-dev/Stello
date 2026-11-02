@@ -24,7 +24,7 @@ internal static class Program
                     [--hash-bits N] [--selective on|off] [--probcut-pct N] [--out <file.json>] [--compare <file.json>]
                                     Search the midgame positions to a fixed depth: nodes, move and score of each search, speed.
                                     --mpc (Egaroucid's selectivity: 74, 88, 93, 98, 99, 99.9 or 100) and --level are for Egaroucid.
-                                    --selective (Multi-ProbCut) and --probcut-pct (its t × 100) are for stello-v2, as in `stello mid-bench`.
+                                    --selective (Multi-ProbCut) and --probcut-pct (its t × 100) are for stello and stello-v2, as in `stello mid-bench`.
           eval-compare [--data <folder>] [--files N] [--per-empties 5000] [--name <name>]
                                     Both evaluations against the final scores of Egaroucid's training games (not in the
                                     repository: Traning data/Egaroucid_Train_Data/0001_egaroucid_7_5_1_lv17 by default).

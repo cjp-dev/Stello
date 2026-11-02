@@ -1,3 +1,9 @@
-# The Windows DLL for the WPF app is cross-compiled with MinGW (apt: gcc-mingw-w64-x86-64).
+# A check build of the Windows DLL, cross-compiled in the Linux sandbox with MinGW (apt: gcc-mingw-w64-x86-64):
+# dotnet build ... -p:StelloCargoTarget=x86_64-pc-windows-gnu, or cargo build --release -p stello-ffi --target x86_64-pc-windows-gnu.
 [target.x86_64-pc-windows-gnu]
 linker = "x86_64-w64-mingw32-gcc"
+
+# The Windows DLL that Stello.Engine's build makes with Cargo on Windows (MSVC): the C runtime is linked in, so the DLL
+# needs no Visual C++ redistributable next to the app.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

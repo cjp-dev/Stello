@@ -52,6 +52,20 @@ impl SearchLimits {
         SearchLimits { mode: TimeControlMode::TimePerGame, depth: 0, time_ms: remaining_ms }
     }
 
+    /// The limits from their parts, as a wrapper gets them from C#, or `None` if they are not valid: a fixed depth
+    /// needs 1–60 plies, a time per move a time of at least 0 ms (C# requires a positive `TimeSpan`, which
+    /// `(long)TotalMilliseconds` may round down to 0). The parts a mode does not use are ignored, as C# keeps them at
+    /// zero.
+    pub fn from_parts(mode: TimeControlMode, depth: i32, time_ms: i64) -> Option<SearchLimits> {
+        match mode {
+            TimeControlMode::FixedDepth if (1..=60).contains(&depth) => Some(SearchLimits { mode, depth, time_ms: 0 }),
+            TimeControlMode::TimePerMove if time_ms >= 0 => Some(SearchLimits { mode, depth: 0, time_ms }),
+            TimeControlMode::TimePerGame => Some(SearchLimits { mode, depth: 0, time_ms }),
+            TimeControlMode::Solve => Some(SearchLimits::SOLVE),
+            _ => None,
+        }
+    }
+
     /// C#: `SearchLimits.Mode`.
     pub fn mode(&self) -> TimeControlMode {
         self.mode

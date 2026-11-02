@@ -38,11 +38,6 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                     throw new ArgumentException("--mpc and --level are only for --engine egaroucid.");
                 }
 
-                if (options.Text("selective") is not null || options.Text("probcut-pct") is not null)
-                {
-                    throw new ArgumentException("--selective and --probcut-pct are only for --engine stello-v2 (--side for stello).");
-                }
-
                 int bits = options.Number("hash-bits", SearchLimits.DefaultHashBits, 10, 26);
                 string? evalFile = options.Text("eval");
                 SearchOptions searchOptions = evalFile is null or "default" ? SearchOptions.Default : MatchCommands.PatternOptions(evalFile);
@@ -59,6 +54,8 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                     limitText += $", {sideText}";
                 }
 
+                // --selective and --probcut-pct, as for stello-v2: the parity runs of the Rust engine against Stello 2.0.
+                (searchOptions, limitText) = SearchSwitches(options, searchOptions, limitText);
                 var stello = new SearchEngine(bits, searchOptions);
 
                 return new BenchSearcher(engine, limitText, bits, position =>
@@ -98,25 +95,9 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                 }
 
                 // --selective off (the plain search of the trainer's mpc) and --probcut-pct: Stello 2.0's search switches,
-                // for the Rust engine's parity runs (stello mid-bench takes the same options).
-                switch (options.Text("selective"))
-                {
-                    case null or "on":
-                        break;
-                    case "off":
-                        v2Options = v2Options with { Selective = false };
-                        limitText += ", selective off";
-                        break;
-                    default:
-                        throw new ArgumentException("--selective must be on or off.");
-                }
-
-                if (options.Text("probcut-pct") is not null)
-                {
-                    int percent = options.Number("probcut-pct", 100, 1, 1000);
-                    v2Options = v2Options with { ProbCutPercent = percent };
-                    limitText += $", probcut {percent} %";
-                }
+                // for the Rust engine's parity runs (stello mid-bench and --engine stello take the same options).
+                (bool selective, int? probCutPercent, limitText) = SwitchValues(options, limitText);
+                v2Options = v2Options with { Selective = selective, ProbCutPercent = probCutPercent ?? v2Options.ProbCutPercent };
 
                 var v2 = new Stello.Engine.V2.SearchEngine(v2Bits, v2Options);
                 return new BenchSearcher(engine, limitText, v2Bits, position =>
@@ -171,5 +152,35 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
         string[] names = Level.SelectivityPercentage.ToArray().Select(p => p.ToString(System.Globalization.CultureInfo.InvariantCulture)).ToArray();
         int level = Array.IndexOf(names, text);
         return level >= 0 ? level : throw new ArgumentException($"--mpc must be one of {string.Join(", ", names)}.");
+    }
+
+    private static (SearchOptions Options, string LimitText) SearchSwitches(Options options, SearchOptions searchOptions, string limitText)
+    {
+        (bool selective, int? probCutPercent, limitText) = SwitchValues(options, limitText);
+        return (searchOptions with { Selective = selective, ProbCutPercent = probCutPercent ?? searchOptions.ProbCutPercent }, limitText);
+    }
+
+    // --selective on|off and --probcut-pct N.
+    private static (bool Selective, int? ProbCutPercent, string LimitText) SwitchValues(Options options, string limitText)
+    {
+        bool selective = options.Text("selective") switch
+        {
+            null or "on" => true,
+            "off" => false,
+            _ => throw new ArgumentException("--selective must be on or off."),
+        };
+        if (!selective)
+        {
+            limitText += ", selective off";
+        }
+
+        int? percent = null;
+        if (options.Text("probcut-pct") is not null)
+        {
+            percent = options.Number("probcut-pct", 100, 1, 1000);
+            limitText += $", probcut {percent} %";
+        }
+
+        return (selective, percent, limitText);
     }
 }

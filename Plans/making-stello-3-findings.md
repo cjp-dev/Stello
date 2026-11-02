@@ -11,7 +11,7 @@ What the work on Stello 3.0 teaches us, written down as we go: the decisions, th
 |---|---|---|
 | 0 Set-up and the frozen Stello 2.0 | done (2026-11-02) | Stello.Engine.V2 searches node for node like 2.0; the Rust workspace builds for Linux, Windows and WASM, and .NET and Node call it |
 | 1 The core in Rust | done (2026-11-02) | Board, evaluation, midgame search and endgame solver node-for-node identical to C# 2.0 (mid-bench, FFO #40–49, 3,100 random midgame and endgame positions, the whole test split); 1.27–1.37× faster on one thread |
-| 2 Desktop and tools on Rust | not started | |
+| 2 Desktop and tools on Rust | in progress | The C# `SearchEngine` calls Rust; identical to 2.0 through the wrapper (mid-bench, random positions, FFO, a whole book recalculation); 1.26–1.39× faster, so a speed pass comes before the match |
 | 3 The web app on Rust | not started | |
 | 4 Release (3.0 preview) | not started | |
 | 5 Threads and a shared hash table | not started | |
@@ -224,3 +224,46 @@ This is a straight port with no speed work. The plan's phase 2 target is 1.5× n
 - **Incremental builds:** Cargo's incremental builds fail on the host mount ("unable to copy .o"). Build with `CARGO_INCREMENTAL=0`.
 - **`git stash`** is unreliable on the mount (a stash pop failed once with "unable to read tree", then worked).
 - **A test fix:** two cancel tests measured their time from after the signalling thread started and failed in release builds (96 ms against an asserted 100 ms). The clock now starts before the thread.
+
+## Phase 2, part 1: the wrapper (2026-11-02)
+
+### Design
+- **The C ABI** (`stello-ffi`, library `stello_engine`, 629 lines):
+  - an engine handle (hash bits, the options, and optionally the bytes of another evaluation file);
+  - a signals handle for cancel and Move Now;
+  - `search` with the position, the limits, `onlyMoves`, a progress callback and an iteration-done callback, returning a status code;
+  - `clear_hash` and `stello_version`.
+
+  No panic can cross the boundary (`panic = "abort"`, and every argument is checked).
+- **`Stello.Engine.SearchEngine`** (278 lines) is now a wrapper over a `SafeHandle`, using `[LibraryImport]` (`Native/StelloNative.cs`, 181 lines). It keeps the same API:
+  - progress through an `[UnmanagedCallersOnly]` callback;
+  - the cancellation tokens set the signals, and a cancelled search still throws `OperationCanceledException`;
+  - exceptions thrown inside the progress or iteration callbacks reach the caller.
+- **The C# search was removed from `Stello.Engine`:** the midgame part of `SearchEngine.cs`, `Endgame/` and `Search/{MoveOrdering,TimeControl,TranspositionTable}.cs`. `Stello.Engine.V2` keeps it. `Evaluation/`, `SearchOptions` and the board stay, for the trainer and the tools. The tests of the C# internals (`EndgameBitsTests`, `TranspositionTableTests`) now test V2.
+- **MSBuild** (`Stello.Engine.csproj`, target `BuildStelloNative`):
+  - Cargo runs before the build when the Rust sources or the evaluation file are newer than the library;
+  - each OS has its own target folder (`Stello.Rust/target/linux`, `target/windows`);
+  - Cargo is found on the PATH or in rustup's folder, and the build stops with a clear message if Cargo or the C++ linker is missing;
+  - the library flows to the output of every project that references `Stello.Engine`: apps, tools and tests;
+  - `-p:StelloCargoTarget=x86_64-pc-windows-gnu` cross-builds the DLL here as a check, and `StelloNativeEngine=false` skips Rust;
+  - on Windows the MSVC DLL links the C runtime statically (`+crt-static`), so no Visual C++ redistributable is needed.
+- **The web app** keeps the frozen V2 engine in its .NET worker until phase 3, so the live site is unchanged. Its build keeps the native library out of the browser output.
+- **On the user's PC:** rustup with the MSVC toolchain and Visual Studio's C++ build tools. `cargo build --release -p stello-ffi --target-dir target\windows` works there.
+
+### Checks
+- **Tests:** `Stello.Engine.Tests` has 483 tests, all green. They include the 105 recorded 2.0 signatures through the wrapper and 14 new wrapper tests (versions, options, progress and iterations, exceptions in callbacks, cancel and Move Now, engines on several threads, rejected options). `Egaroucid.Engine.Tests` (34) and `cargo test` pass too.
+- **Parity through the wrapper,** `--engine stello` against `--engine stello-v2 --compare`: identical in every run.
+
+| Run | C# 2.0 | Rust through the wrapper | Faster by |
+|---|---:|---:|---:|
+| mid-bench depth 10 | 1.28 s | 0.93 s | 1.39× |
+| mid-bench depth 12 | 3.50 s | 2.62 s | 1.34× |
+| 1,000 random positions, depth 8 | 2.97 s | 2.36 s | 1.26× |
+| FFO #40–49 | 48.9 s | 35.6 s | 1.37× |
+
+- **The book recalculation:** the whole master book at `--depth 10` with 4 workers, using the C# engine (a worktree at 972d317) and then Rust. The books and the reports are identical (13,064 values changed). It took 50 s in C# and 44 s in Rust. The gain is smaller because each of the roughly 8,000 short searches starts with cleared hash tables and pays the call overhead.
+- **Tools:** each ran on Rust: Benchmark `match` (`stello` against `stello-v2`), BookTool `match`, and the trainer's `mpc` (with too few positions to fit, as expected).
+- **Builds:** the solution builds with 0 warnings. WPF gets `stello_engine.dll` (checked with the MinGW cross-build), and the web publish contains no native library.
+
+### Next
+1.5× was the target. The plan's speed work keeps the nodes identical. Then comes the 500 ms match of 3.0 against 2.0.

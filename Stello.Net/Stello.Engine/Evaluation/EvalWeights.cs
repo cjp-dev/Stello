@@ -96,8 +96,35 @@ internal sealed class EvalWeights
 
     public static EvalWeights Load(string path)
     {
-        using FileStream file = File.OpenRead(path);
-        return Read(file);
+        byte[] bytes = File.ReadAllBytes(path);
+        EvalWeights weights = Read(new MemoryStream(bytes, writable: false));
+        weights._fileBytes = bytes;
+        return weights;
+    }
+
+    /// <summary>Whether these are the built-in weights (<see cref="Default"/>), without loading them.</summary>
+    internal bool IsDefault => BuiltIn.IsValueCreated && ReferenceEquals(this, BuiltIn.Value);
+
+    // The file these weights were loaded from, or written once by FileBytes.
+    private byte[]? _fileBytes;
+
+    /// <summary>
+    /// The weights as an evaluation file (see the remarks): the file they were loaded from, or else what
+    /// <see cref="Write"/> writes. The Rust engine reads it (<c>EvalWeights::read</c>) to get the same weights.
+    /// </summary>
+    internal byte[] FileBytes
+    {
+        get
+        {
+            if (_fileBytes is null)
+            {
+                using var stream = new MemoryStream();
+                Write(stream);
+                _fileBytes = stream.ToArray();
+            }
+
+            return _fileBytes;
+        }
     }
 
     /// <exception cref="InvalidDataException">The stream is not an evaluation file.</exception>

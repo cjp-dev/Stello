@@ -2,10 +2,17 @@ using System.Diagnostics;
 using System.Runtime.InteropServices.JavaScript;
 using System.Runtime.Versioning;
 using Stello.Engine;
+using ComputerPlayer = Stello.Engine.V2.ComputerPlayer;
+using SearchEngine = Stello.Engine.V2.SearchEngine;
 
 namespace Stello.Web.Worker;
 
 /// <summary>The engine and the opening book inside the Web Worker (see wwwroot/js/engine-worker.js).</summary>
+/// <remarks>
+/// The browser runs Stello 2.0's C# engine (Stello.Engine.V2) until the Rust engine comes to the web as WebAssembly
+/// (Plans/making-stello-3-plan.md, phase 3): Stello.Engine's <see cref="Stello.Engine.SearchEngine"/> calls a native
+/// library, which the browser cannot load.
+/// </remarks>
 [SupportedOSPlatform("browser")]
 public static partial class EngineWorker
 {
@@ -51,8 +58,8 @@ public static partial class EngineWorker
             .Select(text => Move.TryParse(text, out Move? move) ? move.Value : throw new FormatException($"Not a move: {text}"))
             .ToList();
 
-        // Adding a game does not search, so the limits do not matter.
-        new BookLearner(s_book, new SearchEngine(10), SearchLimits.FixedDepth(1), new Random()).AddGame(played, (GameResult)result);
+        // Adding a game does not search, so the limits do not matter, and the engine never loads its native library.
+        new BookLearner(s_book, new Stello.Engine.SearchEngine(10), SearchLimits.FixedDepth(1), new Random()).AddGame(played, (GameResult)result);
         return s_book.NodeCount;
     }
 

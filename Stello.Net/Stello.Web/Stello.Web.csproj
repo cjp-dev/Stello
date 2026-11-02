@@ -21,9 +21,31 @@
   <ItemGroup>
     <ProjectReference Include="..\Stello.App\Stello.App.csproj" />
     <ProjectReference Include="..\Stello.Engine\Stello.Engine.csproj" />
+    <!-- The engine in the Web Worker: Stello 2.0's C# engine until phase 3 of Stello 3.0 brings the Rust engine as WebAssembly. -->
+    <ProjectReference Include="..\Stello.Engine.V2\Stello.Engine.V2.csproj" />
     <!-- The shared game GUI (git submodule). -->
     <ProjectReference Include="..\..\external\GameShell\src\GameShell\GameShell.csproj" />
   </ItemGroup>
+
+  <!--
+    Stello.Engine's native Rust library (libstello_engine.so / stello_engine.dll) flows to the output of every project
+    that references it; the browser cannot load it, so it stays out of this app's output and publish folder.
+  -->
+  <Target Name="RemoveStelloNativeEngine" AfterTargets="GetCopyToOutputDirectoryItems">
+    <ItemGroup>
+      <_StelloNativeItem Include="@(_SourceItemsToCopyToOutputDirectory);@(_SourceItemsToCopyToOutputDirectoryAlways);@(_SourceItemsToCopyToOutputDirectoryIfDifferent)"
+                         Condition="'%(Filename)' == 'libstello_engine' or '%(Filename)' == 'stello_engine'" />
+      <_SourceItemsToCopyToOutputDirectory Remove="@(_StelloNativeItem)" />
+      <_SourceItemsToCopyToOutputDirectoryAlways Remove="@(_StelloNativeItem)" />
+      <_SourceItemsToCopyToOutputDirectoryIfDifferent Remove="@(_StelloNativeItem)" />
+      <AllItemsFullPathWithTargetPath Remove="@(_StelloNativeItem)" />
+    </ItemGroup>
+  </Target>
+  <Target Name="RemoveStelloNativeEngineFromPublish" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Filename)' == 'libstello_engine' or '%(Filename)' == 'stello_engine'" />
+    </ItemGroup>
+  </Target>
 
   <!-- A linked file is not served by the dev server, so the shipped book is copied into wwwroot (git-ignored). -->
   <Target Name="CopyOpeningBook" BeforeTargets="AssignTargetPaths">

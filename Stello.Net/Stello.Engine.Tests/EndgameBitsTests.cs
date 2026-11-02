@@ -1,8 +1,10 @@
 using System.Numerics;
-using Stello.Engine.Endgame;
+using Stello.Engine.V2.Endgame;
 
 namespace Stello.Engine.Tests;
 
+// Internals of Stello 2.0's C# search (Stello.Engine.V2, frozen). Since 3.0 the search is Rust, which is checked
+// against fixtures and signatures written by Stello.Engine.V2 (Stello.Rust/stello-core/tests).
 public class EndgameBitsTests
 {
     [Fact]
