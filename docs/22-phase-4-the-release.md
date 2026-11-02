@@ -172,7 +172,7 @@ Phase 4 also wrote a documentation chapter on the new evaluation and solver, wit
 
 | File | Main members |
 |---|---|
-| [EvalWeights.cs](../Stello.Net/Stello.Engine/Evaluation/EvalWeights.cs), [Stello.Engine.csproj](../Stello.Net/Stello.Engine/Stello.Engine.csproj) | `Default`; the `EmbeddedResource` for `stello-eval.bin` |
+| [EvalWeights.cs](../Stello.Net/Stello.Engine.V2/Evaluation/EvalWeights.cs), [Stello.Engine.V2.csproj](../Stello.Net/Stello.Engine.V2/Stello.Engine.V2.csproj) | `Default`; the `EmbeddedResource` for `stello-eval.bin` (in the frozen 2.0 engine, `Stello.Engine.V2`; since 3.0 the Rust engine embeds the file, [chapter 25](25-phases-0-4-the-engine-in-rust.md)) |
 | [AnalysisViewModel.cs](../Stello.Net/Stello.App/ViewModels/AnalysisViewModel.cs) | `FormatScore`: scores in discs |
 | [AboutInfo.cs](../Stello.Net/Stello.App/Models/AboutInfo.cs) | The About text and `Version` |
 | [OpeningBook.cs](../Stello.Net/Stello.Engine/OpeningBook.cs) | `EngineVersion` (now 4) |

@@ -18,7 +18,7 @@ The port was built in October 2026, before the work on Stello 2.0 began. This ch
 - **Every ported file** starts with `// SPDX-License-Identifier: GPL-3.0-only` and names its C++ original: "Ported from Egaroucid src/engine/…, © Takuto Yamana, GPL-3.0-or-later".
 - **Egaroucid's source and resources are not in git.** The source goes in `Egaroucid-main/` in the repository root, which is git-ignored.
 - **The training data is not in git either.** Its terms allow its use but forbid redistribution. It lives in the git-ignored folder `Traning data/`. It was first used to measure evaluations, and later to train Stello 2.0's ([chapter 20](20-phases-0-2-the-evaluation.md)).
-- The credits are in [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) and [the references](26-references.md#18-the-egaroucid-port-19-stello-1-against-egaroucid).
+- The credits are in [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) and [the references](27-references.md#18-the-egaroucid-port-19-stello-1-against-egaroucid).
 
 The resources the port reads, from `Egaroucid-main/bin/resources`:
 

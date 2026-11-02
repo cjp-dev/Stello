@@ -100,7 +100,7 @@ The web app's header has four menus (`Home.razor`):
 * **User guide (`F1`):** Opens this chapter in a new browser tab, shown by the app's Docs pages (`/docs/15-gui-and-settings`).
 * **Rules & Documentation (`Shift+F1`):** Opens the index of this documentation in a new tab (the Docs pages at `/docs`; the build copies `docs` into the app, chapter 14).
 * *(Separator)*
-* **About Stello...:** Shows "Stello Version 2.0", the picture of the author with the caption "Claus Pedersen – wrote Stello in C++ in 1992 and ported it to C# in 2026", and four paragraphs (`AboutInfo`, shared by both apps): what Stello is; its brain (alpha-beta search, a hash table and iterative deepening; since version 2.0 an evaluation by patterns of squares, trained on 500 million positions from the games of Egaroucid, the Othello program by Takuto Yamana, and an endgame solver adapted from Egaroucid's; more than 11,000 opening positions; perfect play near the end); the port of the 1992 C++ original to C# and .NET 10, running as a Windows program and in the browser; and the licence (GPL-3.0-only) with the address of the source code, https://github.com/cjp-dev/Stello.
+* **About Stello...:** Shows "Stello Version 3.0", the picture of the author with the caption "Claus Pedersen – wrote Stello in C++ in 1992 and ported it to C# in 2026", and four paragraphs (`AboutInfo`, shared by both apps): what Stello is; its brain (alpha-beta search, a hash table and iterative deepening; since version 2.0 an evaluation by patterns of squares, trained on 500 million positions from the games of Egaroucid, the Othello program by Takuto Yamana, and an endgame solver adapted from Egaroucid's; more than 11,000 opening positions; perfect play near the end); the port of the 1992 C++ original to C# and .NET 10, and since version 3.0 the brain in Rust, two to three times faster, the same brain in the Windows program and, compiled to WebAssembly, in the browser; and the licence (GPL-3.0-only) with the address of the source code, https://github.com/cjp-dev/Stello.
 
 > [!NOTE] Dedicated Quick Action Buttons for Undo & Redo
 > In accordance with the tournament GUI specification, Undo and Redo are provided via prominent **Quick Action buttons** beneath the scoreboard and via standard keyboard shortcuts (`Ctrl+Z` / `Ctrl+Y`), keeping the top menus streamlined and uncluttered.
@@ -247,11 +247,11 @@ When enabled via **Options $\rightarrow$ Analysis** (`Ctrl+A`), the telemetry si
 Instant moves, such as opening-book moves and single legal moves, would otherwise appear the moment the human has moved. `MainViewModel` therefore plays a computer move no sooner than $250\text{ ms}$ (`ComputerDelayMs`) after the search started: a search that took $40\text{ ms}$ waits another $210\text{ ms}$, while a search that took longer than $250\text{ ms}$ is played at once. **Move Now** skips the wait. The Analysis panel shows the time of the search itself.
 
 ### Web Worker Engine Host in the Browser
-In Blazor WebAssembly (`Stello.Web`), running deep searches directly on the main UI thread would block JavaScript execution and cause interface stutter. Stello isolates the entire engine within a dedicated **Web Worker**:
-1. `WebEngineHost` sends move requests as compact JSON messages to `engine-worker.js`.
-2. The Web Worker runs `EngineWorker.ChooseMove` in its own .NET runtime, off the page's thread.
+In Blazor WebAssembly (`Stello.Web`), running deep searches directly on the main UI thread would block JavaScript execution and cause interface stutter. Stello runs the search in a dedicated **Web Worker**:
+1. `WebEngineHost` plays a book move itself, on the page. Otherwise it sends the search request as a compact JSON message to `engine-worker.js`.
+2. The Web Worker runs Stello's Rust engine compiled to WebAssembly (`stello-wasm`), off the page's thread.
 3. The worker sends progress reports to the page at most every $100\text{ ms}$ (and whenever the depth or the best move changes) to update the analysis panel.
-4. **Move Now** or a cancel sets a stop signal in memory shared with the worker, which the search reads at its next progress report; if that is not possible, the worker is terminated and started again (chapter 14).
+4. **Move Now** or a cancel sets a stop signal in memory shared with the worker, which the engine reads at its next abort check (every 1,024 nodes). If that is not possible, the worker is terminated and started again (chapter 14).
 
 ---
 
@@ -333,8 +333,8 @@ The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs t
 | [`MainViewModel.cs`](../Stello.Net/Stello.App/ViewModels/MainViewModel.cs) | `MainViewModel` | Central orchestrator managing game flow, competitive integrity (`IsStatusModified`), clocks, and undo/redo |
 | [`SettingsViewModel.cs`](../Stello.Net/Stello.App/ViewModels/SettingsViewModel.cs) | `SettingsViewModel` | Data backing for thinking limits, opening book toggle, and transposition table capacity |
 | [`AnalysisViewModel.cs`](../Stello.Net/Stello.App/ViewModels/AnalysisViewModel.cs) | `AnalysisViewModel` | Observable ViewModel formatting depth, evaluation score, node counts, and elapsed search time |
-| [`WebEngineHost.cs`](../Stello.Net/Stello.Web/Services/WebEngineHost.cs) | `WebEngineHost` | Web Worker lifecycle manager, message serializer, and cancellation controller |
-| [`EngineWorker.cs`](../Stello.Net/Stello.Web/Worker/EngineWorker.cs) | `EngineWorker` | Web Worker search runner with dynamic engine resizing on hash bit changes |
+| [`WebEngineHost.cs`](../Stello.Net/Stello.Web/Services/WebEngineHost.cs) | `WebEngineHost` | The book move on the page, the Web Worker's lifecycle, the message serializer, and the cancellation controller |
+| [`engine-worker.js`](../Stello.Net/Stello.Web/wwwroot/js/engine-worker.js), [`stello-wasm/src/lib.rs`](../Stello.Rust/stello-wasm/src/lib.rs) | `init`, `search` | The Web Worker and the Rust engine in WebAssembly, which makes a new engine when the hash bits change |
 | [`LocalEngineHost.cs`](../Stello.Net/Stello.App/Services/LocalEngineHost.cs) | `LocalEngineHost` | Desktop background task runner for search and book operations |
 | [`SoundWaves.cs`](../Stello.Net/Stello.App/Services/SoundWaves.cs) | `SoundWaves` | Procedural 16-bit PCM WAV synthesized sound generator |
 | [`BrowserSoundService.cs`](../Stello.Net/Stello.Web/Services/BrowserSoundService.cs) | `BrowserSoundService` | Registers the sounds with the page and plays them (web app) |

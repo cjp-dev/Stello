@@ -71,6 +71,8 @@ What each step brought, in Elo at 500 ms against Egaroucid: the evaluation about
 
 None of these is decided. They are listed roughly by value for the work.
 
+**Since then:** the plan for Stello 3.0 took up items 2 and 1 in the other order. The core was rewritten in Rust first, node for node like 2.0, and is 2.8–3.1 times faster in the midgame and 1.75 times on FFO #40–49; it beats 2.0 with 59.6 % at 500 ms. Threads, Lazy SMP and YBWC come next. This is [Part 3, chapter 25](25-phases-0-4-the-engine-in-rust.md). The list below is kept as it was written for 2.0.
+
 1. **More threads: Lazy SMP or YBWC** (phase 5 item 7, not started).
    - The desktop app runs on one core of a machine with many. With 4 threads at 1.5–3 times the speed, the time-odds matches suggest roughly +50 to +150 Elo.
    - Lazy SMP is the simpler method: the threads share the hash table and search the same position with small differences. It worked for the Checkers program in the same repository, including WebAssembly threads in the browser.
@@ -102,8 +104,8 @@ $B match --a engine=egaroucid,time-ms=500,book=on --b time-ms=500,book=on --name
 $B solve-bench --from 40 --to 49 --out ../Plans/benchmark-results/v2-final-solve-bench-40-49.json
 ```
 
-Each match takes 5 minutes at 100 ms and 21–23 minutes at 500 ms on the 24-thread laptop. No other heavy work should run at the same time.
+Each match takes 5 minutes at 100 ms and 21–23 minutes at 500 ms on the 24-thread laptop. No other heavy work should run at the same time. Since Stello 3.0, the default side (`engine=stello`) is the Rust engine; to measure Stello 2.0 again, give the second side `engine=stello-v2` (and `solve-bench --engine stello-v2`).
 
 ---
 
-Previous: [23 Phase 5: the search](23-phase-5-the-search.md) · Next: [25 Glossary](25-glossary.md)
+Previous: [23 Phase 5: the search](23-phase-5-the-search.md) · Next: [25 Phases 0–4: the engine in Rust](25-phases-0-4-the-engine-in-rust.md)

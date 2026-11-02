@@ -13,7 +13,7 @@ What the work on Stello 3.0 teaches us, written down as we go: the decisions, th
 | 1 The core in Rust | done (2026-11-02) | Board, evaluation, midgame search and endgame solver node-for-node identical to C# 2.0 (mid-bench, FFO #40–49, 3,100 random midgame and endgame positions, the whole test split); 1.27–1.37× faster on one thread |
 | 2 Desktop and tools on Rust | done (2026-11-02) | The C# `SearchEngine` calls Rust, identical to 2.0 (mid-bench, random positions, FFO, handover, 500 random endgames, a whole book recalculation); after a speed pass 2.8–3.1× faster in the midgame and 1.75× on FFO; 3.0 beats 2.0 at 500 ms with 59.6 % (+68 Elo) |
 | 3 The web app on Rust | done (2026-11-02) | The browser searches with the Rust engine in WebAssembly, node for node like 2.0; in Chromium 2.3–2.4× faster than the .NET AOT worker in the midgame and 1.59× on FFO #40–44 (1.86× overall); the worker starts in 92 ms instead of 680, Stop and Move Now answer in under 1 ms, and the first visit is 1.07 MB smaller |
-| 4 Release (3.0 preview) | not started | |
+| 4 Release (3.0 preview) | in progress | About shows 3.0; docs Part 1 describes the Rust engine, Part 3 begins with chapter 25 (glossary and references now 26 and 27); 0 broken links, all 46 Mermaid diagrams render in the docs viewer |
 | 5 Threads and a shared hash table | not started | |
 | 6 Lazy SMP | not started | |
 | 7 YBWC | not started | |

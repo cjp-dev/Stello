@@ -125,6 +125,7 @@ The four first moves in legacy numbers are d3 = 34, c4 = 43, f5 = 56 and e6 = 65
 - **Why bitboards.** The C++ version used a 10 × 10 array with a border, a list of empty squares next to discs, and tables of directions per square. Bitboards replace all three: the border is replaced by the two column masks, and "all empty squares next to a disc" is a few shifts. See [Stello porting documentation.md](../Plans/Stello%20porting%20documentation.md), phase 1.
 - **Why immutable.** A `Board` is 16 bytes, the same size as two `long` values. Copying it is as cheap as passing a reference, so the search keeps the parent position in a local variable instead of undoing moves, and the game record stores every position ([chapter 13](13-game-record.md)).
 - **Value equality.** `Board` is a record struct, so two boards with the same discs are equal. The tests compare boards directly, and the hash table and the opening book use the two bitboards as keys.
+- **The same numbering in C# and Rust.** The Rust search core uses exactly this layout (`u64` with bit n = square n), so a position crosses from C# to Rust as the two numbers, with no conversion ([chapter 14](14-app-integration.md)).
 - **Side to move is not part of the board.** A position is a `Board` plus the `Player` to move. The search, the game record and the book always pass both.
 - **Legacy numbers only at the edge.** Only the import of the C++ book uses them; the rest of the engine, the evaluation included, works on `Square` and bitboards (chapter 04).
 
@@ -136,6 +137,7 @@ The four first moves in legacy numbers are d3 = 34, c4 = 43, f5 = 56 and e6 = 65
 | [Player.cs](../Stello.Net/Stello.Engine/Player.cs) | `Player`, `Opponent()` |
 | [Board.cs](../Stello.Net/Stello.Engine/Board.cs) | `Board`, `Initial`, `Parse`, `ToString` |
 | [Bitboards.cs](../Stello.Net/Stello.Engine/Bitboards.cs) | The masks `NotColumnA`, `NotColumnH`, `InnerColumns`, `InnerRows` |
+| Rust: [square.rs](../Stello.Rust/stello-core/src/square.rs), [board.rs](../Stello.Rust/stello-core/src/board.rs) | The search core's `Square` (`to_legacy`, `from_legacy`, `in_mask`), `Move`, `Player` (`opponent`), `Board` (`INITIAL`, `parse`) |
 
 ## Tests
 

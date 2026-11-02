@@ -1,4 +1,4 @@
-# 26 – References
+# 27 – References
 
 [Back to the index](README.md)
 
@@ -148,6 +148,25 @@ Articles, papers and source code on the internet that explain the techniques use
 | [Logistello – Michael Buro](https://skatgame.net/mburo/log.html) | The program that brought trained pattern evaluation and Multi-ProbCut to Othello. |
 | [Buro (1995): ProbCut: An Effective Selective Extension of the Alpha-Beta Algorithm (pdf)](https://skatgame.net/mburo/ps/probcut.pdf) | The original ProbCut paper, the basis of the Multi-ProbCut of phase 5. |
 
+## 25 Phases 0–4: the engine in Rust
+
+| Link | What you find there |
+|---|---|
+| [Rust](https://www.rust-lang.org/) | The language of Stello 3.0's search core. |
+| [rustup](https://rustup.rs/) | The Rust installer, needed to build the apps (chapter 14). |
+| [The Cargo Book](https://doc.rust-lang.org/cargo/) | Rust's build tool: workspaces, profiles (LTO, `panic = "abort"`), targets. |
+| [FFI – the Rustonomicon](https://doc.rust-lang.org/nomicon/ffi.html) | Calling Rust from other languages through the C ABI, as `stello-ffi` does. |
+| [P/Invoke source generation – Microsoft Learn](https://learn.microsoft.com/dotnet/standard/native-interop/pinvoke-source-generation) | `[LibraryImport]`, which `Stello.Engine` uses to call the native library. |
+| [The wasm-bindgen Guide](https://wasm-bindgen.github.io/wasm-bindgen/) | How Rust and JavaScript call each other in WebAssembly; the `--target web` package of `stello-wasm`. |
+| [wasm-bindgen on GitHub](https://github.com/wasm-bindgen/wasm-bindgen) | The source and the prebuilt `wasm-bindgen-cli` releases that the deploy workflow downloads. |
+| [WebAssembly](https://webassembly.org/) | The format the browser runs the engine in. |
+| [Web Workers API – MDN](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API) | The browser thread the engine runs in. |
+| [SharedArrayBuffer – MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer) | The shared memory of the stop signal, and why it needs cross-origin isolation. |
+| [PEXT – x86 instruction reference](https://www.felixcloutier.com/x86/pext) | The BMI2 instruction the evaluation uses to read a feature's squares. |
+| [BMI2 – Chess Programming Wiki](https://www.chessprogramming.org/BMI2) | BMI2 and its `pext` and `pdep`, and their slow versions on AMD before Zen 3. |
+| [is_x86_feature_detected – Rust documentation](https://doc.rust-lang.org/std/arch/macro.is_x86_feature_detected.html) | The run-time check behind the choice of the fast path. |
+| [Edax's flip_carry_64.c on GitHub](https://github.com/abulmo/edax-reversi/blob/master/src/flip_carry_64.c) | Per-square flip functions, an idea left for later. |
+
 ## Writing these documents
 
 | Link | What you find there |
@@ -158,4 +177,4 @@ Articles, papers and source code on the internet that explain the techniques use
 
 ---
 
-Previous: [25 Glossary](25-glossary.md) · Next: [Index](README.md)
+Previous: [26 Glossary](26-glossary.md) · Next: [Index](README.md)

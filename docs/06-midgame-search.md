@@ -8,38 +8,43 @@ To choose a move, the engine looks ahead: it tries its moves, the opponent's rep
 
 ## Data structures
 
-`SearchEngine` holds everything one search needs. An instance runs one search at a time; the app keeps one engine for the whole game, so the hash tables survive from move to move.
+`SearchEngine` keeps what lives from search to search; one running search is a `Searcher`, which borrows the engine's tables and holds the counters of that search. An engine runs one search at a time; the app keeps one engine for the whole game, so the hash tables survive from move to move.
 
-| Field | Contents |
+| Field of `SearchEngine` | Contents |
 |---|---|
-| `_midgameTable`, `_endgameTable` | The two hash tables (chapter 07) |
-| `_localTable` | The solver's small table of bounds (chapter 08) |
-| `_ordering` | The move ordering with the response table (chapter 05) |
-| `_pattern` | The pattern evaluation, `EvalWeights.Default` unless `SearchOptions.Pattern` gives another (chapter 04) |
-| `_probCutErrors` | Multi-ProbCut's margin $t\,\sigma$ in 1/100 disc for each disc count and depth, or null when `SearchOptions.Selective` is off |
-| `_inProbCut` | True during Multi-ProbCut's shallow search, which is not selective itself |
-| `_clock`, `_hardLimitMs`, `_softTimePercent` | A `Stopwatch`, the hard time limit, and `SearchOptions.SoftTimePercent` (chapter 09) |
-| `_nodes`, `_evaluations` | Counters, reported in `SearchInfo` and `SearchResult` |
-| `_hashGetHeight`, `_hashPutHeight` | How far from the root the midgame hash table is used |
-| `_cancel`, `_moveNow`, `_progress` | The two tokens and the progress callback of the running search |
-| `_report…`, `_lastHeartbeatMs` | The last reported state, repeated as a heartbeat when no report was sent for 100 ms (chapter 09) |
+| `midgame_table`, `endgame_table` | The two hash tables (chapter 07) |
+| `endgame` | The solver's small table of bounds, `EndgameState::local` (chapter 08) |
+| `ordering` | The move ordering with the response table (chapter 05) |
+| `options` | The `SearchOptions`: `pattern`, another evaluation instead of the built-in `EvalWeights::built_in()` (chapter 04), and the switches `selective`, `probcut_percent` and `soft_time_percent` |
+| `probcut_errors` | Multi-ProbCut's margin $t\,\sigma$ in 1/100 disc for each disc count and depth, or `None` when `selective` is off |
+| `clock`, `iteration_done` | The clock (`system_clock`, or the browser's, set with `set_clock`; chapter 09) and the callback after each iteration |
+
+| Field of `Searcher` | Contents |
+|---|---|
+| `pattern` | The evaluation this search uses |
+| `in_probcut` | True during Multi-ProbCut's shallow search, which is not selective itself |
+| `start`, `hard_limit_ms`, `soft_time_percent` | When the search started, the hard time limit, and the soft share of the time (chapter 09) |
+| `nodes`, `evaluations` | Counters, reported in `SearchInfo` and `SearchResult` |
+| `hash_get_height`, `hash_put_height` | How far from the root the midgame hash table is used |
+| `stop`, `progress` | The stop signals (cancel and Move Now, a `StopSignal`) and the progress callback of the running search |
+| `report_…`, `last_heartbeat_ms` | The last reported state, repeated as a heartbeat when no report was sent for 100 ms (chapter 09) |
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `Infinity` | 32 767 | Larger than any score |
-| `RootWindow` | 32 664 | The root window is (−32 664, 32 664) |
-| `WinScore` | 32 600 | A finished game scores ±(32 600 + disc difference) |
-| `PatternUnitsPerDisc` | 100 | Scores are in 1/100 disc |
-| `EndgameDistance` | 7 | Switch to the solver when the search would reach 7 or fewer empty squares |
-| `SolveOrderingLooks` | 4 | In solve mode, 4 midgame iterations order the root moves first |
-| `EvaluationOrderMinLook` | 4 | From `look` = 4 the moves are ordered by evaluation (chapter 05) |
-| `MidgameEtcMinLook` | 4 | From `look` = 4 the children's hash entries are tried first (ETC, chapter 07) |
-| `ProbCutMinLook` | 2 | Multi-ProbCut is tried from `look` = 2, a depth of 3 plies |
-| `DefaultProbCutPercent` | 100 | Its t × 100: a cut needs the shallow search to be t = 1.0 standard deviations outside the window |
-| `ProbCutPreCheckOffset` | 400 | 4 discs: the static evaluation must already be within 4 discs of that margin, and at least 1 disc beyond the bound, before the shallow search is tried |
-| `ProbCutScoreLimit` | 32 000 | No Multi-ProbCut near won or lost scores |
+| `INFINITY` | 32 767 | Larger than any score |
+| `ROOT_WINDOW` | 32 664 | The root window is (−32 664, 32 664) |
+| `WIN_SCORE` | 32 600 | A finished game scores ±(32 600 + disc difference) |
+| `PATTERN_UNITS_PER_DISC` | 100 | Scores are in 1/100 disc |
+| `ENDGAME_DISTANCE` | 7 | Switch to the solver when the search would reach 7 or fewer empty squares |
+| `SOLVE_ORDERING_LOOKS` | 4 | In solve mode, 4 midgame iterations order the root moves first |
+| `EVALUATION_ORDER_MIN_LOOK` | 4 | From `look` = 4 the moves are ordered by evaluation (chapter 05) |
+| `MIDGAME_ETC_MIN_LOOK` | 4 | From `look` = 4 the children's hash entries are tried first (ETC, chapter 07) |
+| `PROBCUT_MIN_LOOK` | 2 | Multi-ProbCut is tried from `look` = 2, a depth of 3 plies |
+| `DEFAULT_PROBCUT_PERCENT` | 100 | Its t × 100: a cut needs the shallow search to be t = 1.0 standard deviations outside the window |
+| `PROBCUT_PRE_CHECK_OFFSET` | 400 | 4 discs: the static evaluation must already be within 4 discs of that margin, and at least 1 disc beyond the bound, before the shallow search is tried |
+| `PROBCUT_SCORE_LIMIT` | 32 000 | No Multi-ProbCut near won or lost scores |
 
-**Scores** are in 1/100 disc from the point of view of the side to move: `EvaluateLeaf` converts the pattern evaluation's units (1/8 disc in the built-in file) to 1/100 disc and caps it at ±64 discs (±6 400) (chapter 04). A finished game scores ±(32 600 + disc difference), with the empty squares given to the winner, so every won game is better than any evaluation.
+**Scores** are in 1/100 disc from the point of view of the side to move: `evaluate_leaf` (through `eval::pattern_score`) converts the pattern evaluation's units (1/8 disc in the built-in file) to 1/100 disc and caps it at ±64 discs (±6 400) (chapter 04). A finished game scores ±(32 600 + disc difference), with the empty squares given to the winner, so every won game is better than any evaluation.
 
 **Depth.** The code uses the C++ convention `look`: the remaining depth *after* the current move. A search with `look` = *n* looks *n* + 1 plies ahead, and the leaves are evaluated in the move loop of the node with `look` = 0.
 
@@ -66,19 +71,19 @@ With these four root moves in this order and the replies in square order, alpha-
 
 ### The search as a whole
 
-`SearchEngine.Search(board, player, limits, progress, cancellationToken, moveNowToken, onlyMoves)`:
+`SearchEngine::search(board, player, limits, progress, stop, only_moves)`; the C# `SearchEngine.Search(board, player, limits, progress, cancellationToken, moveNowToken, onlyMoves)` that the apps and tools call passes its arguments on to it (chapter 14):
 
 ```mermaid
 flowchart TD
-    Start["Search(board, player, limits, ...)"] --> Moves{"Legal moves?"}
+    Start["search(board, player, limits, ...)"] --> Moves{"Legal moves?"}
     Moves -- "none" --> Pass["Return a pass (ScoreKind.None)"]
     Moves -- "exactly one" --> One["Return it at once (ScoreKind.None)"]
     Moves -- "several" --> Prep["Clear the response table,<br/>order the root moves"]
     Prep --> Solve{"limits = Solve?"}
-    Solve -- "yes" --> Order4["SearchRoot at 1 to 4 plies,<br/>only to order the root moves"]
+    Solve -- "yes" --> Order4["search_root at 1 to 4 plies,<br/>only to order the root moves"]
     Order4 --> WLD
     Solve -- "no" --> Near{"Would the next depth reach<br/>7 or fewer empty squares?"}
-    Near -- "no" --> Root["SearchRoot at the next depth"]
+    Near -- "no" --> Root["search_root at the next depth"]
     Root --> Stop{"Depth or soft time<br/>limit reached?"}
     Stop -- "no" --> Near
     Stop -- "yes" --> Done["Return the best move"]
@@ -86,27 +91,27 @@ flowchart TD
     WLD --> Done
 ```
 
-With `onlyMoves`, only the given moves are searched, even a single one (used by book learning, chapter 11). A single legal move is not searched, unless the limit is `Solve` or `onlyMoves` is given. In solve mode the midgame iterations at 1 to 4 plies (`SolveOrderingLooks`, fewer if the position is too near the end) only order the root moves for the solver; their scores are not the result. If the time runs out or "Move Now" is used at any point, the search unwinds and returns the best move found so far (chapter 09).
+With `only_moves`, only the given moves are searched, even a single one (used by book learning, chapter 11). A single legal move is not searched, unless the limit is `Solve` or `only_moves` is given. In solve mode the midgame iterations at 1 to 4 plies (`SOLVE_ORDERING_LOOKS`, fewer if the position is too near the end) only order the root moves for the solver; their scores are not the result. If the time runs out or "Move Now" is used at any point, the search unwinds and returns the best move found so far (chapter 09).
 
 ### Iterative deepening
 
-The loop runs `look` = 0, 1, 2, … as long as $\text{empties} - 1 - \text{look} > 7$, that is, as long as the search ends with more than 7 empty squares on the board. After each iteration it stops if the depth limit (fixed depth) or the soft time limit (the other modes) is reached. Searching depth 1, 2, 3, … sounds wasteful, but each iteration fills the hash table and reorders the root moves for the next one, and the deeper searches are so much bigger that the small ones hardly count. After each iteration the internal `IterationDone` callback, if set, gets the depth and the score; the trainer's `mpc` command uses it to record every iteration's score for the Multi-ProbCut fit.
+The loop runs `look` = 0, 1, 2, … as long as $\text{empties} - 1 - \text{look} > 7$, that is, as long as the search ends with more than 7 empty squares on the board. After each iteration it stops if the depth limit (fixed depth) or the soft time limit (the other modes) is reached. Searching depth 1, 2, 3, … sounds wasteful, but each iteration fills the hash table and reorders the root moves for the next one, and the deeper searches are so much bigger that the small ones hardly count. After each iteration the callback set with `set_iteration_done`, if any, gets the depth and the score (the C# wrapper's internal `IterationDone` sets it); the trainer's `mpc` command uses it to record every iteration's score for the Multi-ProbCut fit.
 
 ### The root: principal variation search
 
-`SearchRoot` searches every root move:
+`search_root` searches every root move:
 
 - The first move with the full window; the other moves, once the search is deeper than 3 plies (`look` > 2), with a **null window** (−α − 1, −α). A null-window search is fast because it only answers "better than α or not?". If a move turns out better, it is searched again with the full window. This is **principal variation search** (PVS), which replaces the C++ `zero_findmax`.
 - After each root move, a `SearchInfo` is reported (depth, current move, best move, score, nodes, evaluations, time).
-- Each move that becomes the new best is recorded; at the end they are moved to the front of the root list in that order (`MoveToFront`), so the next iteration starts with the latest best move (C++ `put_in_front`).
+- Each move that becomes the new best is recorded; at the end they are moved to the front of the root list in that order (`move_to_front`), so the next iteration starts with the latest best move (C++ `put_in_front`).
 
 ### One node
 
-The private `Search(board, player, look, ply, previousMove, alpha, beta, out bestMove)`:
+`Searcher::search(board, player, look, ply, previous_move, alpha, beta)`, which returns the score and the best move:
 
 ```mermaid
 flowchart TD
-    N["Search(board, player, look, ply, alpha, beta)"] --> Count["Count the node; every 1024 nodes<br/>check time, cancel and Move Now"]
+    N["search(board, player, look, ply, alpha, beta)"] --> Count["Count the node; every 1024 nodes<br/>check time, cancel and Move Now"]
     Count --> Legal{"Legal moves?"}
     Legal -- "none, and none for the opponent" --> Over["Return the game-over score"]
     Legal -- "none, opponent can move" --> PassNode["Pass: search the opponent<br/>with the same look"]
@@ -130,11 +135,11 @@ flowchart TD
 
 Some details:
 
-- **Leaves are evaluated in the parent's loop.** When `look` is 0, the positions after each move are evaluated directly with the pattern evaluation (`EvaluateLeaf`, chapter 04), for the side to move there, and negated. This saves a function call per leaf, as in C++. Each evaluated leaf counts as a node and an evaluation.
+- **Leaves are evaluated in the parent's loop.** When `look` is 0, the positions after each move are evaluated directly with the pattern evaluation (`evaluate_leaf`, chapter 04), for the side to move there, and negated. This saves a function call per leaf, as in C++. Each evaluated leaf counts as a node and an evaluation.
 - **Passes** do not use up depth: the opponent is searched with the same `look`.
 - **Extension.** A position with only one legal move at the horizon (`look` = 0) is searched one ply deeper (`look` = 1), so a forced reply is not judged by a static evaluation. The result is still stored in the hash table with the original `look`.
 - **The response table** is updated after every searched child (chapter 05).
-- **Enhanced transposition cutoff** from `look` = 4 (`MidgameEtcMinLook`), where the children are within the hash table's read height: the children's hash entries are looked up before the moves are ordered; a child whose stored upper bound already refutes it ends the node ([chapter 07](07-transposition-table.md#use-in-the-midgame-search)).
+- **Enhanced transposition cutoff** from `look` = 4 (`MIDGAME_ETC_MIN_LOOK`), where the children are within the hash table's read height: the children's hash entries are looked up before the moves are ordered; a child whose stored upper bound already refutes it ends the node ([chapter 07](07-transposition-table.md#use-in-the-midgame-search)).
 - **The hash table** is read only at plies ≤ `look` − 1 and written only at plies ≤ `look` of the current iteration, the same heights as in C++; so it is used in the upper part of the tree, where each entry saves the most work. A hash move is only used if it is legal in the position (chapter 07).
 - **PVS in every node.** The first move is searched with the full window, the others with a null window and again with the full window if they turn out better, as at the root. A node that already has a null window searches all its moves with it. The measurements behind this choice are in [chapter 23](23-phase-5-the-search.md).
 
@@ -142,13 +147,13 @@ Some details:
 
 Stello uses **Multi-ProbCut** (Buro), as Egaroucid does ([chapter 18](18-the-egaroucid-port.md)): a shallow search predicts the result of the deep one, and when the prediction is clearly outside the window, the deep search is skipped.
 
-At a node with depth $d$ = `look` + 1 ≥ 3 (`TryProbCut`), after the hash table lookup and before the moves are generated into a list:
+At a node with depth $d$ = `look` + 1 ≥ 3 (`try_probcut` and `probcut_searches`), after the hash table lookup and before the moves are generated into a list:
 
-1. The shallow depth is about half, with the same parity (`ProbCutShallowDepth`): $s = 2\lfloor d/4 \rfloor + (d \bmod 2)$, so 3 → 1, 4 → 2, 7 → 3, 10 → 4, 13 → 7.
-2. The error margin is $e = \lceil t \cdot \max(0.5,\ \sigma(n, s, d)) \cdot 100 \rceil$ in 1/100 disc, with $t$ = 1.0 (`DefaultProbCutPercent`) and $n$ the number of discs on the board. `ProbCutErrors` computes it once per engine for every disc count and depth.
+1. The shallow depth is about half, with the same parity (`probcut_shallow_depth`): $s = 2\lfloor d/4 \rfloor + (d \bmod 2)$, so 3 → 1, 4 → 2, 7 → 3, 10 → 4, 13 → 7.
+2. The error margin is $e = \lceil t \cdot \max(0.5,\ \sigma(n, s, d)) \cdot 100 \rceil$ in 1/100 disc, with $t$ = 1.0 (`DEFAULT_PROBCUT_PERCENT`) and $n$ the number of discs on the board. `probcut_errors` computes it once per engine for every disc count and depth.
 3. **A cheap test first:** the static evaluation must be at least $\beta + \max(100,\ e - 400)$, that is, within 4 discs of the margin and at least 1 disc above β. Only then does a null-window search to depth $s$ test whether the position scores at least $\beta + e$. If so, the node returns β. The same is done below α: static evaluation at most $\alpha - \max(100,\ e - 400)$, then a test against $\alpha - e$, and the node returns α.
-4. The shallow search is an ordinary node search (same ply, same previous move, the same hash table), but Multi-ProbCut is off inside it (`_inProbCut`).
-5. Near won and lost scores it is not used: the cut above β is only tried when $\beta + e < 32\,000$, the cut below α only when $\alpha - e > -32\,000$ (`ProbCutScoreLimit`).
+4. The shallow search is an ordinary node search (same ply, same previous move, the same hash table), but Multi-ProbCut is off inside it (`in_probcut`).
+5. Near won and lost scores it is not used: the cut above β is only tried when $\beta + e < 32\,000$, the cut below α only when $\alpha - e > -32\,000$ (`PROBCUT_SCORE_LIMIT`).
 
 **The error model** comes from Stello's own searches. The trainer's `mpc` command searched 11,700 test positions (300 per disc count from 14 to 52) without selectivity at every depth up to min(13, empties − 8), and measured the spread of the deep result minus the shallow one. A weighted least-squares fit over those spreads gives, in discs, with $x = n / 64$:
 
@@ -160,11 +165,11 @@ Because the margin comes from the measured errors, it is wide where the shallow 
 
 ### Game over inside the search
 
-When neither side can move, the node returns $\pm(32600 + d)$, where $d$ is the disc difference with the empty squares given to the winner, and 0 for a draw (`GameOverScore`).
+When neither side can move, the node returns $\pm(32600 + d)$, where $d$ is the disc difference with the empty squares given to the winner, and 0 for a draw (`game_over_score`, with `final_score`).
 
 ## Worked example: iterative deepening
 
-The midgame test position after `f5 d6 c3 d3 c4 f4 c5 b3 c2 e6`, Black to move, searched by `new SearchEngine()` with `SearchLimits.FixedDepth(10)` (Release build, 2 November 2026, on the laptop used for all measurements; times depend on the machine):
+The midgame test position after `f5 d6 c3 d3 c4 f4 c5 b3 c2 e6`, Black to move, searched by a new `SearchEngine` (2^19 slots, the default options) with a fixed depth of 10 (Rust release build, 2 November 2026, on the laptop used for all measurements; times depend on the machine). Stello 3.0 visits the same nodes as Stello 2.0, so the moves, scores and counters are those of 2.0 too; only the times are 3.0's:
 
 ```text
 --------
@@ -179,16 +184,16 @@ The midgame test position after `f5 d6 c3 d3 c4 f4 c5 b3 c2 e6`, Black to move, 
 
 | Depth (plies) | Best move | Score | Nodes (total) | Evaluations (total) | Time (total) |
 |---|---|---|---|---|---|
-| 1 | c6 | 50 | 11 | 11 | 5 ms |
-| 2 | c6 | 112 | 43 | 32 | 7 ms |
-| 3 | c6 | 75 | 297 | 249 | 8 ms |
-| 4 | c6 | 87 | 493 | 391 | 8 ms |
-| 5 | c6 | 275 | 1 267 | 966 | 9 ms |
-| 6 | b4 | 162 | 4 787 | 3 354 | 14 ms |
-| 7 | b4 | 300 | 8 950 | 6 381 | 18 ms |
-| 8 | c6 | 225 | 18 387 | 12 604 | 30 ms |
-| 9 | c6 | 275 | 22 893 | 15 865 | 35 ms |
-| 10 | c6 | 200 | 30 977 | 20 968 | 44 ms |
+| 1 | c6 | 50 | 11 | 11 | 0.02 ms |
+| 2 | c6 | 112 | 43 | 32 | 0.06 ms |
+| 3 | c6 | 75 | 297 | 249 | 0.16 ms |
+| 4 | c6 | 87 | 493 | 391 | 0.25 ms |
+| 5 | c6 | 275 | 1 267 | 966 | 0.63 ms |
+| 6 | b4 | 162 | 4 787 | 3 354 | 2.1 ms |
+| 7 | b4 | 300 | 8 950 | 6 381 | 3.6 ms |
+| 8 | c6 | 225 | 18 387 | 12 604 | 7.2 ms |
+| 9 | c6 | 275 | 22 893 | 15 865 | 8.5 ms |
+| 10 | c6 | 200 | 30 977 | 20 968 | 11.8 ms |
 
 The counters and times are totals since the start of the search. The best move's score at each depth:
 
@@ -210,7 +215,7 @@ Two things are typical:
 
 - **No stored game tree.** The C++ search kept a tree of up to 300 000 nodes to order moves between iterations (`findmax`, `findmax1`). The hash table and the root reordering give the same ordering with much less code. Reusing the tree after the opponent's move is gone too, but the hash table survives between moves, so most of the benefit remains.
 - **PVS instead of the C++ restart trick.** `zero_findmax` restarted the root loop after the second improvement; standard PVS re-search gives the same result.
-- **Exceptions instead of `longjmp`.** A time-out or "Move Now" throws a private `SearchAbortedException` from `CheckAbort`, caught in `Search`; cancel throws `OperationCanceledException`, which reaches the caller.
+- **Results instead of `longjmp`.** Every search function returns a `Result`. A time-out or "Move Now" makes `check_abort` return `Abort::Stop`, which `?` passes up to `run`, and the best move found so far is returned; cancel ends in `SearchError::Cancelled`, which the C# wrapper throws as an `OperationCanceledException`.
 - **Deterministic.** With the same position and limits the search gives the same result every time (no randomness, stable sorting). Only time limits make results differ between runs.
 - **Game-over scores** give the empty squares to the winner, the standard rule; C++ did not count them.
 - **Selectivity from statistics.** The C++ selective search used a fixed margin. Multi-ProbCut's margin depends on the disc count and on both depths, and comes from measured errors, so it can be refitted when the evaluation or the search changes (`mpc`, and `SearchOptions.ProbCutPercent` to retune $t$).
@@ -222,18 +227,25 @@ See [Stello porting documentation.md](../Plans/Stello%20porting%20documentation.
 
 | File | Main members |
 |---|---|
-| [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs) | `Search` (public), `SearchRoot`, `Search` (private node search), `OrderByEvaluation`, `TryProbCut`, `ProbCutShallowDepth`, `ProbCutErrors`, `EvaluateLeaf`, `PatternScore`, `GameOverScore`, `StopIterating`, `CheckAbort`, `Report`, `MoveToFront`, `Play` |
-| [Search/SearchOptions.cs](../Stello.Net/Stello.Engine/Search/SearchOptions.cs) | The switches for experiments: `Pattern`, `SoftTimePercent`, `Selective`, `ProbCutPercent` |
-| [SearchLimits.cs](../Stello.Net/Stello.Engine/SearchLimits.cs), [SearchResult.cs](../Stello.Net/Stello.Engine/SearchResult.cs) | The limits, `SearchInfo`, `SearchResult`, `ScoreKind` |
+| [search/engine.rs](../Stello.Rust/stello-core/src/search/engine.rs) | `SearchEngine` (`new`, `search`, `clear_hash`, `set_clock`, `set_iteration_done`), `Searcher` (`run`, `iterate`, `search_root`, `search`, `order_by_evaluation`, `try_probcut`, `probcut_searches`, `evaluate_leaf`, `stop_iterating`, `check_abort`, `report`), `probcut_shallow_depth`, `probcut_errors`, `final_score`, `game_over_score`, `move_to_front`, the constants |
+| [eval/mod.rs](../Stello.Rust/stello-core/src/eval/mod.rs) | `PATTERN_UNITS_PER_DISC`, `pattern_score` (chapter 04) |
+| [search/options.rs](../Stello.Rust/stello-core/src/search/options.rs), [search/limits.rs](../Stello.Rust/stello-core/src/search/limits.rs) | `SearchOptions`; the limits, `SearchInfo`, `SearchResult`, `ScoreKind` |
+| [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs), [Native/StelloNative.cs](../Stello.Net/Stello.Engine/Native/StelloNative.cs) | The C# API: `Search`, `ClearHash`, `HashBits`, `IterationDone`, which call the Rust engine through the C ABI (chapter 14) |
+| [Search/SearchOptions.cs](../Stello.Net/Stello.Engine/Search/SearchOptions.cs) | The switches for experiments, as the tools set them: `Pattern`, `SoftTimePercent`, `Selective`, `ProbCutPercent` |
+| [SearchLimits.cs](../Stello.Net/Stello.Engine/SearchLimits.cs), [SearchResult.cs](../Stello.Net/Stello.Engine/SearchResult.cs) | The C# limits, `SearchInfo`, `SearchResult`, `ScoreKind` |
 | [MpcCommand.cs](../Stello.Net/tools/Stello.Trainer/MpcCommand.cs) | The trainer's `mpc` command: the data and the fit of Multi-ProbCut's error model |
-| Egaroucid: [multi_probcut.hpp](../Egaroucid-main/src/engine/multi_probcut.hpp) | The original Multi-ProbCut that `TryProbCut` follows |
+| Egaroucid: [multi_probcut.hpp](../Egaroucid-main/src/engine/multi_probcut.hpp) | The original Multi-ProbCut that `try_probcut` follows |
 | C++: [Minmax.cpp](../Stello%20C++/BRAIN/Minmax.cpp), [Kontrol.cpp](../Stello%20C++/BRAIN/Kontrol.cpp) | `findmax`, `findmax1`, `findmax2`, `zero_findmax`, `getcomputer` |
+| C# 2.0 (frozen): [Stello.Engine.V2/SearchEngine.cs](../Stello.Net/Stello.Engine.V2/SearchEngine.cs) | The C# original of the search, which the Rust code follows node for node ([chapter 25](25-phases-0-4-the-engine-in-rust.md)) |
 
 ## Tests
 
-- [SearchEngineTests.cs](../Stello.Net/Stello.Engine.Tests/SearchEngineTests.cs): a pass when there is no legal move; a single legal move without search; at depth 9 Multi-ProbCut needs less than half the nodes of the plain search, with a score within 3 discs; the requested depth is reached (1, 4 and 7 plies); the same result twice; progress for every depth, and periodic progress during a long search; time per move and per game are kept; "Move Now" and cancel stop within 100 ms; an already cancelled search throws.
+- [SearchEngineTests.cs](../Stello.Net/Stello.Engine.Tests/SearchEngineTests.cs), through the C# wrapper: a pass when there is no legal move; a single legal move without search; at depth 9 Multi-ProbCut needs less than half the nodes of the plain search, with a score within 3 discs; the requested depth is reached (1, 4 and 7 plies); the same result twice; progress for every depth, and periodic progress during a long search; time per move and per game are kept; "Move Now" and cancel stop within 100 ms; an already cancelled search throws.
+- [StelloV2Tests.cs](../Stello.Net/Stello.Engine.Tests/StelloV2Tests.cs): the 100 midgame positions at depth 10, searched by the current engine and by the frozen 2.0, give exactly the recorded move, score, depth and nodes ([`Data/stello-v2-signatures.txt`](../Stello.Net/Stello.Engine.Tests/Data/stello-v2-signatures.txt)).
+- [NativeEngineTests.cs](../Stello.Net/Stello.Engine.Tests/NativeEngineTests.cs): the wrapper; the options (`Selective`, `ProbCutPercent`, another evaluation) search as in 2.0, progress and the iteration callback are those of 2.0, exceptions in the callbacks reach the caller, cancel and Move Now from inside the progress, engines on several threads.
 - [StrengthTests.cs](../Stello.Net/Stello.Engine.Tests/StrengthTests.cs): at depth 4 the engine beats a random player and a greedy player.
 - [EndgameTests.cs](../Stello.Net/Stello.Engine.Tests/EndgameTests.cs): a fixed-depth search near the end switches to the solver and returns the exact score.
+- Rust, [tests/search.rs](../Stello.Rust/stello-core/tests/search.rs): every fifth of the 2.0 midgame signatures; a single legal move and a pass need no search; `only_moves`; a report for every root move, and heartbeats; the soft and the hard time limit with a clock the test sets; cancel and Move Now from another thread; Multi-ProbCut cuts nodes. The unit tests in [search/engine.rs](../Stello.Rust/stello-core/src/search/engine.rs) check the shallow depth's parity, the fitted error model, `move_to_front` and the game-over scores.
 
 ## Further reading
 

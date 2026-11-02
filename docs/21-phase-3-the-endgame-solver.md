@@ -55,7 +55,7 @@ The gate: FFO #40–49 all correct in at most about 2 × the port's 25.6 s, with
 | `SolveShallow`, `SolveLast2`, `SolveLast` for principal-variation nodes | 6 and fewer | Stello's, kept |
 | The 4-ply ordering search in solve mode | the root | New |
 
-The half-turn trick made the adaptation direct. Egaroucid's bitboards have a1 at bit 63, Stello's at bit 0; reversing the bits maps square $i$ to $63 - i$, a half turn of the board. Othello is the same after a half turn, and so is every table in the solver: the flip directions, the neighbour masks, the quadrants, the corners and the stable edges. So the adapted code runs on Stello's bitboards as they are, and the moves it returns are Stello's. [EndgameBits.cs](../Stello.Net/Stello.Engine/Endgame/EndgameBits.cs) holds the adapted flips, legal moves and small tables, and a test checks them against Stello's own `Bitboards`.
+The half-turn trick made the adaptation direct. Egaroucid's bitboards have a1 at bit 63, Stello's at bit 0; reversing the bits maps square $i$ to $63 - i$, a half turn of the board. Othello is the same after a half turn, and so is every table in the solver: the flip directions, the neighbour masks, the quadrants, the corners and the stable edges. So the adapted code runs on Stello's bitboards as they are, and the moves it returns are Stello's. [EndgameBits.cs](../Stello.Net/Stello.Engine.V2/Endgame/EndgameBits.cs) holds the adapted flips, legal moves and small tables, and a test checks them against Stello's own `Bitboards`.
 
 The whole solver is described layer by layer in [chapter 08](08-endgame-solver.md#the-layers).
 
@@ -78,7 +78,7 @@ The whole solver is described layer by layer in [chapter 08](08-endgame-solver.m
 
 ## What was tried and dropped
 
-- **The pattern evaluation in the ordering at 11–13 empty squares.** It saves about 20 % of the nodes, but each node becomes about 40 % slower. Egaroucid uses a small 4-pattern table there, updated move by move; Stello orders by the opponent's mobility alone ([chapter 08](08-endgame-solver.md#7-to-13-empty-squares-endlocal-and-endsimple)).
+- **The pattern evaluation in the ordering at 11–13 empty squares.** It saves about 20 % of the nodes, but each node becomes about 40 % slower. Egaroucid uses a small 4-pattern table there, updated move by move; Stello orders by the opponent's mobility alone ([chapter 08](08-endgame-solver.md#7-to-13-empty-squares)).
 - **The midgame table's best moves as hash moves in the solver,** where the endgame table has none. FFO #40–44 then took 6.9–10.6 s instead of 4.1 s. The endgame ordering is better than the choice of a shallow midgame search.
 - **Other depths for the ordering search:** a 1-ply search from 14, 16, 18 or 20 empty squares changed the time by under 15 %. The final rule searches 1 ply from 16 empty squares in `EndDeep`, and 0–2 plies in `EndWindow` ([chapter 08](08-endgame-solver.md#move-ordering-above-13-empty-squares)).
 - **Exact at once** with a full window, instead of the win/loss/draw pass first: 50.0 s against 45.6 s on FFO #40–49. The win/loss/draw pass also gives a playable result early if the time runs out. It stays.
@@ -177,12 +177,14 @@ From phase 3, in the findings:
 
 ## Where in the code
 
+The C# search files of this chapter are kept, frozen, in `Stello.Engine.V2`. Since Stello 3.0 the same search runs in Rust ([chapter 25](25-phases-0-4-the-engine-in-rust.md)); Part 1 points to that code.
+
 | File | Main members |
 |---|---|
-| [SearchEngine.Endgame.cs](../Stello.Net/Stello.Engine/Endgame/SearchEngine.Endgame.cs) | `SolveChild`, `EndNull`, `EndWindow`, `EndDeep`, `OrderingValue`, `EndLocal`, `EndSimple`, `EndFast`, `Last4` … `Last1`, `StabilityCut` |
-| [EndgameBits.cs](../Stello.Net/Stello.Engine/Endgame/EndgameBits.cs) | `Flips`, `LegalMoves`, `LoneEmpties`, `Parity`, `WeightedMoves`, `PotentialMobility`, the stability thresholds |
-| [StableDiscs.cs](../Stello.Net/Stello.Engine/Endgame/StableDiscs.cs), [LocalTable.cs](../Stello.Net/Stello.Engine/Endgame/LocalTable.cs) | The stable discs; the local table of 7–13 empty squares |
-| [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs) | `Search` (the solve-mode ordering, the two passes), `SolveRoot`, `SolveShallow`, `CheckAbort` |
+| [SearchEngine.Endgame.cs](../Stello.Net/Stello.Engine.V2/Endgame/SearchEngine.Endgame.cs) | `SolveChild`, `EndNull`, `EndWindow`, `EndDeep`, `OrderingValue`, `EndLocal`, `EndSimple`, `EndFast`, `Last4` … `Last1`, `StabilityCut` |
+| [EndgameBits.cs](../Stello.Net/Stello.Engine.V2/Endgame/EndgameBits.cs) | `Flips`, `LegalMoves`, `LoneEmpties`, `Parity`, `WeightedMoves`, `PotentialMobility`, the stability thresholds |
+| [StableDiscs.cs](../Stello.Net/Stello.Engine.V2/Endgame/StableDiscs.cs), [LocalTable.cs](../Stello.Net/Stello.Engine.V2/Endgame/LocalTable.cs) | The stable discs; the local table of 7–13 empty squares |
+| [SearchEngine.cs](../Stello.Net/Stello.Engine.V2/SearchEngine.cs) | `Search` (the solve-mode ordering, the two passes), `SolveRoot`, `SolveShallow`, `CheckAbort` |
 | Source: [Egaroucid.Engine/EndSearch.cs](../Stello.Net/Egaroucid.Engine/EndSearch.cs), [Stability.cs](../Stello.Net/Egaroucid.Engine/Stability.cs) | The port's endgame code that the last 13 squares were adapted from |
 | [Stello.Engine.V1/SearchEngine.cs](../Stello.Net/Stello.Engine.V1/SearchEngine.cs) | Stello 1's solver, the one that was replaced |
 
@@ -192,7 +194,7 @@ From phase 3, in the findings:
 - [Egaroucid on GitHub](https://github.com/Nyanyan/Egaroucid): `src/engine/endsearch_nws.hpp`, `endsearch_nws_last_generic.hpp`, `stability_cutoff.hpp`, `move_ordering.hpp`.
 - [The FFO endgame test suite – radagast.se](http://radagast.se/othello/ffotest.html): the positions of the gate.
 - [Enhanced Transposition Cutoff – Chess Programming Wiki](https://www.chessprogramming.org/Enhanced_Transposition_Cutoff) and [Null Window – Chess Programming Wiki](https://www.chessprogramming.org/Null_Window).
-- [References](26-references.md).
+- [References](27-references.md).
 
 ---
 

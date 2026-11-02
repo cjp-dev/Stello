@@ -8,18 +8,19 @@ In Othello the same position is often reached by different move orders: a **tran
 
 ## Data structures
 
-![Left: the table as an array of 2^bits slots, each with two entries, "deepest" and "always replaced". Right: the 24-byte entry with Own, Opponent, Value, Depth, Bound, Move and Tag, and the hash function that chooses the slot.](images/tt-layout.svg)
+![Left: the table as an array of 2^bits slots, each with two entries, "deepest" and "always replaced". Right: the 24-byte entry with Own, Opponent, Value, Depth, Bound, Move, Tag and Generation, and the hash function that chooses the slot.](images/tt-layout.svg)
 
-An `Entry` is a `readonly record struct` of 24 bytes:
+An `Entry` is a `Copy` struct of 24 bytes:
 
 | Field | Type | Contents |
 |---|---|---|
-| `Own`, `Opponent` | `ulong` | The discs of the side to move and of the other side: the whole position |
-| `Value` | `short` | The score |
-| `Depth` | `sbyte` | The midgame `look` of the search, or the number of empty squares in the endgame |
-| `Bound` | `Bound` | `Exact`, `Lower`, `Upper`, or `None` for an unused entry |
-| `Move` | `sbyte` | The best move (square index), or −1 |
-| `Tag` | `byte` | Extra key: the side to move in the midgame table, 0 in the endgame table |
+| `own`, `opponent` | `u64` | The discs of the side to move and of the other side: the whole position |
+| `value` | `i16` | The score |
+| `depth` | `i8` | The midgame `look` of the search, or the number of empty squares in the endgame |
+| `bound` | `Bound` | `Exact`, `Lower`, `Upper`, or `None` for an unused entry |
+| `mv` | `i8` | The best move (square index), or −1 |
+| `tag` | `u8` | Extra key: the side to move in the midgame table, 0 in the endgame table |
+| `generation` | `u16` | The table's generation when the entry was stored (see [Clearing](#clearing-by-generation)); it fills the two bytes that would otherwise be padding |
 
 | `Bound` | Meaning | C++ name |
 |---|---|---|
@@ -27,7 +28,7 @@ An `Entry` is a `readonly record struct` of 24 bytes:
 | `Lower` | The true score is at least the value (it failed high: ≥ β) | `HI_HASH` |
 | `Upper` | The true score is at most the value (it failed low: ≤ α) | `LO_HASH` |
 
-`new TranspositionTable(bits)` allocates $2^{\text{bits}}$ slots of two entries. `SearchEngine` takes `hashBits` (10–26, default 19) and creates two tables of that size (one for the heuristic midgame and one for the exact endgame solver):
+`TranspositionTable::new(bits)` allocates $2^{\text{bits}}$ slots of two entries. `SearchEngine` takes the hash bits (10–26, default 19) and creates two tables of that size (one for the heuristic midgame and one for the exact endgame solver):
 
 $$2 \times \big(2^{19} \text{ slots} \times 2 \text{ entries} \times 24 \text{ bytes}\big) = 48 \text{ MiB total}$$
 
@@ -43,7 +44,7 @@ In the Settings dialog (chapter 15), players choose the number of entries **per 
 | **4,194,304 entries (192 MB)** | 21 | 4,194,304 | $201.33\text{ MB}$ | Deep searches and complex endgame solving |
 | **16,777,216 entries (768 MB)** | 23 | 16,777,216 | $805.31\text{ MB}$ | Maximum 64-bit desktop cache |
 
-The setting is converted via $\text{hashBits} = \log_2(\text{entries}) - 1$ and passed in `SearchLimits.HashBits`. If the active search engine's `HashBits` does not match the requested size, `LocalEngineHost` (desktop) and `EngineWorker` (Web Worker) automatically recreate the engine with the requested capacity before launching the search.
+The setting is converted via $\text{hashBits} = \log_2(\text{entries}) - 1$ and passed in `SearchLimits.HashBits`. If the active search engine's `HashBits` does not match the requested size, `LocalEngineHost` (desktop) and the WebAssembly engine's `search` in the Web Worker ([chapter 14](14-app-integration.md)) recreate the engine with the requested capacity before launching the search.
 
 ## Algorithm
 
@@ -62,21 +63,21 @@ $$
 
 (multiplications modulo $2^{64}$). The top bits of $h$ choose the slot; they depend on all the input bits.
 
-### Looking up: `TryGet`
+### Looking up: `get`
 
-`TryGet(own, opponent, tag, out entry)` checks the two entries of the slot. An entry is a hit only if `Own`, `Opponent` and `Tag` are all equal and the entry is in use. Because the whole position is stored, there are **no false hits**: an entry can never belong to a different position that happens to have the same hash.
+`get(own, opponent, tag)` checks the two entries of the slot and returns the entry it finds, if any. An entry is a hit only if `own`, `opponent` and `tag` are all equal and the entry is in use: its bound is not `None` and its generation is the table's. Because the whole position is stored, there are **no false hits**: an entry can never belong to a different position that happens to have the same hash.
 
-### Storing: `Store`
+### Storing: `store`
 
-`Store(own, opponent, tag, depth, bound, value, move)` keeps the deepest result in the first entry and uses the second entry for everything else:
+`store(own, opponent, tag, depth, bound, value, mv)` keeps the deepest result in the first entry and uses the second entry for everything else:
 
 ```mermaid
 flowchart TD
-    S["Store(position, depth, ...)"] --> Same{"First entry holds<br/>the same position?"}
+    S["store(position, depth, ...)"] --> Same{"First entry holds<br/>the same position?"}
     Same -- "yes" --> Deeper{"depth ≥ its depth?"}
     Deeper -- "yes" --> Replace["Replace the first entry"]
     Deeper -- "no" --> Keep["Keep the first entry;<br/>the new result is dropped"]
-    Same -- "no" --> Empty{"First entry unused,<br/>or depth ≥ its depth?"}
+    Same -- "no" --> Empty{"First entry not in use,<br/>or depth ≥ its depth?"}
     Empty -- "yes" --> Move["Move the first entry to the second place,<br/>store the new one first"]
     Empty -- "no" --> Second["Store the new one in the second entry"]
 ```
@@ -94,29 +95,34 @@ In the node search (chapter 06):
   - the bound is `Upper` and the value is below α (the position is too bad for us), or
   - the bound is `Lower` and the value is at least β (too good; the opponent avoids it).
 - Otherwise the stored move is searched first (chapter 05).
-- **Enhanced transposition cutoff.** From `look` = 4 (`MidgameEtcMinLook`), when the children's ply is still within the read height, the position after each move is looked up before the moves are ordered, with the opponent as the tag. If a child has an `Exact` or `Upper` entry with depth ≥ `look` − 1 whose negated value is at least β, that move already refutes the node, and the node returns at once without searching anything.
+- **Enhanced transposition cutoff.** From `look` = 4 (`MIDGAME_ETC_MIN_LOOK`), when the children's ply is still within the read height, the position after each move is looked up before the moves are ordered, with the opponent as the tag. If a child has an `Exact` or `Upper` entry with depth ≥ `look` − 1 whose negated value is at least β, that move already refutes the node, and the node returns at once without searching anything.
 - **Multi-ProbCut's shallow searches** (chapter 06) read and write the same table at the same plies. Their entries have a small depth, so for the deep search that follows they mostly give the move to try first, and the depth-preferred entry keeps deeper results.
+- **Prefetch.** At a node that will store its result but does not read the table (the deepest ply that is written, one below the last one that is read), the search asks the processor to load the slot into the cache (`prefetch`, x86-64 only) before it searches the children, so the store at the end does not wait for memory. It changes nothing else.
 - After the node is searched, the result is stored with the node's `look` as depth and the bound from the window: `Lower` if the best score ≥ β, `Exact` if it is above α, else `Upper`.
 
 ### Use in the endgame solver
 
 The solver ([chapter 08](08-endgame-solver.md)) uses the endgame table with tag 0 and the number of empty squares as the depth; an exact endgame result never needs a deeper search, so the stored depth is not checked when reading. Two kinds of node use it:
 
-- **Nodes with a window** (`EndWindow`, 7 or more empty squares, the principal variation of the solver):
+- **Nodes with a window** (`end_window`, 7 or more empty squares, the principal variation of the solver):
   - an `Exact` entry is returned at once;
   - a `Lower` entry raises α and an `Upper` entry lowers β; if then α ≥ β, the stored value is returned;
   - otherwise the stored move is searched first;
   - the result is stored as `Lower` if it reached β, `Exact` if it is above the original α, else `Upper`.
-- **Null-window nodes above 13 empty squares** (`EndDeep`, a fail-soft null window around α, so there is no window to narrow):
+- **Null-window nodes above 13 empty squares** (`end_deep`, a fail-soft null window around α, so there is no window to narrow):
   - an entry that is not `Upper` with a value above α, or not `Lower` with a value at or below α, already answers the question "better than α?", so its value is returned;
   - otherwise the stored move is searched first, before the other moves are ordered;
   - the result is stored as `Lower` if it is above α, else `Upper`.
 
-Both are described in [Above 13 empty squares: `EndWindow` and `EndDeep`](08-endgame-solver.md#above-13-empty-squares-endwindow-and-enddeep). Null-window nodes with 13 or fewer empty squares use the solver's small local table instead ([7 to 13 empty squares](08-endgame-solver.md#7-to-13-empty-squares-endlocal-and-endsimple)), and nodes with 6 or fewer empty squares no table at all. From 12 empty squares (`EndEtcMinEmpties`), both kinds of node first look up the positions after each move (*enhanced transposition cutoff*, chapter 08).
+Both are described in [Above 13 empty squares: `EndWindow` and `EndDeep`](08-endgame-solver.md#above-13-empty-squares). Null-window nodes with 13 or fewer empty squares use the solver's small local table instead ([7 to 13 empty squares](08-endgame-solver.md#7-to-13-empty-squares)), and nodes with 6 or fewer empty squares no table at all. From 12 empty squares (`END_ETC_MIN_EMPTIES`), both kinds of node first look up the positions after each move (*enhanced transposition cutoff*, chapter 08).
 
 ### Two tables
 
-Midgame values (heuristic scores in 1/100 disc, depending on the search depth, or ±(32 600 + discs) for a finished game) and endgame values (final disc differences, −64 to 64) mean different things, so they are kept in separate tables. The tables are never cleared during a game: `SearchEngine.ClearHash` (which also clears the solver's local table) exists, but the apps do not call it, so results from the previous move are still there when the next search starts. The tools call it between independent searches: the benchmarks, the trainer's `mpc` command, the book recalculation and the book match.
+Midgame values (heuristic scores in 1/100 disc, depending on the search depth, or ±(32 600 + discs) for a finished game) and endgame values (final disc differences, −64 to 64) mean different things, so they are kept in separate tables. The tables are never cleared during a game: `SearchEngine::clear_hash` (C# `ClearHash`, which also clears the solver's local table) exists, but the apps do not call it, so results from the previous move are still there when the next search starts. The tools call it between independent searches: the benchmarks, the trainer's `mpc` command, the book recalculation and the book match.
+
+### Clearing by generation
+
+`clear` does not write the table. Each table has a 16-bit generation counter, which `clear` increases, and every entry records the generation it was stored in. An entry of an older generation counts as empty: `get` does not find it, and `store` treats it as an unused first entry. So clearing costs nothing, however large the table; only when the counter wraps, after 65,535 clears, is the whole table set to zero once (an all-zero entry is an empty one), and the count starts again at 1. A new table starts at generation 1, so its zeroed entries (generation 0) are empty too. The tools that clear the tables before each of many short searches gain the most ([chapter 25](25-phases-0-4-the-engine-in-rust.md)).
 
 ## Worked examples
 
@@ -171,14 +177,18 @@ The deep result A survived two shallow stores (steps 2 and 3); only a deeper res
 
 | File | Main members |
 |---|---|
-| [TranspositionTable.cs](../Stello.Net/Stello.Engine/Search/TranspositionTable.cs) | `Bound`, `TranspositionTable`, `Entry`, `TryGet`, `Store`, `Clear`, `Slot` |
-| [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs) | `_midgameTable` and `_endgameTable`, the midgame use in `Search` (with `MidgameEtcMinLook`), `ClearHash` |
-| [Endgame/SearchEngine.Endgame.cs](../Stello.Net/Stello.Engine/Endgame/SearchEngine.Endgame.cs) | The endgame use in `EndWindow` and `EndDeep`, `EndEtcMinEmpties` |
+| [search/table.rs](../Stello.Rust/stello-core/src/search/table.rs) | `Bound`, `Entry` (`is_live`, `matches`), `TranspositionTable` (`new`, `get`, `store`, `prefetch`, `clear`, `slot`) |
+| [search/engine.rs](../Stello.Rust/stello-core/src/search/engine.rs) | `midgame_table` and `endgame_table`, the midgame use in `Searcher::search` (with `MIDGAME_ETC_MIN_LOOK` and the prefetch), `SearchEngine::clear_hash` |
+| [endgame/search.rs](../Stello.Rust/stello-core/src/endgame/search.rs) | The endgame use in `end_window` and `end_deep`, `END_ETC_MIN_EMPTIES` |
+| [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs) | The C# `ClearHash` and `HashBits`, passed on to the Rust engine (chapter 14) |
 | C++: [Minmax.cpp](../Stello%20C++/BRAIN/Minmax.cpp), [HASH.H](../Stello%20C++/BRAIN/HASH.H) | `f_hash_put`, the C++ hash table |
+| C# 2.0 (frozen): [Stello.Engine.V2/Search/TranspositionTable.cs](../Stello.Net/Stello.Engine.V2/Search/TranspositionTable.cs) | The C# original, the same table without the generation (its `Clear` writes every entry) |
 
 ## Tests
 
-[TranspositionTableTests.cs](../Stello.Net/Stello.Engine.Tests/TranspositionTableTests.cs): store and find; another position or tag is not found; the deeper result for the same position is kept; a deep entry survives many shallow entries in the same slot; clear removes everything. The endgame tests (chapter 08) check that the table gives correct scores in real searches.
+- Rust, the unit tests in [search/table.rs](../Stello.Rust/stello-core/src/search/table.rs): store and find; another tag is not found; a shallower result for the same position does not replace the deeper one; after a clear an old entry is not found and counts as empty when storing; over 70,000 clears the generation wraps and the table still works; an entry is 24 bytes.
+- [TranspositionTableTests.cs](../Stello.Net/Stello.Engine.Tests/TranspositionTableTests.cs), on the frozen C# 2.0 table: store and find; another position or tag is not found; the deeper result for the same position is kept; a deep entry survives many shallow entries in the same slot; clear removes everything.
+- The search and endgame tests (chapters 06 and 08) check that the table gives the same nodes and scores as in 2.0 in real searches.
 
 ## Further reading
 

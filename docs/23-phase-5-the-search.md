@@ -212,7 +212,7 @@ Matches, 1,180 games each:
 | ETC from `look` 4 / 8 | [49.3 %](../Plans/benchmark-results/match_v2x-p5-order-etc_4-100ms.md) (−5) / [50.1 %](../Plans/benchmark-results/match_v2x-p5-order-etc_8-100ms.md) (+1) | |
 | **Evaluation ordering from `look` 4 without killers, plus ETC from `look` 4** | [**53.3 %**](../Plans/benchmark-results/match_v2x-p5-order-order_4-killers_off-etc_4-100ms.md) (51.1–55.5), **+23** | [**51.9 %**](../Plans/benchmark-results/match_v2x-p5-order-order_4-killers_off-etc_4-500ms.md) (49.9–53.9), **+13**, depth 16.49 → 16.78 |
 
-- **Kept: evaluation ordering from `look` 4 without killers, plus ETC from `look` 4** (commit 12e3833). It is now the default, with no switch (`EvaluationOrderMinLook` and `MidgameEtcMinLook` in [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs)).
+- **Kept: evaluation ordering from `look` 4 without killers, plus ETC from `look` 4** (commit 12e3833). It is now the default, with no switch (`EvaluationOrderMinLook` and `MidgameEtcMinLook` in [SearchEngine.cs](../Stello.Net/Stello.Engine.V2/SearchEngine.cs)).
   - It passed at 100 ms. At 500 ms the lower bound is 49.9 %, just short of the gate.
   - It is kept under the speed rule: 3.9 % fewer nodes at a fixed depth, 0.3 plies more depth at 500 ms, and no loss in either match.
 - **Each part alone was even.** Only together did they pass. The gains are small because the old ordering was already good.
@@ -272,7 +272,7 @@ At 100 ms, 1,180 games each, against Stello 2.0 after item 4:
 
 Two small changes prepared the second book recalculation (commit b8e7109):
 
-- **The evaluation is capped at ±64 discs.** In the first 2.0 recalculation one book leaf got −65 discs: the pattern evaluation is a sum of weights and can exceed what a game can end with. The midgame evaluation is now clamped to ±64 × 100 (`EvaluateLeaf` in [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs)).
+- **The evaluation is capped at ±64 discs.** In the first 2.0 recalculation one book leaf got −65 discs: the pattern evaluation is a sum of weights and can exceed what a game can end with. The midgame evaluation is now clamped to ±64 × 100 (`EvaluateLeaf` in [SearchEngine.cs](../Stello.Net/Stello.Engine.V2/SearchEngine.cs)).
 - **`OpeningBook.EngineVersion` is 4.** The book records the engine version with every searched value ([chapter 10](10-opening-book.md)). Version 3 was the first 2.0 release. Raising it marks every value of the old search as out of date, so `recalc` searches every leaf that is not exact again ([chapter 12](12-book-tool.md#recalculating-the-leaves-recalc)).
 
 ## The book recalculated again
@@ -461,9 +461,11 @@ The trainer's commands need the converted training data, which is not in the rep
 
 ## Where in the code
 
+The C# search files of this chapter are kept, frozen, in `Stello.Engine.V2`. Since Stello 3.0 the same search runs in Rust ([chapter 25](25-phases-0-4-the-engine-in-rust.md)); Part 1 points to that code.
+
 | File | Main members |
 |---|---|
-| [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs) | `Search` (PVS in every node, ETC), `TryProbCut`, `ProbCutShallowDepth`, `ProbCutErrors`, `DefaultProbCutPercent`, `OrderByEvaluation`, `EvaluateLeaf` (the ±64 cap), `IterationDone`, `WithSoftPercent` |
+| [SearchEngine.cs](../Stello.Net/Stello.Engine.V2/SearchEngine.cs) | `Search` (PVS in every node, ETC), `TryProbCut`, `ProbCutShallowDepth`, `ProbCutErrors`, `DefaultProbCutPercent`, `OrderByEvaluation`, `EvaluateLeaf` (the ±64 cap), `IterationDone`, `WithSoftPercent` |
 | [Search/SearchOptions.cs](../Stello.Net/Stello.Engine/Search/SearchOptions.cs) | `SoftTimePercent`, `Selective`, `ProbCutPercent` |
 | [MpcCommand.cs](../Stello.Net/tools/Stello.Trainer/MpcCommand.cs) | `Run` (`mpc`), `RunEnd` (`mpc-end`), the fits |
 | [MatchCommands.cs](../Stello.Net/tools/Stello.Benchmark/MatchCommands.cs) | `ParseSide`: the keys `soft-pct=`, `mpc=`, `book-file=` |

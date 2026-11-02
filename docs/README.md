@@ -1,6 +1,6 @@
 # The Stello brain
 
-Stello is an Othello program. Its "brain" is the engine library `Stello.Engine`, which decides the computer's move. The brain consists of:
+Stello is an Othello program. Its "brain" is the engine, which decides the computer's move: the search core in Rust (`Stello.Rust`), called from the C# library `Stello.Engine`, which also holds the rules, the game record and the opening book. The brain consists of:
 
 - **the board and rules**: bitboards and fast move generation;
 - **the evaluation**: a pattern evaluation, 15 patterns of squares with weights trained on 500 million positions, in 10 stages of the game;
@@ -8,15 +8,16 @@ Stello is an Othello program. Its "brain" is the engine library `Stello.Engine`,
 - **the endgame solver**: perfect play near the end of the game, adapted from Egaroucid;
 - **the opening book**: about 11 000 known opening positions, which can learn from games.
 
-These documents explain how the parts work, how they fit together and how they came to be. They describe Stello .NET 2.0, the current C# code in [Stello.Net](../Stello.Net).
+These documents explain how the parts work, how they fit together and how they came to be. They describe Stello 3.0, the current code: the search in Rust in [Stello.Rust](../Stello.Rust), and the engine library, the apps and the tools in C# in [Stello.Net](../Stello.Net).
 
-## Three versions
+## Four versions
 
 | Version | When | What it is |
 |---|---|---|
 | **Stello C++** | 1992 | The original program by Claus Pedersen, written in C++ (later MFC, Visual C++ 6): a hand-made evaluation of edges, corners and mobility, alpha-beta with a selective search, an endgame solver and an opening book that learns from games. The source is in [Stello C++](../Stello%20C++). |
 | **Stello .NET 1.0** ("Stello 1") | September–October 2026 | The C++ program ported to C# and .NET 10, with a WPF app for Windows and a Blazor WebAssembly app for the browser. The engine works as in C++, made faster with bitboards; the opening book was imported and recalculated. How it was ported, phase by phase, is in [Stello porting documentation.md](../Plans/Stello%20porting%20documentation.md). Its engine is kept, frozen, as `Stello.Engine.V1` for matches. |
-| **Stello .NET 2.0** | November 2026 | A new trained pattern evaluation, an endgame solver adapted from Egaroucid, a new search (PVS everywhere, Multi-ProbCut, evaluation ordering) and the opening book recalculated by the new engine. It scores about 95 % against Stello 1 and beats the C# port of Egaroucid at short time limits ([chapter 24](24-results-and-what-comes-next.md)). |
+| **Stello .NET 2.0** | November 2026 | A new trained pattern evaluation, an endgame solver adapted from Egaroucid, a new search (PVS everywhere, Multi-ProbCut, evaluation ordering) and the opening book recalculated by the new engine. It scores about 95 % against Stello 1 and beats the C# port of Egaroucid at short time limits ([chapter 24](24-results-and-what-comes-next.md)). Its C# engine is kept, frozen, as `Stello.Engine.V2`. |
+| **Stello 3.0** (preview) | November 2026 | The same search rewritten in Rust, node for node: 2.8–3.1 times faster in the midgame and 1.75 times on the FFO endgames, in the Windows app through a native library and in the browser compiled to WebAssembly. It scores 59.6 % against Stello 2.0 at 500 ms per move ([chapter 25](25-phases-0-4-the-engine-in-rust.md)). The final 3.0 will add a parallel search on several threads. |
 
 The documentation of Stello 1 is kept as it was in the **[Stello 1 documentation](stello-1/README.md)** (archive).
 
@@ -47,7 +48,7 @@ The time limit can stop the search at any point; the best move found so far is t
 
 ## Chapters
 
-### Part 1: How Stello 2.0 works
+### Part 1: How Stello 3.0 works
 
 | # | Chapter | Content |
 |---|---|---|
@@ -64,7 +65,7 @@ The time limit can stop the search at any point; the best move found so far is t
 | 11 | [Book learning](11-book-learning.md) | Adding games, dropout expansion, minimax, self-play |
 | 12 | [Book tool](12-book-tool.md) | The console tool for the master book: import, build, verify, statistics, recalculating the leaves, comparing and matching books |
 | 13 | [Game record](13-game-record.md) | Move history, undo/redo, the text file format |
-| 14 | [App integration](14-app-integration.md) | The game loop, threading, engine hosts, WebAssembly worker, settings, data files |
+| 14 | [App integration](14-app-integration.md) | The game loop, threading, engine hosts, the native library and the WebAssembly worker, the Rust toolchain, settings, data files |
 | 15 | [GUI and settings](15-gui-and-settings.md) | The web and desktop interfaces, menu commands, settings, real-time analysis |
 
 ### Part 2: From Stello 1 to Stello 2.0
@@ -81,21 +82,28 @@ The time limit can stop the search at any point; the best move found so far is t
 | 23 | [Phase 5: the search](23-phase-5-the-search.md) | Every search change, kept or rejected, with its matches; the book recalculated again; time odds; C++ against C# |
 | 24 | [Results and what comes next](24-results-and-what-comes-next.md) | The final measurements of Stello 2.0 against Stello 1 and Egaroucid, and the next steps |
 
+### Part 3: From Stello 2.0 to 3.0
+
+| # | Chapter | Content |
+|---|---|---|
+| 25 | [Phases 0–4: the engine in Rust](25-phases-0-4-the-engine-in-rust.md) | Why Rust, the decisions, the frozen Stello 2.0, the port with node-for-node parity, the speed pass, the web app on WebAssembly, 3.0 against 2.0, and what comes next |
+
 ### Reference
 
 | # | Chapter | Content |
 |---|---|---|
-| 25 | [Glossary](25-glossary.md) | The terms used in these documents |
-| 26 | [References](26-references.md) | Articles, papers and source code on the internet |
+| 26 | [Glossary](26-glossary.md) | The terms used in these documents |
+| 27 | [References](27-references.md) | Articles, papers and source code on the internet |
 
 ## Reading paths
 
 - **Everything:** read the chapters in order.
-- **Just the engine:** 01, 02, 03, 04, 05, 06, 07, 08, 09.
+- **Just the engine:** 01, 02, 03, 04, 05, 06, 07, 08, 09; and 25 for how it moved to Rust.
 - **Just the opening book:** 01, 02 (square numbers), 10, 11, 12.
 - **UI and application architecture:** 01, 13, 14, 15.
 - **Tuning the engine:** 17 (how to measure a change), then 23 for what has been tried, with its measurements, and 24 for the ideas that remain.
 - **The story of Stello 2.0:** 16 to 24, then the working documents [improve-stello-strength-plan.md](../Plans/improve-stello-strength-plan.md) and [improve-stello-strength-findings.md](../Plans/improve-stello-strength-findings.md).
+- **The story of Stello 3.0:** 25, then [making-stello-3-plan.md](../Plans/making-stello-3-plan.md) and [making-stello-3-findings.md](../Plans/making-stello-3-findings.md).
 
 ## How to view these documents
 

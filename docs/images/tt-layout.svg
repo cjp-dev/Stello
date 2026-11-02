@@ -53,7 +53,8 @@
 <text x="385" y="252" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">Tag (1)</text>
 <text x="452" y="252" font-size="12" fill="#333333">side to move (midgame) or 0</text>
 <rect x="330" y="256" width="110" height="22" fill="#EEEEEE" stroke="#757575" stroke-width="1"/>
-<text x="385" y="272" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">padding (2)</text>
+<text x="385" y="272" font-size="12" text-anchor="middle" font-family="monospace" fill="#000000">Generation (2)</text>
+<text x="452" y="272" font-size="12" fill="#333333">clear count when stored</text>
 <text x="330" y="312" font-size="14" font-weight="bold" fill="#000000">Slot of a position:</text>
 <text x="330" y="334" font-size="12" font-family="monospace" fill="#000000">h = own × 0x9E3779B97F4A7C15</text>
 <text x="330" y="354" font-size="12" font-family="monospace" fill="#000000">h ^= rotl(opponent × 0xC2B2AE3D27D4EB4F, 31) + tag</text>

@@ -1,10 +1,10 @@
 # Stello
 
-Stello is an Othello program. Claus Pedersen wrote it in C++ in 1992 and ported it to C# and .NET 10 in 2026. It runs as a Windows program (WPF) and in the browser (Blazor WebAssembly).
+Stello is an Othello program. Claus Pedersen wrote it in C++ in 1992 and ported it to C# and .NET 10 in 2026. Since version 3.0 its search engine is written in Rust. It runs as a Windows program (WPF) and in the browser (Blazor WebAssembly, with the engine compiled to WebAssembly).
 
 - **Play in the browser:** https://polite-sky-0e9899910.3.azurestaticapps.net
 - **How it works:** [docs](docs/README.md) describes the engine, the opening book, the tools and the apps.
-- **Code:** the solution is [Stello.Net/Stello.Net.slnx](Stello.Net/Stello.Net.slnx).
+- **Code:** the solution is [Stello.Net/Stello.Net.slnx](Stello.Net/Stello.Net.slnx); the Rust engine is the Cargo workspace [Stello.Rust](Stello.Rust). Building needs the .NET 10 SDK and Rust from [rustup](https://rustup.rs) (on Windows with Visual Studio's C++ build tools; for the web app also the `wasm32-unknown-unknown` target and `wasm-bindgen-cli` 0.2.130), see [chapter 14](docs/14-app-integration.md#how-each-app-gets-the-engine).
 
 ## Licence
 
