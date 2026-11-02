@@ -21,6 +21,7 @@ Articles, papers and source code on the internet that explain the techniques use
 | Link | What you find there |
 |---|---|
 | [Introduction to the MVVM Toolkit – Microsoft Learn](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/) | `CommunityToolkit.Mvvm`, used by the app's view models. |
+| [GameShell on GitHub](https://github.com/cjp-dev/GameShell) | The shared web GUI library of the web app (menus, panels, dialogs, documentation viewer), a git submodule in `external/GameShell`. |
 
 ## 02 Board and squares, 03 Rules and move generation
 
@@ -34,9 +35,11 @@ Articles, papers and source code on the internet that explain the techniques use
 
 | Link | What you find there |
 |---|---|
-| [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Position evaluation": disk-square tables, mobility-based evaluation (like Stello's) and pattern-based evaluation. |
-| [Computer Othello – Wikipedia](https://en.wikipedia.org/wiki/Computer_Othello) | Evaluation techniques, including mobility and potential mobility. |
-| [Othello – Chess Programming Wiki](https://www.chessprogramming.org/Othello) | The "Evaluation" section, with references to IAGO (edge stability, mobility, potential mobility). |
+| [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Position evaluation": disk-square tables, mobility-based evaluation and pattern-based evaluation, the kind Stello uses. |
+| [Logistello – Michael Buro](https://skatgame.net/mburo/log.html) | The program that made trained pattern evaluations standard in Othello, and its papers. |
+| [Technical explanation – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/explanation/) | Egaroucid's pattern evaluation, where Stello's four 10-square patterns come from. |
+| [Training data – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/train-data/) | The data Stello's evaluation weights were trained on. It may not be redistributed, so it is not in the repository; the trained weights are. As its terms ask: *Stello used Egaroucid's self-play data for training and testing its Othello AI.* |
+| [Othello – Chess Programming Wiki](https://www.chessprogramming.org/Othello) | The "Evaluation" section, from IAGO's hand-made features to pattern evaluations. |
 
 ## 05 Move ordering
 
@@ -44,6 +47,7 @@ Articles, papers and source code on the internet that explain the techniques use
 |---|---|
 | [Alpha-Beta – Chess Programming Wiki](https://www.chessprogramming.org/Alpha-Beta) | "Savings": why searching the best move first gives the most cutoffs. |
 | [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Move ordering": killer responses in Othello. |
+| [Egaroucid on GitHub](https://github.com/Nyanyan/Egaroucid) | `src/engine/move_ordering.hpp`, the source of the evaluation ordering and its weights. |
 
 ## 06 Midgame search
 
@@ -51,7 +55,7 @@ Articles, papers and source code on the internet that explain the techniques use
 |---|---|
 | [Alpha-Beta – Chess Programming Wiki](https://www.chessprogramming.org/Alpha-Beta) | Alpha-beta, fail-soft and fail-hard, in negamax form. |
 | [Principal Variation Search – Chess Programming Wiki](https://www.chessprogramming.org/Principal_Variation_Search) | PVS: null-window searches after the first move, and re-searches. |
-| [ProbCut – Chess Programming Wiki](https://www.chessprogramming.org/ProbCut) | ProbCut and Multi-ProbCut, the statistical forms of the selective search idea. |
+| [ProbCut – Chess Programming Wiki](https://www.chessprogramming.org/ProbCut) | ProbCut and Multi-ProbCut, the statistical forms of the selective search idea; Stello uses Multi-ProbCut. |
 | [Buro (1995): ProbCut: An Effective Selective Extension of the Alpha-Beta Algorithm (pdf)](https://skatgame.net/mburo/ps/probcut.pdf) | The original ProbCut paper. |
 | [Negamax – Wikipedia](https://en.wikipedia.org/wiki/Negamax) | Negamax with alpha-beta and with a transposition table, in pseudocode. |
 | [Fail-Soft – Chess Programming Wiki](https://www.chessprogramming.org/Fail-Soft) | Scores outside the window, and why they help. |
@@ -71,11 +75,14 @@ Articles, papers and source code on the internet that explain the techniques use
 
 | Link | What you find there |
 |---|---|
-| [Enhanced Transposition Cutoff – Chess Programming Wiki](https://www.chessprogramming.org/Enhanced_Transposition_Cutoff) | Looking up the children in the hash table before searching them. |
+| [Egaroucid on GitHub](https://github.com/Nyanyan/Egaroucid) | `src/engine/endsearch_nws.hpp`, `endsearch_nws_last_generic.hpp`, `stability_cutoff.hpp` and `move_ordering.hpp`: the endgame code Stello's solver is adapted from. |
+| [Technical explanation – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/explanation/) | Egaroucid's endgame search, move ordering and the code for the last empty squares. |
+| [Enhanced Transposition Cutoff – Chess Programming Wiki](https://www.chessprogramming.org/Enhanced_Transposition_Cutoff) | Looking up the children in the hash table before searching them; the solver does it from 12 empty squares. |
+| [Null Window – Chess Programming Wiki](https://www.chessprogramming.org/Null_Window) | Null-window searches, which the solver is built from. |
 | [endgame.c – radagast.se](http://radagast.se/othello/endgame.c) | A small endgame solver (Smith, Weill, Andersson) with region parity, a fixed square order, special code for the last squares and 112 test positions. |
 | [The FFO endgame test suite – radagast.se](http://radagast.se/othello/ffotest.html) | The test positions #40–#59, their correct scores and moves, and Zebra's times. |
 | [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html) | "Endgame": why ordering decides everything, and fastest-first. |
-| [Edax on GitHub](https://github.com/abulmo/edax-reversi) | A much faster open-source bitboard endgame solver. |
+| [Edax on GitHub](https://github.com/abulmo/edax-reversi) | Another fast open-source bitboard endgame solver, for comparison. |
 
 ## 09 Time control
 
@@ -109,11 +116,19 @@ Articles, papers and source code on the internet that explain the techniques use
 
 | Link | What you find there |
 |---|---|
+| [GameShell on GitHub](https://github.com/cjp-dev/GameShell) | The shared web GUI library and its general game GUI specification, which the web app follows. |
 | [World Othello Federation (WOF)](https://www.worldothello.org/) | Official tournament rules, clock specifications, first-mover (Black) conventions, and ratings. |
 | [Logistello – Michael Buro](https://skatgame.net/mburo/log.html) | Michael Buro's historic championship Othello program and evaluation papers. |
 | [Usability 101: Introduction to Usability – Nielsen Norman Group](https://www.nngroup.com/articles/usability-101-introduction-to-usability/) | Principles of status visibility, match integrity, and user control. |
 
-## 19 The Egaroucid port, 20 Comparing Stello with Egaroucid
+## 17 Measuring the engine
+
+| Link | What you find there |
+|---|---|
+| [The FFO endgame test suite – radagast.se](http://radagast.se/othello/ffotest.html) | The positions #40–#59 of `solve-bench`, with their correct scores and moves. |
+| [Edax on GitHub](https://github.com/abulmo/edax-reversi) | `problem/fforum-40-59.obf`, the same positions in Edax's format, one of the two sources of `ffo-40-59.txt`. |
+
+## 18 The Egaroucid port, 19 Stello 1 against Egaroucid
 
 | Link | What you find there |
 |---|---|
@@ -123,16 +138,15 @@ Articles, papers and source code on the internet that explain the techniques use
 | [Training data – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/train-data/) | Egaroucid's self-play and match data. Stello's `eval-compare` uses it to measure evaluations; it may not be redistributed. As its terms ask: *Stello used Egaroucid's self-play data for training and testing its Othello AI.* |
 | [ProbCut – Chess Programming Wiki](https://www.chessprogramming.org/ProbCut) | Multi-ProbCut, the selective search Egaroucid uses. |
 
-## 21 Stello 2: the pattern evaluation and the new endgame solver
+## 20–23 From Stello 1 to Stello 2.0
 
 | Link | What you find there |
 |---|---|
-| [Technical explanation – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/explanation/) | Egaroucid's pattern evaluation and its training with Adam, move ordering, the endgame search and the code for the last empty squares, which Stello 2's solver adapts. |
-| [Training data – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/train-data/) | The data Stello 2's evaluation was trained on (`Stello.Trainer`). It may not be redistributed, so it is not in the repository; the trained weights are. As its terms ask: *Stello used Egaroucid's self-play data for training and testing its Othello AI.* |
+| [Training data – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/train-data/) | The data Stello 2.0's evaluation was trained on (`Stello.Trainer`). It may not be redistributed, so it is not in the repository; the trained weights are. As its terms ask: *Stello used Egaroucid's self-play data for training and testing its Othello AI.* |
+| [Technical explanation – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/explanation/) | Egaroucid's pattern evaluation and its training with Adam, move ordering, Multi-ProbCut and the endgame search, which Stello 2.0 follows. |
 | [Kingma and Ba (2014): Adam: A Method for Stochastic Optimization – arXiv](https://arxiv.org/abs/1412.6980) | The optimiser of the trainer. |
-| [Logistello – Michael Buro](https://skatgame.net/mburo/log.html) | The program that brought trained pattern evaluation to Othello. |
-| [Enhanced Transposition Cutoff – Chess Programming Wiki](https://www.chessprogramming.org/Enhanced_Transposition_Cutoff) | ETC, used by the new solver from 12 empty squares. |
-| [Null Window – Chess Programming Wiki](https://www.chessprogramming.org/Null_Window) | Null-window searches, which the new solver is built from. |
+| [Logistello – Michael Buro](https://skatgame.net/mburo/log.html) | The program that brought trained pattern evaluation and Multi-ProbCut to Othello. |
+| [Buro (1995): ProbCut: An Effective Selective Extension of the Alpha-Beta Algorithm (pdf)](https://skatgame.net/mburo/ps/probcut.pdf) | The original ProbCut paper, the basis of the Multi-ProbCut of phase 5. |
 
 ## Writing these documents
 
@@ -144,4 +158,4 @@ Articles, papers and source code on the internet that explain the techniques use
 
 ---
 
-Previous: [16 Glossary](25-glossary.md) · Next: [Index](README.md)
+Previous: [25 Glossary](25-glossary.md) · Next: [Index](README.md)

@@ -6,19 +6,19 @@
 
 [Egaroucid](https://github.com/Nyanyan/Egaroucid) is a very strong open-source Othello program by Takuto Yamana. Its engine (version 7.9) has been ported to C# as the project [Egaroucid.Engine](../../Stello.Net/Egaroucid.Engine): board, pattern evaluation, midgame search, endgame search, time management and opening book lookup.
 
-- **Why:** to compare Stello with a much stronger engine one part at a time (evaluation, midgame search, endgame), and to play matches between the two. What is learnt is the basis for Stello 2.0.
+- **Why:** to compare Stello with a much stronger engine one part at a time (evaluation, midgame search, endgame), and to play matches between the two. What was learnt became the basis for Stello 2.0, and Stello 2.0's endgame solver is adapted from the port ([chapter 08](08-endgame-solver.md)).
 - **Exact:** on 1 thread the port gives the same evaluations, moves, values, depths and **node counts** as the C++ original. A C++ reference harness and test fixtures prove it.
-- **Where it runs:** in the tools and tests only ([Stello.Benchmark](../../Stello.Net/tools/Stello.Benchmark) and [Egaroucid.Engine.Tests](../../Stello.Net/Egaroucid.Engine.Tests)). The WPF and web apps keep Stello's engine.
+- **Where it runs:** in the tools and tests only ([Stello.Benchmark](../../Stello.Net/tools/Stello.Benchmark), [Stello.Trainer](../../Stello.Net/tools/Stello.Trainer) and [Egaroucid.Engine.Tests](../../Stello.Net/Egaroucid.Engine.Tests)). The WPF and web apps use Stello's own engine.
 
-This chapter explains how the port is built, how it was proven exact, and how to run it. [Chapter 20](19-stello-1-against-egaroucid.md) gives what the comparison found. The working documents are [egaroucid-port-plan.md](../../Plans/egaroucid-port-plan.md) and [egaroucid-port-findings.md](../../Plans/egaroucid-port-findings.md).
+The port was built in October 2026, before the work on Stello 2.0 began. This chapter explains how it is built, how it was proven exact, and how to run it. [Chapter 19](19-stello-1-against-egaroucid.md) gives what the comparison with Stello 1 found, [chapter 16](16-the-goal-and-the-plan.md) the plan that came of it, and [chapter 24](24-results-and-what-comes-next.md) how the final Stello 2.0 does against the port. The working documents are [egaroucid-port-plan.md](../../Plans/egaroucid-port-plan.md) and [egaroucid-port-findings.md](../../Plans/egaroucid-port-findings.md).
 
 ## Licence
 
 - **Stello is GPL-3.0-only** since the port (see [LICENSE](../../LICENSE)). Egaroucid is © Takuto Yamana, **GPL-3.0-or-later**, so Stello uses it under GPL version 3.
 - **Every ported file** starts with `// SPDX-License-Identifier: GPL-3.0-only` and names its C++ original: "Ported from Egaroucid src/engine/…, © Takuto Yamana, GPL-3.0-or-later".
 - **Egaroucid's source and resources are not in git.** The source goes in `Egaroucid-main/` in the repository root, which is git-ignored.
-- **The training data is not in git either.** Its terms allow its use but forbid redistribution. It lives in the git-ignored folder `Traning data/` and is only used to measure evaluations.
-- The credits are in [THIRD-PARTY-NOTICES.md](../../THIRD-PARTY-NOTICES.md) and [chapter 17](26-references.md#19-the-egaroucid-port-20-comparing-stello-with-egaroucid).
+- **The training data is not in git either.** Its terms allow its use but forbid redistribution. It lives in the git-ignored folder `Traning data/`. It was first used to measure evaluations, and later to train Stello 2.0's ([chapter 20](20-phases-0-2-the-evaluation.md)).
+- The credits are in [THIRD-PARTY-NOTICES.md](../../THIRD-PARTY-NOTICES.md) and [the references](26-references.md#18-the-egaroucid-port-19-stello-1-against-egaroucid).
 
 The resources the port reads, from `Egaroucid-main/bin/resources`:
 
@@ -110,7 +110,7 @@ In time mode, selectivity is 100 % up to depth 13 and 74 % beyond. Each iteratio
 
 ## From C++ file to C# file
 
-The C# files follow Egaroucid's names, so the two can be read side by side. The C# namespace is `Stello.Egaroucid`, and every type is internal: only the tests and the benchmark tool see them.
+The C# files follow Egaroucid's names, so the two can be read side by side. The C# namespace is `Stello.Egaroucid`, and every type is internal: only the tests, the benchmark tool and the trainer see them.
 
 | C++ (`src/engine`) | C# ([Egaroucid.Engine](../../Stello.Net/Egaroucid.Engine)) | Main types and members |
 |---|---|---|
@@ -134,7 +134,7 @@ The C# files follow Egaroucid's names, so the two can be read side by side. The 
 | `transposition_table.hpp`, `endsearch_nws.hpp` (the local table) | [TranspositionTable.cs](../../Stello.Net/Egaroucid.Engine/TranspositionTable.cs) | `TranspositionTable`, `LocalTranspositionTable` |
 
 **Not ported:**
-- the multi-threaded search: `ybwc.hpp`, `thread_pool.hpp`, `parallel.hpp` and the parallel clog search (phase 6, postponed);
+- the multi-threaded search: `ybwc.hpp`, `thread_pool.hpp`, `parallel.hpp` and the parallel clog search (the port's phase 6, postponed and not done);
 - the SIMD variants (`*_simd.hpp`, `flip_avx512.hpp`), because the port follows the Generic build;
 - book editing, expansion and analysis (`book_enlarge.hpp`, `book_accuracy.hpp`) and the older book formats;
 - the GUI's extras: human-like play (`human_like_ai.hpp`), XOT (`xot.hpp`) and local strategy (`local_strategy.hpp`);
@@ -238,7 +238,7 @@ If they are not found, the tool stops with a message that says where to put them
 
 ### In the benchmark tool
 
-`engine=egaroucid` on a match side, or `--engine egaroucid` for a benchmark, chooses the port ([chapter 18](17-measuring-the-engine.md)):
+`engine=egaroucid` on a match side, or `--engine egaroucid` for a benchmark, chooses the port ([chapter 17](17-measuring-the-engine.md)):
 
 ```text
 dotnet run -c Release --project Stello.Net/tools/Stello.Benchmark -- <command> [options]
@@ -260,7 +260,7 @@ mid-bench --engine egaroucid --level 21
 | `seed=1` | seeds the book's choice anew every game |
 | `--mpc 74` … `--mpc 100` | `mid-bench` only: the selectivity of a fixed-depth search (100 = none, the default) |
 
-`eval-compare`, `make-exact` and `mid-quality` also use the port; [chapter 20](19-stello-1-against-egaroucid.md#reproducing-the-results) shows them.
+`eval-compare`, `make-exact` and `mid-quality` also use the port; [chapter 19](19-stello-1-against-egaroucid.md#reproducing-the-results) shows them. The trainer's `report` gives the port's error next to a trained Stello evaluation ([chapter 17](17-measuring-the-engine.md#the-trainers-measurements)).
 
 ### Tests
 
@@ -274,13 +274,13 @@ dotnet test Stello.Net/Egaroucid.Engine.Tests
 
 ## Status
 
-- **Done (phases 0–5):** licence, reference harness, foundations, single-threaded search, time management and book, and the comparison with Stello ([chapter 20](19-stello-1-against-egaroucid.md)).
+- **Done (phases 0–5):** licence, reference harness, foundations, single-threaded search, time management and book, and the comparison with Stello 1 ([chapter 19](19-stello-1-against-egaroucid.md)).
 - **Single-threaded only.** The parallel paths throw `NotSupportedException`, and the transposition table has no locks.
-- **Phase 6 (YBWC multi-threading) is postponed.** It can be resumed later. The work continues with Stello 2.0 in [improve-stello-strength-plan.md](../../Plans/improve-stello-strength-plan.md).
+- **Phase 6 (YBWC multi-threading) was postponed** and has not been done. The work went on with Stello 2.0 ([chapter 16](16-the-goal-and-the-plan.md), [improve-stello-strength-plan.md](../../Plans/improve-stello-strength-plan.md)), and every comparison since has been on 1 thread.
 
-Speed on 1 thread, from the findings:
+Speed on 1 thread, from the findings ("Stello" is Stello 1, the engine of that time):
 
-| What | C# port | C++ Generic | Stello |
+| What | C# port | C++ Generic | Stello 1 |
 |---|---:|---:|---:|
 | perft 11 from the start (212,258,800 leaves) | 0.61 s | 1.35 s | — |
 | FFO #40–49, exact (520,296,918 nodes) | 28.2 s | about 19.4 s | 369 s |
@@ -288,7 +288,7 @@ Speed on 1 thread, from the findings:
 | Loading the evaluation and hash numbers | 0.11 s | about 1.4 s (start-up incl. other tables) | — |
 | Loading the book (1,302,322 positions) | 0.22 s | — | — |
 
-The port is 1.45× slower than C++ in the endgame and 1.12× in the midgame, and solves FFO #40–49 13× faster than Stello.
+The port is 1.45× slower than C++ in the endgame and 1.12× in the midgame, and solves FFO #40–49 13× faster than Stello 1. Stello 2.0's solver, adapted from the port, takes 47 s ([chapter 08](08-endgame-solver.md#the-ffo-positions)).
 
 ## Where in the code
 
@@ -308,8 +308,8 @@ The port is 1.45× slower than C++ in the endgame and 1.12× in the midgame, and
 | [FoundationTests.cs](../../Stello.Net/Egaroucid.Engine.Tests/FoundationTests.cs) | coordinates, perft, stability, features, hash codes and evaluations against the fixtures; incremental features against from-scratch ones |
 | [SearchParityTests.cs](../../Stello.Net/Egaroucid.Engine.Tests/SearchParityTests.cs) | the Multi-ProbCut table, and the midgame (levels 1–21) and FFO (level 60) searches, node for node |
 | [BookAndTimeTests.cs](../../Stello.Net/Egaroucid.Engine.Tests/BookAndTimeTests.cs) | book values, the book's choice at accuracy 0, the pass quirk, the time limits and stopping |
-| [MatchAdapterTests.cs](../../Stello.Net/Egaroucid.Engine.Tests/MatchAdapterTests.cs) | the bit conversion along random games, side parsing, a match against Stello, Stello 1 at the same depth playing like Stello, repeatable book moves |
+| [MatchAdapterTests.cs](../../Stello.Net/Egaroucid.Engine.Tests/MatchAdapterTests.cs) | the bit conversion along random games, side parsing, a match against Stello, Stello 1 playing whole games against Stello, repeatable book moves |
 
 ---
 
-Previous: [18 Measuring the engine](17-measuring-the-engine.md) · Next: [20 Comparing Stello with Egaroucid](19-stello-1-against-egaroucid.md)
+Previous: [17 Measuring the engine](17-measuring-the-engine.md) · Next: [19 Stello 1 against Egaroucid](19-stello-1-against-egaroucid.md)
