@@ -3,7 +3,7 @@
 Stello is an Othello program. Claus Pedersen wrote it in C++ in 1992 and ported it to C# and .NET 10 in 2026. It runs as a Windows program (WPF) and in the browser (Blazor WebAssembly).
 
 - **Play in the browser:** https://polite-sky-0e9899910.3.azurestaticapps.net
-- **How it works:** [docs/brain](docs/brain/README.md) describes the engine, the opening book, the tools and the apps.
+- **How it works:** [docs](docs/README.md) describes the engine, the opening book, the tools and the apps.
 - **Code:** the solution is [Stello.Net/Stello.Net.slnx](Stello.Net/Stello.Net.slnx).
 
 ## Licence

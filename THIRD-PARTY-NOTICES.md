@@ -27,7 +27,7 @@ Stello 2's evaluation, `Stello.Net/Book/stello-eval.bin`, was trained on this da
 - **Link:** [GitHub](https://github.com/abulmo/edax-reversi)
 - **Licence:** GPL-3.0
 
-Stello uses ideas from Edax's bitboard move generation and endgame search (described in [docs/brain](docs/brain/README.md), chapters 03 and 08). The FFO test positions in `Stello.Net/tools/Stello.Benchmark/Data/ffo-40-59.txt` were taken from Edax's `problem/fforum-40-59.obf`.
+Stello uses ideas from Edax's bitboard move generation and endgame search (described in [docs](docs/README.md), chapters 03 and 08). The FFO test positions in `Stello.Net/tools/Stello.Benchmark/Data/ffo-40-59.txt` were taken from Edax's `problem/fforum-40-59.obf`.
 
 ## FFO endgame test positions
 

@@ -8,7 +8,7 @@ on:
       - 'Stello.Net/Stello.App/**'
       - 'Stello.Net/Stello.Engine/**'
       - 'Stello.Net/Book/**'
-      - 'docs/brain/**'
+      - 'docs/**'
       - 'Stello.Net/Images/**'
       - 'external/GameShell'
       - 'external/GameShell/**'

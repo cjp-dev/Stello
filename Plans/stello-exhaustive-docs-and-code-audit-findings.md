@@ -12,7 +12,7 @@
 This document presents the detailed findings, remediations, mathematical verifications, and historical lineage cross-references resulting from the execution of the [Stello Exhaustive Docs and Code Audit Plan](stello-exhaustive-docs-and-code-audit-plan.md).
 
 The audit covered:
-1. All 18 chapters of the Stello architectural manual in [`docs/brain/`](../docs/brain/).
+1. All 18 chapters of the Stello architectural manual in [`docs/`](../docs/).
 2. The universal turn-based board game specification in [`Plans/general-game-gui-specification.md`](general-game-gui-specification.md).
 3. The porting treatise in [`Plans/Stello porting documentation.md`](Stello%20porting%20documentation.md).
 4. The entire active .NET 10 production codebase and its ancestral origins:
@@ -25,7 +25,7 @@ The audit covered:
 - **Audited Markdown Documents:** 20 files.
 - **Fenced Code Blocks Cataloged & Linted:** 72 blocks (40 mermaid, 29 text, 2 csharp, 1 ini).
 - **Formatting Deficiencies Remediated:** 10 bare code blocks tagged with language specifiers; 1 double-numbering artifact eliminated.
-- **Broken Relative Links Resolved:** 12 broken references to the porting documentation repaired across `docs/brain/*.md`.
+- **Broken Relative Links Resolved:** 12 broken references to the porting documentation repaired across `docs/*.md`.
 - **Glossary Entries Added:** 2 key architectural terms added (`Dumb7Fill`, `Frontier disc`).
 - **Solution Compilation:** 0 warnings, 0 errors.
 - **Automated Test Suite:** 265 passing unit tests (195 in `Stello.Engine.Tests`, 70 in `Stello.Net.Tests`), 0 failures, 0 skipped.
@@ -39,9 +39,9 @@ The audit covered:
 - **Tooling Implementation:** Created [`scratch/audit_stello_snippets.mjs`](../scratch/audit_stello_snippets.mjs), a Node.js verification tool that scans all markdown files, parses frontmatter and markdown structures, catalogs all fenced code blocks with line coordinates, validates language specifiers, and checks for syntax errors or double-numbering artifacts.
 - **Defects Identified:**
   1. *Bare Fenced Code Blocks (10 instances):* Code blocks without language tags were identified in:
-     - [`docs/brain/15-gui-and-settings.md`](../docs/brain/15-gui-and-settings.md): Lines 119, 222, 261.
+     - [`docs/15-gui-and-settings.md`](../docs/15-gui-and-settings.md): Lines 119, 222, 261.
      - [`Plans/general-game-gui-specification.md`](general-game-gui-specification.md): Lines 51, 81, 134, 219, 276, 347, 424.
-  2. *Double-Numbering Artifact:* In [`docs/brain/15-gui-and-settings.md`](../docs/brain/15-gui-and-settings.md) (Move History panel), lines read `1. 1. d3`, `2. 2. c5` through `6. 6. f4` instead of standard single numbering (`1. d3`, `2. c5` ... `6. f4`).
+  2. *Double-Numbering Artifact:* In [`docs/15-gui-and-settings.md`](../docs/15-gui-and-settings.md) (Move History panel), lines read `1. 1. d3`, `2. 2. c5` through `6. 6. f4` instead of standard single numbering (`1. d3`, `2. c5` ... `6. f4`).
 - **Remediation:**
   - Added explicit ` ```text ` specifiers to all 10 bare blocks.
   - Corrected move history list numbering to single ordinal numbers.
@@ -57,8 +57,8 @@ The audit covered:
     $$r_1 = m \land (o \ll s), \quad r_{k+1} = r_k \lor \big(m \land (r_k \ll s)\big) \ (k=1\dots 5), \quad \text{moves} = (r_6 \ll s) \land e$$
   - Directional masks verified: `NotColumnA` (`0xFEFE_FEFE_FEFE_FEFEUL`), `NotColumnH` (`0x7F7F_7F7F_7F7F_7F7FUL`), `InnerColumns` (`0x7E7E_7E7E_7E7E_7E7EUL`), `InnerRows` (`0x00FF_FFFF_FFFF_FF00UL`), and `Inner` (`InnerColumns & InnerRows`).
 - **Documentation Update:**
-  - Enhanced [`docs/brain/03-rules-and-move-generation.md`](../docs/brain/03-rules-and-move-generation.md) to explicitly document the Edax broadword shift lineage.
-  - Updated [`docs/brain/17-references.md`](../docs/brain/stello-1/17-references.md) under Chapter 02/03 to cite Richard Delorme's `board.c`.
+  - Enhanced [`docs/03-rules-and-move-generation.md`](../docs/03-rules-and-move-generation.md) to explicitly document the Edax broadword shift lineage.
+  - Updated [`docs/17-references.md`](../docs/stello-1/17-references.md) under Chapter 02/03 to cite Richard Delorme's `board.c`.
 - **Perft Validation:** Re-verified perft node counts against Aart Bik's standard test suite: Depth 1 = 4, Depth 2 = 12, Depth 3 = 56, Depth 4 = 244, Depth 5 = 1,396, Depth 6 = 8,200, Depth 7 = 55,010, Depth 8 = 390,216.
 
 ---
@@ -160,26 +160,26 @@ The audit covered:
 
 ### Phase 8: Broken Relative Links Repair & Glossary Additions (Chapters 16, 17, README & Porting Doc)
 - **Critical Discovery — Broken Porting Documentation Links:**
-  - When `Stello porting documentation.md` was moved into `Plans/` earlier during preparation for the review, all relative links in `docs/brain/*.md` that pointed to `../../Stello%20porting%20documentation.md` became broken.
+  - When `Stello porting documentation.md` was moved into `Plans/` earlier during preparation for the review, all relative links in `docs/*.md` that pointed to `../../Stello%20porting%20documentation.md` became broken.
   - Systematic search identified 12 impacted files.
   - **Remediation:** Updated all 12 files to reference the new relative path `../../Plans/Stello%20porting%20documentation.md`:
-    1. [`docs/brain/01-overview.md`](../docs/brain/01-overview.md#L236)
-    2. [`docs/brain/02-board-and-squares.md`](../docs/brain/02-board-and-squares.md#L125)
-    3. [`docs/brain/04-evaluation.md`](../docs/brain/04-evaluation.md#L276)
-    4. [`docs/brain/05-move-ordering.md`](../docs/brain/05-move-ordering.md#L92)
-    5. [`docs/brain/06-midgame-search.md`](../docs/brain/06-midgame-search.md#L200)
-    6. [`docs/brain/07-transposition-table.md`](../docs/brain/07-transposition-table.md#L156-L158)
-    7. [`docs/brain/08-endgame-solver.md`](../docs/brain/08-endgame-solver.md#L154-L155)
-    8. [`docs/brain/09-time-control.md`](../docs/brain/09-time-control.md#L141)
-    9. [`docs/brain/10-opening-book.md`](../docs/brain/10-opening-book.md#L233)
-    10. [`docs/brain/11-book-learning.md`](../docs/brain/11-book-learning.md#L158)
-    11. [`docs/brain/14-app-integration.md`](../docs/brain/14-app-integration.md#L242)
-    12. [`docs/brain/README.md`](../docs/brain/README.md#L11-L65)
+    1. [`docs/01-overview.md`](../docs/01-overview.md#L236)
+    2. [`docs/02-board-and-squares.md`](../docs/02-board-and-squares.md#L125)
+    3. [`docs/04-evaluation.md`](../docs/04-evaluation.md#L276)
+    4. [`docs/05-move-ordering.md`](../docs/05-move-ordering.md#L92)
+    5. [`docs/06-midgame-search.md`](../docs/06-midgame-search.md#L200)
+    6. [`docs/07-transposition-table.md`](../docs/07-transposition-table.md#L156-L158)
+    7. [`docs/08-endgame-solver.md`](../docs/08-endgame-solver.md#L154-L155)
+    8. [`docs/09-time-control.md`](../docs/09-time-control.md#L141)
+    9. [`docs/10-opening-book.md`](../docs/10-opening-book.md#L233)
+    10. [`docs/11-book-learning.md`](../docs/11-book-learning.md#L158)
+    11. [`docs/14-app-integration.md`](../docs/14-app-integration.md#L242)
+    12. [`docs/README.md`](../docs/README.md#L11-L65)
   - Re-checked with PowerShell regex; zero broken links remain.
-- **Glossary Enhancements ([`docs/brain/16-glossary.md`](../docs/brain/stello-1/16-glossary.md)):**
+- **Glossary Enhancements ([`docs/16-glossary.md`](../docs/stello-1/16-glossary.md)):**
   - Added definition for `Dumb7Fill`: "Broadword parallel bitboard fill technique (Delorme, Edax) used for directional ray casting in move generation."
   - Added definition for `Frontier disc`: "A disc adjacent to at least one empty square; potential mobility measures empty squares bordering opponent frontier discs."
-- **Master Index & Reading Paths ([`docs/brain/README.md`](../docs/brain/README.md)):**
+- **Master Index & Reading Paths ([`docs/README.md`](../docs/README.md)):**
   - Verified reading paths (Full, Search, Opening Book, Tuning, UI Architecture).
   - Confirmed all 17 chapter links and Mermaid execution pipeline.
 
@@ -192,7 +192,7 @@ The audit covered:
 2. **Solution Build & Synchronization:**
    - Ran `dotnet build .\Stello.Net\Stello.Net.slnx`.
    - Result: `0 Warning(s)`, `0 Error(s)`.
-   - Build target `CopyBrainDocs` automatically synchronized updated markdown files and diagrams from `docs/brain/**` into `Stello.Web/wwwroot/content/brain/`.
+   - Build target `CopyBrainDocs` automatically synchronized updated markdown files and diagrams from `docs/**` into `Stello.Web/wwwroot/content/brain/`.
 3. **Unit Test Suite Execution:**
    - Ran `dotnet test .\Stello.Net\Stello.Net.slnx`.
    - Result: **265 passed, 0 failed, 0 skipped**:
@@ -208,24 +208,24 @@ The audit covered:
 | File | Status | Audit Findings & Actions Taken |
 |---|---|---|
 | `scratch/audit_stello_snippets.mjs` | **Created** | Created Node.js snippet and code block linter tool. Cataloged 72 code blocks. |
-| `docs/brain/01-overview.md` | **Updated** | Updated broken relative link to `../../Plans/Stello%20porting%20documentation.md`. |
-| `docs/brain/02-board-and-squares.md` | **Updated** | Updated broken relative link to `../../Plans/Stello%20porting%20documentation.md`. |
-| `docs/brain/03-rules-and-move-generation.md` | **Updated** | Added explicit Edax Dumb7Fill / broadword parallel shift lineage. Added Edax reference. |
-| `docs/brain/04-evaluation.md` | **Updated** | Fixed evaluation bug (`score = min(tscore, escore)`), properly penalizing candidate reply score. Updated porting doc link. |
-| `docs/brain/05-move-ordering.md` | **Updated** | Verified weights (127, -64, -32, 22/11) and corner neighbor adjustments. Updated porting doc link. |
-| `docs/brain/06-midgame-search.md` | **Updated** | Verified fail-soft, PVS null-window, ProbCut selective formula, extensions, and parent loop leaf evaluations. Updated porting doc link. |
-| `docs/brain/07-transposition-table.md` | **Updated** | Verified 24B `Entry`, 2-entry slot architecture, 5 capacity tiers, multiply-rotate hash. Updated porting doc links. |
-| `docs/brain/08-endgame-solver.md` | **Updated** | Verified `EndgameDistance = 7`, Pass 1 WLD, Pass 2 exact, ETC at 10 empties, fastest-first key, parity in `SolveShallow`, `SolveLast2`, `SolveLast`. Updated porting doc links. |
-| `docs/brain/09-time-control.md` | **Updated** | Verified soft limit, dynamic piece formula ($s = \max(0, e-6)$), fast endgame bonus, 1024-node abort. Updated porting doc link. |
-| `docs/brain/10-opening-book.md` | **Updated** | Verified 4-symmetry canonical normalization, binary format (193 KB), `BookTracker`. Updated porting doc link. |
-| `docs/brain/11-book-learning.md` | **Updated** | Verified `AddGame`, `EvaluatePositions`, dropout expansion, `Minimax`, `SelfPlay`. Updated porting doc link. |
-| `docs/brain/12-book-tool.md` | **Verified** | Verified CLI commands (`verify`, `stats`, `recalc`, `match`), parallel workers, normal form invariants. |
-| `docs/brain/13-game-record.md` | **Verified** | Verified move history, undo/redo, text format serialization. |
-| `docs/brain/14-app-integration.md` | **Updated** | Verified MVVM, `LocalEngineHost`, `WebEngineHost`, cancellation tokens. Updated porting doc link. |
-| `docs/brain/15-gui-and-settings.md` | **Updated** | Fixed 3 bare code blocks (` ```text `). Fixed double-numbering artifact (`1. d3`). Cross-referenced GUI Spec. |
-| `docs/brain/16-glossary.md` | **Updated** | Added glossary definitions for `Dumb7Fill` and `Frontier disc`. |
-| `docs/brain/17-references.md` | **Updated** | Added Edax `board.c` bitboard move generation citations under Chapters 02 & 03. |
-| `docs/brain/README.md` | **Updated** | Updated broken relative links to `../../Plans/Stello%20porting%20documentation.md`. Verified master reading paths. |
+| `docs/01-overview.md` | **Updated** | Updated broken relative link to `../../Plans/Stello%20porting%20documentation.md`. |
+| `docs/02-board-and-squares.md` | **Updated** | Updated broken relative link to `../../Plans/Stello%20porting%20documentation.md`. |
+| `docs/03-rules-and-move-generation.md` | **Updated** | Added explicit Edax Dumb7Fill / broadword parallel shift lineage. Added Edax reference. |
+| `docs/04-evaluation.md` | **Updated** | Fixed evaluation bug (`score = min(tscore, escore)`), properly penalizing candidate reply score. Updated porting doc link. |
+| `docs/05-move-ordering.md` | **Updated** | Verified weights (127, -64, -32, 22/11) and corner neighbor adjustments. Updated porting doc link. |
+| `docs/06-midgame-search.md` | **Updated** | Verified fail-soft, PVS null-window, ProbCut selective formula, extensions, and parent loop leaf evaluations. Updated porting doc link. |
+| `docs/07-transposition-table.md` | **Updated** | Verified 24B `Entry`, 2-entry slot architecture, 5 capacity tiers, multiply-rotate hash. Updated porting doc links. |
+| `docs/08-endgame-solver.md` | **Updated** | Verified `EndgameDistance = 7`, Pass 1 WLD, Pass 2 exact, ETC at 10 empties, fastest-first key, parity in `SolveShallow`, `SolveLast2`, `SolveLast`. Updated porting doc links. |
+| `docs/09-time-control.md` | **Updated** | Verified soft limit, dynamic piece formula ($s = \max(0, e-6)$), fast endgame bonus, 1024-node abort. Updated porting doc link. |
+| `docs/10-opening-book.md` | **Updated** | Verified 4-symmetry canonical normalization, binary format (193 KB), `BookTracker`. Updated porting doc link. |
+| `docs/11-book-learning.md` | **Updated** | Verified `AddGame`, `EvaluatePositions`, dropout expansion, `Minimax`, `SelfPlay`. Updated porting doc link. |
+| `docs/12-book-tool.md` | **Verified** | Verified CLI commands (`verify`, `stats`, `recalc`, `match`), parallel workers, normal form invariants. |
+| `docs/13-game-record.md` | **Verified** | Verified move history, undo/redo, text format serialization. |
+| `docs/14-app-integration.md` | **Updated** | Verified MVVM, `LocalEngineHost`, `WebEngineHost`, cancellation tokens. Updated porting doc link. |
+| `docs/15-gui-and-settings.md` | **Updated** | Fixed 3 bare code blocks (` ```text `). Fixed double-numbering artifact (`1. d3`). Cross-referenced GUI Spec. |
+| `docs/16-glossary.md` | **Updated** | Added glossary definitions for `Dumb7Fill` and `Frontier disc`. |
+| `docs/17-references.md` | **Updated** | Added Edax `board.c` bitboard move generation citations under Chapters 02 & 03. |
+| `docs/README.md` | **Updated** | Updated broken relative links to `../../Plans/Stello%20porting%20documentation.md`. Verified master reading paths. |
 | `Plans/general-game-gui-specification.md` | **Updated** | Fixed 7 bare code blocks (` ```text `). Cross-referenced to Stello architecture. |
 | `Plans/stello-exhaustive-docs-and-code-audit-plan.md` | **Copied & Updated** | Copied master plan into `Plans/` and marked all audit verification items complete. |
 

@@ -21,7 +21,7 @@ builder.Services.AddSingleton<ISoundService, BrowserSoundService>();
 builder.Services.AddSingleton<ISettingsStore, LocalStorageSettingsStore>();
 builder.Services.AddSingleton<LocalStorageBookStore>();
 builder.Services.AddSingleton<StartupBook>();
-builder.Services.AddBrainDocs("The Stello brain", "Stello", "https://github.com/cjp-dev/Stello/blob/main/docs/brain/");
+builder.Services.AddBrainDocs("The Stello brain", "Stello", "https://github.com/cjp-dev/Stello/blob/main/docs/");
 builder.Services.AddSingleton<AppearanceStore>();
 builder.Services.AddSingleton<IEngineHost>(services => new WebEngineHost(
     services.GetRequiredService<IJSRuntime>(),

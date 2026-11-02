@@ -21,7 +21,7 @@ The user's goals are in [Update documentation for Stello 2 release.md](../Update
 
 ## The new structure
 
-`docs/brain/README.md`, the introduction:
+`docs/README.md`, the introduction:
 - the history: C++ → .NET 1.0, with a link to `Plans/Stello porting documentation.md` → .NET 2.0;
 - the brain on one page (the move-choice diagram);
 - the chapter table in three parts;
@@ -63,7 +63,7 @@ The user's goals are in [Update documentation for Stello 2 release.md](../Update
 | 25 | Glossary | today's 16 |
 | 26 | References | today's 17 |
 
-### The archive: `docs/brain/stello-1/`
+### The archive: `docs/stello-1/`
 
 - **Contents:** README and chapters 01–18 exactly as at `a261a6d`, the last commit before the 2.0 work, with their images in `stello-1/images/`.
 - **A note at the top of each page:** "Stello 1 documentation (archive): this describes the engine before 2.0, kept in `Stello.Engine.V1`".
@@ -96,7 +96,7 @@ The user's goals are in [Update documentation for Stello 2 release.md](../Update
 
 ## Verification
 
-- The link check passes for `docs/brain/` and `Plans/`.
+- The link check passes for `docs/` and `Plans/`.
 - `grep "Stello 1"` in chapters 01–15 finds only links to the archive or to Part 2.
 - `grep "2\.x"` finds only identifiers.
 - Every "Where in the code" file exists.
@@ -131,10 +131,11 @@ The agents found these while checking the docs against the code. They are fixed 
 ## Status
 
 - Step 1: done (9009cce).
-- Step 2: done. Archive in `docs/brain/stello-1/`: 19 pages and 19 images from `a261a6d`, an archive note on each page, and 0 broken links.
+- Step 2: done. Archive in `docs/stello-1/`: 19 pages and 19 images from `a261a6d`, an archive note on each page, and 0 broken links.
 - Step 3: done (4f9c225, 9d16511). The numbers of 06's two worked examples are still to be regenerated.
 - Step 4: done (b582b2d renumbering, 9772925 Part 2). Chapter 24 is still to be written.
-- Step 5: done. README (7f6696e); chapter 24 from the final measurements; 06's worked examples and figure regenerated with Stello 2.0; 08's FFO table from the final run; link check 0 broken in docs/brain; no "2.x"; Part 1's remaining "Stello 1" mentions are archive links or the frozen `Stello.Engine.V1`.
+- Step 5: done. README (7f6696e); chapter 24 from the final measurements; 06's worked examples and figure regenerated with Stello 2.0; 08's FFO table from the final run; link check 0 broken in docs; no "2.x"; Part 1's remaining "Stello 1" mentions are archive links or the frozen `Stello.Engine.V1`.
 - Final measurements: against Stello 1 with books 96.4 % (+571) at 100 ms, 94.7 % (+501) at 500 ms; against Egaroucid without books 75.6 % (+196) at 100 ms, 58.8 % (+62) at 500 ms, with books 54.9 % (+34) at 500 ms; FFO #40–49 46.8 s.
 - Step 6: done. main = 946e0b3, deploy 41414073220 succeeded. Archive pages are served as raw markdown by the web docs viewer (GameShell renders only top-level chapters); asked the user.
 - Code fixes 1–5: done, with tests and the docs updated (12, 14, 15, 23, 24, 01).
+- Later (user, 2026-11-02): the documentation moved from `docs/brain/` up to `docs/`. The web app still copies it to `wwwroot/content/brain/`.

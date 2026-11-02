@@ -37,7 +37,7 @@
   <!-- The brain documentation is shown by the Docs pages; copied into wwwroot like the book (git-ignored). -->
   <Target Name="CopyBrainDocs" BeforeTargets="AssignTargetPaths">
     <ItemGroup>
-      <BrainDocs Include="..\..\docs\brain\**\*" />
+      <BrainDocs Include="..\..\docs\**\*" />
     </ItemGroup>
     <Copy SourceFiles="@(BrainDocs)" DestinationFiles="@(BrainDocs->'wwwroot\content\brain\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <ItemGroup>

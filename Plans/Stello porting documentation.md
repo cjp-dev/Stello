@@ -755,8 +755,8 @@ This phase has no C++ counterpart. The same engine and view models also run in t
   - Progress is posted at most every 100 ms, but always when the depth or the best move changes.
   - **`Services/WebEngineHost`:** the `IEngineHost` for the browser. A running search cannot be interrupted inside the worker, so Stop and Move Now terminate the worker and start a new one at once. Move Now plays the best move from the last progress report (or the current move, or the first legal move). After adding a game, the book is read back from the worker and saved in local storage. `SupportsLearning` is false.
 - **Opening book file:** a build target copies `Stello C++/OPENING` to `wwwroot/data/OPENING.bin`, which is git-ignored. A linked file is not served by the development server, and the extension makes Static Web Apps serve it as binary data.
-- **Rules and documentation (Help → Rules & Documentation):** opens the documents in `docs/brain` in a new tab, so the game stays open.
-  - A build target copies `docs/brain` to `wwwroot/content/brain` (git-ignored), like the book.
+- **Rules and documentation (Help → Rules & Documentation):** opens the documents in `docs` in a new tab, so the game stays open.
+  - A build target copies `docs` to `wwwroot/content/brain` (git-ignored), like the book.
   - `Services/BrainDocs` turns the Markdown into HTML with Markdig: GitHub heading ids, tables, and raw HTML turned off. Links to chapters become pages of the app, pictures point to the copied files, and links to other files in the repository open them on GitHub.
   - The README is the front page, and its links to the chapter files give the contents list with the chapters' names.
   - `Pages/Docs` shows the contents list, the page, and links to the previous and next chapter. `wwwroot/js/docs.js` renders the formulas with KaTeX and the diagrams with Mermaid. Both are pinned versions from jsDelivr, checked with Subresource Integrity, and only loaded when a page needs them.
@@ -834,7 +834,7 @@ The first step of the book improvement ([Opening book improvment.md](Opening%20b
 
 ### C# (`Stello.BookTool`, apps, build)
 
-- New console project `tools/Stello.BookTool`: `import`, `format`, `build`, `verify`, `stats` (docs/brain chapter 13).
+- New console project `tools/Stello.BookTool`: `import`, `format`, `build`, `verify`, `stats` (docs chapter 13).
 - `opening-book.bin` is built by the tool and committed next to the text file; the engine test `ShippedBinaryBook_HoldsTheTextBook` fails if it was not built again, and `TextBook_IsInNormalForm` if the text was not formatted. (Building it inside MSBuild was considered, but it would need the tool to run during the WPF and web builds and in the GitHub workflow.)
 - WPF links `Book/opening-book.bin` as `Data/OPENING`; the web build copies it to `wwwroot/data/OPENING.bin`; the GitHub workflow runs on changes in `Stello.Net/Book/**` instead of `Stello C++/OPENING`. `.gitattributes` marks the binary book as binary.
 - The About box says "more than 11,000 opening positions" (positions, no longer nodes).

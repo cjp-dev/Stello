@@ -21,7 +21,7 @@ public sealed class OpeningBook
     /// <summary>
     /// Bumped by hand when a change to the evaluation or the search changes the values it finds. Versions 3 and 4 are
     /// Stello 2.0, whose heuristic values are in 1/100 disc: 3 the first 2.0 release, 4 with the phase 5 search
-    /// (docs/brain chapters 22 and 23).
+    /// (docs chapters 22 and 23).
     /// </summary>
     internal const int EngineVersion = 4;
 

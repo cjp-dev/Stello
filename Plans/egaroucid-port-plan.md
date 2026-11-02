@@ -3,7 +3,7 @@
 This is the working copy of the plan; its Status section is updated as phases finish. It replaces the earlier draft `pattern-evaluation-plan.md`, which only ported the evaluation.
 
 ## Context
-Step 1 (`docs/brain/18-measuring-the-engine.md`) added the measuring tools. The planned step 2 was a pattern evaluation. The user widened it: port the **whole Egaroucid engine** (search, evaluation, endgame, book) to C#. It then becomes possible to:
+Step 1 (`docs/18-measuring-the-engine.md`) added the measuring tools. The planned step 2 was a pattern evaluation. The user widened it: port the **whole Egaroucid engine** (search, evaluation, endgame, book) to C#. It then becomes possible to:
 - compare evaluation, midgame search and endgame search with Stello's, one component at a time;
 - play test matches between the two engines.
 
@@ -89,7 +89,7 @@ The goal comes later: an improved Stello engine built on what is learnt. That is
     - the Egaroucid training data: used but not redistributed, credited as its terms ask.
   - A short root `README.md` with the licence and a link to the docs.
 - **About box** (`Stello.App/Models/AboutInfo.cs`): add a licence line and the source URL `https://github.com/cjp-dev/Stello`. The repository is public, which covers GPL's source requirement for the web build.
-- **Docs:** fix `docs/brain/15-gui-and-settings.md:105`, which claims About shows licence details.
+- **Docs:** fix `docs/15-gui-and-settings.md:105`, which claims About shows licence details.
 - **Headers:** every ported file gets `// SPDX-License-Identifier: GPL-3.0-only` and "Ported from Egaroucid <file>, © Takuto Yamana, GPL-3.0-or-later". `external/GameShell` keeps its own licence.
 - **Commit:** "License Stello under GPL-3.0-only".
 
@@ -212,8 +212,8 @@ All of this lives in `tools/Stello.Benchmark`, which references `Egaroucid.Engin
 
 ## Phase 7: Docs, report and memory
 - **New chapters**, built from `Plans/egaroucid-port-findings.md`:
-  - `docs/brain/19-the-egaroucid-port.md`: architecture, a map from C++ files to C# files, the parity method and fixtures, the differences from the original (bit order at the adapter, one weight table, seeded book), and how to run it;
-  - `docs/brain/20-engine-comparison.md`: the comparison results per component, linking the report.
+  - `docs/19-the-egaroucid-port.md`: architecture, a map from C++ files to C# files, the parity method and fixtures, the differences from the original (bit order at the adapter, one weight table, seeded book), and how to run it;
+  - `docs/20-engine-comparison.md`: the comparison results per component, linking the report.
 - **Updated chapters:**
   - 01 (overview diagram and table: the new projects);
   - 17 (references: Egaroucid and the training data credit);
@@ -292,4 +292,4 @@ All of this lives in `tools/Stello.Benchmark`, which references `Egaroucid.Engin
     - FFO #40–49: 25.6 s against 369 s.
   - **Not done:** hybrids (deferred to the improved-engine step, as planned).
 - **Phase 6: postponed (2026-10-31).** The user stopped the port after phase 5: the comparison is a good enough baseline. The work continues in [improve-stello-strength-plan.md](improve-stello-strength-plan.md) (Stello 2.0). YBWC can be ported later if wanted.
-- **Phase 7: done as part of phase 0 of the Stello 2.0 plan.** The docs chapters `docs/brain/19-the-egaroucid-port.md` and `20-engine-comparison.md`.
+- **Phase 7: done as part of phase 0 of the Stello 2.0 plan.** The docs chapters `docs/19-the-egaroucid-port.md` and `20-engine-comparison.md`.

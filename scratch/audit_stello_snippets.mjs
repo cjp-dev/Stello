@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const docsBrainDir = path.resolve('docs/brain');
+const docsBrainDir = path.resolve('docs');
 const plansDir = path.resolve('Plans');
 
 const filesToAudit = [

@@ -51,7 +51,7 @@ All three must be able to play matches against each other.
 - **Branch:** `feature/stello-v2`, with the plan and findings documents.
 - **Closing the port:**
   - the port plan's Status records phase 6 (YBWC) as postponed;
-  - the port's docs chapters are written now (its planned phase 7), so the docs match the code: `docs/brain/19-the-egaroucid-port.md` and `20-engine-comparison.md`, built from the findings and the report, and linked from README and chapter 01.
+  - the port's docs chapters are written now (its planned phase 7), so the docs match the code: `docs/19-the-egaroucid-port.md` and `20-engine-comparison.md`, built from the findings and the report, and linked from README and chapter 01.
 - **`Stello.Net/Stello.Engine.V1`:** a new project in the namespace `Stello.Engine.V1`. It copies `SearchEngine`, `Search/*` and `Evaluation/*` unchanged and shares `Board`, `Move`, `SearchLimits` and `SearchResult`. It gets `InternalsVisibleTo` for `Bitboards`. Only tools and tests reference it.
 - **`V1MatchPlayer : IMatchPlayer`** (`BookMatch.cs` pattern) with Stello 1's book choice.
 - **Benchmark:**
@@ -141,7 +141,7 @@ All three must be able to play matches against each other.
   - Stello.Engine and Egaroucid tests pass;
   - WPF builds with `-p:EnableWindowsTargeting=true`;
   - after the deploy, the live site plays, stops and solves (screenshot via the Playwright set-up).
-- **Docs:** a chapter `docs/brain/21-stello-2-evaluation-and-solver.md`, plus updates to 01, 18 and README.
+- **Docs:** a chapter `docs/21-stello-2-evaluation-and-solver.md`, plus updates to 01, 18 and README.
 - Fast-forward main, push and check the deploy run.
 
 ## Phase 5: Search improvements (final 2.0)

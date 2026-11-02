@@ -10,13 +10,13 @@ There are several sections we can look into:
 
 Look into the Checkers folder for inspiration and information, files worth mentioning are:
 
-- [Checkers/docs/brain/10-opening-book.md](Checkers/docs/brain/10-opening-book.md) (how the Checkers book is built and used: Multi-PV generation, full-width early plies + DOE, text format, random choice within 10 cp, CLI reference, measured results)
+- [Checkers/docs/10-opening-book.md](Checkers/docs/10-opening-book.md) (how the Checkers book is built and used: Multi-PV generation, full-width early plies + DOE, text format, random choice within 10 cp, CLI reference, measured results)
 - [Checkers/Opening book.md](Checkers/Opening%20book.md) (the Checkers book spec)
 - [Checkers/Opening book Drop-Out Expansion.md](Checkers/Opening%20book%20Drop-Out%20Expansion.md) (DOE background)
 - [Checkers/tools/Checkers.Benchmark/BookCommands.cs](Checkers/tools/Checkers.Benchmark/BookCommands.cs) (CLI: `book generate`, `book expand-doe`, `book verify`)
 - [Checkers/src/Checkers.Core/AI/Book/BookBuilder.cs](Checkers/src/Checkers.Core/AI/Book/BookBuilder.cs) (`ExpandDropOut`: parallel workers, virtual visits, checkpoints), [BookFile.cs](Checkers/src/Checkers.Core/AI/Book/BookFile.cs) (text format), [OpeningBook.cs](Checkers/src/Checkers.Core/AI/Book/OpeningBook.cs) (random choice within a margin)
 
-The current Stello book is described in [docs/brain/11-opening-book.md](docs/brain/11-opening-book.md) and [docs/brain/12-book-learning.md](docs/brain/12-book-learning.md).
+The current Stello book is described in [docs/11-opening-book.md](docs/11-opening-book.md) and [docs/12-book-learning.md](docs/12-book-learning.md).
 
 ---
 
@@ -29,8 +29,8 @@ The current Stello book is described in [docs/brain/11-opening-book.md](docs/bra
 
 ### Status
 
-- **Phase 1: done (2026-10-07).** Described in [docs/brain chapter 11](docs/brain/11-opening-book.md), [chapter 12](docs/brain/12-book-learning.md), the new [chapter 13](docs/brain/13-book-tool.md) and [Stello porting documentation.md](Stello%20porting%20documentation.md), phase 10. Decisions taken while implementing it are marked *(phase 1)* below.
-- **Phase 2: done (2026-10-08).** `recalc`, `compare` and `match` are in the book tool ([chapter 13](docs/brain/13-book-tool.md#the-result-october-2026)) and in [Stello porting documentation.md](Stello%20porting%20documentation.md), phase 11. The master book was recalculated with 60 s per position (8 workers, about a day): 10 531 leaf values searched, exact values from 1 091 to 2 990, 2 163 positions with another first move. In the match from those positions the recalculated book scored 52.8 % (95 % interval 51.6–54.0 %) against the C++ book, so it is shipped.
+- **Phase 1: done (2026-10-07).** Described in [docs chapter 11](docs/11-opening-book.md), [chapter 12](docs/12-book-learning.md), the new [chapter 13](docs/13-book-tool.md) and [Stello porting documentation.md](Stello%20porting%20documentation.md), phase 10. Decisions taken while implementing it are marked *(phase 1)* below.
+- **Phase 2: done (2026-10-08).** `recalc`, `compare` and `match` are in the book tool ([chapter 13](docs/13-book-tool.md#the-result-october-2026)) and in [Stello porting documentation.md](Stello%20porting%20documentation.md), phase 11. The master book was recalculated with 60 s per position (8 workers, about a day): 10 531 leaf values searched, exact values from 1 091 to 2 990, 2 163 positions with another first move. In the match from those positions the recalculated book scored 52.8 % (95 % interval 51.6–54.0 %) against the C++ book, so it is shipped.
 - **Phase 2b: Recalculation with fixed evaluation (2026-10-26).** Following the evaluation bugfix in `Evaluator.cs`, `OpeningBook.EngineVersion` was bumped to 2. All 8 623 leaves were recalculated with 60 s per position across 7 workers: 6 068 values changed, 622 first moves changed, and exact endgames increased by +226 to 3 216. In a 530-game match against book v1 at depth 10, book v2 scored 51.2 % (95 % interval 50.0–52.4 %), +0.3 discs/game, confirming it is stronger.
 
 ### Decisions (answers to the review questions)
@@ -53,7 +53,7 @@ The current Stello book is described in [docs/brain/11-opening-book.md](docs/bra
 
 ### Facts about the current book
 
-- 23 389 nodes, 11 978 leaves, 11 214 positions with replies, longest line 57 plies ([chapter 11](docs/brain/11-opening-book.md#the-master-book)).
+- 23 389 nodes, 11 978 leaves, 11 214 positions with replies, longest line 57 plies ([chapter 11](docs/11-opening-book.md#the-master-book)).
 - 11 972 nodes are `Calculated`; 1 217 of them solved exactly and 3 500 solved win/loss/draw. So about 7 250 leaves have a heuristic value of unknown quality (the C++ learning used 2 minutes per position on a 20-year-old PC; the C# app uses the user's "time per move").
 - A node is 6 bytes: move, value, flags. The file has no magic number or version, and the header is a C++ allocation counter, not the node count.
 
@@ -62,7 +62,7 @@ The current Stello book is described in [docs/brain/11-opening-book.md](docs/bra
 1. **No record of how a value was found.** A value can come from an added game (±32 665), a heuristic search, a win/loss/draw solve or an exact solve, and the flags only partly tell which. The search depth or time is not stored, so a tool cannot tell a 1-second value from a 2-minute value. Phase 2 needs this to skip leaves that are already good enough and to resume after a stop.
 2. **Tree, not graph.** Transpositions are stored once per move order; the index takes the first one, and minimax needs 10 rounds so that values travel through transpositions. Storing each position once (a DAG keyed by the position) makes back-up exact in one pass, avoids searching the same leaf position twice in phase 2, and is what DOE will work on later.
 3. **"60 seconds" is not 60 seconds.** `SearchLimits.TimePerMove(60 s)` has a soft limit of 40 s (no new iteration) and a hard limit of 60 s ([TimeControl.cs](Stello.Net/Stello.Engine/Search/TimeControl.cs)). That is fine, but the tool output and the stored effort should say "time per move 60 s", and the time estimates below use ~50 s.
-4. **The search already decides when to solve exactly.** `SearchEngine.Search` deepens the midgame search until the depth reaches the number of empties − 8 (`EndgameDistance` = 7), then solves win/loss/draw and then the exact score, all within the time limit ([chapter 09](docs/brain/09-endgame-solver.md)). If the solver does not finish in time, the result is the last complete one (heuristic or win/loss/draw), and `SearchResult.Kind` says which. So with 60 s the late leaves are solved exactly (FFO #40–44, 20–24 empties, take 19 s together), and the origin is stored from `Kind`. A later run with more time can upgrade a heuristic or win/loss/draw value.
+4. **The search already decides when to solve exactly.** `SearchEngine.Search` deepens the midgame search until the depth reaches the number of empties − 8 (`EndgameDistance` = 7), then solves win/loss/draw and then the exact score, all within the time limit ([chapter 09](docs/09-endgame-solver.md)). If the solver does not finish in time, the result is the last complete one (heuristic or win/loss/draw), and `SearchResult.Kind` says which. So with 60 s the late leaves are solved exactly (FFO #40–44, 20–24 empties, take 19 s together), and the origin is stored from `Kind`. A later run with more time can upgrade a heuristic or win/loss/draw value.
 5. **The engine is single-threaded.** The tool must run several `SearchEngine` instances in parallel (one per worker, each with its own hash table), as `BookBuilder` does in Checkers. With timed searches, the worker count changes how deep each search gets (shared L3 cache, SMT), so the default should be the number of physical cores.
 6. **Cost of phase 2.** About 10 000 leaves that are not exactly solved × ~50 s ≈ 140 hours on one core, ≈ 18 hours with 8 workers (less, since late leaves are solved in seconds). The tool must be stoppable and resumable, and does the most important leaves (nearest the root) first, so a stopped run has already improved the most-played lines.
 7. **Book size matters for the web version.** The user's book is stored base64-encoded in localStorage (about 5 MB per site), and the shipped book is downloaded on start. The binary format must stay about as compact as today's 8 bytes per move.
@@ -193,7 +193,7 @@ Stello.BookTool match <book A> <book B> (--starts <report.txt> | --starts-ply N)
 
 ## Documentation
 
-- Update [docs/brain/11-opening-book.md](docs/brain/11-opening-book.md) (format) and [docs/brain/12-book-learning.md](docs/brain/12-book-learning.md) (new model, origin and effort); add a chapter for the book tool (`import`, `build`, `verify`, `stats`, `recalc`, `match`).
+- Update [docs/11-opening-book.md](docs/11-opening-book.md) (format) and [docs/12-book-learning.md](docs/12-book-learning.md) (new model, origin and effort); add a chapter for the book tool (`import`, `build`, `verify`, `stats`, `recalc`, `match`).
 - Record the change in [Stello porting documentation.md](Stello%20porting%20documentation.md) as a new phase ("changed from C++: book format").
 
 ## Phases
@@ -234,7 +234,7 @@ Stello.BookTool expand --book <file.txt> [--omega <units per ply>] [--max-ply 40
                        [--time-s 60 | --depth N] [--workers ...]
 ```
 
-- **Priority.** Lincke (*Strategies for the Automatic Construction of Opening Books*, CG 2000, and his 2002 ETH thesis): every leaf and every deviation gets an expansion priority from the path to it, ω × depth + the sum of the value losses along the path; the lowest is expanded next (formula to be checked against the paper). The Checkers implementation ([chapter 10, section 5](Checkers/docs/brain/10-opening-book.md#5-full-width-early-plies--drop-out-expansion-expanddropout)) uses a simpler variant that is proven in practice: a hard threshold δ per ply (15 cp at plies 0–5, 10 cp at 6–9, 6 cp from 10) and the least-visited active child.
+- **Priority.** Lincke (*Strategies for the Automatic Construction of Opening Books*, CG 2000, and his 2002 ETH thesis): every leaf and every deviation gets an expansion priority from the path to it, ω × depth + the sum of the value losses along the path; the lowest is expanded next (formula to be checked against the paper). The Checkers implementation ([chapter 10, section 5](Checkers/docs/10-opening-book.md#5-full-width-early-plies--drop-out-expansion-expanddropout)) uses a simpler variant that is proven in practice: a hard threshold δ per ply (15 cp at plies 0–5, 10 cp at 6–9, 6 cp from 10) and the least-visited active child.
 - **Expansion.** Expanding a leaf: search its position and its deviation. Expanding a deviation: add the move, search its position and its deviation. Then back up values along all parent paths.
 - **Both colours.** The book plays either side, so value losses of both players count.
 - **Full-width early plies** (`--full-width-plies N`, from Checkers phase A): store all legal moves in the first N plies, so the computer stays in book against any human reply early on.
