@@ -21,7 +21,7 @@ What the work on Stello 2.0 teaches us, written down as we go: the decisions, th
 | 2 Evaluation 2.0 | done | 15 patterns × 10 stages in 0.99 MB: 5.47 discs error; +400 Elo against Stello 1 at 100 and 500 ms, +67 against Egaroucid at 100 ms, −84 at 500 ms |
 | 3 Endgame solver | done | FFO #40–49 in 47.1 s (Stello 1 369 s, Egaroucid port 25.6 s); in games as strong as the old solver (51.1 % at 500 ms) |
 | 4 Release 2.0 in the apps | done | The engine is Stello 2 with a book recalculated by it; with books on it scores 88.9 % (+362) against Stello 1 at 500 ms, and the new book is as good as the old one (49.2 %); in the browser 22 empty squares solve in 0.6–1.3 s (Stello 1: 1.1–4.5 s) |
-| 5 Search improvements (final 2.0) | in progress (branch `feature/stello-v2.x`) | Item 1 (time use): no gain, the 2/3 rule stays. Item 2: PVS in every node +28/+30 Elo, kept; a table with both bounds and two moves gave nothing; item 3 Multi-ProbCut +120 at 500 ms; item 4 ordering and ETC kept; item 5 rejected; the book recalculated with the phase 5 search: 51.7 % against the first 2.0 release's book; item 6 (book exit check) rejected |
+| 5 Search improvements (final 2.0) | done (released 2026-11-02) | Item 1 (time use): no gain, the 2/3 rule stays. Item 2: PVS in every node +28/+30 Elo, kept; a table with both bounds and two moves gave nothing; item 3 Multi-ProbCut +120 at 500 ms; item 4 ordering and ETC kept; item 5 rejected; the book recalculated with the phase 5 search: 51.7 % against the first 2.0 release's book; item 6 (book exit check) rejected |
 
 ## Stello 1, the frozen baseline
 
@@ -526,3 +526,7 @@ All on 1 thread, on the same Intel i7-12850HX laptop VM as the port's measuremen
 
 - **A small move-ordering table for 11–13 empty squares** (phase 3), like Egaroucid's 4-pattern table updated move by move. The full pattern evaluation saves 20 % of the nodes there but is too slow.
 - **When to start solving** (phase 5, items 1 and 5): start from an estimate of the solve time instead of the fixed "midgame depth reaches empty squares − 8". Then solve selectively, as Egaroucid does.
+
+## Closed
+
+This work ended with the final 2.0 on 2 November 2026 (final measurements in [docs chapter 24](../docs/24-results-and-what-comes-next.md)). Item 7, parallel search, and the move to Rust continue in [making-stello-3-plan.md](making-stello-3-plan.md) and [making-stello-3-findings.md](making-stello-3-findings.md).

@@ -214,7 +214,7 @@ Each change is a separate commit behind a `SearchOptions` flag and is measured o
   - Gate: with books on at 500 ms, Stello 2 + new book scored 88.9 % (+362) against Stello 1 + its book, and 49.2 % (47.3–51.2 %) against Stello 2 + the old book, not worse.
   - Found afterwards: 2,718 leaves marked win/loss/draw by the C++ book kept their old values; fixed for the second recalculation (d21e42f on `feature/stello-v2.x`).
   - Live site after the deploy (Playwright, headless Chromium): the About box shows the 2.0 text; the computer played 15 book moves, then searched depth 14–15 in 1 s with scores in discs; Move Now during a 60 s search moved within 0.11 s (with the browser driver's delay); 22 empty squares solved in 0.59 s (+12 discs). No page errors.
-- **Phase 5: in progress, on `feature/stello-v2.x` (based on `feature/stello-v2`).** Details are in the findings.
+- **Phase 5: done (2026-11-02), on `feature/stello-v2.x` (based on `feature/stello-v2`); released as the final 2.0 (main 6e08ec5).** Details are in the findings.
   - Item 1, time use: no variant passed (soft limit 80–100 %: +4 to +14, not significant; predicting the next iteration: −25 to −37). The 2/3 rule stays; `SoftTimePercent` (`soft-pct=`) stays as a switch.
   - Item 2a, PVS in every midgame node: kept, +28 Elo at 100 ms and +30 at 500 ms.
   - Item 2b, a midgame table with both bounds and two moves: at best +4, removed.
@@ -225,4 +225,7 @@ Each change is a separate commit behind a `SearchOptions` flag and is measured o
   - Item 6, checking the moves outside the book (a book move's time spent on the moves the book lacks, played if 1 disc better): `exit` 49.6 % (−3), `all` 50.4 % (+3) at 100 ms with books on. Only 7–12 % of the games had a switched move, because the games start at ply 10–12. Rejected; the code is in 124cf2d and was removed.
   - Side experiment, a larger desktop evaluation (9b1ee56): the best model has 5.23 discs test error in 8.3 MB, but only +9 Elo (not significant) against the shipped one at 500 ms, because the search ran 17 % fewer nodes per second. Not pursued.
   - Against Egaroucid after item 4: 76.4 % (+204) at 100 ms, 57.7 % (+54) at 500 ms and 40.8 % (−64) at 2 s (phase 2: +67 and −84 at 100 and 500 ms).
-  - Tests: Stello.Engine.Tests 257, all green.
+  - Item 7, Lazy SMP or YBWC: not done here. It moved to [making-stello-3-plan.md](making-stello-3-plan.md), Part 2.
+  - Tests: Stello.Engine.Tests 259, all green (after the fixes in ac666d6).
+- **Docs for the 2.0 release: done (2026-11-02)**, see [stello-2-docs-plan.md](stello-2-docs-plan.md). Final measurements in [docs chapter 24](../docs/24-results-and-what-comes-next.md).
+- **Plan closed on 2 November 2026.** The work continues in [making-stello-3-plan.md](making-stello-3-plan.md) (Stello 3.0: the engine in Rust, then Lazy SMP and YBWC).
