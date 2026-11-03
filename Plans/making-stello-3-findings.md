@@ -17,7 +17,7 @@ What the work on Stello 3.0 teaches us, written down as we go: the decisions, th
 | 5 Threads and a shared hash table | done (2026-11-02) | A thread pool and a seqlocked shared hash table (64-byte slots); `Threads` from C# to Rust, the CLI and the Benchmark; threads = 1 identical to 2.0 on every parity run, at most +2.2 % slower; 2–16 threads give exact solves; no speed-up yet (phase 6) |
 | 6 Lazy SMP | done (2026-11-02) | Helpers run their own iterative deepening 1 + ctz(i+1) plies ahead, and up to 3 help each solve pass; 4 threads beat 1 with 55.3 % (+37 Elo) and 8 threads with 53.0 % (+21) at 500 ms; time to depth 1.53× (4 threads) and 1.66–1.76× (8); FFO only about 10 % faster (YBWC is phase 7) |
 | 7 YBWC | done (2026-11-03) | YBWC (after Egaroucid's ybwc.hpp) plus Lazy SMP on half the workers; FFO #40–49 1.98×/3.29×/3.97× faster with 4/8/16 threads (Egaroucid C++ 2.61×/4.15×/4.86×); depth 16 2.09× with 8 threads; at 8 threads beats Lazy SMP alone with 54.4 % at 500 ms and 54.7 % at 2 s |
-| 8 Threads in the browser | not started | |
+| 8 Threads in the browser | done (2026-11-03) | A threaded WebAssembly package (pinned nightly, shared memory) whose threads are Web Workers, loaded only when more than 1 thread is asked for and the page is cross-origin isolated; in Chromium FFO #40–44 3.5× faster and midgame 1.93× with 8 threads, all exact; Move Now ≤ 7 ms; the single-threaded package is the fallback |
 | 9 Threads setting and the 3.0 release | not started | |
 
 ## Baseline (Stello 2.0, C#, 1 thread)
@@ -604,3 +604,57 @@ At 16 threads this VM saturates (16 single-threaded copies each run 75 % slower)
 - **No heartbeats while waiting:** a thread waiting at a split sends no progress reports, so the apps may see a stale report for as long as the wait.
 - **`end_deep`:** a stored best move that was searched but did not improve on best does not count as searched, so that node splits one move later. This costs only parallelism.
 - **16 threads in the midgame** are slower than Lazy SMP alone on this VM. Measure on the 7800X3D (8 cores, 16 threads, no E-cores) before choosing the default Threads value in phase 9.
+
+## Phase 8: threads in the browser (2026-11-03)
+
+### Design
+- **Our own small pool,** not wasm-bindgen-rayon:
+  - the engine already has its pool and the `Spawner` hook, and Rayon would add two crates only to run long-lived bodies;
+  - with ours, the engine worker decides when the Web Workers start (asynchronously, before a search), so Rust never waits for a worker the browser has not started yet;
+  - it is about 70 lines of Rust and 60 of JavaScript.
+- **Rust (`stello-wasm/src/threads.rs`, only with `target_feature = "atomics"`):** `web_spawner` hands the body to a Web Worker waiting in `poolWorker()`, or fails if none waits, and the pool then has fewer threads. It waits briefly (at most 200 ms) for a worker that is on its way back from the previous pool.
+  - **Found in review:** that wait had no limit. If fewer Web Workers started than the pool asked for, it would have waited for the pool's own threads, which end only with the pool: the search would hang. Now it gives up after 200 ms.
+- **JavaScript:**
+  - `engine-worker.js` is still the search thread. At `init` it loads `../engine-mt` only if more than 1 thread is asked for, the page is `crossOriginIsolated` and `SharedArrayBuffer` exists; otherwise, or if the load fails, it loads `../engine`. Only the package used is downloaded.
+  - In the threaded mode it compiles the module once and starts the pool workers (`engine-pool-worker.js`) at `init`. Each instantiates the module on the shared memory and waits for bodies with `Atomics.wait`, which a worker may do. The page's main thread never blocks.
+  - Before each search the threads are capped at `navigator.hardwareConcurrency`.
+- **The clock** is `performance.timeOrigin + performance.now()` in both builds, because `performance.now()` counts from each worker's own start and the threads compare their time with the search's start.
+- **For testing until phase 9:** the page address query `?threads=N` (1–256), read by `WebEngineHost.ThreadsFromQuery`. The default is 1. `engine-client.js` `info()` returns `{ version, mode: 'threaded' | 'single', threads }`. Switching between 1 and more threads will need a worker restart in phase 9, because the package is chosen at `init`.
+- **Shared memory** may grow to 2 GiB, so the 1,024 MB hash setting fits. Where a device cannot reserve that, the threaded load fails and the single-threaded package plays.
+
+### Build
+- **The MSBuild target `BuildStelloWasmThreads`** builds into `wwwroot/engine-mt` (git-ignored) with the nightly pinned by the property `StelloWasmNightly` (`nightly-2026-11-02`, not a rust-toolchain file, so the rest of the workspace stays on stable). It uses `-Z build-std=std,panic_abort` and `+atomics,+bulk-memory,+mutable-globals`, with shared, imported memory and its own target folder.
+- **`StelloWasmThreads`:**
+  - `auto` (the default): a missing nightly or rust-src gives a warning with the rustup command, and only the single-threaded engine is built. A Windows build without the nightly still works;
+  - `required`: a missing nightly is an error (the deploy workflow);
+  - `false`: no threaded build. `StelloWasmEngine=false` still skips everything.
+  - The probe runs with `RUSTUP_AUTO_INSTALL=0`, so a build never downloads a toolchain.
+- **The deploy workflow** installs the pinned nightly with rust-src and publishes with `-p:StelloWasmThreads=required`. It first runs on GitHub at the phase 9 release.
+
+### Gate P8 (local): passed
+Headless Chromium, Release AOT publish served with COOP/COEP, `hardwareConcurrency` 24; engine times:
+
+| Threads | FFO #40–44 (exact) | Speed-up | Midgame depth 14, 20 positions | Speed-up | Move Now / cancel |
+|---:|---:|---:|---:|---:|---|
+| 1 (single-threaded package) | 2.87 s | 1.00× | 1.72 s | 1.00× | 0.1–1.2 ms |
+| 2 | 1.93 s | 1.49× | 1.62 s | 1.06× | ≤ 2.1 ms |
+| 4 | 1.24 s | 2.31× | 1.06 s | 1.62× | ≤ 1.5 ms |
+| 8 | 0.82 s | 3.50× | 0.89 s | 1.93× | ≤ 6.5 ms |
+| 24 | 0.89 s | 3.22× | 0.90 s | 1.91× | ≤ 15.6 ms |
+
+- **Results:** every solve exact, and every midgame move legal and at depth 14.
+- **The threaded package with 1 thread** searches the same nodes, 3–8 % slower.
+- **Re-checked after the review fix:** 8 threads, FFO #40–44 exact, 0.82 s against 2.79 s (3.4×); Move Now and cancel ≤ 7 ms; no page errors.
+- **In the UI with `?threads=8`:** the engine runs threaded and plays at 1 s per move at depth 25 and about 21 M nodes/s. Move Now takes 83 ms through the UI.
+- **Fallback:**
+  - served without COOP/COEP with `?threads=8`, it runs single-threaded, plays, and Move Now works;
+  - with `engine-mt` missing, it runs single-threaded with a console warning.
+- **First visit (brotli):** 6.85 MB with 1 thread (only `engine/`), and 6.88 MB with `?threads=8` (only `engine-mt/`).
+- **Node tests:** `engine.test.mjs` 10/10 on the single-threaded package. The new `engine-mt.test.mjs`, with `worker_threads` pool workers, passes 5/5: 1-thread parity with the 2.0 signatures, FFO #40–44 exact with 4 threads, a legal midgame move, and Move Now and cancel under 30 ms.
+- **Checks:** fmt clean; clippy clean natively, for wasm32 single-threaded and for wasm32 threaded (nightly, build-std); 72 `cargo test` tests; the .NET build has 0 warnings; 488 engine tests. The engine core did not change, so native parity holds.
+- **Not verified:**
+  - the Windows build with the nightly;
+  - the CI workflow itself (it first runs at the release);
+  - Firefox and Safari (nested workers and shared memory);
+  - mobile devices;
+  - the live check with threads (phase 9).

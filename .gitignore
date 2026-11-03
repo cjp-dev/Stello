@@ -373,6 +373,7 @@ Stello.Net/Stello.Web/wwwroot/images/
 
 # The WebAssembly engine (Stello.Rust/stello-wasm) built by the Stello.Web build
 Stello.Net/Stello.Web/wwwroot/engine/
+Stello.Net/Stello.Web/wwwroot/engine-mt/
 
 edax-reversi-master
 

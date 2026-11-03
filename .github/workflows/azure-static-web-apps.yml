@@ -44,6 +44,15 @@ jobs:
           rustup default stable
           cargo --version
 
+      # The threaded engine (wwwroot/engine-mt) is built with a pinned nightly and its standard library source
+      # (-Z build-std); the version must equal StelloWasmNightly in Stello.Net/Stello.Web/Stello.Web.csproj.
+      - name: Install the nightly Rust of the threaded engine
+        env:
+          STELLO_WASM_NIGHTLY: 'nightly-2026-11-02'
+        run: |
+          rustup toolchain install "$STELLO_WASM_NIGHTLY" --profile minimal --component rust-src
+          cargo "+$STELLO_WASM_NIGHTLY" --version
+
       # A prebuilt wasm-bindgen-cli; its version must equal the wasm-bindgen crate's (=0.2.130 in Stello.Rust/Cargo.toml).
       - name: Install wasm-bindgen
         env:
@@ -55,8 +64,9 @@ jobs:
           wasm-bindgen --version
 
       # StelloNativeEngine=false: the web app does not need Stello.Engine's native library (stello-ffi).
+      # StelloWasmThreads=required: the threaded engine must be built here (a local build without the nightly only warns).
       - name: Publish (AOT)
-        run: dotnet publish Stello.Net/Stello.Web/Stello.Web.csproj -c Release -o publish -p:StelloNativeEngine=false
+        run: dotnet publish Stello.Net/Stello.Web/Stello.Web.csproj -c Release -o publish -p:StelloNativeEngine=false -p:StelloWasmThreads=required
 
       # The app is already built, so the action only uploads the static files.
       - name: Deploy to Azure Static Web Apps

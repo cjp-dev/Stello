@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.JSInterop;
@@ -26,7 +27,8 @@ builder.Services.AddSingleton<AppearanceStore>();
 builder.Services.AddSingleton<IEngineHost>(services => new WebEngineHost(
     services.GetRequiredService<IJSRuntime>(),
     services.GetRequiredService<LocalStorageBookStore>(),
-    services.GetRequiredService<StartupBook>().Book));
+    services.GetRequiredService<StartupBook>().Book,
+    WebEngineHost.ThreadsFromQuery(services.GetRequiredService<NavigationManager>().Uri)));
 builder.Services.AddSingleton(services => new MainViewModel(
     services.GetRequiredService<IEngineHost>(),
     services.GetRequiredService<IDialogService>(),

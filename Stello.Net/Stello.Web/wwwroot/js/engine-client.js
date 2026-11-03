@@ -7,6 +7,8 @@ const signalView = signalBuffer ? new Int32Array(signalBuffer) : null;
 
 let worker = null;
 let nextId = 1;
+// What the worker's 'init' answered: { version, mode: 'threaded' | 'single', threads } (see engine-worker.js).
+let engineInfo = null;
 const pending = new Map();
 
 function rejectPending(message) {
@@ -30,9 +32,11 @@ function post(command, args, includeBuffer = false) {
     return response;
 }
 
-// Starts a new worker and makes its engine; resolves with the engine's version when it is ready.
-export function start(progressTarget, hashBits) {
+// Starts a new worker and makes its engine; resolves with the engine's version when it is ready. With `threads` > 1
+// the worker loads the threaded engine if the page can share memory (cross-origin isolated).
+export function start(progressTarget, hashBits, threads = 1) {
     terminate();
+    engineInfo = null;
     const current = new Worker(workerUrl, { type: 'module' });
 
     current.addEventListener('message', e => {
@@ -61,7 +65,16 @@ export function start(progressTarget, hashBits) {
     });
 
     worker = current;
-    return post('init', [hashBits], true);
+    return post('init', [hashBits, threads], true).then(info => {
+        engineInfo = info;
+        return info.version;
+    });
+}
+
+// The running engine: { version, mode: 'threaded' | 'single', threads (the most it can use) }, or null before it is
+// ready.
+export function info() {
+    return engineInfo;
 }
 
 export function call(command, ...args) {

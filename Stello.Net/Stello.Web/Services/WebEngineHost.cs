@@ -12,6 +12,12 @@ namespace Stello.Web.Services;
 /// here, and the worker only searches. A running search is stopped cooperatively via a SharedArrayBuffer signal
 /// (preserving the hash tables), falling back to restarting the worker if needed.
 /// </summary>
+/// <remarks>
+/// The searches use <see cref="Threads"/> threads: the worker then loads the threaded engine, if the page is
+/// cross-origin isolated (else, and if it cannot be loaded, the single-threaded one, which searches with 1). Until the
+/// Threads setting comes (Plans/making-stello-3-plan.md, phase 9), the number is 1 unless the page's address has a
+/// <c>threads</c> query, for testing: <c>?threads=4</c>.
+/// </remarks>
 public sealed class WebEngineHost : IEngineHost
 {
     private const int HashBits = 19;
@@ -28,8 +34,11 @@ public sealed class WebEngineHost : IEngineHost
     private Task _started;
     private Action<SearchInfo>? _progress;
 
-    public WebEngineHost(IJSRuntime js, LocalStorageBookStore bookStore, OpeningBook book)
+    public WebEngineHost(IJSRuntime js, LocalStorageBookStore bookStore, OpeningBook book, int threads = 1)
     {
+        ArgumentOutOfRangeException.ThrowIfLessThan(threads, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(threads, SearchLimits.MaxThreads);
+        Threads = threads;
         _js = js;
         _bookStore = bookStore;
         _book = book;
@@ -41,6 +50,25 @@ public sealed class WebEngineHost : IEngineHost
     }
 
     public bool SupportsLearning => false;
+
+    /// <summary>The threads of the searches (the worker caps them at the device's <c>navigator.hardwareConcurrency</c>).</summary>
+    public int Threads { get; }
+
+    /// <summary>The <c>threads</c> query of a page address (<c>?threads=4</c>), 1 to <see cref="SearchLimits.MaxThreads"/>, else 1.</summary>
+    public static int ThreadsFromQuery(string uri)
+    {
+        string query = new Uri(uri).Query.TrimStart('?');
+        foreach (string part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            string[] keyValue = part.Split('=', 2);
+            if (keyValue.Length == 2 && keyValue[0] == "threads" && int.TryParse(keyValue[1], out int threads) && threads is >= 1 and <= SearchLimits.MaxThreads)
+            {
+                return threads;
+            }
+        }
+
+        return 1;
+    }
 
     public async Task<SearchResult> ChooseMoveAsync(
         Board board,
@@ -77,7 +105,7 @@ public sealed class WebEngineHost : IEngineHost
             last = info;
             progress?.Report(info);
         };
-        Task<string> search = client.InvokeAsync<string>("call", "search", EngineProtocol.WriteRequest(board, player, limits)).AsTask();
+        Task<string> search = client.InvokeAsync<string>("call", "search", EngineProtocol.WriteRequest(board, player, limits with { Threads = Threads })).AsTask();
         try
         {
             if (await Task.WhenAny(search, stopped.Task) == search)
@@ -174,7 +202,7 @@ public sealed class WebEngineHost : IEngineHost
     private async Task StartAsync()
     {
         _client ??= await _js.InvokeAsync<IJSInProcessObjectReference>("import", "./js/engine-client.js");
-        await _client.InvokeAsync<string>("start", _self, HashBits);
+        await _client.InvokeAsync<string>("start", _self, HashBits, Threads);
     }
 
     private void Restart(IJSInProcessObjectReference client)

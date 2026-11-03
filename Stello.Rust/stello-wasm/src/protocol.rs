@@ -70,8 +70,8 @@ pub fn read_request(json: &str) -> Result<MoveRequest, String> {
     let time_ms = time_ticks / 10_000;
     let limits =
         SearchLimits::from_parts(mode, depth, time_ms).ok_or_else(|| "The limits are not valid.".to_string())?;
-    // Checked as C#'s SearchLimits.Threads does; this single-threaded build then searches with 1 (the engine ignores
-    // the count where threads are not available).
+    // Checked as C#'s SearchLimits.Threads does. The threaded build searches with as many threads as it has pool
+    // workers for (engine-worker.js caps the count at the device's); the single-threaded build with 1.
     let limits = u32::try_from(threads)
         .ok()
         .and_then(|threads| limits.with_threads(threads))

@@ -6,9 +6,17 @@
 //! runs: the page stops it through a `SharedArrayBuffer` instead, which the [`Host`]'s `signal()` reads with
 //! `Atomics.load` at every abort check of the engine (every 1024 nodes).
 //!
-//! WebAssembly has no clock in `std`, so the engine is timed with `performance.now()`.
+//! WebAssembly has no clock in `std`, so the engine is timed with `performance.now()` (from `performance.timeOrigin`,
+//! the same in every worker).
+//!
+//! There are two builds (Plans/making-stello-3-plan.md, phase 8): the single-threaded one (stable Rust,
+//! `wwwroot/engine`) and the threaded one (a pinned nightly with atomics and shared memory, `wwwroot/engine-mt`),
+//! whose other threads are Web Workers on the same memory (`threads.rs`, `engine-pool-worker.js`). [`threaded`] says
+//! which this is.
 
 mod protocol;
+#[cfg(target_feature = "atomics")]
+mod threads;
 
 use std::cell::RefCell;
 use std::sync::Arc;
@@ -41,6 +49,13 @@ extern "C" {
     /// `performance.now()`: milliseconds since the worker started, with fractions.
     #[wasm_bindgen(js_namespace = performance, js_name = now)]
     fn performance_now() -> f64;
+}
+
+#[wasm_bindgen(inline_js = "export function absolute_now() { return performance.timeOrigin + performance.now(); }")]
+extern "C" {
+    /// Milliseconds since 1970, with fractions: the same clock in every Web Worker, unlike `performance.now()`,
+    /// which counts from each worker's start. The threads of a search compare their time with the search's start.
+    fn absolute_now() -> f64;
 }
 
 /// The engine and the evaluation it was made with (to make it again for other hash bits).
@@ -84,8 +99,8 @@ pub fn init(evaluation: Option<Vec<u8>>, hash_bits: u32) -> Result<(), JsError> 
 /// Finds the best move (C#: `SearchEngine.Search`) for `request`, the JSON of `EngineProtocol`'s `MoveRequest`,
 /// and returns the JSON of a `MoveResponse`. Progress goes to `host.progress()`: new depths and new best moves at
 /// once, other reports at most every 100 ms. A request with other hash bits than the engine's makes a new engine
-/// (empty hash tables), as `ComputerPlayer` did in the worker of Stello 2.0. The request's `Threads` is checked, but
-/// this build has no threads and searches with 1 (threads in the browser are phase 8 of Plans/making-stello-3-plan.md).
+/// (empty hash tables), as `ComputerPlayer` did in the worker of Stello 2.0. The request's `Threads` is used by the
+/// threaded build (up to the pool workers that wait, see `threads.rs`); the single-threaded build searches with 1.
 ///
 /// Throws if the engine is not initialised, the request is not valid, or the search was cancelled ("cancelled").
 #[wasm_bindgen]
@@ -119,11 +134,20 @@ pub fn search(request: &str, host: &Host) -> Result<String, JsError> {
 fn new_engine(hash_bits: u32, pattern: Option<Arc<EvalWeights>>) -> SearchEngine {
     let mut engine = SearchEngine::new(hash_bits, SearchOptions { pattern, ..SearchOptions::default() });
     engine.set_clock(browser_clock);
+    #[cfg(target_feature = "atomics")]
+    engine.set_spawner(threads::web_spawner);
     engine
 }
 
 fn browser_clock() -> Duration {
-    Duration::from_secs_f64(performance_now().max(0.0) / 1000.0)
+    Duration::from_secs_f64(absolute_now().max(0.0) / 1000.0)
+}
+
+/// Whether this is the threaded build (shared memory and Web Workers); the single-threaded one searches with 1
+/// thread whatever a request asks for.
+#[wasm_bindgen]
+pub fn threaded() -> bool {
+    cfg!(target_feature = "atomics")
 }
 
 /// The page's stop signal, read at the engine's abort checks.
