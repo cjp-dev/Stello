@@ -1,0 +1,111 @@
+{
+  "Command": "solve-bench",
+  "Date": "2026-11-03 11:42",
+  "ProcessorCount": 24,
+  "Limits": "solve, 24 threads",
+  "HashBits": 19,
+  "Passes": 1,
+  "Results": [
+    {
+      "Id": "40",
+      "Empties": 20,
+      "Move": "a2",
+      "Score": 38,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 13832086,
+      "Ms": 99.1679
+    },
+    {
+      "Id": "41",
+      "Empties": 22,
+      "Move": "h4",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 14482554,
+      "Ms": 80.5344
+    },
+    {
+      "Id": "42",
+      "Empties": 22,
+      "Move": "g2",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 33392327,
+      "Ms": 159.6931
+    },
+    {
+      "Id": "43",
+      "Empties": 23,
+      "Move": "c7",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 52905224,
+      "Ms": 254.9552
+    },
+    {
+      "Id": "44",
+      "Empties": 23,
+      "Move": "d2",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 14676223,
+      "Ms": 139.6959
+    },
+    {
+      "Id": "45",
+      "Empties": 24,
+      "Move": "b2",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 392372530,
+      "Ms": 1345.2852
+    },
+    {
+      "Id": "46",
+      "Empties": 24,
+      "Move": "b3",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 74088042,
+      "Ms": 352.7028
+    },
+    {
+      "Id": "47",
+      "Empties": 25,
+      "Move": "g2",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 25,
+      "Nodes": 57895316,
+      "Ms": 286.8665
+    },
+    {
+      "Id": "48",
+      "Empties": 25,
+      "Move": "f6",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 25,
+      "Nodes": 345294178,
+      "Ms": 1530.9869
+    },
+    {
+      "Id": "49",
+      "Empties": 26,
+      "Move": "e1",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 26,
+      "Nodes": 710062671,
+      "Ms": 2311.0785
+    }
+  ],
+  "Engine": "stello"
+}
