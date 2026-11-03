@@ -120,6 +120,15 @@ pub(crate) fn engine_options(options: &Options) -> Result<(SearchOptions, String
         Some(_) => return Err("--selective must be on or off.".to_string()),
     }
 
+    match options.text("ybwc") {
+        None | Some("on") => {}
+        Some("off") => {
+            search.ybwc = false;
+            text.push_str(", YBWC off");
+        }
+        Some(_) => return Err("--ybwc must be on or off.".to_string()),
+    }
+
     if options.text("probcut-pct").is_some() {
         let percent = number(options, "probcut-pct", 100, 1, 1000)?;
         search.probcut_percent = Some(percent);
@@ -148,8 +157,10 @@ fn positions_path(options: &Options, default: &str) -> Result<PathBuf, String> {
 }
 
 pub(crate) fn solve_bench(args: &[String]) -> Result<(), String> {
-    let options =
-        Options::parse(args, &["positions", "from", "to", "passes", "hash-bits", "eval", "out", "cpu", "threads"])?;
+    let options = Options::parse(
+        args,
+        &["positions", "from", "to", "passes", "hash-bits", "eval", "out", "cpu", "threads", "ybwc"],
+    )?;
     let all = load_positions(&positions_path(&options, "ffo-40-59.txt")?)?;
     let from = number(&options, "from", 40, 0, i32::MAX)?;
     let to = number(&options, "to", 44, 0, i32::MAX)?;
@@ -207,7 +218,19 @@ pub(crate) fn solve_bench(args: &[String]) -> Result<(), String> {
 pub(crate) fn mid_bench(args: &[String]) -> Result<(), String> {
     let options = Options::parse(
         args,
-        &["positions", "depth", "passes", "hash-bits", "eval", "selective", "probcut-pct", "out", "cpu", "threads"],
+        &[
+            "positions",
+            "depth",
+            "passes",
+            "hash-bits",
+            "eval",
+            "selective",
+            "probcut-pct",
+            "out",
+            "cpu",
+            "threads",
+            "ybwc",
+        ],
     )?;
     let positions = load_positions(&positions_path(&options, "midgame.txt")?)?;
     let depth = number(&options, "depth", 10, 1, 60)?;

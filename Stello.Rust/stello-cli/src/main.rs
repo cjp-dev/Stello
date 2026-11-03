@@ -37,7 +37,7 @@ Usage: stello <command> [options]
                             --cpu portable (both benches) keeps to the portable code that WebAssembly runs, instead of
                             the processor's fast paths (BMI2, AVX2); the results are the same.
                             --threads N (both benches, 1-256) searches with N threads sharing the hash tables; with
-                            more than 1 the nodes vary from run to run.
+                            more than 1 the nodes vary from run to run. --ybwc off: Lazy SMP alone (phase 6).
 ";
 
 const FNV_OFFSET: u64 = 14_695_981_039_346_656_037;

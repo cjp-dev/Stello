@@ -28,4 +28,10 @@ internal sealed record SearchOptions
     /// Null: <see cref="SearchEngine.DefaultProbCutPercent"/>. Kept as a switch to retune t when the search changes.
     /// </summary>
     public int? ProbCutPercent { get; init; }
+
+    /// <summary>
+    /// With more than 1 thread, YBWC with half of the threads on Lazy SMP helpers (the default); off is Lazy SMP alone on
+    /// all threads (Plans/making-stello-3-plan.md, phase 6). Kept as a switch to compare the two in matches.
+    /// </summary>
+    public bool Ybwc { get; init; } = true;
 }

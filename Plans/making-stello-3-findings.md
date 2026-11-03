@@ -16,7 +16,7 @@ What the work on Stello 3.0 teaches us, written down as we go: the decisions, th
 | 4 Release (3.0 preview) | done (2026-11-02) | About shows 3.0; docs Part 1 describes the Rust engine and Part 3 begins (chapter 25); main = c9aa054, deploy 41504303682 succeeded; the live site plays, stops and solves on the Rust engine |
 | 5 Threads and a shared hash table | done (2026-11-02) | A thread pool and a seqlocked shared hash table (64-byte slots); `Threads` from C# to Rust, the CLI and the Benchmark; threads = 1 identical to 2.0 on every parity run, at most +2.2 % slower; 2–16 threads give exact solves; no speed-up yet (phase 6) |
 | 6 Lazy SMP | done (2026-11-02) | Helpers run their own iterative deepening 1 + ctz(i+1) plies ahead, and up to 3 help each solve pass; 4 threads beat 1 with 55.3 % (+37 Elo) and 8 threads with 53.0 % (+21) at 500 ms; time to depth 1.53× (4 threads) and 1.66–1.76× (8); FFO only about 10 % faster (YBWC is phase 7) |
-| 7 YBWC | not started | |
+| 7 YBWC | done (2026-11-03) | YBWC (after Egaroucid's ybwc.hpp) plus Lazy SMP on half the workers; FFO #40–49 1.98×/3.29×/3.97× faster with 4/8/16 threads (Egaroucid C++ 2.61×/4.15×/4.86×); depth 16 2.09× with 8 threads; at 8 threads beats Lazy SMP alone with 54.4 % at 500 ms and 54.7 % at 2 s |
 | 8 Threads in the browser | not started | |
 | 9 Threads setting and the 3.0 release | not started | |
 
@@ -534,3 +534,73 @@ FFO #40–49: 1 thread 25.4 s (identical to 2.0), 4 threads 23.6 s, 8 threads 23
 ### Notes for phase 7
 - The Lazy SMP helpers hold N−1 workers for the whole midgame, so YBWC tasks would find no idle worker. Phase 7 will probably cap the helpers by depth (as Egaroucid does: helpers up to depth 10, YBWC deeper) or give them fewer workers.
 - In the solve, 4 of 8 threads are idle today, ready for YBWC.
+
+## Phase 7: YBWC (2026-11-03)
+
+### Design
+- **The pool's `scope_polling`** waits for its tasks and calls a check about every millisecond while it waits. That way a thread waiting at a split still sees Move Now, cancel and its time limit.
+- **`search/ybwc.rs`, after Egaroucid's `ybwc.hpp`:**
+  - Split points form a chain, and a split-off search stops when any split point above it is stopped.
+  - `Searcher::split`, called after the first child, gives every younger brother a null window at alpha. Each brother except the last goes to an idle worker if there is one, otherwise it is searched here.
+  - A fail high sets the split's cut and stop flags. A brother at ≥ beta cuts the node off; the other fail highs are searched again with the full window, in order. Brothers that were stopped go into another round at the new alpha.
+  - If tasks are missing without a cut, the stop came from above, and the split returns the right abort reason.
+  - A split-off search copies the stage of the iteration and the time limit, and may split again.
+- **Where nodes split:**
+  - midgame `search`, at the second child, when the children are searched at depth ≥ 6 (Egaroucid's minimum), at PVS and null-window nodes;
+  - endgame `end_window` and `end_deep`, when the children have ≥ 16 empty squares (15 and 16 measured best).
+- **Lazy SMP together with YBWC:** half of the workers, rounded up, run Lazy SMP helpers (2 threads → 1, 4 → 2, 8 → 4, 16 → 8), and the rest are free for YBWC. The solve uses no Lazy SMP helpers when YBWC is on (3 solve helpers made FFO with 8 threads take 11.2 s instead of 8.0 s).
+- **Not as planned:** the plan said "Lazy SMP at shallow main depths, as in Egaroucid". Helpers only up to depth 10 were slower here (8 threads, depth 14: 2.79 s against 1.82 s for Lazy SMP alone). YBWC alone is weak in this midgame (51k tasks averaging 415 nodes, workers 26 % busy; 8 threads at depth 14: 3.30 s, slower than 1 thread's 3.07 s). Half the workers as helpers at all depths, with YBWC on the rest, won.
+- **An internal switch** (`SearchOptions.ybwc`, FFI `stello_engine_set_ybwc` in ABI 3, `stello-cli --ybwc off`, match key `ybwc=on|off`) gives exactly phase 6 with `off`. It is kept for later comparisons, like the `selective` switch.
+
+### Choosing the number of Lazy SMP helpers (CLI, mean of 3 passes, depth 16, 1 thread about 8.1–8.5 s)
+| Threads | Helpers | Time | Lazy SMP alone |
+|---:|---|---:|---:|
+| 2 | 0 / 1 | 7.13 / 6.66 s | |
+| 4 | 1 / 2 | 5.08 / 4.89 s | 5.49 s |
+| 8 | 3 / **4** / 5 | 4.02 / **3.82** / 4.08 s | 4.80 s |
+| 16 | 4 / 8 / 12 | 4.92 / 4.96 / 5.26 s | 5.18 s |
+
+At depth 17 with 8 threads: 4 helpers 6.39 s, 2 helpers 6.62 s, Lazy SMP alone 7.68 s, YBWC alone 9.69 s (1 thread 13.4 s).
+
+### Numbers (through the wrapper, machine idle)
+FFO #40–49, every score and move correct:
+
+| Threads | Stello 3.0 | Speed-up | Lazy SMP alone | Egaroucid C++ (hash 21) | Speed-up |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 25.6 s | 1.00× | | 11.46 s | 1.00× |
+| 4 | 12.9 s | 1.98× | 24.3 s | 4.39 s | 2.61× |
+| 8 | 7.8 s | 3.29× | 23.5 s | 2.76 s | 4.15× |
+| 16 | 6.45 s | 3.97× | 23.7 s | 2.36 s | 4.86× |
+
+The C# Egaroucid port is single-threaded (26.2 s), so it has no thread numbers.
+
+Time to depth 16, mean wall time of 3 mid-bench passes:
+
+| Threads | YBWC + Lazy SMP | Speed-up | Lazy SMP alone |
+|---:|---:|---:|---:|
+| 1 | 8.13 s | 1.00× | |
+| 4 | 4.85 s | 1.68× | 5.28 s |
+| 8 | 3.89 s | 2.09× | 4.72 s |
+| 16 | 5.39 s | 1.51× | 4.97 s |
+
+At 16 threads this VM saturates (16 single-threaded copies each run 75 % slower), and YBWC + Lazy SMP is slower than Lazy SMP alone there.
+
+### Gate P7: passed
+| Gate | Result |
+|---|---|
+| FFO #40–49 correct and faster with N threads | 1.98×, 3.29× and 3.97× with 4, 8 and 16 threads, all correct |
+| 500 ms, 8 threads, YBWC + Lazy SMP against Lazy SMP alone: not worse | **54.4 %** (52.2–56.5), +30 Elo (+16 to +45), 1,180 games, 2 at a time; midgame depth 20.51 vs 19.89, first solve at 24.9 vs 23.6 empties; 2 h 02 min ([results](benchmark-results/match_v3p7-ybwc-vs-lazy-8t-500ms.md)) |
+| 2 s, the same: better | **54.7 %** (52.0–57.3), +33 Elo (+14 to +51), **600 games** (300 starts), 2 at a time; depth 23.14 vs 22.26, first solve at 26.7 vs 25.3; 3 h 50 min ([results](benchmark-results/match_v3p7-ybwc-vs-lazy-8t-2s.md)) |
+
+- **600 games at 2 s** instead of 1,180, because 1,180 would have taken about 8 hours. The lower bound is above 50 % anyway.
+- **Review checks:** 500 random endgames with 8 and with 16 threads gave every score and move equal to 2.0 (180 s and 150 s, against 974 s for 2.0). The 300 handover positions with 8 threads gave no wrong score kind or depth. With 1 thread, mid-bench depth 12 and FFO #40–49 are identical to 2.0.
+- **Tests:** 72 `cargo test` tests (new: split solves with 3, 8 and 16 threads on small tables, Multi-ProbCut on and off; Lazy SMP alone solves exactly; the polling scope; `set_ybwc`), 488 engine tests, 34 Egaroucid tests, 10 Node tests; clippy clean, also for wasm32.
+- **Miri** passes the pool tests, including the polling scope (the split code is too slow under Miri). **ThreadSanitizer** found no reports. Only the time-per-move test fails under it, because of its slowdown (370 ms against 190). In release the worst overshoot at 150 ms with 8 threads was 4.9 ms.
+- **Not verified:** Windows with MSVC.
+
+### Not done, and ideas for later
+- **No root splitting:** `search_root` and `solve_root` still go through the root moves one by one. Egaroucid splits at the root too, which could close part of the FFO gap to it (3.29× against 4.15× with 8 threads).
+- **The thread that split is not interrupted:** when a task fails high, the brother this thread is searching itself runs to the end (found in review). Correct, but the work is wasted.
+- **No heartbeats while waiting:** a thread waiting at a split sends no progress reports, so the apps may see a stale report for as long as the wait.
+- **`end_deep`:** a stored best move that was searched but did not improve on best does not count as searched, so that node splits one move later. This costs only parallelism.
+- **16 threads in the midgame** are slower than Lazy SMP alone on this VM. Measure on the 7800X3D (8 cores, 16 threads, no E-cores) before choosing the default Threads value in phase 9.

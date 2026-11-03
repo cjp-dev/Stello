@@ -7,6 +7,7 @@
 //! - [`table`]: C# `TranspositionTable`, `Bound`;
 //! - [`ordering`]: C# `MoveOrdering`;
 //! - [`time`]: C# `TimeControl`, `TimeBudget`;
+//! - `ybwc`: the Young Brothers Wait Concept, splitting nodes over the pool's idle workers (not in C#);
 //! - [`pool`]: the worker threads of a search with more than one thread (not in C#);
 //! - [`engine`]: C# `SearchEngine` (the midgame search and the root of the solver), with the stop signals and the
 //!   clock.
@@ -18,6 +19,7 @@ pub mod ordering;
 pub mod pool;
 pub mod table;
 pub mod time;
+pub(crate) mod ybwc;
 
 pub use engine::{
     Clock, DEFAULT_PROBCUT_PERCENT, NoStop, SearchEngine, SearchError, SearchSignals, StopSignal, ThreadState,

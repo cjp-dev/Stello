@@ -121,6 +121,23 @@ impl<S: Send + 'static> ThreadPool<S> {
     where
         F: for<'scope> FnOnce(&'scope Scope<'scope, 'env, S>) -> R,
     {
+        self.run_scope(body, None)
+    }
+
+    /// [`ThreadPool::scope`], but while it waits for the tasks after `body` it calls `poll` about every
+    /// millisecond, on this thread. A search that waits for the siblings it split off checks its own stop signals
+    /// there, and stops the siblings if it must.
+    pub fn scope_polling<'env, R, F>(&'env self, body: F, mut poll: impl FnMut()) -> R
+    where
+        F: for<'scope> FnOnce(&'scope Scope<'scope, 'env, S>) -> R,
+    {
+        self.run_scope(body, Some(&mut poll))
+    }
+
+    fn run_scope<'env, R, F>(&'env self, body: F, poll: Option<&mut dyn FnMut()>) -> R
+    where
+        F: for<'scope> FnOnce(&'scope Scope<'scope, 'env, S>) -> R,
+    {
         let scope =
             Scope { shared: &self.shared, tasks: Arc::new(ScopeTasks::default()), _borrows: std::marker::PhantomData };
 
@@ -135,7 +152,11 @@ impl<S: Send + 'static> ThreadPool<S> {
 
         let result = {
             let _wait = WaitOnDrop(&scope.tasks);
-            body(&scope)
+            let result = body(&scope);
+            if let Some(poll) = poll {
+                scope.tasks.wait_polling(poll);
+            }
+            result
         };
 
         if let Some(panic) = lock(&scope.tasks.panic).take() {
@@ -214,6 +235,24 @@ impl ScopeTasks {
         let mut running = lock(&self.running);
         while *running > 0 {
             running = self.finished.wait(running).unwrap_or_else(PoisonError::into_inner);
+        }
+    }
+
+    /// [`ScopeTasks::wait`], calling `poll` (without the lock) each time a millisecond passed without the tasks
+    /// finishing.
+    fn wait_polling(&self, poll: &mut dyn FnMut()) {
+        let mut running = lock(&self.running);
+        while *running > 0 {
+            let (guard, timeout) = self
+                .finished
+                .wait_timeout(running, std::time::Duration::from_millis(1))
+                .unwrap_or_else(PoisonError::into_inner);
+            running = guard;
+            if timeout.timed_out() && *running > 0 {
+                drop(running);
+                poll();
+                running = lock(&self.running);
+            }
         }
     }
 }
@@ -347,6 +386,29 @@ mod tests {
             stop.store(true, Ordering::Relaxed);
         });
         assert!(spins.load(Ordering::Relaxed) >= 1000);
+    }
+
+    #[test]
+    fn a_polling_scope_polls_while_it_waits_and_can_stop_its_tasks() {
+        let pool = ThreadPool::new(1, std_spawner, || ());
+        let stop = AtomicBool::new(false);
+        let mut polls = 0;
+        pool.scope_polling(
+            |scope| {
+                assert!(scope.try_spawn(|_| {
+                    while !stop.load(Ordering::Relaxed) {
+                        std::hint::spin_loop();
+                    }
+                }))
+            },
+            || {
+                polls += 1;
+                if polls == 3 {
+                    stop.store(true, Ordering::Relaxed);
+                }
+            },
+        );
+        assert!(polls >= 3);
     }
 
     #[test]

@@ -257,3 +257,40 @@ fn several_threads_with_few_empty_squares_solve_like_one() {
         }
     }
 }
+
+/// Endings with 19–21 empty squares, where the solver splits its nodes over the threads (YBWC), solved with 3, 8 and 16
+/// threads on small tables (many replacements) and Multi-ProbCut on and off in the midgame part: the exact score of
+/// the single-threaded solver.
+#[test]
+fn split_solves_give_the_exact_score() {
+    let mut seed = 0x5DEE_CE66_D1CE_4E5Bu64;
+    let mut single = SearchEngine::new(18, SearchOptions::default());
+    let mut checked = 0;
+    while checked < 8 {
+        let Some((board, player)) = random_position(&mut seed, 19 + checked % 3) else { continue };
+        single.clear_hash();
+        let expected = single.search_simple(&board, player, &SearchLimits::SOLVE);
+        for (count, selective) in [(3, true), (8, false), (16, true)] {
+            let mut threaded = SearchEngine::new(12, SearchOptions { selective, ..SearchOptions::default() });
+            let result = threaded.search_simple(&board, player, &threads(SearchLimits::SOLVE, count));
+            assert_eq!((result.score, result.kind), (expected.score, expected.kind), "{board} with {count} threads");
+            let after = board.play_unchecked(player, result.mv.0.unwrap().index() as u32);
+            assert_eq!(score_for(&after, player), expected.score, "{board}: {} is not a best move", result.mv);
+        }
+        checked += 1;
+    }
+}
+
+/// With YBWC off (Lazy SMP alone, as in phase 6, kept to compare in matches), solves are exact too.
+#[test]
+fn lazy_smp_alone_solves_exactly() {
+    let positions = benchmark_positions("ffo-40-59.txt");
+    let mut engine = SearchEngine::new(18, SearchOptions { ybwc: false, ..SearchOptions::default() });
+    for (id, board, player, best) in positions.iter().filter(|p| ["40", "41", "42"].contains(&&*p.0)) {
+        engine.clear_hash();
+        let result = engine.search_simple(board, *player, &threads(SearchLimits::SOLVE, 6));
+        assert_eq!((result.score, result.kind), (best.unwrap(), ScoreKind::Exact), "#{id}");
+        let midgame = engine.search_simple(board, *player, &threads(SearchLimits::fixed_depth(8), 6));
+        assert!(board.legal_moves(*player) & midgame.mv.0.unwrap().bit() != 0, "#{id}");
+    }
+}

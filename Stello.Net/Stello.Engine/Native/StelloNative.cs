@@ -13,7 +13,7 @@ internal static unsafe partial class StelloNative
     private const string Library = "stello_engine";
 
     /// <summary>The ABI version this wrapper is written for (<c>ABI_VERSION</c> in the Rust library).</summary>
-    public const uint AbiVersion = 2;
+    public const uint AbiVersion = 3;
 
     // Status codes (STELLO_OK ... in the Rust library).
     public const int Ok = 0;
@@ -41,6 +41,9 @@ internal static unsafe partial class StelloNative
 
     [LibraryImport(Library, EntryPoint = "stello_engine_set_threads")]
     public static partial int SetThreads(EngineHandle engine, int threads);
+
+    [LibraryImport(Library, EntryPoint = "stello_engine_set_ybwc")]
+    public static partial int SetYbwc(EngineHandle engine, int ybwc);
 
     [LibraryImport(Library, EntryPoint = "stello_engine_set_iteration_done")]
     public static partial int SetIterationDone(EngineHandle engine, delegate* unmanaged[Cdecl]<int, int, nint, void> callback, nint user);

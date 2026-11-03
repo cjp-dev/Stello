@@ -203,6 +203,11 @@ public sealed class SearchEngine
                 : new InvalidOperationException($"The Rust engine could not be made (status {status}).");
         }
 
+        if (!Options.Ybwc)
+        {
+            Check(StelloNative.SetYbwc(engine, 0));
+        }
+
         engine.AddMemoryPressure((long)HashBytesPerSlot << HashBits);
         _signals = StelloNative.CreateSignals();
         _engine = engine;

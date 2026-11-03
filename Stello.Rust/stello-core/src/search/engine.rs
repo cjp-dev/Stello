@@ -18,6 +18,7 @@ use super::ordering::{self, MoveOrdering};
 use super::pool::{Spawner, ThreadPool, std_spawner};
 use super::table::{Bound, TranspositionTable};
 use super::time::{self, TimeBudget};
+use super::ybwc::{MidgameChild, SplitPoint};
 use crate::bits;
 use crate::board::{Board, Player};
 use crate::endgame;
@@ -209,6 +210,7 @@ pub(crate) struct SearchContext<'a> {
     endgame_table: &'a TranspositionTable,
     clock: Clock,
     soft_time_percent: Option<i32>,
+    ybwc: bool,
 }
 
 impl<'a> SearchContext<'a> {
@@ -226,19 +228,37 @@ impl<'a> SearchContext<'a> {
             endgame_table,
             clock,
             soft_time_percent: options.soft_time_percent,
+            ybwc: options.ybwc,
         }
     }
 }
 
-/// The most helpers in a solve. On FFO #40–49 with 8 threads, 3 helpers made the solve 1.1 times faster and no
-/// position slower; 7 made some positions faster but filled the endgame table so that FFO #49 took 15 s instead of
-/// 8.8 s. The other threads stay idle (for YBWC in phase 7).
+/// The most helpers in a solve without YBWC ([`SearchOptions::ybwc`] off). On FFO #40–49 with 8 threads, 3 helpers
+/// made the solve 1.1 times faster and no position slower; 7 made some positions faster but filled the endgame table
+/// so that FFO #49 took 15 s instead of 8.8 s. With YBWC there are none: they took the workers YBWC uses better
+/// (FFO #40–49 with 8 threads: 11.2 s with them, 8.0 s without).
 const SOLVE_HELPERS: usize = 3;
+
+/// The Lazy SMP helpers in the midgame, of `workers` (the threads but the main one): half of the threads, the
+/// others being left to YBWC. On mid-bench at depth 16 and 17 this beat both all helpers and none (8 threads:
+/// 3.8 s against 4.8 s with Lazy SMP alone and 9.7 s at depth 17 with YBWC alone, 1 thread 8.5 s at depth 16); in the
+/// midgame YBWC alone gains little, as its split searches are small.
+fn lazy_smp_helpers(workers: usize) -> usize {
+    workers.div_ceil(2)
+}
+
+/// YBWC splits midgame nodes whose children are searched this many plies deep or more (Egaroucid's
+/// `YBWC_MID_SPLIT_MIN_DEPTH`).
+const YBWC_MID_MIN_DEPTH: i32 = 6;
+
+/// YBWC splits endgame nodes whose children have this many empty squares or more (Egaroucid's
+/// `YBWC_END_SPLIT_MIN_DEPTH`; 15 and 16 were the fastest on FFO #40–49 with 8 and 16 threads).
+pub(crate) const YBWC_END_MIN_EMPTIES: i32 = 16;
 
 /// What the main thread needs to start its helpers: the pool, what the helpers read, and where they count.
 #[derive(Clone, Copy)]
 pub(crate) struct Helpers<'a> {
-    pool: &'a ThreadPool<ThreadState>,
+    pub(crate) pool: &'a ThreadPool<ThreadState>,
     context: SearchContext<'a>,
     /// The helpers to start: the threads but this one.
     count: usize,
@@ -248,7 +268,7 @@ pub(crate) struct Helpers<'a> {
 
 impl<'a> Helpers<'a> {
     /// A helper's search on a worker: no progress, no time limit, its nodes counted for the main thread.
-    fn searcher<'b>(&self, state: &'b mut ThreadState, stop: &'b FlagStop<'b>) -> Searcher<'b>
+    pub(crate) fn searcher<'b>(&self, state: &'b mut ThreadState, stop: &'b dyn StopSignal) -> Searcher<'b>
     where
         'a: 'b,
     {
@@ -258,7 +278,7 @@ impl<'a> Helpers<'a> {
     }
 
     /// Adds a helper's last nodes and its evaluations to the search's counts.
-    fn finish(&self, helper: &mut Searcher<'_>) {
+    pub(crate) fn finish(&self, helper: &mut Searcher<'_>) {
         helper.flush_nodes();
         self.evaluations.fetch_add(helper.evaluations, Ordering::Relaxed);
     }
@@ -323,6 +343,11 @@ impl SearchEngine {
         }
     }
 
+    /// [`SearchOptions::ybwc`], for the next searches.
+    pub fn set_ybwc(&mut self, ybwc: bool) {
+        self.options.ybwc = ybwc;
+    }
+
     /// The clock that times the search (default [`system_clock`]).
     pub fn set_clock(&mut self, clock: Clock) {
         self.clock = clock;
@@ -349,9 +374,10 @@ impl SearchEngine {
     ///   book).
     ///
     /// With more than 1 thread ([`SearchLimits::threads`]) this thread searches as with 1, and the others help it
-    /// through the shared hash tables (Lazy SMP): in the midgame they search the root a few plies deeper
-    /// ([`Searcher::lazy_smp_midgame`]), in the solve they solve the root starting with other moves
-    /// ([`Searcher::solve_iteration`]). The result is this thread's, with the nodes and evaluations of all threads.
+    /// (Plans/making-stello-3-plan.md, phases 6 and 7): in the midgame half of them run Lazy SMP helpers that search
+    /// the root a few plies deeper into the shared hash tables ([`Searcher::lazy_smp_midgame`]), and the others take
+    /// the younger brothers of the nodes this thread and they search (YBWC, [`Searcher::split`]); in the solve all of
+    /// them take part in YBWC. The result is this thread's, with the nodes and evaluations of all threads.
     pub fn search(
         &mut self,
         board: &Board,
@@ -402,7 +428,6 @@ impl SearchEngine {
         searcher.helpers = Some(helpers);
         searcher.node_source = Some(&nodes);
         let result = searcher.run(board, player, limits, only_moves);
-
         result.map(|mut result| {
             result.nodes += nodes.load(Ordering::Relaxed);
             result.evaluations += evaluations.load(Ordering::Relaxed);
@@ -466,13 +491,17 @@ pub(crate) struct Searcher<'a> {
     pub(crate) ordering: &'a mut MoveOrdering,
     progress: Option<&'a mut dyn FnMut(&SearchInfo)>,
     iteration_done: Option<&'a mut (dyn FnMut(i32, i32) + Send + 'static)>,
-    stop: &'a dyn StopSignal,
-    clock: Clock,
-    start: Duration,
+    pub(crate) stop: &'a dyn StopSignal,
+    pub(crate) clock: Clock,
+    pub(crate) start: Duration,
     soft_time_percent: Option<i32>,
+    /// [`SearchOptions::ybwc`]: whether this search splits its nodes when it has helpers.
+    pub(crate) ybwc: bool,
+    /// The split point this search was split off at (YBWC), if it was.
+    pub(crate) split: Option<&'a SplitPoint<'a>>,
     /// The main thread's helpers in a search with more than 1 thread (Lazy SMP); `None` with 1 thread and in the
     /// helpers themselves.
-    helpers: Option<Helpers<'a>>,
+    pub(crate) helpers: Option<Helpers<'a>>,
     /// A helper adds its nodes here at each abort check ([`Searcher::flush_nodes`]); the main thread reports its own
     /// nodes plus these.
     node_sink: Option<&'a AtomicU64>,
@@ -483,10 +512,10 @@ pub(crate) struct Searcher<'a> {
     pub(crate) evaluations: u64,
     /// The endgame's abort check (C#: `_nextAbortCheck`); the midgame checks when `nodes % 1024 == 0`.
     pub(crate) next_abort_check: u64,
-    hard_limit_ms: i64,
-    hash_get_height: i32,
-    hash_put_height: i32,
-    in_probcut: bool,
+    pub(crate) hard_limit_ms: i64,
+    pub(crate) hash_get_height: i32,
+    pub(crate) hash_put_height: i32,
+    pub(crate) in_probcut: bool,
     last_heartbeat_ms: i64,
     pub(crate) report_depth: i32,
     pub(crate) report_move: i32,
@@ -510,6 +539,8 @@ impl<'a> Searcher<'a> {
             clock: context.clock,
             start: (context.clock)(),
             soft_time_percent: context.soft_time_percent,
+            ybwc: context.ybwc,
+            split: None,
             helpers: None,
             node_sink: None,
             node_source: None,
@@ -630,7 +661,8 @@ impl<'a> Searcher<'a> {
     /// [`Searcher::solve_root`], with up to [`SOLVE_HELPERS`] helpers on the other threads: each solves the same
     /// window, its root moves rotated by its number plus one, so that the threads begin with different moves. They
     /// fill the shared endgame table and stop when this thread's solve ends; their results are not used. Egaroucid
-    /// has no helpers in its last iteration, and splits the endgame with YBWC instead (phase 7).
+    /// has no helpers in its last iteration, and splits the endgame with YBWC instead (phase 7), as this search does
+    /// unless [`SearchOptions::ybwc`] is off.
     #[allow(clippy::too_many_arguments)]
     fn solve_iteration(
         &mut self,
@@ -642,7 +674,7 @@ impl<'a> Searcher<'a> {
         root_moves: &mut [i32],
         best: &mut Best,
     ) -> Result<(i32, i32), Abort> {
-        let Some(helpers) = self.helpers else {
+        let Some(helpers) = self.helpers.filter(|_| !self.ybwc) else {
             return self.solve_root(board, player, alpha, beta, kind, root_moves, best);
         };
 
@@ -682,6 +714,8 @@ impl<'a> Searcher<'a> {
     /// search splits with YBWC), the helpers at the main depth searching with less Multi-ProbCut. Here that did not
     /// reach depth 14 any faster; helpers that keep searching across the main iterations did (1.5 times with 4 and 8
     /// threads, Plans/making-stello-3-findings.md).
+    ///
+    /// Only [`lazy_smp_helpers`] of the workers are helpers; the others stay idle for YBWC splits.
     #[allow(clippy::too_many_arguments)]
     fn lazy_smp_midgame(
         &mut self,
@@ -705,7 +739,8 @@ impl<'a> Searcher<'a> {
         let mut order = [0i32; MAX_MOVES];
         order[..count].copy_from_slice(root_moves);
         helpers.pool.scope(|scope| {
-            for i in 0..helpers.count {
+            let lazy = if self.ybwc { lazy_smp_helpers(helpers.count) } else { helpers.count };
+            for i in 0..lazy {
                 let ahead = 1 + (i as u32 + 1).trailing_zeros() as i32;
                 let (stop, main_look) = (&stop, &main_look);
                 let started = scope.try_spawn(move |state: &mut ThreadState| {
@@ -839,7 +874,7 @@ impl<'a> Searcher<'a> {
     /// The node search: the score and the best move (-1 if none). C++: findmax2 (findmax/findmax1 kept a move tree
     /// for ordering; the hash table does that here). C#: `Search`.
     #[allow(clippy::too_many_arguments)]
-    fn search(
+    pub(crate) fn search(
         &mut self,
         board: &Board,
         player: Player,
@@ -943,7 +978,32 @@ impl<'a> Searcher<'a> {
         let mut best = -INFINITY;
         let mut best_move = -1;
         let mut bound = Bound::Lower;
-        for &mv in list.iter() {
+        let alpha_start = alpha;
+        for (index, &mv) in list.iter().enumerate() {
+            // YBWC: after the first child, the younger brothers in parallel.
+            if index == 1 && look >= YBWC_MID_MIN_DEPTH && self.may_split() {
+                let mut children =
+                    [MidgameChild { board: *board, player: opponent, look: 0, ply: 0, mv: 0 }; MAX_MOVES];
+                for (child, &mv) in children.iter_mut().zip(&list[1..]) {
+                    *child = MidgameChild {
+                        board: board.play_unchecked(player, mv as u32),
+                        player: opponent,
+                        look: look - 1,
+                        ply: ply + 1,
+                        mv,
+                    };
+                }
+                self.split(&children[..list.len() - 1], alpha, beta, &mut best, &mut best_move)?;
+                bound = if best >= beta {
+                    Bound::Lower
+                } else if best > alpha_start {
+                    Bound::Exact
+                } else {
+                    Bound::Upper
+                };
+                break;
+            }
+
             let child = board.play_unchecked(player, mv as u32);
             let score;
 

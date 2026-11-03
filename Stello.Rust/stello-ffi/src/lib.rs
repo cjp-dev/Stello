@@ -52,8 +52,9 @@ pub const STELLO_INTERNAL_ERROR: i32 = 5;
 /// The version of this ABI (functions, structs, codes). .NET checks it before it uses the library.
 ///
 /// - 1: the engine, signals and search functions (Stello 3.0 preview);
-/// - 2: [`stello_engine_set_threads`]; the functions of version 1 are unchanged.
-pub const ABI_VERSION: u32 = 2;
+/// - 2: [`stello_engine_set_threads`]; the functions of version 1 are unchanged;
+/// - 3: [`stello_engine_set_ybwc`]; the functions of version 2 are unchanged.
+pub const ABI_VERSION: u32 = 3;
 
 /// An engine: C# `SearchEngine`'s state (hash tables, options, evaluation). Opaque to the caller.
 pub struct StelloEngine {
@@ -203,6 +204,7 @@ pub unsafe extern "C" fn stello_engine_create(
             soft_time_percent: (soft_time_percent >= 0).then_some(soft_time_percent),
             selective: selective != 0,
             probcut_percent: (probcut_percent >= 0).then_some(probcut_percent),
+            ybwc: true,
         };
         engine =
             Box::into_raw(Box::new(StelloEngine { engine: SearchEngine::new(hash_bits as u32, options), threads: 1 }));
@@ -259,6 +261,21 @@ pub unsafe extern "C" fn stello_engine_set_threads(engine: *mut StelloEngine, th
         }
         _ => STELLO_INVALID_ARGUMENT,
     }
+}
+
+/// Turns YBWC on (`ybwc` not 0, the default) or off for the engine's next searches with more than 1 thread
+/// (C#: `SearchOptions.Ybwc`): off, all threads but this one run Lazy SMP helpers, as in phase 6 of
+/// Plans/making-stello-3-plan.md; kept to compare the two in matches. Returns [`STELLO_OK`], or
+/// [`STELLO_INVALID_ARGUMENT`] for a null engine.
+///
+/// # Safety
+/// `engine` is null or a valid engine that no other thread uses during the call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn stello_engine_set_ybwc(engine: *mut StelloEngine, ybwc: i32) -> i32 {
+    // SAFETY: the caller passes null or a valid engine used by this thread only.
+    let Some(engine) = (unsafe { engine.as_mut() }) else { return STELLO_INVALID_ARGUMENT };
+    engine.engine.set_ybwc(ybwc != 0);
+    STELLO_OK
 }
 
 /// A pointer that the iteration callback carries; the caller is responsible for it (see
@@ -595,6 +612,8 @@ mod tests {
             assert_eq!(stello_engine_set_threads(engine, 0), STELLO_INVALID_ARGUMENT);
             assert_eq!(stello_engine_set_threads(engine, 257), STELLO_INVALID_ARGUMENT);
             assert_eq!(stello_engine_set_threads(engine, 4), STELLO_OK);
+            assert_eq!(stello_engine_set_ybwc(std::ptr::null_mut(), 0), STELLO_INVALID_ARGUMENT);
+            assert_eq!(stello_engine_set_ybwc(engine, 0), STELLO_OK);
             let initial = Board::INITIAL;
             let mut result = StelloSearchResult::default();
             for depth in [6, 8] {

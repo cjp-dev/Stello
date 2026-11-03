@@ -15,6 +15,9 @@
 //! [`Searcher::solve_child`] (from `solve_root`). State that lives from search to search (C#: `_localTable`) is in
 //! [`EndgameState`], which `SearchEngine::clear_hash` clears.
 //!
+//! With more than 1 thread, `end_window` and `end_deep` split their younger brothers over idle threads (YBWC,
+//! [`crate::search::ybwc`]) when the children have [`YBWC_END_MIN_EMPTIES`] empty squares or more.
+//!
 //! Scores are final disc differences for the side to move, the empty squares going to the winner. Null-window
 //! searches return fail-soft bounds: a score above alpha is a lower bound, at or below alpha an upper bound.
 
@@ -26,8 +29,9 @@ use super::local::LocalTable;
 use super::stable;
 use crate::bits;
 use crate::eval;
-use crate::search::engine::{Abort, INFINITY, Searcher, final_score};
+use crate::search::engine::{Abort, INFINITY, Searcher, YBWC_END_MIN_EMPTIES, final_score};
 use crate::search::table::Bound;
+use crate::search::ybwc::SplitChild;
 
 pub(crate) const END_INFINITY: i32 = 127;
 pub(crate) const END_FAST_EMPTIES: i32 = 6;
@@ -216,6 +220,13 @@ impl Searcher<'_> {
         let mut best = -END_INFINITY;
         let mut best_move = -1;
         for i in 0..count {
+            if i == 1 && empties > YBWC_END_MIN_EMPTIES && self.may_split() {
+                // YBWC: the younger brothers in parallel, in their order.
+                let children = end_children(own, opponent, empties, moves, i, 0);
+                self.split(children.as_slice(), alpha, beta, &mut best, &mut best_move)?;
+                break;
+            }
+
             swap_next_best(moves, i);
             let mv = moves[i];
             let (child_own, child_opponent) = child(own, opponent, &mv);
@@ -362,13 +373,25 @@ impl Searcher<'_> {
                 }
             }
 
+            // Whether a child was searched here (the stored best move), so that the others may be split off.
+            let mut searched = best_move >= 0;
             for i in 0..count {
+                if searched && empties > YBWC_END_MIN_EMPTIES && self.may_split() {
+                    // YBWC: the younger brothers in parallel, in their order.
+                    let children = end_children(own, opponent, empties, moves, i, done);
+                    if !children.is_empty() {
+                        self.split(children.as_slice(), alpha, alpha + 1, &mut best, &mut best_move)?;
+                    }
+                    break;
+                }
+
                 swap_next_best(moves, i);
                 let mv = moves[i];
                 if done & (1u64 << mv.square) != 0 {
                     continue;
                 }
 
+                searched = true;
                 let (child_own, child_opponent) = child(own, opponent, &mv);
                 let score = -self.end_deep(child_own, child_opponent, -alpha - 1, empties - 1, false, mv.replies)?;
                 if score > best {
@@ -872,6 +895,85 @@ fn fill_end_moves(own: u64, opponent: u64, mut legal: u64, moves: &mut [EndMove]
     }
 
     false
+}
+
+/// A child of a split endgame node (YBWC): the position after `square`, with `empties` empty squares.
+#[derive(Clone, Copy, Default)]
+pub(crate) struct EndgameChild {
+    own: u64,
+    opponent: u64,
+    empties: i32,
+    replies: u64,
+    square: i32,
+}
+
+impl SplitChild for EndgameChild {
+    fn null_window(&self, searcher: &mut Searcher<'_>, alpha: i32) -> Result<i32, Abort> {
+        Ok(-searcher.end_null(self.own, self.opponent, -alpha - 1, self.empties, self.replies)?)
+    }
+
+    fn window(&self, searcher: &mut Searcher<'_>, alpha: i32, beta: i32, null_score: i32) -> Result<i32, Abort> {
+        // As the single-threaded search: from the null window's lower bound.
+        Ok(-searcher.end_window(self.own, self.opponent, -beta, -alpha.max(null_score), self.empties, false)?)
+    }
+
+    fn square(&self) -> i32 {
+        self.square
+    }
+}
+
+/// The children of `moves[from..]` that are not in `done`, best first (the order of [`swap_next_best`]).
+fn end_children(
+    own: u64,
+    opponent: u64,
+    empties: i32,
+    moves: &mut [EndMove],
+    from: usize,
+    done: u64,
+) -> ArrayVec<EndgameChild> {
+    let mut children = ArrayVec::default();
+    for i in from..moves.len() {
+        swap_next_best(moves, i);
+        let mv = moves[i];
+        if done & (1u64 << mv.square) == 0 {
+            let (child_own, child_opponent) = child(own, opponent, &mv);
+            children.push(EndgameChild {
+                own: child_own,
+                opponent: child_opponent,
+                empties: empties - 1,
+                replies: mv.replies,
+                square: mv.square as i32,
+            });
+        }
+    }
+    children
+}
+
+/// A list of at most [`DEEP_MOVES`] items on the stack.
+pub(crate) struct ArrayVec<T: Copy + Default> {
+    items: [T; DEEP_MOVES],
+    len: usize,
+}
+
+impl<T: Copy + Default> Default for ArrayVec<T> {
+    fn default() -> Self {
+        ArrayVec { items: [T::default(); DEEP_MOVES], len: 0 }
+    }
+}
+
+impl<T: Copy + Default> ArrayVec<T> {
+    fn push(&mut self, item: T) {
+        self.items[self.len] = item;
+        self.len += 1;
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    fn as_slice(&self) -> &[T] {
+        &self.items[..self.len]
+    }
 }
 
 /// The position after a move, for the opponent. C#: `Child`.

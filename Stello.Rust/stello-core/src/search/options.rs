@@ -20,11 +20,16 @@ pub struct SearchOptions {
     /// Multi-ProbCut's t × 100: a cut needs the shallow search to be t standard deviations outside the window.
     /// `None`: [`super::DEFAULT_PROBCUT_PERCENT`].
     pub probcut_percent: Option<i32>,
+
+    /// With more than 1 thread: YBWC, with half of the threads running Lazy SMP helpers in the midgame (the default);
+    /// off is Lazy SMP alone on all threads, with helpers in the solve (Plans/making-stello-3-plan.md, phase 6), kept
+    /// to compare the two in matches. With 1 thread it changes nothing. Not in C# 2.0.
+    pub ybwc: bool,
 }
 
 impl Default for SearchOptions {
     /// C#: `SearchOptions.Default`, the engine as the apps use it.
     fn default() -> SearchOptions {
-        SearchOptions { pattern: None, soft_time_percent: None, selective: true, probcut_percent: None }
+        SearchOptions { pattern: None, soft_time_percent: None, selective: true, probcut_percent: None, ybwc: true }
     }
 }

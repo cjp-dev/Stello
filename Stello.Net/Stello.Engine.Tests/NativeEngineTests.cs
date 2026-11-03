@@ -199,6 +199,19 @@ public class NativeEngineTests
     }
 
     [Fact]
+    public void LazySmpAlone_SolvesExactly()
+    {
+        var engine = new SearchEngine(16, SearchOptions.Default with { Ybwc = false });
+        var v2 = new V2.SearchEngine(16);
+        foreach ((Board board, Player player) in TestPositions.RandomPositions(seed: 37, count: 3, plies: 40))
+        {
+            SearchResult expected = v2.Search(board, player, SearchLimits.Solve);
+            SearchResult threaded = engine.Search(board, player, SearchLimits.Solve with { Threads = 4 });
+            Assert.Equal((expected.Score, expected.Kind), (threaded.Score, threaded.Kind));
+        }
+    }
+
+    [Fact]
     public void StelloTwo_IgnoresThreads()
     {
         var v2 = new V2.SearchEngine(16);
