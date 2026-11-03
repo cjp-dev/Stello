@@ -9,7 +9,7 @@ using GameShell;
 namespace Stello.Web.Services;
 
 /// <summary>The game's dialogs, shown by GameShell's DialogHost through ShellDialogs.</summary>
-public sealed class BrowserDialogService(IJSInProcessRuntime js, ShellDialogs dialogs) : IDialogService
+public sealed class BrowserDialogService(IJSInProcessRuntime js, ShellDialogs dialogs, ThreadCounts threads) : IDialogService
 {
     private const string Caption = "Stello";
 
@@ -27,7 +27,7 @@ public sealed class BrowserDialogService(IJSInProcessRuntime js, ShellDialogs di
 
     public async Task<GameSettings?> EditSettingsAsync(GameSettings current)
     {
-        var settings = new SettingsViewModel(current);
+        var settings = new SettingsViewModel(current, threads);
         int button = await ShowAsync(new DialogRequest { Title = "Settings", Body = SettingsForm.For(settings), Buttons = ["OK", "Cancel"] });
         return button == 0 ? settings.ToSettings() : null;
     }

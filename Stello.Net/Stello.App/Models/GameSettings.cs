@@ -5,14 +5,20 @@ using Stello.Engine;
 namespace Stello.App.Models;
 
 /// <summary>How long the computer may think (C++: tid_kontrol with lookahead, tider[] and GameTid).</summary>
+/// <param name="Threads">The threads the computer searches with, or <see cref="AutomaticThreads"/> for the device's
+/// default (<see cref="ThreadCounts"/>).</param>
 public sealed record GameSettings(
     TimeControlMode Mode,
     int Depth,
     int SecondsPerMove,
     int MinutesPerGame,
     bool UseOpeningBook = true,
-    int TranspositionTableEntries = 1_048_576)
+    int TranspositionTableEntries = 1_048_576,
+    int Threads = GameSettings.AutomaticThreads)
 {
+    /// <summary>The Threads setting's Automatic choice: the device's default (<see cref="ThreadCounts.Default"/>).</summary>
+    public const int AutomaticThreads = 0;
+
     public const int MaxDepth = 20;
     public const int MaxSecondsPerMove = 60;
     public const int MaxMinutesPerGame = 60;
@@ -52,13 +58,19 @@ public sealed record GameSettings(
             Math.Clamp(SecondsPerMove, 1, MaxSecondsPerMove),
             Math.Clamp(MinutesPerGame, 1, MaxMinutesPerGame),
             UseOpeningBook,
-            entries);
+            entries,
+            Math.Clamp(Threads, AutomaticThreads, SearchLimits.MaxThreads));
     }
 
-    public SearchLimits ToLimits(TimeSpan computerTimeLeft) => Mode switch
+    /// <summary>The threads to search with on a device: the chosen number, at most the device's, or its default.</summary>
+    public int ThreadsFor(ThreadCounts counts) =>
+        Threads <= AutomaticThreads ? counts.Default : Math.Clamp(Threads, 1, Math.Max(1, counts.Device));
+
+    /// <param name="threads">The threads to search with (<see cref="ThreadsFor"/>).</param>
+    public SearchLimits ToLimits(TimeSpan computerTimeLeft, int threads = 1) => (Mode switch
     {
         TimeControlMode.FixedDepth => SearchLimits.FixedDepth(Depth, UseOpeningBook, HashBits),
         TimeControlMode.TimePerMove => SearchLimits.TimePerMove(TimeSpan.FromSeconds(SecondsPerMove), UseOpeningBook, HashBits),
         _ => SearchLimits.TimePerGame(computerTimeLeft, UseOpeningBook, HashBits),
-    };
+    }) with { Threads = threads };
 }

@@ -1,3 +1,4 @@
+using Stello.App.Models;
 using Stello.Engine;
 
 namespace Stello.App.Services;
@@ -7,6 +8,9 @@ public interface IEngineHost
 {
     /// <summary>False where only games can be added to the book (no Evaluate Book or Self-play).</summary>
     bool SupportsLearning { get; }
+
+    /// <summary>The threads the engine can search with here: the Threads setting's range and its Automatic choice.</summary>
+    ThreadCounts Threads => ThreadCounts.ForThisProcess();
 
     /// <param name="cancellationToken">Stops the search and throws <see cref="OperationCanceledException"/>.</param>
     /// <param name="moveNowToken">Stops the search and returns the best move found so far.</param>

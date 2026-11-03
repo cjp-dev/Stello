@@ -204,7 +204,7 @@ The Egaroucid port did not port this; its YBWC phase was postponed.
   - shown in the analysis as nodes per second over all threads.
 - **Tools:**
   - a `threads=` side key and `--threads` options;
-  - the book recalculation's `--workers` × `--threads` are measured to find the best split on a given machine.
+  - ~~the book recalculation's `--workers` × `--threads` are measured to find the best split on a given machine.~~ User decision (2026-11-03): the recalculation keeps 1 thread per worker and has no `--threads`, because parallel positions scale better than threads in one search; threads stay in the matches and benchmarks (`Stello.Benchmark`, `Stello.BookTool match`).
 - **Final measurements,** as for 2.0:
   - against 2.0 and against Egaroucid, at 100 ms, 500 ms and 2 s, with 1 thread and with N threads;
   - FFO #40–49.
@@ -248,3 +248,4 @@ The Egaroucid port did not port this; its YBWC phase was postponed.
 - **Phase 6: done (2026-11-02).** Lazy SMP: helpers run their own iterative deepening 1 + ctz(i+1) plies ahead at all midgame depths (Egaroucid's limit of depth 10 gave no gain without YBWC), and up to 3 helpers help each solve pass. 4 threads beat 1 with 55.3 % (53.1–57.4) and 8 threads with 53.0 % (50.9–55.0) at 500 ms, 1,180 games each; time to depth 1.53× (4) and 1.66–1.76× (8). threads = 1 stays identical. Details in the findings.
 - **Phase 7: done (2026-11-03).** YBWC after Egaroucid's ybwc.hpp (midgame from depth 6, endgame from 16 empties) plus Lazy SMP on half the workers at all depths (Egaroucid's shallow-only helpers were slower here). FFO #40–49 1.98×/3.29×/3.97× faster with 4/8/16 threads, all correct; depth 16 2.09× with 8 threads. 8 threads YBWC + Lazy SMP against Lazy SMP alone: 54.4 % at 500 ms (1,180 games) and 54.7 % at 2 s (600 games). threads = 1 stays identical. Details in the findings.
 - **Phase 8: done (2026-11-03).** A threaded WebAssembly package (`wwwroot/engine-mt`, nightly-2026-11-02 with build-std, shared memory) whose threads are Web Workers through the engine's Spawner hook; loaded only when more than 1 thread is asked for and the page is cross-origin isolated, else the single-threaded package. In Chromium with 8 threads FFO #40–44 is 3.5× and the midgame 1.93× faster, all exact; Move Now ≤ 7 ms. For testing until phase 9: `?threads=N`. The deploy workflow installs the nightly; it first runs at the release. Details in the findings.
+- **Phase 9: part A done (2026-11-03).** A Threads setting in WPF and web (Automatic = cores − 1 on the desktop, `hardwareConcurrency` in the browser; the web worker restarts between 1 and more threads). The recalculation stays at 1 thread per worker; `Stello.BookTool match --threads` added. The final matches (part B) wait for the user's go.

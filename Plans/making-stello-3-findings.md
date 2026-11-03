@@ -18,7 +18,7 @@ What the work on Stello 3.0 teaches us, written down as we go: the decisions, th
 | 6 Lazy SMP | done (2026-11-02) | Helpers run their own iterative deepening 1 + ctz(i+1) plies ahead, and up to 3 help each solve pass; 4 threads beat 1 with 55.3 % (+37 Elo) and 8 threads with 53.0 % (+21) at 500 ms; time to depth 1.53× (4 threads) and 1.66–1.76× (8); FFO only about 10 % faster (YBWC is phase 7) |
 | 7 YBWC | done (2026-11-03) | YBWC (after Egaroucid's ybwc.hpp) plus Lazy SMP on half the workers; FFO #40–49 1.98×/3.29×/3.97× faster with 4/8/16 threads (Egaroucid C++ 2.61×/4.15×/4.86×); depth 16 2.09× with 8 threads; at 8 threads beats Lazy SMP alone with 54.4 % at 500 ms and 54.7 % at 2 s |
 | 8 Threads in the browser | done (2026-11-03) | A threaded WebAssembly package (pinned nightly, shared memory) whose threads are Web Workers, loaded only when more than 1 thread is asked for and the page is cross-origin isolated; in Chromium FFO #40–44 3.5× faster and midgame 1.93× with 8 threads, all exact; Move Now ≤ 7 ms; the single-threaded package is the fallback |
-| 9 Threads setting and the 3.0 release | not started | |
+| 9 Threads setting and the 3.0 release | part A done (2026-11-03) | A Threads setting in both apps (Automatic: cores − 1 on the desktop, all in the browser); the book recalculation stays at 1 thread per worker (user); final matches wait for the user's go |
 
 ## Baseline (Stello 2.0, C#, 1 thread)
 
@@ -658,3 +658,43 @@ Headless Chromium, Release AOT publish served with COOP/COEP, `hardwareConcurren
   - Firefox and Safari (nested workers and shared memory);
   - mobile devices;
   - the live check with threads (phase 9).
+
+## Phase 9, part A: the Threads setting (2026-11-03)
+
+### The setting
+- **`GameSettings.Threads`**, stored with the other settings. 0 means Automatic, so the default follows the device the settings are used on. Old settings files read as Automatic.
+- **`ThreadCounts(Device, Default)`:**
+  - desktop: `Environment.ProcessorCount`, with Automatic = cores − 1 (at least 1);
+  - browser: `navigator.hardwareConcurrency` for both (user decisions).
+  - A chosen number is capped at the device's.
+- **The UI:**
+  - WPF: a "Threads" box in the Settings dialog ("Automatic (N threads)", then 1 up to the device's count, "of N on this computer");
+  - web: the same choice in the settings form.
+- **Desktop:** the threads reach the Rust engine through `SearchLimits.Threads` on the existing path (`MainViewModel` → `ComputerPlayer` → `SearchEngine`). Book learning stays on 1 thread.
+- **Web:**
+  - the worker starts with the saved setting, so the first search finds the right package loaded;
+  - going between 1 thread and more restarts the worker, keeping the book tracker; another number above 1 does not;
+  - `?threads=N` is removed.
+- **The analysis panel** already shows nodes per second over all threads.
+- **Checks:**
+  - in headless Chromium, the setting at 1 runs the single-threaded package (3.7 M nodes/s), 8 runs the threaded one (22 M), and Automatic (24) gives 33 M. A reload keeps the setting, and there were no console errors;
+  - the solution builds with 0 warnings, including WPF and Stello.Net.Tests (Windows-only, not run here; new tests for the setting and `ThreadCounts`);
+  - 488 engine tests pass.
+  - **WPF itself needs the user's check on Windows.**
+
+### Threads in the tools (user decisions)
+- **The book recalculation has no `--threads`.** It already searches many positions in parallel, one search per core, which scales almost perfectly. Threads within a search scale far less (midgame 1.7–2.1× and endgame about 3.3× at 8 threads). So at the same number of cores, 1 thread with more time per position always beats several threads. A measurement made before the decision confirms it (the whole master book at depth 14, 7,534 positions):
+
+  | Workers × threads | Positions/min |
+  |---|---:|
+  | 24 × 1 | 11,191 |
+  | 12 × 1 (the default) | 8,969 |
+  | 12 × 2 | 6,831–8,056 |
+  | 8 × 1 | 6,683 |
+  | 6 × 4 | 5,993 |
+  | 3 × 8 | 4,160 |
+  | 2 × 12 | 3,129 |
+  | 1 × 24 | 1,816 |
+
+  The default stays at 12 workers. 24 × 1 was 25 % faster at depth 14, but with a time per position, hyperthreads and E-cores give each search less CPU.
+- **Threads stay where engines are compared:** `Stello.Benchmark match` (`threads=`), `mid-bench`/`solve-bench --threads`, and `Stello.BookTool match --threads` (new: default 1, shown in the header).

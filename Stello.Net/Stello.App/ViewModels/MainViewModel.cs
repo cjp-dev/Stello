@@ -699,7 +699,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // The clock timer keeps ticking down the computer's time while it thinks, for display.
         // After the search the clock is set from this starting value, so the time is charged only once.
         TimeSpan computerTime = player == Player.Black ? _blackTimeLeft : _whiteTimeLeft;
-        SearchLimits limits = Settings.ToLimits(computerTime);
+        SearchLimits limits = Settings.ToLimits(computerTime, Settings.ThreadsFor(_engine.Threads));
 
         int searchId = ++_searchId;
         var progress = new Progress<SearchInfo>(info =>

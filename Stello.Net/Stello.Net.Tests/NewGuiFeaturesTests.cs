@@ -194,6 +194,43 @@ public sealed class NewGuiFeaturesTests
     }
 
     [Fact]
+    public void SettingsViewModel_ThreadsAreAutomaticByDefaultAndChosenUpToTheDevice()
+    {
+        var vm = new SettingsViewModel(GameSettings.Default, new ThreadCounts(Device: 8, Default: 7));
+
+        Assert.Equal(GameSettings.AutomaticThreads, vm.Threads);
+        Assert.Equal("Automatic (7 threads)", vm.ThreadsText);
+        Assert.Equal(9, vm.ThreadChoices.Count);
+        Assert.Equal([0, 1, 2, 3, 4, 5, 6, 7, 8], vm.ThreadChoices.Select(c => c.Value));
+        Assert.Equal("1 thread", vm.ThreadChoices[1].Text);
+
+        vm.Threads = 4;
+        Assert.Equal("4 threads", vm.ThreadsText);
+        GameSettings saved = vm.ToSettings();
+        Assert.Equal(4, saved.Threads);
+        Assert.Equal(4, saved.ThreadsFor(new ThreadCounts(8, 7)));
+        // On a device with fewer threads, the setting gives what it has; Automatic gives its default.
+        Assert.Equal(2, saved.ThreadsFor(new ThreadCounts(2, 1)));
+        Assert.Equal(1, GameSettings.Default.ThreadsFor(new ThreadCounts(2, 1)));
+        Assert.Equal(4, saved.ToLimits(TimeSpan.FromMinutes(5), saved.ThreadsFor(new ThreadCounts(8, 7))).Threads);
+
+        // A saved count above the device's is shown as the device's; values outside the range are normalized.
+        Assert.Equal(8, new SettingsViewModel(saved with { Threads = 32 }, new ThreadCounts(8, 7)).Threads);
+        Assert.Equal(GameSettings.AutomaticThreads, (saved with { Threads = -3 }).Normalize().Threads);
+        Assert.Equal(SearchLimits.MaxThreads, (saved with { Threads = 1000 }).Normalize().Threads);
+    }
+
+    [Fact]
+    public void ThreadCounts_DesktopKeepsOneThreadForTheApp_BrowserUsesAll()
+    {
+        ThreadCounts desktop = ThreadCounts.ForThisProcess();
+        Assert.Equal(Math.Min(Environment.ProcessorCount, SearchLimits.MaxThreads), desktop.Device);
+        Assert.Equal(Math.Max(1, desktop.Device - 1), desktop.Default);
+        Assert.Equal(new ThreadCounts(12, 12), ThreadCounts.ForBrowser(12));
+        Assert.Equal(new ThreadCounts(1, 1), ThreadCounts.ForBrowser(0));
+    }
+
+    [Fact]
     public void ComputerPlayer_RespectsUseOpeningBookFlag()
     {
         string bookText = "# Stello opening book, format 2\nd3 c5:10:H\n";

@@ -20,8 +20,10 @@ internal static class Program
           compare <old book> <new book> [--out <report.txt>]
                                            Report the values and first moves that changed.
           match <book A> <book B> (--starts <report.txt> | --starts-ply N) [--max-starts N]
-                [--depth 10 | --time-s S] [--workers N] [--hash-bits 19]
+                [--depth 10 | --time-s S] [--workers N] [--threads 1] [--hash-bits 19]
                                            Play the books against each other, two games per start position.
+                                           --threads: each engine's search threads (1-256); keep workers × threads
+                                           within the cores.
 
         Ctrl+C stops recalc and match cleanly. --workers is the number of physical cores by default.
         """;

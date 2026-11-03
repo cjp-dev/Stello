@@ -38,6 +38,19 @@
     </div>
 </fieldset>
 
+<fieldset class="settings">
+    <legend>Threads</legend>
+    <div>
+        <label style="margin-top: 0; display: block; margin-bottom: 0.25rem;">Search with (of @Settings.DeviceThreads on this device):</label>
+        <select class="dialog-text" style="margin: 0.25rem 0;" aria-label="Threads" @bind="Settings.Threads">
+            @foreach (ThreadChoice choice in Settings.ThreadChoices)
+            {
+                <option value="@choice.Value">@choice.Text</option>
+            }
+        </select>
+    </div>
+</fieldset>
+
 @code {
     [Parameter, EditorRequired]
     public SettingsViewModel Settings { get; set; } = default!;

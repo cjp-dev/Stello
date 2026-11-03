@@ -59,10 +59,12 @@ internal static class SearchCommands
 
     public static int Match(Options options)
     {
-        options.Allow("starts", "starts-ply", "max-starts", "time-s", "depth", "workers", "hash-bits");
+        options.Allow("starts", "starts-ply", "max-starts", "time-s", "depth", "workers", "threads", "hash-bits");
         OpeningBook bookA = OpeningBook.Load(options[0]);
         OpeningBook bookB = OpeningBook.Load(options[1]);
-        SearchLimits limits = options.Limits(SearchLimits.FixedDepth(10));
+        // --threads: each engine's search threads (both books play with the same engine).
+        int threads = options.Number("threads", 1, 1, SearchLimits.MaxThreads);
+        SearchLimits limits = options.Limits(SearchLimits.FixedDepth(10)) with { Threads = threads };
         int workers = options.Number("workers", DefaultWorkers, 1, 256);
         int hashBits = options.Number("hash-bits", 19, 10, 26);
 
@@ -76,7 +78,9 @@ internal static class SearchCommands
 
         Console.WriteLine($"A: {options[0]}");
         Console.WriteLine($"B: {options[1]}");
-        Console.WriteLine($"{starts.Count:N0} start positions, 2 games each; {LimitText(limits)} per move, {workers} workers.");
+        Console.WriteLine(
+            $"{starts.Count:N0} start positions, 2 games each; {LimitText(limits)} per move, {workers} workers, " +
+            $"{threads} thread{(threads == 1 ? "" : "s")} per engine.");
 
         var pairs = new List<MatchPair>();
         var clock = Stopwatch.StartNew();

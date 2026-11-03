@@ -5,6 +5,11 @@ window.stello = (() => {
     let audio = null;
 
     return {
+        // The threads the engine may search with here (the Threads setting's range and default).
+        hardwareConcurrency() {
+            return navigator.hardwareConcurrency || 1;
+        },
+
         beep() {
             audio ??= new (window.AudioContext || window.webkitAudioContext)();
             const oscillator = audio.createOscillator();

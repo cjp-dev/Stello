@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.JSInterop;
+using Stello.App.Models;
 using Stello.App.Services;
 using Stello.Engine;
 using Stello.Web.Worker;
@@ -13,10 +14,11 @@ namespace Stello.Web.Services;
 /// (preserving the hash tables), falling back to restarting the worker if needed.
 /// </summary>
 /// <remarks>
-/// The searches use <see cref="Threads"/> threads: the worker then loads the threaded engine, if the page is
-/// cross-origin isolated (else, and if it cannot be loaded, the single-threaded one, which searches with 1). Until the
-/// Threads setting comes (Plans/making-stello-3-plan.md, phase 9), the number is 1 unless the page's address has a
-/// <c>threads</c> query, for testing: <c>?threads=4</c>.
+/// A search with more than 1 thread (the Threads setting, <see cref="SearchLimits.Threads"/>) needs the threaded engine,
+/// which the worker loads at its start if the page is cross-origin isolated (else, or if it cannot be loaded, the
+/// single-threaded one, which searches with 1). The worker chooses its engine only when it starts, so a search with
+/// more than 1 thread after one with 1, or the other way round, restarts it; another number of threads above 1 does
+/// not.
 /// </remarks>
 public sealed class WebEngineHost : IEngineHost
 {
@@ -30,15 +32,20 @@ public sealed class WebEngineHost : IEngineHost
     // Only its book step runs here (TryChooseBookMove); its engine never searches, so it needs no native library.
     private readonly ComputerPlayer _computer;
     private int _workerHashBits = HashBits;
+    // The threads the worker was started for: its engine is the threaded one if this is more than 1.
+    private int _workerThreads;
     private IJSInProcessObjectReference? _client;
     private Task _started;
     private Action<SearchInfo>? _progress;
 
-    public WebEngineHost(IJSRuntime js, LocalStorageBookStore bookStore, OpeningBook book, int threads = 1)
+    /// <param name="threads">The browser's thread counts (navigator.hardwareConcurrency).</param>
+    /// <param name="startThreads">The threads of the first searches (the saved setting), for the worker's first engine.</param>
+    public WebEngineHost(IJSRuntime js, LocalStorageBookStore bookStore, OpeningBook book, ThreadCounts threads, int startThreads = 1)
     {
-        ArgumentOutOfRangeException.ThrowIfLessThan(threads, 1);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(threads, SearchLimits.MaxThreads);
+        ArgumentOutOfRangeException.ThrowIfLessThan(startThreads, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(startThreads, SearchLimits.MaxThreads);
         Threads = threads;
+        _workerThreads = startThreads;
         _js = js;
         _bookStore = bookStore;
         _book = book;
@@ -51,24 +58,7 @@ public sealed class WebEngineHost : IEngineHost
 
     public bool SupportsLearning => false;
 
-    /// <summary>The threads of the searches (the worker caps them at the device's <c>navigator.hardwareConcurrency</c>).</summary>
-    public int Threads { get; }
-
-    /// <summary>The <c>threads</c> query of a page address (<c>?threads=4</c>), 1 to <see cref="SearchLimits.MaxThreads"/>, else 1.</summary>
-    public static int ThreadsFromQuery(string uri)
-    {
-        string query = new Uri(uri).Query.TrimStart('?');
-        foreach (string part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
-        {
-            string[] keyValue = part.Split('=', 2);
-            if (keyValue.Length == 2 && keyValue[0] == "threads" && int.TryParse(keyValue[1], out int threads) && threads is >= 1 and <= SearchLimits.MaxThreads)
-            {
-                return threads;
-            }
-        }
-
-        return 1;
-    }
+    public ThreadCounts Threads { get; }
 
     public async Task<SearchResult> ChooseMoveAsync(
         Board board,
@@ -93,6 +83,15 @@ public sealed class WebEngineHost : IEngineHost
             return bookMove;
         }
 
+        // The worker's engine (threaded or not) is chosen when it starts: a new worker for the other one. Its hash tables
+        // are new too; the book tracker stays (unlike after a failed search).
+        if ((limits.Threads > 1) != (_workerThreads > 1))
+        {
+            _workerThreads = limits.Threads;
+            (await StartedAsync()).InvokeVoid("terminate");
+            _started = StartAsync();
+        }
+
         IJSInProcessObjectReference client = await StartedAsync();
 
         SearchInfo? last = null;
@@ -105,7 +104,7 @@ public sealed class WebEngineHost : IEngineHost
             last = info;
             progress?.Report(info);
         };
-        Task<string> search = client.InvokeAsync<string>("call", "search", EngineProtocol.WriteRequest(board, player, limits with { Threads = Threads })).AsTask();
+        Task<string> search = client.InvokeAsync<string>("call", "search", EngineProtocol.WriteRequest(board, player, limits)).AsTask();
         try
         {
             if (await Task.WhenAny(search, stopped.Task) == search)
@@ -202,7 +201,7 @@ public sealed class WebEngineHost : IEngineHost
     private async Task StartAsync()
     {
         _client ??= await _js.InvokeAsync<IJSInProcessObjectReference>("import", "./js/engine-client.js");
-        await _client.InvokeAsync<string>("start", _self, HashBits, Threads);
+        await _client.InvokeAsync<string>("start", _self, HashBits, _workerThreads);
     }
 
     private void Restart(IJSInProcessObjectReference client)

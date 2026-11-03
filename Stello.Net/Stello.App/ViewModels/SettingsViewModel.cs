@@ -27,8 +27,20 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private int _transpositionTableEntries;
 
-    public SettingsViewModel(GameSettings settings)
+    /// <summary>The Threads setting: 1 to <see cref="DeviceThreads"/>, or <see cref="GameSettings.AutomaticThreads"/>.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ThreadsText))]
+    private int _threads;
+
+    /// <param name="threads">This device's thread counts (default: this process's, as on the desktop).</param>
+    public SettingsViewModel(GameSettings settings, ThreadCounts? threads = null)
     {
+        ThreadCounts counts = threads ?? ThreadCounts.ForThisProcess();
+        DeviceThreads = counts.Device;
+        DefaultThreads = counts.Default;
+        Threads = settings.Threads <= GameSettings.AutomaticThreads ? GameSettings.AutomaticThreads : Math.Min(settings.Threads, DeviceThreads);
+        ThreadChoices = [new(GameSettings.AutomaticThreads, $"Automatic ({Plural(DefaultThreads)})"),
+            .. Enumerable.Range(1, DeviceThreads).Select(n => new ThreadChoice(n, Plural(n)))];
         Mode = settings.Mode;
         Depth = settings.Depth;
         SecondsPerMove = settings.SecondsPerMove;
@@ -36,6 +48,17 @@ public sealed partial class SettingsViewModel : ObservableObject
         UseOpeningBook = settings.UseOpeningBook;
         TranspositionTableEntries = settings.TranspositionTableEntries;
     }
+
+    /// <summary>The most threads this device offers.</summary>
+    public int DeviceThreads { get; }
+
+    /// <summary>The threads that the Automatic choice uses here.</summary>
+    public int DefaultThreads { get; }
+
+    /// <summary>The Threads setting's choices: Automatic, then 1 to <see cref="DeviceThreads"/>.</summary>
+    public IReadOnlyList<ThreadChoice> ThreadChoices { get; }
+
+    public string ThreadsText => Threads <= GameSettings.AutomaticThreads ? $"Automatic ({Plural(DefaultThreads)})" : Plural(Threads);
 
     public int MaxDepth => GameSettings.MaxDepth;
 
@@ -101,7 +124,10 @@ public sealed partial class SettingsViewModel : ObservableObject
         SecondsPerMove,
         MinutesPerGame,
         UseOpeningBook,
-        TranspositionTableEntries).Normalize();
+        TranspositionTableEntries,
+        Threads).Normalize();
+
+    private static string Plural(int threads) => threads == 1 ? "1 thread" : $"{threads} threads";
 
     private void SelectMode(bool selected, TimeControlMode mode)
     {
@@ -111,3 +137,6 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 }
+
+/// <summary>One choice of the Threads setting: its value (<see cref="GameSettings.AutomaticThreads"/> or a count) and text.</summary>
+public sealed record ThreadChoice(int Value, string Text);

@@ -1,3 +1,4 @@
+using Stello.App.Models;
 using Stello.App.Services;
 using Stello.Engine;
 
@@ -7,6 +8,8 @@ namespace Stello.Net.Tests;
 internal sealed class DelayedEngineHost(IEngineHost inner, int delayMs) : IEngineHost
 {
     public bool SupportsLearning => inner.SupportsLearning;
+
+    public ThreadCounts Threads => inner.Threads;
 
     public async Task<SearchResult> ChooseMoveAsync(
         Board board,
