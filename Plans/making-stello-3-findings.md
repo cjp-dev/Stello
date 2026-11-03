@@ -715,6 +715,7 @@ Each match starts on the user's go. They run one at a time on an otherwise idle 
 | 7 | 8 threads vs Stello 2.0, 100 ms | 1,180 | **69.4 %** (67.3–71.5) | +142 (+125 to +160) | +751 =136 −293 | 17.85 vs 14.26 | 64.3 M vs 5.4 M | 26 min 47 s |
 | 10 | 8 threads vs Egaroucid port, 100 ms | 1,180 | **79.7 %** (77.7–81.7) | +237 (+216 to +259) | +890 =100 −190 | 17.88 vs 9.61 | 64.3 M vs 5.2 M | 28 min 59 s |
 | 8 | 8 threads vs Stello 2.0, 500 ms | 1,180 | **66.7 %** (64.7–68.7) | +121 (+105 to +137) | +693 =188 −299 | 21.02 vs 17.26 | 78.2 M vs 6.0 M | 2 h 02 min |
+| 9 | 8 threads vs Stello 2.0, 2 s | 600 | **62.7 %** (59.9–65.5) | +90 (+69 to +111) | +322 =108 −170 | 23.70 vs 19.68 | 88.3 M vs 6.3 M | 3 h 50 min |
 
 - On 1 thread, 3.0 searches about 1.9 plies deeper than 2.0 at every time per move, and starts the exact solve one empty square earlier.
 - The phase 2 match at 500 ms gave 59.6 % (57.3–61.9). The final 61.1 % lies within that interval; the single-threaded engine has not changed since.
@@ -739,3 +740,4 @@ Each match starts on the user's go. They run one at a time on an otherwise idle 
 The result files are `benchmark-results/v3final-solve-bench-40-49-t{1,8,24}.json`.
 - **8 threads against the Egaroucid port at 100 ms** gave 79.7 % (+237), a little below 1 thread's 82.8 % (+273); the intervals almost touch. The 8-thread matches play only 2 games at a time, so the 1-thread opponent runs on a much less loaded machine: the port searched 5.2 M nodes/s and reached depth 9.61 here, against 3.8 M and 8.69 in the 12-at-a-time match. So a match with 8 threads and one with 1 thread are not directly comparable; each says how 3.0 does on a machine loaded like that. (Phase 6 saw the same effect.)
 - **8 threads against 2.0 at 500 ms:** 66.7 % (+121), against 61.1 % (+78) on 1 thread. 8 threads reach 21.0 plies, as deep as 1 thread at 2 s (21.03). The first run was cut off by a power cut after about 1.5 hours; the match tool saves only at the end, so it was restarted from the beginning.
+- **8 threads against 2.0 at 2 s:** 62.7 % (+90), against 61.7 % (+83) on 1 thread; the intervals overlap. 8 threads reach 23.7 plies (1 thread: 21.0) and start the exact solve at 27.2 empty squares (1 thread: 25.0). Against 2.0, the gain from threads shrinks with time (+43 Elo at 100 ms, +43 at 500 ms, +7 at 2 s), partly because 2.0 runs on a less loaded machine in the 2-at-a-time matches (6.3 M against 4.6 M nodes/s) and partly because many games at 2 s are decided by both sides solving the endgame exactly.
