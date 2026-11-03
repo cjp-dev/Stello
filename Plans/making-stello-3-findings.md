@@ -698,3 +698,16 @@ Headless Chromium, Release AOT publish served with COOP/COEP, `hardwareConcurren
 
   The default stays at 12 workers. 24 × 1 was 25 % faster at depth 14, but with a time per position, hyperthreads and E-cores give each search less CPU.
 - **Threads stay where engines are compared:** `Stello.Benchmark match` (`threads=`), `mid-bench`/`solve-bench --threads`, and `Stello.BookTool match --threads` (new: default 1, shown in the header).
+
+## Phase 9, part B: the final matches (started 2026-11-03)
+
+Each match starts on the user's go. They run one at a time on an otherwise idle machine, with no books, hash bits 19 and Stello 3.0 as side A.
+
+| # | Match | Games | Stello 3.0 score (95 %) | Elo | W / D / L | Midgame depth | Nodes/s | Wall time |
+|---|---|---:|---|---|---|---|---|---:|
+| 1 | 1 thread vs Stello 2.0, 100 ms | 1,180 | **63.8 %** (61.5–66.1) | +99 (+81 to +116) | +682 =142 −356 | 15.76 vs 13.83 | 10.1 M vs 4.2 M | 4 min 38 s |
+| 2 | 1 thread vs Stello 2.0, 500 ms | 1,180 | **61.1 %** (58.9–63.3) | +78 (+62 to +94) | +636 =169 −375 | 18.59 vs 16.70 | 10.4 M vs 4.3 M | 21 min 28 s |
+| 3 | 1 thread vs Stello 2.0, 2 s | 600 | **61.7 %** (58.7–64.6) | +83 (+61 to +105) | +318 =104 −178 | 21.03 vs 19.20 | 10.8 M vs 4.6 M | 40 min 36 s |
+
+- On 1 thread, 3.0 searches about 1.9 plies deeper than 2.0 at every time per move, and starts the exact solve one empty square earlier.
+- The phase 2 match at 500 ms gave 59.6 % (57.3–61.9). The final 61.1 % lies within that interval; the single-threaded engine has not changed since.
