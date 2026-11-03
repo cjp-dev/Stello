@@ -709,5 +709,18 @@ Each match starts on the user's go. They run one at a time on an otherwise idle 
 | 2 | 1 thread vs Stello 2.0, 500 ms | 1,180 | **61.1 %** (58.9–63.3) | +78 (+62 to +94) | +636 =169 −375 | 18.59 vs 16.70 | 10.4 M vs 4.3 M | 21 min 28 s |
 | 3 | 1 thread vs Stello 2.0, 2 s | 600 | **61.7 %** (58.7–64.6) | +83 (+61 to +105) | +318 =104 −178 | 21.03 vs 19.20 | 10.8 M vs 4.6 M | 40 min 36 s |
 
+| 4 | 1 thread vs Egaroucid port, 100 ms | 1,180 | **82.8 %** (80.9–84.7) | +273 (+251 to +297) | +925 =104 −151 | 15.73 vs 8.69 | 9.7 M vs 3.8 M | 5 min 14 s |
+| 5 | 1 thread vs Egaroucid port, 500 ms | 1,180 | **65.2 %** (63.1–67.4) | +109 (+93 to +126) | +689 =161 −330 | 18.58 vs 13.42 | 10.3 M vs 4.2 M | 22 min 27 s |
+| 6 | 1 thread vs Egaroucid port, 2 s | 600 | **45.7 %** (42.8–48.5) | −30 (−50 to −10) | +217 =114 −269 | 20.95 vs 21.45 | 10.7 M vs 5.0 M | 42 min 16 s |
+
 - On 1 thread, 3.0 searches about 1.9 plies deeper than 2.0 at every time per move, and starts the exact solve one empty square earlier.
 - The phase 2 match at 500 ms gave 59.6 % (57.3–61.9). The final 61.1 % lies within that interval; the single-threaded engine has not changed since.
+- **Against the Egaroucid port** (C#, 1 thread, table bits 21; its resources are the ones in `Egaroucid-main/bin/resources`, as in the 2.0 matches), compared with 2.0's final matches:
+
+  | Time per move | Stello 2.0 | Stello 3.0 | Gain |
+  |---|---|---|---|
+  | 100 ms | 75.6 % (+196 Elo) | 82.8 % (+273) | +77 Elo |
+  | 500 ms | 58.8 % (+62) | 65.2 % (+109) | +47 Elo |
+  | 2 s | 40.8 % (−64), 1,180 games | 45.7 % (−30), 600 games | +34 Elo |
+
+  At short times the port reaches far less depth (8.7 at 100 ms), so Stello wins clearly. At 2 s the port's evaluation and deeper search (21.45 against 20.95 plies, at half the nodes per second) still win. The gap to the port is now 30 Elo instead of 64.
