@@ -271,4 +271,5 @@ The order puts speed first (it changes no nodes), then the threads, the search, 
 - the link checker `scratchpad/linkcheck.py`.
 
 ## Status
-- Plan written on 4 November 2026, with the user's decisions above. **Not started:** the phases begin when the user says so.
+- Plan written on 4 November 2026, with the user's decisions above.
+- **Phase 0: started (2026-11-04).** Branch, plan, findings and the tag `v3.0` on baa44e5 are done; the 3.0 reference JSONs and the baseline signature test are still to do.

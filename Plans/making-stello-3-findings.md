@@ -708,7 +708,6 @@ Each match starts on the user's go. They run one at a time on an otherwise idle 
 | 1 | 1 thread vs Stello 2.0, 100 ms | 1,180 | **63.8 %** (61.5–66.1) | +99 (+81 to +116) | +682 =142 −356 | 15.76 vs 13.83 | 10.1 M vs 4.2 M | 4 min 38 s |
 | 2 | 1 thread vs Stello 2.0, 500 ms | 1,180 | **61.1 %** (58.9–63.3) | +78 (+62 to +94) | +636 =169 −375 | 18.59 vs 16.70 | 10.4 M vs 4.3 M | 21 min 28 s |
 | 3 | 1 thread vs Stello 2.0, 2 s | 600 | **61.7 %** (58.7–64.6) | +83 (+61 to +105) | +318 =104 −178 | 21.03 vs 19.20 | 10.8 M vs 4.6 M | 40 min 36 s |
-
 | 4 | 1 thread vs Egaroucid port, 100 ms | 1,180 | **82.8 %** (80.9–84.7) | +273 (+251 to +297) | +925 =104 −151 | 15.73 vs 8.69 | 9.7 M vs 3.8 M | 5 min 14 s |
 | 5 | 1 thread vs Egaroucid port, 500 ms | 1,180 | **65.2 %** (63.1–67.4) | +109 (+93 to +126) | +689 =161 −330 | 18.58 vs 13.42 | 10.3 M vs 4.2 M | 22 min 27 s |
 | 6 | 1 thread vs Egaroucid port, 2 s | 600 | **45.7 %** (42.8–48.5) | −30 (−50 to −10) | +217 =114 −269 | 20.95 vs 21.45 | 10.7 M vs 5.0 M | 42 min 16 s |
