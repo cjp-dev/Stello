@@ -230,6 +230,20 @@ fn move_now_after_a_draw_in_the_win_loss_draw_pass_is_not_exact() {
     assert!(board.legal_moves(player) & result.mv.0.unwrap().bit() != 0);
 }
 
+/// Move Now in the win/loss/draw pass after a losing move, with no midgame result before it (8 empties: no ordering
+/// searches; a lost position, -2, from FFO #41 by random play): the loss is only a bound until every move is
+/// searched, so the result is a legal move without a solved score. Had the pass completed, it would be WinLossDraw.
+#[test]
+fn move_now_after_a_loss_in_the_win_loss_draw_pass_keeps_a_move_without_a_score() {
+    let board = Board::parse("XXXXXXXO--OOOXXXOOOOXOOXXOXXXOOX-XOXOX-XOOXOOO---XOXOOO-XOOOOOOO").unwrap();
+    let player = Player::Black;
+    let result = solve_with_move_now_at(&board, player, |info| {
+        info.depth == 8 && info.kind == ScoreKind::WinLossDraw && info.score < 0
+    });
+    assert_eq!(result.kind, ScoreKind::None);
+    assert!(board.legal_moves(player) & result.mv.0.unwrap().bit() != 0);
+}
+
 #[test]
 fn trivial_positions_need_no_search() {
     let mut engine = SearchEngine::new(10, SearchOptions::default());

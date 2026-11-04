@@ -62,12 +62,13 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
   `BookSearch` stores `Exact` as `BookOrigin.Exact`, and `recalc` never searches an exact value again.
 - **The fix:** a stopped pass keeps the last completed pass's result.
   - In pass 2, `solve_root` no longer touches `best`, so a stop returns pass 1's win/loss/draw result with its move.
-  - In pass 1, a win still counts at once (one winning move proves it); a draw keeps its move as `Heuristic` 0; nothing else changes `best`.
+  - In pass 1, a win still counts at once (one winning move proves it); a draw keeps its move as `Heuristic` 0; nothing else changes `best`. A loss leaves `best` as it was, which always holds a legal move: the midgame result or, at 8 empty squares or fewer (no ordering searches before the solve), the first ordered move with kind `None` and no score, as a single forced move is reported.
   - The completed passes set the result as before. `best` only feeds the reports and the result, so the search is unchanged.
   - The frozen C# engines (`Stello.Engine.V1`/`V2`) keep the old behaviour; they are references.
-- **Tests:** two new Rust tests in [tests/search.rs](../Stello.Rust/stello-core/tests/search.rs) set Move Now from the progress callback. Both failed before the fix, with `Exact`:
-  - in the exact pass of FFO #40, the result must be `WinLossDraw`, a win, depth 20;
-  - after the first draw report in the win/loss/draw pass of FFO #41, the result must not be `Exact` or `WinLossDraw`.
+- **Tests:** three new Rust tests in [tests/search.rs](../Stello.Rust/stello-core/tests/search.rs) set Move Now from the progress callback. All three failed before the fix:
+  - in the exact pass of FFO #40, the result must be `WinLossDraw`, a win, depth 20 (was `Exact`);
+  - after the first draw report in the win/loss/draw pass of FFO #41, the result must not be `Exact` or `WinLossDraw` (was `Exact`);
+  - after the first losing report in the win/loss/draw pass of a lost 8-empty position (−2, from FFO #41 by random play; no midgame result before the solve), the result must be a legal move with kind `None` (was a `WinLossDraw` loss). Had the pass completed, the result would be `WinLossDraw`, so the test also fails if the stop comes too late.
 - **Baseline:** unchanged. `StelloV3BaselineTests` passes (105 signatures). `solve-bench` FFO #40–49 against `v3.0-ref/ffo-40-49.json` is identical: all 10 searches have the same nodes, move and score.
 - **Checks:**
   - `cargo test --workspace --release` and clippy pass;
