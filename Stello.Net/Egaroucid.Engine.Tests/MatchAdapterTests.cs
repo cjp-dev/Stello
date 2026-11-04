@@ -2,6 +2,7 @@
 
 using Stello.Benchmark;
 using Stello.Engine;
+using Stello.Engine.Search;
 using EngineBoard = Stello.Engine.Board;
 
 namespace Stello.Egaroucid.Tests;
@@ -59,9 +60,41 @@ public class MatchAdapterTests
     [InlineData("engine=egaroucid,time-ms=100,hash-bits=26")]
     [InlineData("engine=edax,time-ms=100")]
     [InlineData("time-ms=100,book=yes")]
+    [InlineData("depth=5,opt=ybwc")]
+    [InlineData("depth=5,opt=unknown=on")]
+    [InlineData("depth=5,opt=selective=maybe")]
+    [InlineData("depth=5,opt=soft-pct=101")]
+    [InlineData("depth=5,opt=ybwc=off,opt=ybwc=on")]
+    [InlineData("engine=stello-v2,depth=5,opt=ybwc=off")]
     public void ParseSide_RejectsInvalidSides(string text)
     {
         Assert.Throws<ArgumentException>(() => MatchCommands.ParseSide(text));
+    }
+
+    [Fact]
+    public void ParseSide_AppliesRepeatedOptSearchSwitches()
+    {
+        MatchSide side = MatchCommands.ParseSide("depth=4,opt=selective=off,opt=soft-pct=50,opt=mpc=150,opt=ybwc=off");
+
+        Assert.NotNull(side.Options);
+        Assert.False(side.Options.Selective);
+        Assert.Equal(50, side.Options.SoftTimePercent);
+        Assert.Equal(150, side.Options.ProbCutPercent);
+        Assert.False(side.Options.Ybwc);
+        Assert.Contains("Multi-ProbCut off", MatchCommands.Describe(side), StringComparison.Ordinal);
+        Assert.Contains("YBWC off", MatchCommands.Describe(side), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ParseSide_KeepsExistingNamedSearchSwitches()
+    {
+        MatchSide side = MatchCommands.ParseSide("depth=4,soft-pct=50,mpc=150,ybwc=off");
+
+        Assert.NotNull(side.Options);
+        Assert.Equal(50, side.Options.SoftTimePercent);
+        Assert.Equal(150, side.Options.ProbCutPercent);
+        Assert.True(side.Options.Selective);
+        Assert.False(side.Options.Ybwc);
     }
 
     [EgaroucidFact]

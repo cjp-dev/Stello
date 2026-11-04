@@ -116,7 +116,7 @@ internal static class MatchCommands
     }
 
     /// <summary>
-    /// A side such as <c>time-ms=100</c>, <c>depth=8</c>, <c>game-s=60,hash-bits=20,name=new</c> or
+    /// A side such as <c>time-ms=100</c>, <c>depth=8</c>, <c>game-s=60,hash-bits=20,name=new,opt=ybwc=off</c> or
     /// <c>engine=egaroucid,time-ms=100,book=on</c>. The engines are <c>stello</c> (the engine being developed, the default),
     /// <c>stello-v2</c> (Stello 2.0's C# engine, frozen), <c>stello-v1</c> (Stello 1, frozen) and <c>egaroucid</c> (the port).
     /// </summary>
@@ -136,8 +136,10 @@ internal static class MatchCommands
         int? softTimePercent = null;
         int? probCutPercent = null;
         int threads = 1;
+        bool selective = true;
         bool ybwc = true;
         var keys = new HashSet<string>();
+        var searchOptionKeys = new HashSet<string>();
         foreach (string part in text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
             string[] keyValue = part.Split('=', 2, StringSplitOptions.TrimEntries);
@@ -191,19 +193,31 @@ internal static class MatchCommands
                     name = value;
                     break;
                 case "eval":
-                    evalFile = value;
+                    SetSearchOption(key, value);
                     break;
                 case "soft-pct":
-                    softTimePercent = Number(key, value, 1, 100);
+                    SetSearchOption(key, value);
                     break;
                 case "mpc":
-                    probCutPercent = Number(key, value, 1, 1000);
+                    SetSearchOption(key, value);
+                    break;
+                case "selective":
+                    SetSearchOption(key, value);
                     break;
                 case "threads":
                     threads = Number(key, value, 1, SearchLimits.MaxThreads);
                     break;
                 case "ybwc":
-                    ybwc = OnOff(key, value, text);
+                    SetSearchOption(key, value);
+                    break;
+                case "opt":
+                    string[] option = value.Split('=', 2, StringSplitOptions.TrimEntries);
+                    if (option.Length != 2)
+                    {
+                        throw new ArgumentException($"opt must be key=value in the side \"{text}\".");
+                    }
+
+                    SetSearchOption(option[0], option[1]);
                     break;
                 default:
                     throw new ArgumentException($"Unknown key in the side \"{text}\": {key}");
@@ -227,12 +241,18 @@ internal static class MatchCommands
             throw new ArgumentException($"ybwc is only for engine=stello (side \"{text}\").");
         }
 
+        if (keys.Contains("opt") && engine != EngineKind.Stello)
+        {
+            throw new ArgumentException($"opt is only for engine=stello (side \"{text}\").");
+        }
+
         foreach ((string key, bool allowed) in new[]
         {
             ("depth", !egaroucid), ("level", egaroucid), ("book-acc", egaroucid), ("seed", egaroucid), ("eval", engine == EngineKind.Stello),
             ("book-file", !egaroucid),
             ("soft-pct", engine == EngineKind.Stello),
             ("mpc", engine == EngineKind.Stello),
+            ("selective", engine == EngineKind.Stello),
         })
         {
             if (keys.Contains(key) && !allowed)
@@ -266,7 +286,7 @@ internal static class MatchCommands
             {
                 EngineKind.StelloV1 => new MatchSide(name ?? text, limits, bits, CreatePlayer: () => new V1MatchPlayer(bits, book), Description: $"Stello 1, {description}"),
                 EngineKind.StelloV2 => new MatchSide(name ?? text, limits, bits, CreatePlayer: () => new Stello.Engine.V2.V2MatchPlayer(bits, book), Description: $"Stello 2.0 (C#), {description}"),
-                _ => StelloSide(name ?? text, limits, bits, book, description, evalFile, softTimePercent, probCutPercent, ybwc),
+                _ => StelloSide(name ?? text, limits, bits, book, description, evalFile, softTimePercent, probCutPercent, selective, ybwc),
             };
         }
 
@@ -299,6 +319,35 @@ internal static class MatchCommands
             mode = value;
             amount = number;
         }
+
+        void SetSearchOption(string key, string value)
+        {
+            if (!searchOptionKeys.Add(key))
+            {
+                throw new ArgumentException($"Search option {key} is given more than once in the side \"{text}\".");
+            }
+
+            switch (key)
+            {
+                case "eval":
+                    evalFile = value;
+                    break;
+                case "soft-pct":
+                    softTimePercent = Number(key, value, 1, 100);
+                    break;
+                case "mpc":
+                    probCutPercent = Number(key, value, 1, 1000);
+                    break;
+                case "selective":
+                    selective = OnOff(key, value, text);
+                    break;
+                case "ybwc":
+                    ybwc = OnOff(key, value, text);
+                    break;
+                default:
+                    throw new ArgumentException($"Unknown Stello search option in the side \"{text}\": {key}");
+            }
+        }
     }
 
     private static bool OnOff(string key, string value, string side) => value switch
@@ -308,14 +357,15 @@ internal static class MatchCommands
         _ => throw new ArgumentException($"{key} must be on or off in the side \"{side}\"."),
     };
 
-    /// <summary>A Stello side with its search options: the evaluation file and the switches of Stello 2's work.</summary>
+    /// <summary>A Stello side with its evaluation file and search switches.</summary>
     private static MatchSide StelloSide(string name, SearchLimits limits, int bits, OpeningBook? book, string description,
-        string? evalFile, int? softTimePercent, int? probCutPercent, bool ybwc)
+        string? evalFile, int? softTimePercent, int? probCutPercent, bool selective, bool ybwc)
     {
         SearchOptions options = (evalFile is null or "default" ? SearchOptions.Default : PatternOptions(evalFile)) with
         {
             SoftTimePercent = softTimePercent,
             ProbCutPercent = probCutPercent,
+            Selective = selective,
             Ybwc = ybwc,
         };
         if (options == SearchOptions.Default)
@@ -326,6 +376,7 @@ internal static class MatchCommands
         string extra = (evalFile is null or "default" ? "" : $", evaluation {Path.GetFileName(evalFile)}")
             + (softTimePercent is null ? "" : $", soft limit {softTimePercent} %")
             + (probCutPercent is null ? "" : $", Multi-ProbCut t = {probCutPercent / 100.0:0.00}")
+            + (selective ? "" : ", Multi-ProbCut off")
             + (ybwc ? "" : ", YBWC off (Lazy SMP alone)");
         return new MatchSide(name, limits, bits, book, CreatePlayer: () => new StelloMatchPlayer(bits, book, options),
             Description: $"Stello, {description}{extra}", Options: options);

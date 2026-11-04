@@ -1,0 +1,10011 @@
+{
+  "Command": "mid-bench",
+  "Date": "2026-11-04 20:15",
+  "ProcessorCount": 24,
+  "Limits": "depth 8",
+  "HashBits": 19,
+  "Passes": 3,
+  "Results": [
+    {
+      "Id": "r0001e30",
+      "Empties": 30,
+      "Move": "d6",
+      "Score": 1887,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 18713,
+      "Ms": 1.8938
+    },
+    {
+      "Id": "r0002e26",
+      "Empties": 26,
+      "Move": "a4",
+      "Score": -1537,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6015,
+      "Ms": 0.5771
+    },
+    {
+      "Id": "r0003e29",
+      "Empties": 29,
+      "Move": "e2",
+      "Score": 4675,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 24956,
+      "Ms": 2.3803
+    },
+    {
+      "Id": "r0004e28",
+      "Empties": 28,
+      "Move": "a6",
+      "Score": -2525,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 18023,
+      "Ms": 1.8087
+    },
+    {
+      "Id": "r0005e58",
+      "Empties": 58,
+      "Move": "f5",
+      "Score": 50,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3128,
+      "Ms": 0.3003
+    },
+    {
+      "Id": "r0006e59",
+      "Empties": 59,
+      "Move": "e3",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2646,
+      "Ms": 0.2316
+    },
+    {
+      "Id": "r0007e55",
+      "Empties": 55,
+      "Move": "d6",
+      "Score": 1237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2201,
+      "Ms": 0.2238
+    },
+    {
+      "Id": "r0008e50",
+      "Empties": 50,
+      "Move": "d3",
+      "Score": 600,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13784,
+      "Ms": 1.3429
+    },
+    {
+      "Id": "r0009e16",
+      "Empties": 16,
+      "Move": "b7",
+      "Score": 187,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4795,
+      "Ms": 0.5003
+    },
+    {
+      "Id": "r0010e44",
+      "Empties": 44,
+      "Move": "c8",
+      "Score": -1775,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 18164,
+      "Ms": 1.7641
+    },
+    {
+      "Id": "r0011e24",
+      "Empties": 24,
+      "Move": "e8",
+      "Score": -3862,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1967,
+      "Ms": 0.2057
+    },
+    {
+      "Id": "r0012e28",
+      "Empties": 28,
+      "Move": "a2",
+      "Score": -3250,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11708,
+      "Ms": 1.3104
+    },
+    {
+      "Id": "r0013e35",
+      "Empties": 35,
+      "Move": "g8",
+      "Score": 3700,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9893,
+      "Ms": 1.1093
+    },
+    {
+      "Id": "r0014e30",
+      "Empties": 30,
+      "Move": "h5",
+      "Score": 837,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7187,
+      "Ms": 0.7683
+    },
+    {
+      "Id": "r0015e53",
+      "Empties": 53,
+      "Move": "c4",
+      "Score": 1000,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3428,
+      "Ms": 0.3685
+    },
+    {
+      "Id": "r0016e17",
+      "Empties": 17,
+      "Move": "a8",
+      "Score": -50,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4052,
+      "Ms": 0.4201
+    },
+    {
+      "Id": "r0017e39",
+      "Empties": 39,
+      "Move": "f4",
+      "Score": -800,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 33140,
+      "Ms": 3.5572
+    },
+    {
+      "Id": "r0018e33",
+      "Empties": 33,
+      "Move": "h3",
+      "Score": 312,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6050,
+      "Ms": 0.5999
+    },
+    {
+      "Id": "r0019e48",
+      "Empties": 48,
+      "Move": "d6",
+      "Score": -1075,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5080,
+      "Ms": 0.5125
+    },
+    {
+      "Id": "r0020e42",
+      "Empties": 42,
+      "Move": "d3",
+      "Score": 1750,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7472,
+      "Ms": 0.8356
+    },
+    {
+      "Id": "r0021e28",
+      "Empties": 28,
+      "Move": "a4",
+      "Score": -4187,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4805,
+      "Ms": 0.507
+    },
+    {
+      "Id": "r0022e36",
+      "Empties": 36,
+      "Move": "g6",
+      "Score": 662,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 18035,
+      "Ms": 1.8855
+    },
+    {
+      "Id": "r0023e32",
+      "Empties": 32,
+      "Move": "a1",
+      "Score": 1262,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10033,
+      "Ms": 0.9515
+    },
+    {
+      "Id": "r0024e22",
+      "Empties": 22,
+      "Move": "c2",
+      "Score": 2700,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17855,
+      "Ms": 1.6844
+    },
+    {
+      "Id": "r0025e35",
+      "Empties": 35,
+      "Move": "e3",
+      "Score": 1875,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11862,
+      "Ms": 1.1448
+    },
+    {
+      "Id": "r0026e44",
+      "Empties": 44,
+      "Move": "d2",
+      "Score": -2962,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7034,
+      "Ms": 0.6849
+    },
+    {
+      "Id": "r0027e25",
+      "Empties": 25,
+      "Move": "g6",
+      "Score": -2925,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7445,
+      "Ms": 0.7352
+    },
+    {
+      "Id": "r0028e52",
+      "Empties": 52,
+      "Move": "c5",
+      "Score": -775,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6189,
+      "Ms": 0.5748
+    },
+    {
+      "Id": "r0029e18",
+      "Empties": 18,
+      "Move": "e8",
+      "Score": 2500,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2038,
+      "Ms": 0.2228
+    },
+    {
+      "Id": "r0030e24",
+      "Empties": 24,
+      "Move": "a1",
+      "Score": 62,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6802,
+      "Ms": 0.6732
+    },
+    {
+      "Id": "r0031e48",
+      "Empties": 48,
+      "Move": "b4",
+      "Score": 2025,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6093,
+      "Ms": 0.6267
+    },
+    {
+      "Id": "r0032e41",
+      "Empties": 41,
+      "Move": "b4",
+      "Score": 1250,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8618,
+      "Ms": 0.8907
+    },
+    {
+      "Id": "r0033e44",
+      "Empties": 44,
+      "Move": "e7",
+      "Score": 950,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5010,
+      "Ms": 0.5558
+    },
+    {
+      "Id": "r0034e20",
+      "Empties": 20,
+      "Move": "b4",
+      "Score": 1150,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7717,
+      "Ms": 0.7451
+    },
+    {
+      "Id": "r0035e17",
+      "Empties": 17,
+      "Move": "f8",
+      "Score": -4275,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5022,
+      "Ms": 0.4249
+    },
+    {
+      "Id": "r0036e44",
+      "Empties": 44,
+      "Move": "d3",
+      "Score": 3412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4538,
+      "Ms": 0.4443
+    },
+    {
+      "Id": "r0037e47",
+      "Empties": 47,
+      "Move": "c5",
+      "Score": -1812,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5893,
+      "Ms": 0.5325
+    },
+    {
+      "Id": "r0038e33",
+      "Empties": 33,
+      "Move": "c3",
+      "Score": 1525,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17119,
+      "Ms": 1.6466
+    },
+    {
+      "Id": "r0039e54",
+      "Empties": 54,
+      "Move": "e3",
+      "Score": -1887,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5703,
+      "Ms": 0.5649
+    },
+    {
+      "Id": "r0040e29",
+      "Empties": 29,
+      "Move": "f1",
+      "Score": -1612,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6962,
+      "Ms": 0.6443
+    },
+    {
+      "Id": "r0041e42",
+      "Empties": 42,
+      "Move": "d3",
+      "Score": 2087,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5783,
+      "Ms": 0.609
+    },
+    {
+      "Id": "r0042e48",
+      "Empties": 48,
+      "Move": "f6",
+      "Score": -1387,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 20893,
+      "Ms": 2.0247
+    },
+    {
+      "Id": "r0043e29",
+      "Empties": 29,
+      "Move": "c5",
+      "Score": -1425,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 19936,
+      "Ms": 2.0297
+    },
+    {
+      "Id": "r0044e40",
+      "Empties": 40,
+      "Move": "c3",
+      "Score": -1812,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 33975,
+      "Ms": 3.4144
+    },
+    {
+      "Id": "r0045e33",
+      "Empties": 33,
+      "Move": "h5",
+      "Score": 37,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5114,
+      "Ms": 0.4817
+    },
+    {
+      "Id": "r0046e28",
+      "Empties": 28,
+      "Move": "h5",
+      "Score": 4412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12841,
+      "Ms": 1.1659
+    },
+    {
+      "Id": "r0047e23",
+      "Empties": 23,
+      "Move": "a3",
+      "Score": -125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 32925,
+      "Ms": 3.0991
+    },
+    {
+      "Id": "r0048e33",
+      "Empties": 33,
+      "Move": "c1",
+      "Score": 287,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10711,
+      "Ms": 1.0172
+    },
+    {
+      "Id": "r0049e59",
+      "Empties": 59,
+      "Move": "e3",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2646,
+      "Ms": 0.2493
+    },
+    {
+      "Id": "r0050e32",
+      "Empties": 32,
+      "Move": "e6",
+      "Score": -4650,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7506,
+      "Ms": 0.7544
+    },
+    {
+      "Id": "r0051e58",
+      "Empties": 58,
+      "Move": "e6",
+      "Score": 50,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3125,
+      "Ms": 0.2829
+    },
+    {
+      "Id": "r0052e31",
+      "Empties": 31,
+      "Move": "g1",
+      "Score": 4275,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4880,
+      "Ms": 0.509
+    },
+    {
+      "Id": "r0053e21",
+      "Empties": 21,
+      "Move": "a8",
+      "Score": -375,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9896,
+      "Ms": 0.8991
+    },
+    {
+      "Id": "r0054e38",
+      "Empties": 38,
+      "Move": "e6",
+      "Score": -450,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9585,
+      "Ms": 0.9462
+    },
+    {
+      "Id": "r0055e30",
+      "Empties": 30,
+      "Move": "a7",
+      "Score": 562,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6143,
+      "Ms": 0.5623
+    },
+    {
+      "Id": "r0056e54",
+      "Empties": 54,
+      "Move": "f3",
+      "Score": 1500,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8061,
+      "Ms": 0.7601
+    },
+    {
+      "Id": "r0057e19",
+      "Empties": 19,
+      "Move": "b1",
+      "Score": 825,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4272,
+      "Ms": 0.3794
+    },
+    {
+      "Id": "r0058e32",
+      "Empties": 32,
+      "Move": "d1",
+      "Score": 437,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15354,
+      "Ms": 1.4667
+    },
+    {
+      "Id": "r0059e39",
+      "Empties": 39,
+      "Move": "d3",
+      "Score": 1562,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8361,
+      "Ms": 0.8224
+    },
+    {
+      "Id": "r0060e31",
+      "Empties": 31,
+      "Move": "a5",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7695,
+      "Ms": 0.7427
+    },
+    {
+      "Id": "r0061e55",
+      "Empties": 55,
+      "Move": "d7",
+      "Score": 412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8128,
+      "Ms": 0.7306
+    },
+    {
+      "Id": "r0062e51",
+      "Empties": 51,
+      "Move": "e3",
+      "Score": -387,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2056,
+      "Ms": 0.1959
+    },
+    {
+      "Id": "r0063e59",
+      "Empties": 59,
+      "Move": "d6",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2789,
+      "Ms": 0.2377
+    },
+    {
+      "Id": "r0064e59",
+      "Empties": 59,
+      "Move": "d6",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2789,
+      "Ms": 0.2125
+    },
+    {
+      "Id": "r0065e35",
+      "Empties": 35,
+      "Move": "a6",
+      "Score": 1887,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9701,
+      "Ms": 0.9106
+    },
+    {
+      "Id": "r0066e35",
+      "Empties": 35,
+      "Move": "e8",
+      "Score": 2425,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7797,
+      "Ms": 0.6888
+    },
+    {
+      "Id": "r0067e28",
+      "Empties": 28,
+      "Move": "f8",
+      "Score": 2612,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3733,
+      "Ms": 0.3724
+    },
+    {
+      "Id": "r0068e32",
+      "Empties": 32,
+      "Move": "c1",
+      "Score": -3762,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11155,
+      "Ms": 1.0116
+    },
+    {
+      "Id": "r0069e21",
+      "Empties": 21,
+      "Move": "c8",
+      "Score": 3262,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11665,
+      "Ms": 1.0421
+    },
+    {
+      "Id": "r0070e37",
+      "Empties": 37,
+      "Move": "b6",
+      "Score": 2287,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6703,
+      "Ms": 0.6593
+    },
+    {
+      "Id": "r0071e24",
+      "Empties": 24,
+      "Move": "c6",
+      "Score": 4712,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9903,
+      "Ms": 0.9933
+    },
+    {
+      "Id": "r0072e37",
+      "Empties": 37,
+      "Move": "g1",
+      "Score": 3025,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4104,
+      "Ms": 0.449
+    },
+    {
+      "Id": "r0073e25",
+      "Empties": 25,
+      "Move": "h5",
+      "Score": 2525,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9495,
+      "Ms": 0.9273
+    },
+    {
+      "Id": "r0074e31",
+      "Empties": 31,
+      "Move": "e8",
+      "Score": 1562,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2525,
+      "Ms": 0.2508
+    },
+    {
+      "Id": "r0075e20",
+      "Empties": 20,
+      "Move": "b1",
+      "Score": 1900,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11623,
+      "Ms": 1.0397
+    },
+    {
+      "Id": "r0076e44",
+      "Empties": 44,
+      "Move": "f7",
+      "Score": -2237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9937,
+      "Ms": 0.9721
+    },
+    {
+      "Id": "r0077e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.236
+    },
+    {
+      "Id": "r0078e38",
+      "Empties": 38,
+      "Move": "f3",
+      "Score": -1962,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 18369,
+      "Ms": 1.8212
+    },
+    {
+      "Id": "r0079e31",
+      "Empties": 31,
+      "Move": "b3",
+      "Score": -3225,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6733,
+      "Ms": 0.6293
+    },
+    {
+      "Id": "r0080e46",
+      "Empties": 46,
+      "Move": "b5",
+      "Score": -1500,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13290,
+      "Ms": 1.2818
+    },
+    {
+      "Id": "r0081e32",
+      "Empties": 32,
+      "Move": "c4",
+      "Score": -712,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9945,
+      "Ms": 0.91
+    },
+    {
+      "Id": "r0082e32",
+      "Empties": 32,
+      "Move": "h8",
+      "Score": 3475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7147,
+      "Ms": 0.7062
+    },
+    {
+      "Id": "r0083e46",
+      "Empties": 46,
+      "Move": "g5",
+      "Score": 1525,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7110,
+      "Ms": 0.6785
+    },
+    {
+      "Id": "r0084e49",
+      "Empties": 49,
+      "Move": "e6",
+      "Score": 2462,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9224,
+      "Ms": 0.9002
+    },
+    {
+      "Id": "r0085e26",
+      "Empties": 26,
+      "Move": "a5",
+      "Score": 2850,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 18544,
+      "Ms": 1.6561
+    },
+    {
+      "Id": "r0086e57",
+      "Empties": 57,
+      "Move": "g5",
+      "Score": 562,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2115,
+      "Ms": 0.1928
+    },
+    {
+      "Id": "r0087e24",
+      "Empties": 24,
+      "Move": "h1",
+      "Score": 5075,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5720,
+      "Ms": 0.5269
+    },
+    {
+      "Id": "r0088e38",
+      "Empties": 38,
+      "Move": "f8",
+      "Score": -787,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6764,
+      "Ms": 0.6742
+    },
+    {
+      "Id": "r0089e22",
+      "Empties": 22,
+      "Move": "g1",
+      "Score": -4350,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2918,
+      "Ms": 0.2762
+    },
+    {
+      "Id": "r0090e57",
+      "Empties": 57,
+      "Move": "c5",
+      "Score": -275,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5811,
+      "Ms": 0.5209
+    },
+    {
+      "Id": "r0091e22",
+      "Empties": 22,
+      "Move": "a6",
+      "Score": 1412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15087,
+      "Ms": 1.4465
+    },
+    {
+      "Id": "r0092e27",
+      "Empties": 27,
+      "Move": "d8",
+      "Score": 5650,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3242,
+      "Ms": 0.3015
+    },
+    {
+      "Id": "r0093e33",
+      "Empties": 33,
+      "Move": "f3",
+      "Score": 825,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10565,
+      "Ms": 1.0856
+    },
+    {
+      "Id": "r0094e40",
+      "Empties": 40,
+      "Move": "a4",
+      "Score": -4537,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4149,
+      "Ms": 0.3927
+    },
+    {
+      "Id": "r0095e21",
+      "Empties": 21,
+      "Move": "h7",
+      "Score": -2825,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8619,
+      "Ms": 0.7959
+    },
+    {
+      "Id": "r0096e37",
+      "Empties": 37,
+      "Move": "b8",
+      "Score": 275,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11407,
+      "Ms": 1.1161
+    },
+    {
+      "Id": "r0097e55",
+      "Empties": 55,
+      "Move": "f4",
+      "Score": -162,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8396,
+      "Ms": 0.7781
+    },
+    {
+      "Id": "r0098e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2297
+    },
+    {
+      "Id": "r0099e34",
+      "Empties": 34,
+      "Move": "g6",
+      "Score": -1975,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13906,
+      "Ms": 1.3643
+    },
+    {
+      "Id": "r0100e21",
+      "Empties": 21,
+      "Move": "b1",
+      "Score": 3000,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6386,
+      "Ms": 0.5925
+    },
+    {
+      "Id": "r0101e50",
+      "Empties": 50,
+      "Move": "d3",
+      "Score": 362,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8385,
+      "Ms": 0.7799
+    },
+    {
+      "Id": "r0102e58",
+      "Empties": 58,
+      "Move": "e6",
+      "Score": 50,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3125,
+      "Ms": 0.2738
+    },
+    {
+      "Id": "r0103e17",
+      "Empties": 17,
+      "Move": "g4",
+      "Score": 2650,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6727,
+      "Ms": 0.6457
+    },
+    {
+      "Id": "r0104e51",
+      "Empties": 51,
+      "Move": "d3",
+      "Score": 787,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4274,
+      "Ms": 0.4146
+    },
+    {
+      "Id": "r0105e53",
+      "Empties": 53,
+      "Move": "d6",
+      "Score": -475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9450,
+      "Ms": 0.8421
+    },
+    {
+      "Id": "r0106e25",
+      "Empties": 25,
+      "Move": "b5",
+      "Score": -1037,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10366,
+      "Ms": 0.8995
+    },
+    {
+      "Id": "r0107e56",
+      "Empties": 56,
+      "Move": "c4",
+      "Score": 137,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4316,
+      "Ms": 0.3833
+    },
+    {
+      "Id": "r0108e46",
+      "Empties": 46,
+      "Move": "h4",
+      "Score": -925,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7579,
+      "Ms": 0.7399
+    },
+    {
+      "Id": "r0109e18",
+      "Empties": 18,
+      "Move": "h1",
+      "Score": 5100,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2191,
+      "Ms": 0.2136
+    },
+    {
+      "Id": "r0110e53",
+      "Empties": 53,
+      "Move": "c3",
+      "Score": 550,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5540,
+      "Ms": 0.4929
+    },
+    {
+      "Id": "r0111e27",
+      "Empties": 27,
+      "Move": "b3",
+      "Score": -1812,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12087,
+      "Ms": 1.1216
+    },
+    {
+      "Id": "r0112e57",
+      "Empties": 57,
+      "Move": "c4",
+      "Score": 500,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3078,
+      "Ms": 0.2681
+    },
+    {
+      "Id": "r0113e58",
+      "Empties": 58,
+      "Move": "e6",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4852,
+      "Ms": 0.4113
+    },
+    {
+      "Id": "r0114e28",
+      "Empties": 28,
+      "Move": "f3",
+      "Score": 612,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5640,
+      "Ms": 0.5262
+    },
+    {
+      "Id": "r0115e57",
+      "Empties": 57,
+      "Move": "e6",
+      "Score": 600,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5442,
+      "Ms": 0.4717
+    },
+    {
+      "Id": "r0116e55",
+      "Empties": 55,
+      "Move": "f6",
+      "Score": -275,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3951,
+      "Ms": 0.3615
+    },
+    {
+      "Id": "r0117e38",
+      "Empties": 38,
+      "Move": "b4",
+      "Score": -3312,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 22139,
+      "Ms": 2.2497
+    },
+    {
+      "Id": "r0118e25",
+      "Empties": 25,
+      "Move": "f1",
+      "Score": 2137,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5466,
+      "Ms": 0.5665
+    },
+    {
+      "Id": "r0119e34",
+      "Empties": 34,
+      "Move": "g5",
+      "Score": 5750,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 19975,
+      "Ms": 1.805
+    },
+    {
+      "Id": "r0120e34",
+      "Empties": 34,
+      "Move": "h3",
+      "Score": 6400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3378,
+      "Ms": 0.3259
+    },
+    {
+      "Id": "r0121e24",
+      "Empties": 24,
+      "Move": "b1",
+      "Score": 2500,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2994,
+      "Ms": 0.2982
+    },
+    {
+      "Id": "r0122e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2346
+    },
+    {
+      "Id": "r0123e53",
+      "Empties": 53,
+      "Move": "b5",
+      "Score": -62,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13604,
+      "Ms": 1.2477
+    },
+    {
+      "Id": "r0124e54",
+      "Empties": 54,
+      "Move": "c6",
+      "Score": 1312,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6781,
+      "Ms": 0.6189
+    },
+    {
+      "Id": "r0125e17",
+      "Empties": 17,
+      "Move": "h5",
+      "Score": -2837,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6093,
+      "Ms": 0.6244
+    },
+    {
+      "Id": "r0126e35",
+      "Empties": 35,
+      "Move": "e8",
+      "Score": -237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3545,
+      "Ms": 0.3386
+    },
+    {
+      "Id": "r0127e51",
+      "Empties": 51,
+      "Move": "c3",
+      "Score": -1050,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3289,
+      "Ms": 0.317
+    },
+    {
+      "Id": "r0128e38",
+      "Empties": 38,
+      "Move": "g1",
+      "Score": 4112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3948,
+      "Ms": 0.3935
+    },
+    {
+      "Id": "r0129e54",
+      "Empties": 54,
+      "Move": "c4",
+      "Score": -25,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4855,
+      "Ms": 0.4472
+    },
+    {
+      "Id": "r0130e18",
+      "Empties": 18,
+      "Move": "h1",
+      "Score": -1837,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6641,
+      "Ms": 0.6156
+    },
+    {
+      "Id": "r0131e42",
+      "Empties": 42,
+      "Move": "g6",
+      "Score": 3000,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3909,
+      "Ms": 0.4145
+    },
+    {
+      "Id": "r0132e51",
+      "Empties": 51,
+      "Move": "g4",
+      "Score": -950,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8672,
+      "Ms": 0.7396
+    },
+    {
+      "Id": "r0133e48",
+      "Empties": 48,
+      "Move": "e2",
+      "Score": -1437,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10855,
+      "Ms": 1.0082
+    },
+    {
+      "Id": "r0134e41",
+      "Empties": 41,
+      "Move": "d3",
+      "Score": 3150,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12335,
+      "Ms": 1.1709
+    },
+    {
+      "Id": "r0135e33",
+      "Empties": 33,
+      "Move": "h1",
+      "Score": -862,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 16521,
+      "Ms": 1.538
+    },
+    {
+      "Id": "r0136e30",
+      "Empties": 30,
+      "Move": "e2",
+      "Score": 1050,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10961,
+      "Ms": 1.0666
+    },
+    {
+      "Id": "r0137e50",
+      "Empties": 50,
+      "Move": "d6",
+      "Score": -4087,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10865,
+      "Ms": 1.1455
+    },
+    {
+      "Id": "r0138e34",
+      "Empties": 34,
+      "Move": "d2",
+      "Score": -2400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12477,
+      "Ms": 1.1936
+    },
+    {
+      "Id": "r0139e30",
+      "Empties": 30,
+      "Move": "a8",
+      "Score": 6400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8002,
+      "Ms": 0.7679
+    },
+    {
+      "Id": "r0140e57",
+      "Empties": 57,
+      "Move": "d3",
+      "Score": -250,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5340,
+      "Ms": 0.4717
+    },
+    {
+      "Id": "r0141e38",
+      "Empties": 38,
+      "Move": "d2",
+      "Score": 3175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7793,
+      "Ms": 0.7401
+    },
+    {
+      "Id": "r0142e21",
+      "Empties": 21,
+      "Move": "e3",
+      "Score": -2112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15514,
+      "Ms": 1.3503
+    },
+    {
+      "Id": "r0143e45",
+      "Empties": 45,
+      "Move": "e3",
+      "Score": 2337,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 22941,
+      "Ms": 2.2975
+    },
+    {
+      "Id": "r0144e26",
+      "Empties": 26,
+      "Move": "a1",
+      "Score": 3200,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10029,
+      "Ms": 0.9135
+    },
+    {
+      "Id": "r0145e53",
+      "Empties": 53,
+      "Move": "f5",
+      "Score": 512,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 20523,
+      "Ms": 1.7888
+    },
+    {
+      "Id": "r0146e58",
+      "Empties": 58,
+      "Move": "d6",
+      "Score": 475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3903,
+      "Ms": 0.3356
+    },
+    {
+      "Id": "r0147e22",
+      "Empties": 22,
+      "Move": "a5",
+      "Score": 237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 21480,
+      "Ms": 2.0035
+    },
+    {
+      "Id": "r0148e41",
+      "Empties": 41,
+      "Move": "b5",
+      "Score": 5937,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5754,
+      "Ms": 0.5667
+    },
+    {
+      "Id": "r0149e26",
+      "Empties": 26,
+      "Move": "g8",
+      "Score": 3587,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12172,
+      "Ms": 1.1383
+    },
+    {
+      "Id": "r0150e58",
+      "Empties": 58,
+      "Move": "d6",
+      "Score": 475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3903,
+      "Ms": 0.3443
+    },
+    {
+      "Id": "r0151e54",
+      "Empties": 54,
+      "Move": "d6",
+      "Score": 550,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1085,
+      "Ms": 0.106
+    },
+    {
+      "Id": "r0152e48",
+      "Empties": 48,
+      "Move": "e3",
+      "Score": -1250,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8266,
+      "Ms": 0.7924
+    },
+    {
+      "Id": "r0153e20",
+      "Empties": 20,
+      "Move": "a8",
+      "Score": 5512,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1257,
+      "Ms": 0.1261
+    },
+    {
+      "Id": "r0154e48",
+      "Empties": 48,
+      "Move": "c3",
+      "Score": -450,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14532,
+      "Ms": 1.372
+    },
+    {
+      "Id": "r0155e21",
+      "Empties": 21,
+      "Move": "h3",
+      "Score": -187,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 22029,
+      "Ms": 2.194
+    },
+    {
+      "Id": "r0156e44",
+      "Empties": 44,
+      "Move": "f6",
+      "Score": 1300,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14694,
+      "Ms": 1.4208
+    },
+    {
+      "Id": "r0157e51",
+      "Empties": 51,
+      "Move": "f4",
+      "Score": -1000,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10471,
+      "Ms": 0.9645
+    },
+    {
+      "Id": "r0158e35",
+      "Empties": 35,
+      "Move": "g1",
+      "Score": -1575,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7208,
+      "Ms": 0.7041
+    },
+    {
+      "Id": "r0159e51",
+      "Empties": 51,
+      "Move": "a3",
+      "Score": 850,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1599,
+      "Ms": 0.1397
+    },
+    {
+      "Id": "r0160e44",
+      "Empties": 44,
+      "Move": "g6",
+      "Score": 62,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9294,
+      "Ms": 0.8792
+    },
+    {
+      "Id": "r0161e18",
+      "Empties": 18,
+      "Move": "h3",
+      "Score": 1925,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8840,
+      "Ms": 0.7987
+    },
+    {
+      "Id": "r0162e59",
+      "Empties": 59,
+      "Move": "c5",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2622,
+      "Ms": 0.2305
+    },
+    {
+      "Id": "r0163e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2196
+    },
+    {
+      "Id": "r0164e21",
+      "Empties": 21,
+      "Move": "e1",
+      "Score": -700,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9191,
+      "Ms": 0.8542
+    },
+    {
+      "Id": "r0165e43",
+      "Empties": 43,
+      "Move": "c3",
+      "Score": -812,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8421,
+      "Ms": 0.8378
+    },
+    {
+      "Id": "r0166e26",
+      "Empties": 26,
+      "Move": "a4",
+      "Score": 162,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 26684,
+      "Ms": 2.4713
+    },
+    {
+      "Id": "r0167e47",
+      "Empties": 47,
+      "Move": "f3",
+      "Score": 2662,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11240,
+      "Ms": 1.1076
+    },
+    {
+      "Id": "r0168e27",
+      "Empties": 27,
+      "Move": "h3",
+      "Score": -1512,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3077,
+      "Ms": 0.3153
+    },
+    {
+      "Id": "r0169e28",
+      "Empties": 28,
+      "Move": "g4",
+      "Score": 1587,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 23283,
+      "Ms": 2.1001
+    },
+    {
+      "Id": "r0170e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2368
+    },
+    {
+      "Id": "r0171e31",
+      "Empties": 31,
+      "Move": "e2",
+      "Score": -1237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 18471,
+      "Ms": 1.7941
+    },
+    {
+      "Id": "r0172e19",
+      "Empties": 19,
+      "Move": "f8",
+      "Score": -600,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8038,
+      "Ms": 0.7313
+    },
+    {
+      "Id": "r0173e52",
+      "Empties": 52,
+      "Move": "c6",
+      "Score": -1062,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6739,
+      "Ms": 0.6195
+    },
+    {
+      "Id": "r0174e31",
+      "Empties": 31,
+      "Move": "f5",
+      "Score": -375,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10753,
+      "Ms": 1.1032
+    },
+    {
+      "Id": "r0175e17",
+      "Empties": 17,
+      "Move": "g1",
+      "Score": -3550,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3797,
+      "Ms": 0.3954
+    },
+    {
+      "Id": "r0176e48",
+      "Empties": 48,
+      "Move": "e7",
+      "Score": -3987,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7879,
+      "Ms": 0.755
+    },
+    {
+      "Id": "r0177e50",
+      "Empties": 50,
+      "Move": "c6",
+      "Score": -2462,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12212,
+      "Ms": 1.1338
+    },
+    {
+      "Id": "r0178e21",
+      "Empties": 21,
+      "Move": "h5",
+      "Score": 3162,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6915,
+      "Ms": 0.6257
+    },
+    {
+      "Id": "r0179e47",
+      "Empties": 47,
+      "Move": "d6",
+      "Score": 2450,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9594,
+      "Ms": 0.8942
+    },
+    {
+      "Id": "r0180e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2153
+    },
+    {
+      "Id": "r0181e58",
+      "Empties": 58,
+      "Move": "f4",
+      "Score": 475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4005,
+      "Ms": 0.3496
+    },
+    {
+      "Id": "r0182e39",
+      "Empties": 39,
+      "Move": "f3",
+      "Score": -3637,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2285,
+      "Ms": 0.2402
+    },
+    {
+      "Id": "r0183e51",
+      "Empties": 51,
+      "Move": "d3",
+      "Score": -375,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5839,
+      "Ms": 0.5323
+    },
+    {
+      "Id": "r0184e56",
+      "Empties": 56,
+      "Move": "c4",
+      "Score": 0,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2976,
+      "Ms": 0.2574
+    },
+    {
+      "Id": "r0185e36",
+      "Empties": 36,
+      "Move": "g5",
+      "Score": -100,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5485,
+      "Ms": 0.5773
+    },
+    {
+      "Id": "r0186e25",
+      "Empties": 25,
+      "Move": "f1",
+      "Score": 1375,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6630,
+      "Ms": 0.5877
+    },
+    {
+      "Id": "r0187e18",
+      "Empties": 18,
+      "Move": "f1",
+      "Score": 2337,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5813,
+      "Ms": 0.543
+    },
+    {
+      "Id": "r0188e21",
+      "Empties": 21,
+      "Move": "h3",
+      "Score": 2262,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13528,
+      "Ms": 1.1664
+    },
+    {
+      "Id": "r0189e53",
+      "Empties": 53,
+      "Move": "d2",
+      "Score": 3500,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3036,
+      "Ms": 0.2851
+    },
+    {
+      "Id": "r0190e41",
+      "Empties": 41,
+      "Move": "e1",
+      "Score": 1625,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10899,
+      "Ms": 1.0759
+    },
+    {
+      "Id": "r0191e33",
+      "Empties": 33,
+      "Move": "g5",
+      "Score": -2950,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 25997,
+      "Ms": 2.4731
+    },
+    {
+      "Id": "r0192e39",
+      "Empties": 39,
+      "Move": "a5",
+      "Score": 537,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 24449,
+      "Ms": 2.2134
+    },
+    {
+      "Id": "r0193e51",
+      "Empties": 51,
+      "Move": "a6",
+      "Score": 1037,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5449,
+      "Ms": 0.5063
+    },
+    {
+      "Id": "r0194e35",
+      "Empties": 35,
+      "Move": "h3",
+      "Score": -4300,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 24565,
+      "Ms": 2.2778
+    },
+    {
+      "Id": "r0195e38",
+      "Empties": 38,
+      "Move": "d6",
+      "Score": 325,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 30581,
+      "Ms": 2.9074
+    },
+    {
+      "Id": "r0196e39",
+      "Empties": 39,
+      "Move": "d6",
+      "Score": -1625,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 24633,
+      "Ms": 2.334
+    },
+    {
+      "Id": "r0197e33",
+      "Empties": 33,
+      "Move": "a1",
+      "Score": 2500,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9921,
+      "Ms": 0.9053
+    },
+    {
+      "Id": "r0198e46",
+      "Empties": 46,
+      "Move": "f5",
+      "Score": 875,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9078,
+      "Ms": 0.8397
+    },
+    {
+      "Id": "r0199e35",
+      "Empties": 35,
+      "Move": "e6",
+      "Score": 2975,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5821,
+      "Ms": 0.5749
+    },
+    {
+      "Id": "r0200e57",
+      "Empties": 57,
+      "Move": "f4",
+      "Score": 1375,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1888,
+      "Ms": 0.1845
+    },
+    {
+      "Id": "r0201e32",
+      "Empties": 32,
+      "Move": "f3",
+      "Score": -1637,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 28643,
+      "Ms": 2.7101
+    },
+    {
+      "Id": "r0202e33",
+      "Empties": 33,
+      "Move": "h1",
+      "Score": 925,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4783,
+      "Ms": 0.4823
+    },
+    {
+      "Id": "r0203e20",
+      "Empties": 20,
+      "Move": "a8",
+      "Score": -262,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5062,
+      "Ms": 0.4867
+    },
+    {
+      "Id": "r0204e28",
+      "Empties": 28,
+      "Move": "d6",
+      "Score": 2125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4916,
+      "Ms": 0.4848
+    },
+    {
+      "Id": "r0205e53",
+      "Empties": 53,
+      "Move": "f2",
+      "Score": 875,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3492,
+      "Ms": 0.3354
+    },
+    {
+      "Id": "r0206e56",
+      "Empties": 56,
+      "Move": "c4",
+      "Score": 2837,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4349,
+      "Ms": 0.3994
+    },
+    {
+      "Id": "r0207e54",
+      "Empties": 54,
+      "Move": "c5",
+      "Score": 1362,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2789,
+      "Ms": 0.2562
+    },
+    {
+      "Id": "r0208e29",
+      "Empties": 29,
+      "Move": "c4",
+      "Score": -412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 19097,
+      "Ms": 1.7397
+    },
+    {
+      "Id": "r0209e49",
+      "Empties": 49,
+      "Move": "e6",
+      "Score": 600,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14056,
+      "Ms": 1.3262
+    },
+    {
+      "Id": "r0210e29",
+      "Empties": 29,
+      "Move": "a2",
+      "Score": 1962,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15404,
+      "Ms": 1.5888
+    },
+    {
+      "Id": "r0211e24",
+      "Empties": 24,
+      "Move": "f8",
+      "Score": -1612,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6251,
+      "Ms": 0.6076
+    },
+    {
+      "Id": "r0212e19",
+      "Empties": 19,
+      "Move": "b6",
+      "Score": -3887,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6141,
+      "Ms": 0.559
+    },
+    {
+      "Id": "r0213e25",
+      "Empties": 25,
+      "Move": "f2",
+      "Score": -25,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 19225,
+      "Ms": 1.7622
+    },
+    {
+      "Id": "r0214e40",
+      "Empties": 40,
+      "Move": "f3",
+      "Score": -2100,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9977,
+      "Ms": 1.0431
+    },
+    {
+      "Id": "r0215e52",
+      "Empties": 52,
+      "Move": "g6",
+      "Score": -562,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8333,
+      "Ms": 0.8395
+    },
+    {
+      "Id": "r0216e21",
+      "Empties": 21,
+      "Move": "h3",
+      "Score": 962,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 19657,
+      "Ms": 2.1183
+    },
+    {
+      "Id": "r0217e58",
+      "Empties": 58,
+      "Move": "e3",
+      "Score": 475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3887,
+      "Ms": 0.4041
+    },
+    {
+      "Id": "r0218e56",
+      "Empties": 56,
+      "Move": "d3",
+      "Score": -675,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1887,
+      "Ms": 0.1695
+    },
+    {
+      "Id": "r0219e16",
+      "Empties": 16,
+      "Move": "g6",
+      "Score": 737,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12173,
+      "Ms": 1.0924
+    },
+    {
+      "Id": "r0220e19",
+      "Empties": 19,
+      "Move": "h1",
+      "Score": -125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4220,
+      "Ms": 0.4054
+    },
+    {
+      "Id": "r0221e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2309
+    },
+    {
+      "Id": "r0222e25",
+      "Empties": 25,
+      "Move": "h8",
+      "Score": -62,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 74061,
+      "Ms": 6.9445
+    },
+    {
+      "Id": "r0223e26",
+      "Empties": 26,
+      "Move": "h8",
+      "Score": -75,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3637,
+      "Ms": 0.3647
+    },
+    {
+      "Id": "r0224e54",
+      "Empties": 54,
+      "Move": "a6",
+      "Score": -1175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4210,
+      "Ms": 0.3803
+    },
+    {
+      "Id": "r0225e39",
+      "Empties": 39,
+      "Move": "c3",
+      "Score": -2375,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17259,
+      "Ms": 1.7898
+    },
+    {
+      "Id": "r0226e43",
+      "Empties": 43,
+      "Move": "f5",
+      "Score": 1300,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15741,
+      "Ms": 1.5133
+    },
+    {
+      "Id": "r0227e47",
+      "Empties": 47,
+      "Move": "d6",
+      "Score": -550,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11741,
+      "Ms": 1.1881
+    },
+    {
+      "Id": "r0228e42",
+      "Empties": 42,
+      "Move": "c5",
+      "Score": 762,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3609,
+      "Ms": 0.4072
+    },
+    {
+      "Id": "r0229e37",
+      "Empties": 37,
+      "Move": "f2",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 22966,
+      "Ms": 2.3599
+    },
+    {
+      "Id": "r0230e32",
+      "Empties": 32,
+      "Move": "a2",
+      "Score": -350,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7798,
+      "Ms": 0.6979
+    },
+    {
+      "Id": "r0231e40",
+      "Empties": 40,
+      "Move": "g1",
+      "Score": -1400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11759,
+      "Ms": 1.0946
+    },
+    {
+      "Id": "r0232e27",
+      "Empties": 27,
+      "Move": "a7",
+      "Score": 4000,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13219,
+      "Ms": 1.2057
+    },
+    {
+      "Id": "r0233e32",
+      "Empties": 32,
+      "Move": "f4",
+      "Score": -3075,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12934,
+      "Ms": 1.2652
+    },
+    {
+      "Id": "r0234e43",
+      "Empties": 43,
+      "Move": "g8",
+      "Score": -400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9136,
+      "Ms": 0.9311
+    },
+    {
+      "Id": "r0235e26",
+      "Empties": 26,
+      "Move": "a2",
+      "Score": 2300,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6865,
+      "Ms": 0.6193
+    },
+    {
+      "Id": "r0236e41",
+      "Empties": 41,
+      "Move": "c5",
+      "Score": -1437,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7006,
+      "Ms": 0.6593
+    },
+    {
+      "Id": "r0237e43",
+      "Empties": 43,
+      "Move": "a3",
+      "Score": 3750,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7093,
+      "Ms": 0.6499
+    },
+    {
+      "Id": "r0238e17",
+      "Empties": 17,
+      "Move": "b1",
+      "Score": 4150,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4801,
+      "Ms": 0.5501
+    },
+    {
+      "Id": "r0239e51",
+      "Empties": 51,
+      "Move": "c6",
+      "Score": -2450,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 21998,
+      "Ms": 2.1519
+    },
+    {
+      "Id": "r0240e28",
+      "Empties": 28,
+      "Move": "a1",
+      "Score": 1387,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8274,
+      "Ms": 0.8386
+    },
+    {
+      "Id": "r0241e39",
+      "Empties": 39,
+      "Move": "c3",
+      "Score": -1437,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 22765,
+      "Ms": 2.1416
+    },
+    {
+      "Id": "r0242e36",
+      "Empties": 36,
+      "Move": "g3",
+      "Score": -87,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 33940,
+      "Ms": 3.5067
+    },
+    {
+      "Id": "r0243e48",
+      "Empties": 48,
+      "Move": "f3",
+      "Score": -2812,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10786,
+      "Ms": 1.0637
+    },
+    {
+      "Id": "r0244e31",
+      "Empties": 31,
+      "Move": "h1",
+      "Score": 400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 30718,
+      "Ms": 2.898
+    },
+    {
+      "Id": "r0245e41",
+      "Empties": 41,
+      "Move": "f4",
+      "Score": -487,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10926,
+      "Ms": 1.0506
+    },
+    {
+      "Id": "r0246e38",
+      "Empties": 38,
+      "Move": "d7",
+      "Score": -1300,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7511,
+      "Ms": 0.8015
+    },
+    {
+      "Id": "r0247e33",
+      "Empties": 33,
+      "Move": "c5",
+      "Score": -4562,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6134,
+      "Ms": 0.6133
+    },
+    {
+      "Id": "r0248e16",
+      "Empties": 16,
+      "Move": "a8",
+      "Score": 1275,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7413,
+      "Ms": 0.7114
+    },
+    {
+      "Id": "r0249e41",
+      "Empties": 41,
+      "Move": "g8",
+      "Score": 2050,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11777,
+      "Ms": 1.1402
+    },
+    {
+      "Id": "r0250e32",
+      "Empties": 32,
+      "Move": "h1",
+      "Score": -2000,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4173,
+      "Ms": 0.3723
+    },
+    {
+      "Id": "r0251e31",
+      "Empties": 31,
+      "Move": "c5",
+      "Score": 2012,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12185,
+      "Ms": 1.1987
+    },
+    {
+      "Id": "r0252e39",
+      "Empties": 39,
+      "Move": "c3",
+      "Score": -862,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3969,
+      "Ms": 0.3535
+    },
+    {
+      "Id": "r0253e21",
+      "Empties": 21,
+      "Move": "g1",
+      "Score": -1462,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14589,
+      "Ms": 1.36
+    },
+    {
+      "Id": "r0254e44",
+      "Empties": 44,
+      "Move": "e6",
+      "Score": 3150,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12261,
+      "Ms": 1.2859
+    },
+    {
+      "Id": "r0255e34",
+      "Empties": 34,
+      "Move": "f1",
+      "Score": 2850,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11639,
+      "Ms": 1.1188
+    },
+    {
+      "Id": "r0256e44",
+      "Empties": 44,
+      "Move": "b4",
+      "Score": 437,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4195,
+      "Ms": 0.397
+    },
+    {
+      "Id": "r0257e24",
+      "Empties": 24,
+      "Move": "a1",
+      "Score": -1275,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17539,
+      "Ms": 1.7471
+    },
+    {
+      "Id": "r0258e18",
+      "Empties": 18,
+      "Move": "a5",
+      "Score": 1662,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10836,
+      "Ms": 0.9984
+    },
+    {
+      "Id": "r0259e57",
+      "Empties": 57,
+      "Move": "g5",
+      "Score": 562,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2115,
+      "Ms": 0.2034
+    },
+    {
+      "Id": "r0260e59",
+      "Empties": 59,
+      "Move": "e3",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2646,
+      "Ms": 0.2376
+    },
+    {
+      "Id": "r0261e57",
+      "Empties": 57,
+      "Move": "d6",
+      "Score": 225,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2631,
+      "Ms": 0.2379
+    },
+    {
+      "Id": "r0262e40",
+      "Empties": 40,
+      "Move": "a4",
+      "Score": 1687,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2289,
+      "Ms": 0.2386
+    },
+    {
+      "Id": "r0263e59",
+      "Empties": 59,
+      "Move": "e3",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2646,
+      "Ms": 0.2106
+    },
+    {
+      "Id": "r0264e21",
+      "Empties": 21,
+      "Move": "d7",
+      "Score": -25,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11522,
+      "Ms": 1.028
+    },
+    {
+      "Id": "r0265e28",
+      "Empties": 28,
+      "Move": "a1",
+      "Score": 1587,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11661,
+      "Ms": 1.2306
+    },
+    {
+      "Id": "r0266e41",
+      "Empties": 41,
+      "Move": "e3",
+      "Score": -637,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13330,
+      "Ms": 1.2721
+    },
+    {
+      "Id": "r0267e26",
+      "Empties": 26,
+      "Move": "d8",
+      "Score": 1687,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7194,
+      "Ms": 0.6956
+    },
+    {
+      "Id": "r0268e29",
+      "Empties": 29,
+      "Move": "a8",
+      "Score": 2325,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 25502,
+      "Ms": 2.3764
+    },
+    {
+      "Id": "r0269e16",
+      "Empties": 16,
+      "Move": "h1",
+      "Score": -4775,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2054,
+      "Ms": 0.2005
+    },
+    {
+      "Id": "r0270e16",
+      "Empties": 16,
+      "Move": "a8",
+      "Score": 2475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6424,
+      "Ms": 0.5396
+    },
+    {
+      "Id": "r0271e54",
+      "Empties": 54,
+      "Move": "b4",
+      "Score": 250,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7426,
+      "Ms": 0.6911
+    },
+    {
+      "Id": "r0272e30",
+      "Empties": 30,
+      "Move": "h3",
+      "Score": -2425,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9079,
+      "Ms": 0.8639
+    },
+    {
+      "Id": "r0273e56",
+      "Empties": 56,
+      "Move": "e3",
+      "Score": 62,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2794,
+      "Ms": 0.2554
+    },
+    {
+      "Id": "r0274e33",
+      "Empties": 33,
+      "Move": "e6",
+      "Score": 4587,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 23271,
+      "Ms": 2.3252
+    },
+    {
+      "Id": "r0275e48",
+      "Empties": 48,
+      "Move": "c4",
+      "Score": 162,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14983,
+      "Ms": 1.4439
+    },
+    {
+      "Id": "r0276e50",
+      "Empties": 50,
+      "Move": "c4",
+      "Score": -637,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4713,
+      "Ms": 0.4204
+    },
+    {
+      "Id": "r0277e57",
+      "Empties": 57,
+      "Move": "c4",
+      "Score": -250,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5398,
+      "Ms": 0.466
+    },
+    {
+      "Id": "r0278e58",
+      "Empties": 58,
+      "Move": "d3",
+      "Score": 50,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2893,
+      "Ms": 0.2457
+    },
+    {
+      "Id": "r0279e41",
+      "Empties": 41,
+      "Move": "f5",
+      "Score": 850,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11527,
+      "Ms": 1.104
+    },
+    {
+      "Id": "r0280e28",
+      "Empties": 28,
+      "Move": "a8",
+      "Score": 1587,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2324,
+      "Ms": 0.2314
+    },
+    {
+      "Id": "r0281e22",
+      "Empties": 22,
+      "Move": "b3",
+      "Score": -4225,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4498,
+      "Ms": 0.4278
+    },
+    {
+      "Id": "r0282e56",
+      "Empties": 56,
+      "Move": "e6",
+      "Score": 50,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4289,
+      "Ms": 0.3654
+    },
+    {
+      "Id": "r0283e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2264
+    },
+    {
+      "Id": "r0284e55",
+      "Empties": 55,
+      "Move": "c5",
+      "Score": 962,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1923,
+      "Ms": 0.1736
+    },
+    {
+      "Id": "r0285e27",
+      "Empties": 27,
+      "Move": "d3",
+      "Score": -3262,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 33657,
+      "Ms": 3.1804
+    },
+    {
+      "Id": "r0286e19",
+      "Empties": 19,
+      "Move": "c4",
+      "Score": -900,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7124,
+      "Ms": 0.6618
+    },
+    {
+      "Id": "r0287e51",
+      "Empties": 51,
+      "Move": "c5",
+      "Score": -387,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8631,
+      "Ms": 0.7814
+    },
+    {
+      "Id": "r0288e22",
+      "Empties": 22,
+      "Move": "f1",
+      "Score": 1437,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 18428,
+      "Ms": 1.7509
+    },
+    {
+      "Id": "r0289e55",
+      "Empties": 55,
+      "Move": "e3",
+      "Score": 962,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1879,
+      "Ms": 0.1733
+    },
+    {
+      "Id": "r0290e58",
+      "Empties": 58,
+      "Move": "e3",
+      "Score": 475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3887,
+      "Ms": 0.34
+    },
+    {
+      "Id": "r0291e51",
+      "Empties": 51,
+      "Move": "d3",
+      "Score": 212,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4012,
+      "Ms": 0.3734
+    },
+    {
+      "Id": "r0292e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2153
+    },
+    {
+      "Id": "r0293e59",
+      "Empties": 59,
+      "Move": "e3",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2646,
+      "Ms": 0.2166
+    },
+    {
+      "Id": "r0294e37",
+      "Empties": 37,
+      "Move": "h6",
+      "Score": 2525,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8624,
+      "Ms": 0.9021
+    },
+    {
+      "Id": "r0295e27",
+      "Empties": 27,
+      "Move": "f2",
+      "Score": 2200,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6900,
+      "Ms": 0.6483
+    },
+    {
+      "Id": "r0296e19",
+      "Empties": 19,
+      "Move": "g6",
+      "Score": -250,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10727,
+      "Ms": 1.1231
+    },
+    {
+      "Id": "r0297e16",
+      "Empties": 16,
+      "Move": "g3",
+      "Score": 1175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4992,
+      "Ms": 0.4551
+    },
+    {
+      "Id": "r0298e19",
+      "Empties": 19,
+      "Move": "h1",
+      "Score": -150,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17971,
+      "Ms": 1.5076
+    },
+    {
+      "Id": "r0299e33",
+      "Empties": 33,
+      "Move": "c6",
+      "Score": 500,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17793,
+      "Ms": 1.6368
+    },
+    {
+      "Id": "r0300e41",
+      "Empties": 41,
+      "Move": "e6",
+      "Score": -1800,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12838,
+      "Ms": 1.3467
+    },
+    {
+      "Id": "r0301e35",
+      "Empties": 35,
+      "Move": "g8",
+      "Score": -1837,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7260,
+      "Ms": 0.7158
+    },
+    {
+      "Id": "r0302e57",
+      "Empties": 57,
+      "Move": "e7",
+      "Score": 562,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2080,
+      "Ms": 0.1882
+    },
+    {
+      "Id": "r0303e21",
+      "Empties": 21,
+      "Move": "e7",
+      "Score": -237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 33003,
+      "Ms": 2.8029
+    },
+    {
+      "Id": "r0304e24",
+      "Empties": 24,
+      "Move": "e3",
+      "Score": -62,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4518,
+      "Ms": 0.4284
+    },
+    {
+      "Id": "r0305e35",
+      "Empties": 35,
+      "Move": "d3",
+      "Score": -1012,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15293,
+      "Ms": 1.3676
+    },
+    {
+      "Id": "r0306e19",
+      "Empties": 19,
+      "Move": "g4",
+      "Score": -1425,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10164,
+      "Ms": 0.8885
+    },
+    {
+      "Id": "r0307e32",
+      "Empties": 32,
+      "Move": "h6",
+      "Score": 5462,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17383,
+      "Ms": 1.5254
+    },
+    {
+      "Id": "r0308e39",
+      "Empties": 39,
+      "Move": "f3",
+      "Score": -2062,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9449,
+      "Ms": 0.9178
+    },
+    {
+      "Id": "r0309e52",
+      "Empties": 52,
+      "Move": "c3",
+      "Score": 325,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9690,
+      "Ms": 0.9468
+    },
+    {
+      "Id": "r0310e58",
+      "Empties": 58,
+      "Move": "e6",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4852,
+      "Ms": 0.4286
+    },
+    {
+      "Id": "r0311e24",
+      "Empties": 24,
+      "Move": "c1",
+      "Score": -3700,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3680,
+      "Ms": 0.3821
+    },
+    {
+      "Id": "r0312e52",
+      "Empties": 52,
+      "Move": "g6",
+      "Score": 512,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13681,
+      "Ms": 1.3118
+    },
+    {
+      "Id": "r0313e34",
+      "Empties": 34,
+      "Move": "g3",
+      "Score": 37,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 26610,
+      "Ms": 2.5555
+    },
+    {
+      "Id": "r0314e29",
+      "Empties": 29,
+      "Move": "h5",
+      "Score": 2725,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4122,
+      "Ms": 0.4003
+    },
+    {
+      "Id": "r0315e43",
+      "Empties": 43,
+      "Move": "g6",
+      "Score": 2362,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4076,
+      "Ms": 0.4996
+    },
+    {
+      "Id": "r0316e44",
+      "Empties": 44,
+      "Move": "g6",
+      "Score": -425,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 26845,
+      "Ms": 2.5703
+    },
+    {
+      "Id": "r0317e53",
+      "Empties": 53,
+      "Move": "g3",
+      "Score": 1137,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3628,
+      "Ms": 0.3343
+    },
+    {
+      "Id": "r0318e59",
+      "Empties": 59,
+      "Move": "d6",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2789,
+      "Ms": 0.2416
+    },
+    {
+      "Id": "r0319e40",
+      "Empties": 40,
+      "Move": "c6",
+      "Score": 850,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14744,
+      "Ms": 1.3686
+    },
+    {
+      "Id": "r0320e30",
+      "Empties": 30,
+      "Move": "f6",
+      "Score": 837,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10874,
+      "Ms": 1.081
+    },
+    {
+      "Id": "r0321e22",
+      "Empties": 22,
+      "Move": "e8",
+      "Score": 237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14747,
+      "Ms": 1.2777
+    },
+    {
+      "Id": "r0322e43",
+      "Empties": 43,
+      "Move": "a5",
+      "Score": 1700,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12670,
+      "Ms": 1.2188
+    },
+    {
+      "Id": "r0323e20",
+      "Empties": 20,
+      "Move": "a8",
+      "Score": 3400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4174,
+      "Ms": 0.3844
+    },
+    {
+      "Id": "r0324e49",
+      "Empties": 49,
+      "Move": "d3",
+      "Score": 1400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 16081,
+      "Ms": 1.6468
+    },
+    {
+      "Id": "r0325e43",
+      "Empties": 43,
+      "Move": "d7",
+      "Score": 1012,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15721,
+      "Ms": 1.5393
+    },
+    {
+      "Id": "r0326e37",
+      "Empties": 37,
+      "Move": "c6",
+      "Score": 4050,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 45187,
+      "Ms": 5.1617
+    },
+    {
+      "Id": "r0327e40",
+      "Empties": 40,
+      "Move": "a4",
+      "Score": -2300,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8709,
+      "Ms": 0.9767
+    },
+    {
+      "Id": "r0328e56",
+      "Empties": 56,
+      "Move": "b4",
+      "Score": 287,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5987,
+      "Ms": 0.5298
+    },
+    {
+      "Id": "r0329e18",
+      "Empties": 18,
+      "Move": "h2",
+      "Score": 2287,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2584,
+      "Ms": 0.288
+    },
+    {
+      "Id": "r0330e41",
+      "Empties": 41,
+      "Move": "c6",
+      "Score": 2425,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9598,
+      "Ms": 0.8838
+    },
+    {
+      "Id": "r0331e25",
+      "Empties": 25,
+      "Move": "d3",
+      "Score": 2500,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8500,
+      "Ms": 0.8586
+    },
+    {
+      "Id": "r0332e36",
+      "Empties": 36,
+      "Move": "e2",
+      "Score": -787,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 27464,
+      "Ms": 2.4637
+    },
+    {
+      "Id": "r0333e23",
+      "Empties": 23,
+      "Move": "f8",
+      "Score": 3637,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3314,
+      "Ms": 0.3627
+    },
+    {
+      "Id": "r0334e41",
+      "Empties": 41,
+      "Move": "b5",
+      "Score": -2075,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 31425,
+      "Ms": 2.9566
+    },
+    {
+      "Id": "r0335e30",
+      "Empties": 30,
+      "Move": "a8",
+      "Score": -137,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6912,
+      "Ms": 0.7213
+    },
+    {
+      "Id": "r0336e27",
+      "Empties": 27,
+      "Move": "d8",
+      "Score": 337,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11768,
+      "Ms": 1.1876
+    },
+    {
+      "Id": "r0337e16",
+      "Empties": 16,
+      "Move": "a6",
+      "Score": -1312,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6080,
+      "Ms": 0.5357
+    },
+    {
+      "Id": "r0338e44",
+      "Empties": 44,
+      "Move": "e7",
+      "Score": 1962,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 31833,
+      "Ms": 3.082
+    },
+    {
+      "Id": "r0339e39",
+      "Empties": 39,
+      "Move": "e8",
+      "Score": -1350,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 34978,
+      "Ms": 3.4384
+    },
+    {
+      "Id": "r0340e16",
+      "Empties": 16,
+      "Move": "g3",
+      "Score": 1787,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3760,
+      "Ms": 0.3484
+    },
+    {
+      "Id": "r0341e18",
+      "Empties": 18,
+      "Move": "b5",
+      "Score": 3562,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12385,
+      "Ms": 1.0896
+    },
+    {
+      "Id": "r0342e59",
+      "Empties": 59,
+      "Move": "d6",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2789,
+      "Ms": 0.2626
+    },
+    {
+      "Id": "r0343e35",
+      "Empties": 35,
+      "Move": "a5",
+      "Score": 462,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5391,
+      "Ms": 0.5374
+    },
+    {
+      "Id": "r0344e59",
+      "Empties": 59,
+      "Move": "d6",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2789,
+      "Ms": 0.2277
+    },
+    {
+      "Id": "r0345e21",
+      "Empties": 21,
+      "Move": "a1",
+      "Score": 1512,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7538,
+      "Ms": 0.6728
+    },
+    {
+      "Id": "r0346e16",
+      "Empties": 16,
+      "Move": "h8",
+      "Score": -4000,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3204,
+      "Ms": 0.2965
+    },
+    {
+      "Id": "r0347e55",
+      "Empties": 55,
+      "Move": "e3",
+      "Score": 1012,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1589,
+      "Ms": 0.1573
+    },
+    {
+      "Id": "r0348e21",
+      "Empties": 21,
+      "Move": "a1",
+      "Score": 1150,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13058,
+      "Ms": 1.1234
+    },
+    {
+      "Id": "r0349e55",
+      "Empties": 55,
+      "Move": "g5",
+      "Score": 1137,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2425,
+      "Ms": 0.2423
+    },
+    {
+      "Id": "r0350e20",
+      "Empties": 20,
+      "Move": "g4",
+      "Score": -750,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8685,
+      "Ms": 0.7546
+    },
+    {
+      "Id": "r0351e56",
+      "Empties": 56,
+      "Move": "e3",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2671,
+      "Ms": 0.2403
+    },
+    {
+      "Id": "r0352e23",
+      "Empties": 23,
+      "Move": "b1",
+      "Score": -2387,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7283,
+      "Ms": 0.6286
+    },
+    {
+      "Id": "r0353e58",
+      "Empties": 58,
+      "Move": "d3",
+      "Score": 50,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2893,
+      "Ms": 0.2547
+    },
+    {
+      "Id": "r0354e50",
+      "Empties": 50,
+      "Move": "c4",
+      "Score": -662,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10363,
+      "Ms": 1.0014
+    },
+    {
+      "Id": "r0355e46",
+      "Empties": 46,
+      "Move": "g4",
+      "Score": -775,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9162,
+      "Ms": 0.8649
+    },
+    {
+      "Id": "r0356e59",
+      "Empties": 59,
+      "Move": "e3",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2646,
+      "Ms": 0.2274
+    },
+    {
+      "Id": "r0357e34",
+      "Empties": 34,
+      "Move": "h3",
+      "Score": 687,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13148,
+      "Ms": 1.2891
+    },
+    {
+      "Id": "r0358e22",
+      "Empties": 22,
+      "Move": "h8",
+      "Score": -1175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8894,
+      "Ms": 0.8132
+    },
+    {
+      "Id": "r0359e48",
+      "Empties": 48,
+      "Move": "e7",
+      "Score": -62,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10472,
+      "Ms": 0.9978
+    },
+    {
+      "Id": "r0360e48",
+      "Empties": 48,
+      "Move": "c3",
+      "Score": -3287,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13488,
+      "Ms": 1.2574
+    },
+    {
+      "Id": "r0361e45",
+      "Empties": 45,
+      "Move": "d6",
+      "Score": 612,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6507,
+      "Ms": 0.5969
+    },
+    {
+      "Id": "r0362e33",
+      "Empties": 33,
+      "Move": "h8",
+      "Score": 2712,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 78653,
+      "Ms": 7.1507
+    },
+    {
+      "Id": "r0363e35",
+      "Empties": 35,
+      "Move": "b6",
+      "Score": 2162,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 28933,
+      "Ms": 2.9765
+    },
+    {
+      "Id": "r0364e21",
+      "Empties": 21,
+      "Move": "b8",
+      "Score": 825,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11880,
+      "Ms": 1.1385
+    },
+    {
+      "Id": "r0365e25",
+      "Empties": 25,
+      "Move": "a8",
+      "Score": 512,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11718,
+      "Ms": 1.14
+    },
+    {
+      "Id": "r0366e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2441
+    },
+    {
+      "Id": "r0367e44",
+      "Empties": 44,
+      "Move": "c5",
+      "Score": 1100,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12016,
+      "Ms": 1.2521
+    },
+    {
+      "Id": "r0368e58",
+      "Empties": 58,
+      "Move": "d3",
+      "Score": 50,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2893,
+      "Ms": 0.26
+    },
+    {
+      "Id": "r0369e20",
+      "Empties": 20,
+      "Move": "c7",
+      "Score": -3012,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15926,
+      "Ms": 1.3691
+    },
+    {
+      "Id": "r0370e24",
+      "Empties": 24,
+      "Move": "f1",
+      "Score": 3075,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 25705,
+      "Ms": 2.3292
+    },
+    {
+      "Id": "r0371e37",
+      "Empties": 37,
+      "Move": "h8",
+      "Score": 3462,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7917,
+      "Ms": 0.7416
+    },
+    {
+      "Id": "r0372e18",
+      "Empties": 18,
+      "Move": "a2",
+      "Score": -887,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5881,
+      "Ms": 0.535
+    },
+    {
+      "Id": "r0373e17",
+      "Empties": 17,
+      "Move": "a8",
+      "Score": 3200,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1608,
+      "Ms": 0.1689
+    },
+    {
+      "Id": "r0374e51",
+      "Empties": 51,
+      "Move": "d3",
+      "Score": -537,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6918,
+      "Ms": 0.6756
+    },
+    {
+      "Id": "r0375e53",
+      "Empties": 53,
+      "Move": "e3",
+      "Score": -225,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7088,
+      "Ms": 0.6523
+    },
+    {
+      "Id": "r0376e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2245
+    },
+    {
+      "Id": "r0377e59",
+      "Empties": 59,
+      "Move": "c5",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2622,
+      "Ms": 0.2114
+    },
+    {
+      "Id": "r0378e20",
+      "Empties": 20,
+      "Move": "h2",
+      "Score": 750,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 21264,
+      "Ms": 1.8705
+    },
+    {
+      "Id": "r0379e25",
+      "Empties": 25,
+      "Move": "c1",
+      "Score": -3262,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 16057,
+      "Ms": 1.4125
+    },
+    {
+      "Id": "r0380e50",
+      "Empties": 50,
+      "Move": "h5",
+      "Score": -900,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11742,
+      "Ms": 1.1489
+    },
+    {
+      "Id": "r0381e22",
+      "Empties": 22,
+      "Move": "f5",
+      "Score": 3000,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15377,
+      "Ms": 1.5447
+    },
+    {
+      "Id": "r0382e35",
+      "Empties": 35,
+      "Move": "g6",
+      "Score": -100,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 18756,
+      "Ms": 1.9974
+    },
+    {
+      "Id": "r0383e24",
+      "Empties": 24,
+      "Move": "e2",
+      "Score": -4337,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8970,
+      "Ms": 0.8705
+    },
+    {
+      "Id": "r0384e49",
+      "Empties": 49,
+      "Move": "g3",
+      "Score": 1187,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4829,
+      "Ms": 0.4938
+    },
+    {
+      "Id": "r0385e29",
+      "Empties": 29,
+      "Move": "d2",
+      "Score": 3937,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10659,
+      "Ms": 1.0596
+    },
+    {
+      "Id": "r0386e40",
+      "Empties": 40,
+      "Move": "f5",
+      "Score": 2362,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 20466,
+      "Ms": 2.0083
+    },
+    {
+      "Id": "r0387e53",
+      "Empties": 53,
+      "Move": "f4",
+      "Score": 475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5973,
+      "Ms": 0.5251
+    },
+    {
+      "Id": "r0388e47",
+      "Empties": 47,
+      "Move": "c3",
+      "Score": -2300,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15703,
+      "Ms": 1.5214
+    },
+    {
+      "Id": "r0389e22",
+      "Empties": 22,
+      "Move": "g3",
+      "Score": -2412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10526,
+      "Ms": 0.937
+    },
+    {
+      "Id": "r0390e45",
+      "Empties": 45,
+      "Move": "c3",
+      "Score": -212,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 20248,
+      "Ms": 2.0321
+    },
+    {
+      "Id": "r0391e59",
+      "Empties": 59,
+      "Move": "d6",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2789,
+      "Ms": 0.2603
+    },
+    {
+      "Id": "r0392e22",
+      "Empties": 22,
+      "Move": "e6",
+      "Score": -6400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8026,
+      "Ms": 0.7678
+    },
+    {
+      "Id": "r0393e51",
+      "Empties": 51,
+      "Move": "f4",
+      "Score": 487,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3768,
+      "Ms": 0.379
+    },
+    {
+      "Id": "r0394e32",
+      "Empties": 32,
+      "Move": "a4",
+      "Score": 2325,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1993,
+      "Ms": 0.2112
+    },
+    {
+      "Id": "r0395e58",
+      "Empties": 58,
+      "Move": "c4",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4714,
+      "Ms": 0.4098
+    },
+    {
+      "Id": "r0396e41",
+      "Empties": 41,
+      "Move": "c2",
+      "Score": -3025,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6168,
+      "Ms": 0.5998
+    },
+    {
+      "Id": "r0397e30",
+      "Empties": 30,
+      "Move": "d1",
+      "Score": -6400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 42864,
+      "Ms": 3.4319
+    },
+    {
+      "Id": "r0398e45",
+      "Empties": 45,
+      "Move": "f2",
+      "Score": -312,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12300,
+      "Ms": 1.1767
+    },
+    {
+      "Id": "r0399e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2285
+    },
+    {
+      "Id": "r0400e20",
+      "Empties": 20,
+      "Move": "a2",
+      "Score": 5937,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8062,
+      "Ms": 0.7496
+    },
+    {
+      "Id": "r0401e55",
+      "Empties": 55,
+      "Move": "f4",
+      "Score": 925,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8039,
+      "Ms": 0.7199
+    },
+    {
+      "Id": "r0402e40",
+      "Empties": 40,
+      "Move": "e6",
+      "Score": 2112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13671,
+      "Ms": 1.3888
+    },
+    {
+      "Id": "r0403e21",
+      "Empties": 21,
+      "Move": "h1",
+      "Score": 4575,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9031,
+      "Ms": 0.8574
+    },
+    {
+      "Id": "r0404e31",
+      "Empties": 31,
+      "Move": "f5",
+      "Score": -1450,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12001,
+      "Ms": 1.1465
+    },
+    {
+      "Id": "r0405e57",
+      "Empties": 57,
+      "Move": "e6",
+      "Score": -250,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5419,
+      "Ms": 0.4695
+    },
+    {
+      "Id": "r0406e32",
+      "Empties": 32,
+      "Move": "b4",
+      "Score": 2237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 26223,
+      "Ms": 2.6206
+    },
+    {
+      "Id": "r0407e57",
+      "Empties": 57,
+      "Move": "e7",
+      "Score": 375,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1735,
+      "Ms": 0.1599
+    },
+    {
+      "Id": "r0408e36",
+      "Empties": 36,
+      "Move": "d8",
+      "Score": 2387,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6693,
+      "Ms": 0.6567
+    },
+    {
+      "Id": "r0409e39",
+      "Empties": 39,
+      "Move": "a4",
+      "Score": -1937,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9387,
+      "Ms": 0.9664
+    },
+    {
+      "Id": "r0410e39",
+      "Empties": 39,
+      "Move": "f3",
+      "Score": 600,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14468,
+      "Ms": 1.4148
+    },
+    {
+      "Id": "r0411e43",
+      "Empties": 43,
+      "Move": "c1",
+      "Score": 2300,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8668,
+      "Ms": 0.7985
+    },
+    {
+      "Id": "r0412e56",
+      "Empties": 56,
+      "Move": "g4",
+      "Score": 675,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2395,
+      "Ms": 0.2167
+    },
+    {
+      "Id": "r0413e39",
+      "Empties": 39,
+      "Move": "f5",
+      "Score": -200,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7929,
+      "Ms": 0.7633
+    },
+    {
+      "Id": "r0414e24",
+      "Empties": 24,
+      "Move": "a6",
+      "Score": 2025,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4191,
+      "Ms": 0.477
+    },
+    {
+      "Id": "r0415e59",
+      "Empties": 59,
+      "Move": "e3",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2646,
+      "Ms": 0.2303
+    },
+    {
+      "Id": "r0416e47",
+      "Empties": 47,
+      "Move": "g5",
+      "Score": -1262,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14127,
+      "Ms": 1.4187
+    },
+    {
+      "Id": "r0417e21",
+      "Empties": 21,
+      "Move": "e1",
+      "Score": -1550,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4081,
+      "Ms": 0.4168
+    },
+    {
+      "Id": "r0418e43",
+      "Empties": 43,
+      "Move": "f1",
+      "Score": 2875,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13944,
+      "Ms": 1.4089
+    },
+    {
+      "Id": "r0419e54",
+      "Empties": 54,
+      "Move": "f5",
+      "Score": 375,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6287,
+      "Ms": 0.5837
+    },
+    {
+      "Id": "r0420e50",
+      "Empties": 50,
+      "Move": "g5",
+      "Score": -1900,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13854,
+      "Ms": 1.2974
+    },
+    {
+      "Id": "r0421e43",
+      "Empties": 43,
+      "Move": "d1",
+      "Score": -2812,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9277,
+      "Ms": 0.9597
+    },
+    {
+      "Id": "r0422e55",
+      "Empties": 55,
+      "Move": "e7",
+      "Score": -287,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4493,
+      "Ms": 0.4314
+    },
+    {
+      "Id": "r0423e20",
+      "Empties": 20,
+      "Move": "f4",
+      "Score": -1962,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10789,
+      "Ms": 1.0137
+    },
+    {
+      "Id": "r0424e57",
+      "Empties": 57,
+      "Move": "d3",
+      "Score": -250,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4772,
+      "Ms": 0.4226
+    },
+    {
+      "Id": "r0425e39",
+      "Empties": 39,
+      "Move": "f3",
+      "Score": -225,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13692,
+      "Ms": 1.2853
+    },
+    {
+      "Id": "r0426e23",
+      "Empties": 23,
+      "Move": "f8",
+      "Score": 737,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11232,
+      "Ms": 1.0842
+    },
+    {
+      "Id": "r0427e46",
+      "Empties": 46,
+      "Move": "h5",
+      "Score": -750,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14924,
+      "Ms": 1.5184
+    },
+    {
+      "Id": "r0428e50",
+      "Empties": 50,
+      "Move": "f4",
+      "Score": -2000,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12621,
+      "Ms": 1.1709
+    },
+    {
+      "Id": "r0429e28",
+      "Empties": 28,
+      "Move": "f1",
+      "Score": 37,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10696,
+      "Ms": 1.0833
+    },
+    {
+      "Id": "r0430e41",
+      "Empties": 41,
+      "Move": "g5",
+      "Score": 1700,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10207,
+      "Ms": 0.9262
+    },
+    {
+      "Id": "r0431e44",
+      "Empties": 44,
+      "Move": "d3",
+      "Score": 3087,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3009,
+      "Ms": 0.2768
+    },
+    {
+      "Id": "r0432e17",
+      "Empties": 17,
+      "Move": "h4",
+      "Score": -1537,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6862,
+      "Ms": 0.651
+    },
+    {
+      "Id": "r0433e53",
+      "Empties": 53,
+      "Move": "d2",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7484,
+      "Ms": 0.6771
+    },
+    {
+      "Id": "r0434e37",
+      "Empties": 37,
+      "Move": "f5",
+      "Score": 3687,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17811,
+      "Ms": 1.9872
+    },
+    {
+      "Id": "r0435e20",
+      "Empties": 20,
+      "Move": "h5",
+      "Score": 1175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6296,
+      "Ms": 0.6171
+    },
+    {
+      "Id": "r0436e53",
+      "Empties": 53,
+      "Move": "c4",
+      "Score": -487,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5499,
+      "Ms": 0.5503
+    },
+    {
+      "Id": "r0437e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2296
+    },
+    {
+      "Id": "r0438e27",
+      "Empties": 27,
+      "Move": "h3",
+      "Score": 5412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 55130,
+      "Ms": 4.9037
+    },
+    {
+      "Id": "r0439e42",
+      "Empties": 42,
+      "Move": "g5",
+      "Score": -912,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10367,
+      "Ms": 1.0654
+    },
+    {
+      "Id": "r0440e25",
+      "Empties": 25,
+      "Move": "h8",
+      "Score": 6400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6869,
+      "Ms": 0.5735
+    },
+    {
+      "Id": "r0441e46",
+      "Empties": 46,
+      "Move": "c6",
+      "Score": -600,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7340,
+      "Ms": 0.6979
+    },
+    {
+      "Id": "r0442e59",
+      "Empties": 59,
+      "Move": "f4",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2780,
+      "Ms": 0.2433
+    },
+    {
+      "Id": "r0443e56",
+      "Empties": 56,
+      "Move": "e6",
+      "Score": 2837,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4557,
+      "Ms": 0.4417
+    },
+    {
+      "Id": "r0444e45",
+      "Empties": 45,
+      "Move": "d6",
+      "Score": -1250,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7965,
+      "Ms": 0.7949
+    },
+    {
+      "Id": "r0445e16",
+      "Empties": 16,
+      "Move": "e7",
+      "Score": -2700,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8900,
+      "Ms": 0.7919
+    },
+    {
+      "Id": "r0446e58",
+      "Empties": 58,
+      "Move": "c4",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4714,
+      "Ms": 0.4564
+    },
+    {
+      "Id": "r0447e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2384
+    },
+    {
+      "Id": "r0448e44",
+      "Empties": 44,
+      "Move": "d1",
+      "Score": 162,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9423,
+      "Ms": 0.9214
+    },
+    {
+      "Id": "r0449e29",
+      "Empties": 29,
+      "Move": "e8",
+      "Score": 6075,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4226,
+      "Ms": 0.4518
+    },
+    {
+      "Id": "r0450e40",
+      "Empties": 40,
+      "Move": "b8",
+      "Score": 2287,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15092,
+      "Ms": 1.5515
+    },
+    {
+      "Id": "r0451e25",
+      "Empties": 25,
+      "Move": "g1",
+      "Score": -1487,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6845,
+      "Ms": 0.6502
+    },
+    {
+      "Id": "r0452e59",
+      "Empties": 59,
+      "Move": "e3",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2646,
+      "Ms": 0.2426
+    },
+    {
+      "Id": "r0453e40",
+      "Empties": 40,
+      "Move": "b2",
+      "Score": -850,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13971,
+      "Ms": 1.2736
+    },
+    {
+      "Id": "r0454e22",
+      "Empties": 22,
+      "Move": "h8",
+      "Score": 1325,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 46712,
+      "Ms": 4.1921
+    },
+    {
+      "Id": "r0455e43",
+      "Empties": 43,
+      "Move": "e3",
+      "Score": -1162,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14228,
+      "Ms": 1.36
+    },
+    {
+      "Id": "r0456e41",
+      "Empties": 41,
+      "Move": "h5",
+      "Score": 2625,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9880,
+      "Ms": 1.041
+    },
+    {
+      "Id": "r0457e20",
+      "Empties": 20,
+      "Move": "g3",
+      "Score": -625,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 23082,
+      "Ms": 2.0548
+    },
+    {
+      "Id": "r0458e32",
+      "Empties": 32,
+      "Move": "e1",
+      "Score": -2850,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 21892,
+      "Ms": 2.1933
+    },
+    {
+      "Id": "r0459e45",
+      "Empties": 45,
+      "Move": "c4",
+      "Score": 1787,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2296,
+      "Ms": 0.2428
+    },
+    {
+      "Id": "r0460e20",
+      "Empties": 20,
+      "Move": "b1",
+      "Score": 950,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12214,
+      "Ms": 1.0411
+    },
+    {
+      "Id": "r0461e48",
+      "Empties": 48,
+      "Move": "e2",
+      "Score": -525,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7226,
+      "Ms": 0.8517
+    },
+    {
+      "Id": "r0462e46",
+      "Empties": 46,
+      "Move": "e6",
+      "Score": -2275,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7624,
+      "Ms": 0.7451
+    },
+    {
+      "Id": "r0463e19",
+      "Empties": 19,
+      "Move": "h1",
+      "Score": 600,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11654,
+      "Ms": 1.0432
+    },
+    {
+      "Id": "r0464e48",
+      "Empties": 48,
+      "Move": "e3",
+      "Score": 2462,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5486,
+      "Ms": 0.5091
+    },
+    {
+      "Id": "r0465e38",
+      "Empties": 38,
+      "Move": "d2",
+      "Score": 737,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 22878,
+      "Ms": 2.1419
+    },
+    {
+      "Id": "r0466e18",
+      "Empties": 18,
+      "Move": "a5",
+      "Score": 5100,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2224,
+      "Ms": 0.2148
+    },
+    {
+      "Id": "r0467e32",
+      "Empties": 32,
+      "Move": "f4",
+      "Score": 362,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4661,
+      "Ms": 0.4968
+    },
+    {
+      "Id": "r0468e54",
+      "Empties": 54,
+      "Move": "d6",
+      "Score": 2412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6119,
+      "Ms": 0.5997
+    },
+    {
+      "Id": "r0469e38",
+      "Empties": 38,
+      "Move": "d8",
+      "Score": 2325,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6356,
+      "Ms": 0.6739
+    },
+    {
+      "Id": "r0470e28",
+      "Empties": 28,
+      "Move": "h8",
+      "Score": -562,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4207,
+      "Ms": 0.4373
+    },
+    {
+      "Id": "r0471e51",
+      "Empties": 51,
+      "Move": "c3",
+      "Score": -1575,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8524,
+      "Ms": 0.807
+    },
+    {
+      "Id": "r0472e56",
+      "Empties": 56,
+      "Move": "c4",
+      "Score": -675,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1786,
+      "Ms": 0.1775
+    },
+    {
+      "Id": "r0473e48",
+      "Empties": 48,
+      "Move": "f6",
+      "Score": 1837,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9558,
+      "Ms": 0.9258
+    },
+    {
+      "Id": "r0474e17",
+      "Empties": 17,
+      "Move": "e8",
+      "Score": 637,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14850,
+      "Ms": 1.3774
+    },
+    {
+      "Id": "r0475e51",
+      "Empties": 51,
+      "Move": "e3",
+      "Score": 1412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7093,
+      "Ms": 0.6627
+    },
+    {
+      "Id": "r0476e51",
+      "Empties": 51,
+      "Move": "d6",
+      "Score": -62,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4943,
+      "Ms": 0.4739
+    },
+    {
+      "Id": "r0477e53",
+      "Empties": 53,
+      "Move": "d6",
+      "Score": 62,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1898,
+      "Ms": 0.1741
+    },
+    {
+      "Id": "r0478e47",
+      "Empties": 47,
+      "Move": "g5",
+      "Score": -3575,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4681,
+      "Ms": 0.4383
+    },
+    {
+      "Id": "r0479e25",
+      "Empties": 25,
+      "Move": "d8",
+      "Score": 2125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11317,
+      "Ms": 1.068
+    },
+    {
+      "Id": "r0480e34",
+      "Empties": 34,
+      "Move": "f1",
+      "Score": 2687,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14827,
+      "Ms": 1.6863
+    },
+    {
+      "Id": "r0481e55",
+      "Empties": 55,
+      "Move": "f4",
+      "Score": 525,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2968,
+      "Ms": 0.2833
+    },
+    {
+      "Id": "r0482e33",
+      "Empties": 33,
+      "Move": "d6",
+      "Score": -3150,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12975,
+      "Ms": 1.2065
+    },
+    {
+      "Id": "r0483e44",
+      "Empties": 44,
+      "Move": "c4",
+      "Score": -1900,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6273,
+      "Ms": 0.615
+    },
+    {
+      "Id": "r0484e58",
+      "Empties": 58,
+      "Move": "c4",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4714,
+      "Ms": 0.4272
+    },
+    {
+      "Id": "r0485e39",
+      "Empties": 39,
+      "Move": "c3",
+      "Score": -262,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9362,
+      "Ms": 0.9324
+    },
+    {
+      "Id": "r0486e33",
+      "Empties": 33,
+      "Move": "e6",
+      "Score": 1100,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 18150,
+      "Ms": 1.783
+    },
+    {
+      "Id": "r0487e37",
+      "Empties": 37,
+      "Move": "h4",
+      "Score": -2475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2880,
+      "Ms": 0.2896
+    },
+    {
+      "Id": "r0488e27",
+      "Empties": 27,
+      "Move": "a5",
+      "Score": 1625,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17911,
+      "Ms": 1.6994
+    },
+    {
+      "Id": "r0489e33",
+      "Empties": 33,
+      "Move": "c1",
+      "Score": -812,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9160,
+      "Ms": 0.8785
+    },
+    {
+      "Id": "r0490e53",
+      "Empties": 53,
+      "Move": "f8",
+      "Score": 1800,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8430,
+      "Ms": 0.7794
+    },
+    {
+      "Id": "r0491e43",
+      "Empties": 43,
+      "Move": "f1",
+      "Score": 1275,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 23713,
+      "Ms": 2.1789
+    },
+    {
+      "Id": "r0492e39",
+      "Empties": 39,
+      "Move": "b6",
+      "Score": -137,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11354,
+      "Ms": 1.1054
+    },
+    {
+      "Id": "r0493e59",
+      "Empties": 59,
+      "Move": "f4",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2780,
+      "Ms": 0.2505
+    },
+    {
+      "Id": "r0494e30",
+      "Empties": 30,
+      "Move": "d6",
+      "Score": -1925,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17078,
+      "Ms": 1.9187
+    },
+    {
+      "Id": "r0495e49",
+      "Empties": 49,
+      "Move": "d6",
+      "Score": 362,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12913,
+      "Ms": 1.2977
+    },
+    {
+      "Id": "r0496e38",
+      "Empties": 38,
+      "Move": "d3",
+      "Score": 4600,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 23546,
+      "Ms": 2.2312
+    },
+    {
+      "Id": "r0497e52",
+      "Empties": 52,
+      "Move": "e6",
+      "Score": -1412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1839,
+      "Ms": 0.1646
+    },
+    {
+      "Id": "r0498e57",
+      "Empties": 57,
+      "Move": "e3",
+      "Score": 1375,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1991,
+      "Ms": 0.1799
+    },
+    {
+      "Id": "r0499e46",
+      "Empties": 46,
+      "Move": "c3",
+      "Score": 1100,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7433,
+      "Ms": 0.6924
+    },
+    {
+      "Id": "r0500e25",
+      "Empties": 25,
+      "Move": "f3",
+      "Score": 2825,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 18901,
+      "Ms": 1.9229
+    },
+    {
+      "Id": "r0501e48",
+      "Empties": 48,
+      "Move": "f4",
+      "Score": -775,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6480,
+      "Ms": 0.6401
+    },
+    {
+      "Id": "r0502e58",
+      "Empties": 58,
+      "Move": "c4",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4714,
+      "Ms": 0.4117
+    },
+    {
+      "Id": "r0503e39",
+      "Empties": 39,
+      "Move": "c2",
+      "Score": 2175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 23428,
+      "Ms": 2.4106
+    },
+    {
+      "Id": "r0504e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2465
+    },
+    {
+      "Id": "r0505e28",
+      "Empties": 28,
+      "Move": "h3",
+      "Score": 237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 30807,
+      "Ms": 2.8462
+    },
+    {
+      "Id": "r0506e44",
+      "Empties": 44,
+      "Move": "f3",
+      "Score": 812,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 20162,
+      "Ms": 1.9177
+    },
+    {
+      "Id": "r0507e20",
+      "Empties": 20,
+      "Move": "f1",
+      "Score": -4350,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5387,
+      "Ms": 0.5276
+    },
+    {
+      "Id": "r0508e26",
+      "Empties": 26,
+      "Move": "e6",
+      "Score": 3475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 18669,
+      "Ms": 1.7212
+    },
+    {
+      "Id": "r0509e23",
+      "Empties": 23,
+      "Move": "b7",
+      "Score": -1725,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8363,
+      "Ms": 0.7927
+    },
+    {
+      "Id": "r0510e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2251
+    },
+    {
+      "Id": "r0511e46",
+      "Empties": 46,
+      "Move": "c6",
+      "Score": -1687,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11345,
+      "Ms": 1.1634
+    },
+    {
+      "Id": "r0512e37",
+      "Empties": 37,
+      "Move": "f3",
+      "Score": 412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15534,
+      "Ms": 1.4414
+    },
+    {
+      "Id": "r0513e32",
+      "Empties": 32,
+      "Move": "a8",
+      "Score": 637,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 19140,
+      "Ms": 1.8067
+    },
+    {
+      "Id": "r0514e36",
+      "Empties": 36,
+      "Move": "c3",
+      "Score": 1600,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11775,
+      "Ms": 1.201
+    },
+    {
+      "Id": "r0515e18",
+      "Empties": 18,
+      "Move": "h1",
+      "Score": 4050,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4030,
+      "Ms": 0.4298
+    },
+    {
+      "Id": "r0516e48",
+      "Empties": 48,
+      "Move": "e7",
+      "Score": -775,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7426,
+      "Ms": 0.7456
+    },
+    {
+      "Id": "r0517e28",
+      "Empties": 28,
+      "Move": "d1",
+      "Score": 950,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14715,
+      "Ms": 1.3529
+    },
+    {
+      "Id": "r0518e54",
+      "Empties": 54,
+      "Move": "d2",
+      "Score": 250,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6364,
+      "Ms": 0.6175
+    },
+    {
+      "Id": "r0519e23",
+      "Empties": 23,
+      "Move": "h1",
+      "Score": 2000,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7729,
+      "Ms": 0.7035
+    },
+    {
+      "Id": "r0520e16",
+      "Empties": 16,
+      "Move": "a1",
+      "Score": 3912,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17106,
+      "Ms": 1.4216
+    },
+    {
+      "Id": "r0521e50",
+      "Empties": 50,
+      "Move": "d6",
+      "Score": 75,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4467,
+      "Ms": 0.4352
+    },
+    {
+      "Id": "r0522e45",
+      "Empties": 45,
+      "Move": "f4",
+      "Score": 1725,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 19493,
+      "Ms": 2.0576
+    },
+    {
+      "Id": "r0523e28",
+      "Empties": 28,
+      "Move": "h6",
+      "Score": 4175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4740,
+      "Ms": 0.4861
+    },
+    {
+      "Id": "r0524e18",
+      "Empties": 18,
+      "Move": "b3",
+      "Score": -1487,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8376,
+      "Ms": 0.7881
+    },
+    {
+      "Id": "r0525e57",
+      "Empties": 57,
+      "Move": "e6",
+      "Score": 500,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3087,
+      "Ms": 0.2789
+    },
+    {
+      "Id": "r0526e32",
+      "Empties": 32,
+      "Move": "c2",
+      "Score": -4587,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15508,
+      "Ms": 1.4517
+    },
+    {
+      "Id": "r0527e26",
+      "Empties": 26,
+      "Move": "a1",
+      "Score": 2675,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3106,
+      "Ms": 0.3116
+    },
+    {
+      "Id": "r0528e26",
+      "Empties": 26,
+      "Move": "a8",
+      "Score": -2212,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4643,
+      "Ms": 0.4406
+    },
+    {
+      "Id": "r0529e51",
+      "Empties": 51,
+      "Move": "e3",
+      "Score": 1025,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10715,
+      "Ms": 1.0113
+    },
+    {
+      "Id": "r0530e42",
+      "Empties": 42,
+      "Move": "c5",
+      "Score": 137,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8248,
+      "Ms": 0.8373
+    },
+    {
+      "Id": "r0531e55",
+      "Empties": 55,
+      "Move": "f3",
+      "Score": 1037,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2931,
+      "Ms": 0.2742
+    },
+    {
+      "Id": "r0532e16",
+      "Empties": 16,
+      "Move": "h8",
+      "Score": 137,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2807,
+      "Ms": 0.2734
+    },
+    {
+      "Id": "r0533e45",
+      "Empties": 45,
+      "Move": "f5",
+      "Score": 3500,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7059,
+      "Ms": 0.6692
+    },
+    {
+      "Id": "r0534e44",
+      "Empties": 44,
+      "Move": "c3",
+      "Score": 1237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7546,
+      "Ms": 0.9996
+    },
+    {
+      "Id": "r0535e59",
+      "Empties": 59,
+      "Move": "c5",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2622,
+      "Ms": 0.2375
+    },
+    {
+      "Id": "r0536e21",
+      "Empties": 21,
+      "Move": "b5",
+      "Score": -1200,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8706,
+      "Ms": 0.8325
+    },
+    {
+      "Id": "r0537e43",
+      "Empties": 43,
+      "Move": "c5",
+      "Score": -2800,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13089,
+      "Ms": 1.2385
+    },
+    {
+      "Id": "r0538e52",
+      "Empties": 52,
+      "Move": "c3",
+      "Score": 3275,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9083,
+      "Ms": 0.8799
+    },
+    {
+      "Id": "r0539e34",
+      "Empties": 34,
+      "Move": "e8",
+      "Score": 4025,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17504,
+      "Ms": 1.7683
+    },
+    {
+      "Id": "r0540e18",
+      "Empties": 18,
+      "Move": "a5",
+      "Score": -450,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12443,
+      "Ms": 1.3115
+    },
+    {
+      "Id": "r0541e45",
+      "Empties": 45,
+      "Move": "f6",
+      "Score": -2212,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8191,
+      "Ms": 0.747
+    },
+    {
+      "Id": "r0542e32",
+      "Empties": 32,
+      "Move": "c4",
+      "Score": -4675,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8570,
+      "Ms": 0.8888
+    },
+    {
+      "Id": "r0543e56",
+      "Empties": 56,
+      "Move": "e6",
+      "Score": 887,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2535,
+      "Ms": 0.2367
+    },
+    {
+      "Id": "r0544e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2238
+    },
+    {
+      "Id": "r0545e51",
+      "Empties": 51,
+      "Move": "f1",
+      "Score": 0,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6890,
+      "Ms": 0.6087
+    },
+    {
+      "Id": "r0546e32",
+      "Empties": 32,
+      "Move": "h8",
+      "Score": 3275,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6986,
+      "Ms": 0.6655
+    },
+    {
+      "Id": "r0547e24",
+      "Empties": 24,
+      "Move": "a1",
+      "Score": 2262,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11874,
+      "Ms": 1.0804
+    },
+    {
+      "Id": "r0548e39",
+      "Empties": 39,
+      "Move": "c5",
+      "Score": -1525,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 24362,
+      "Ms": 2.3847
+    },
+    {
+      "Id": "r0549e21",
+      "Empties": 21,
+      "Move": "h5",
+      "Score": 1662,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 19923,
+      "Ms": 1.8952
+    },
+    {
+      "Id": "r0550e52",
+      "Empties": 52,
+      "Move": "f6",
+      "Score": 450,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7764,
+      "Ms": 0.7442
+    },
+    {
+      "Id": "r0551e39",
+      "Empties": 39,
+      "Move": "d8",
+      "Score": -787,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11102,
+      "Ms": 1.1013
+    },
+    {
+      "Id": "r0552e50",
+      "Empties": 50,
+      "Move": "f3",
+      "Score": -87,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7515,
+      "Ms": 0.6891
+    },
+    {
+      "Id": "r0553e28",
+      "Empties": 28,
+      "Move": "h1",
+      "Score": 100,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 27794,
+      "Ms": 2.6432
+    },
+    {
+      "Id": "r0554e46",
+      "Empties": 46,
+      "Move": "f4",
+      "Score": 1150,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10481,
+      "Ms": 1.2022
+    },
+    {
+      "Id": "r0555e25",
+      "Empties": 25,
+      "Move": "h8",
+      "Score": 1362,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6485,
+      "Ms": 0.6964
+    },
+    {
+      "Id": "r0556e22",
+      "Empties": 22,
+      "Move": "h5",
+      "Score": -125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9867,
+      "Ms": 0.9396
+    },
+    {
+      "Id": "r0557e43",
+      "Empties": 43,
+      "Move": "c7",
+      "Score": -2287,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10140,
+      "Ms": 1.0485
+    },
+    {
+      "Id": "r0558e52",
+      "Empties": 52,
+      "Move": "d2",
+      "Score": 625,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17177,
+      "Ms": 1.6115
+    },
+    {
+      "Id": "r0559e20",
+      "Empties": 20,
+      "Move": "e1",
+      "Score": 1812,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2948,
+      "Ms": 0.2938
+    },
+    {
+      "Id": "r0560e49",
+      "Empties": 49,
+      "Move": "d3",
+      "Score": -625,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6930,
+      "Ms": 0.6372
+    },
+    {
+      "Id": "r0561e48",
+      "Empties": 48,
+      "Move": "e3",
+      "Score": -1025,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9575,
+      "Ms": 0.8483
+    },
+    {
+      "Id": "r0562e28",
+      "Empties": 28,
+      "Move": "c2",
+      "Score": -25,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 38153,
+      "Ms": 3.6912
+    },
+    {
+      "Id": "r0563e29",
+      "Empties": 29,
+      "Move": "a6",
+      "Score": 2387,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6542,
+      "Ms": 0.6874
+    },
+    {
+      "Id": "r0564e46",
+      "Empties": 46,
+      "Move": "g5",
+      "Score": -300,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6834,
+      "Ms": 0.6507
+    },
+    {
+      "Id": "r0565e27",
+      "Empties": 27,
+      "Move": "a1",
+      "Score": -1100,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 23489,
+      "Ms": 2.1117
+    },
+    {
+      "Id": "r0566e33",
+      "Empties": 33,
+      "Move": "h7",
+      "Score": 2187,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8885,
+      "Ms": 0.8531
+    },
+    {
+      "Id": "r0567e34",
+      "Empties": 34,
+      "Move": "f8",
+      "Score": 2037,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 29512,
+      "Ms": 2.7099
+    },
+    {
+      "Id": "r0568e49",
+      "Empties": 49,
+      "Move": "b5",
+      "Score": -1300,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 16038,
+      "Ms": 1.381
+    },
+    {
+      "Id": "r0569e26",
+      "Empties": 26,
+      "Move": "d2",
+      "Score": 550,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17351,
+      "Ms": 1.5332
+    },
+    {
+      "Id": "r0570e40",
+      "Empties": 40,
+      "Move": "c4",
+      "Score": 1312,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12812,
+      "Ms": 1.2174
+    },
+    {
+      "Id": "r0571e37",
+      "Empties": 37,
+      "Move": "a4",
+      "Score": 6400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4059,
+      "Ms": 0.4082
+    },
+    {
+      "Id": "r0572e17",
+      "Empties": 17,
+      "Move": "f8",
+      "Score": 875,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2496,
+      "Ms": 0.2583
+    },
+    {
+      "Id": "r0573e32",
+      "Empties": 32,
+      "Move": "f7",
+      "Score": -1425,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12221,
+      "Ms": 1.1729
+    },
+    {
+      "Id": "r0574e16",
+      "Empties": 16,
+      "Move": "a8",
+      "Score": 2362,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5874,
+      "Ms": 0.5548
+    },
+    {
+      "Id": "r0575e59",
+      "Empties": 59,
+      "Move": "f4",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2780,
+      "Ms": 0.2613
+    },
+    {
+      "Id": "r0576e59",
+      "Empties": 59,
+      "Move": "d6",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2789,
+      "Ms": 0.2324
+    },
+    {
+      "Id": "r0577e29",
+      "Empties": 29,
+      "Move": "e3",
+      "Score": 3525,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9522,
+      "Ms": 0.9858
+    },
+    {
+      "Id": "r0578e36",
+      "Empties": 36,
+      "Move": "c5",
+      "Score": 962,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6645,
+      "Ms": 0.6701
+    },
+    {
+      "Id": "r0579e59",
+      "Empties": 59,
+      "Move": "c5",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2622,
+      "Ms": 0.2309
+    },
+    {
+      "Id": "r0580e50",
+      "Empties": 50,
+      "Move": "b5",
+      "Score": -50,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9719,
+      "Ms": 0.8895
+    },
+    {
+      "Id": "r0581e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2205
+    },
+    {
+      "Id": "r0582e45",
+      "Empties": 45,
+      "Move": "f4",
+      "Score": -1812,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7040,
+      "Ms": 0.7401
+    },
+    {
+      "Id": "r0583e50",
+      "Empties": 50,
+      "Move": "f5",
+      "Score": 2075,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2429,
+      "Ms": 0.2365
+    },
+    {
+      "Id": "r0584e37",
+      "Empties": 37,
+      "Move": "f4",
+      "Score": -3112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10058,
+      "Ms": 0.9277
+    },
+    {
+      "Id": "r0585e18",
+      "Empties": 18,
+      "Move": "c1",
+      "Score": 4875,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4287,
+      "Ms": 0.4369
+    },
+    {
+      "Id": "r0586e55",
+      "Empties": 55,
+      "Move": "b4",
+      "Score": -87,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5232,
+      "Ms": 0.4718
+    },
+    {
+      "Id": "r0587e55",
+      "Empties": 55,
+      "Move": "f8",
+      "Score": 287,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5504,
+      "Ms": 0.5058
+    },
+    {
+      "Id": "r0588e59",
+      "Empties": 59,
+      "Move": "f4",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2780,
+      "Ms": 0.2278
+    },
+    {
+      "Id": "r0589e26",
+      "Empties": 26,
+      "Move": "a4",
+      "Score": -262,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14008,
+      "Ms": 1.2582
+    },
+    {
+      "Id": "r0590e16",
+      "Empties": 16,
+      "Move": "a8",
+      "Score": -912,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3411,
+      "Ms": 0.3846
+    },
+    {
+      "Id": "r0591e30",
+      "Empties": 30,
+      "Move": "f1",
+      "Score": -1987,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6469,
+      "Ms": 0.6522
+    },
+    {
+      "Id": "r0592e43",
+      "Empties": 43,
+      "Move": "e7",
+      "Score": -587,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11513,
+      "Ms": 1.058
+    },
+    {
+      "Id": "r0593e56",
+      "Empties": 56,
+      "Move": "f3",
+      "Score": 775,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4750,
+      "Ms": 0.4065
+    },
+    {
+      "Id": "r0594e44",
+      "Empties": 44,
+      "Move": "f4",
+      "Score": -3262,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6842,
+      "Ms": 0.5933
+    },
+    {
+      "Id": "r0595e26",
+      "Empties": 26,
+      "Move": "a8",
+      "Score": -1825,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17282,
+      "Ms": 1.461
+    },
+    {
+      "Id": "r0596e46",
+      "Empties": 46,
+      "Move": "f5",
+      "Score": 2237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11427,
+      "Ms": 1.0754
+    },
+    {
+      "Id": "r0597e26",
+      "Empties": 26,
+      "Move": "f6",
+      "Score": -2437,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11546,
+      "Ms": 1.0956
+    },
+    {
+      "Id": "r0598e58",
+      "Empties": 58,
+      "Move": "d3",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4916,
+      "Ms": 0.4219
+    },
+    {
+      "Id": "r0599e32",
+      "Empties": 32,
+      "Move": "f7",
+      "Score": 2837,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15109,
+      "Ms": 1.3829
+    },
+    {
+      "Id": "r0600e51",
+      "Empties": 51,
+      "Move": "d3",
+      "Score": 962,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6610,
+      "Ms": 0.62
+    },
+    {
+      "Id": "r0601e26",
+      "Empties": 26,
+      "Move": "h1",
+      "Score": 1462,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13430,
+      "Ms": 1.178
+    },
+    {
+      "Id": "r0602e27",
+      "Empties": 27,
+      "Move": "h8",
+      "Score": 1275,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8286,
+      "Ms": 0.7337
+    },
+    {
+      "Id": "r0603e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2234
+    },
+    {
+      "Id": "r0604e54",
+      "Empties": 54,
+      "Move": "c6",
+      "Score": -75,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4174,
+      "Ms": 0.3743
+    },
+    {
+      "Id": "r0605e57",
+      "Empties": 57,
+      "Move": "d6",
+      "Score": -275,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6182,
+      "Ms": 0.5387
+    },
+    {
+      "Id": "r0606e53",
+      "Empties": 53,
+      "Move": "e2",
+      "Score": -1237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3714,
+      "Ms": 0.3489
+    },
+    {
+      "Id": "r0607e25",
+      "Empties": 25,
+      "Move": "f4",
+      "Score": 25,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7690,
+      "Ms": 0.7437
+    },
+    {
+      "Id": "r0608e49",
+      "Empties": 49,
+      "Move": "g6",
+      "Score": 2337,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10548,
+      "Ms": 1.0291
+    },
+    {
+      "Id": "r0609e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2205
+    },
+    {
+      "Id": "r0610e53",
+      "Empties": 53,
+      "Move": "c5",
+      "Score": 1425,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5380,
+      "Ms": 0.4784
+    },
+    {
+      "Id": "r0611e26",
+      "Empties": 26,
+      "Move": "h8",
+      "Score": 875,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10439,
+      "Ms": 1.0356
+    },
+    {
+      "Id": "r0612e19",
+      "Empties": 19,
+      "Move": "h8",
+      "Score": 1025,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 18077,
+      "Ms": 1.6354
+    },
+    {
+      "Id": "r0613e26",
+      "Empties": 26,
+      "Move": "d7",
+      "Score": 3162,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13811,
+      "Ms": 1.1954
+    },
+    {
+      "Id": "r0614e20",
+      "Empties": 20,
+      "Move": "d3",
+      "Score": -1350,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5659,
+      "Ms": 0.5085
+    },
+    {
+      "Id": "r0615e28",
+      "Empties": 28,
+      "Move": "a1",
+      "Score": 6400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11985,
+      "Ms": 1.0843
+    },
+    {
+      "Id": "r0616e21",
+      "Empties": 21,
+      "Move": "h1",
+      "Score": 2075,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6999,
+      "Ms": 0.6411
+    },
+    {
+      "Id": "r0617e37",
+      "Empties": 37,
+      "Move": "h1",
+      "Score": -1450,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4991,
+      "Ms": 0.5226
+    },
+    {
+      "Id": "r0618e51",
+      "Empties": 51,
+      "Move": "e6",
+      "Score": 137,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2201,
+      "Ms": 0.2004
+    },
+    {
+      "Id": "r0619e50",
+      "Empties": 50,
+      "Move": "g5",
+      "Score": -62,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17647,
+      "Ms": 1.6105
+    },
+    {
+      "Id": "r0620e17",
+      "Empties": 17,
+      "Move": "d1",
+      "Score": -325,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6053,
+      "Ms": 0.5364
+    },
+    {
+      "Id": "r0621e29",
+      "Empties": 29,
+      "Move": "e7",
+      "Score": 2375,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 16481,
+      "Ms": 1.5434
+    },
+    {
+      "Id": "r0622e23",
+      "Empties": 23,
+      "Move": "h1",
+      "Score": 1287,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 16885,
+      "Ms": 1.5346
+    },
+    {
+      "Id": "r0623e35",
+      "Empties": 35,
+      "Move": "e6",
+      "Score": 3762,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8438,
+      "Ms": 0.8364
+    },
+    {
+      "Id": "r0624e25",
+      "Empties": 25,
+      "Move": "h1",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3355,
+      "Ms": 0.3219
+    },
+    {
+      "Id": "r0625e39",
+      "Empties": 39,
+      "Move": "a3",
+      "Score": 2425,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14215,
+      "Ms": 1.4099
+    },
+    {
+      "Id": "r0626e59",
+      "Empties": 59,
+      "Move": "d6",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2789,
+      "Ms": 0.2546
+    },
+    {
+      "Id": "r0627e27",
+      "Empties": 27,
+      "Move": "h1",
+      "Score": 5537,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6694,
+      "Ms": 0.6359
+    },
+    {
+      "Id": "r0628e43",
+      "Empties": 43,
+      "Move": "c4",
+      "Score": -3862,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9755,
+      "Ms": 0.9418
+    },
+    {
+      "Id": "r0629e28",
+      "Empties": 28,
+      "Move": "c7",
+      "Score": -5787,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 25692,
+      "Ms": 2.2538
+    },
+    {
+      "Id": "r0630e40",
+      "Empties": 40,
+      "Move": "h1",
+      "Score": 4037,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3299,
+      "Ms": 0.3467
+    },
+    {
+      "Id": "r0631e48",
+      "Empties": 48,
+      "Move": "g5",
+      "Score": -725,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6716,
+      "Ms": 0.6597
+    },
+    {
+      "Id": "r0632e17",
+      "Empties": 17,
+      "Move": "h8",
+      "Score": -1425,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6454,
+      "Ms": 0.589
+    },
+    {
+      "Id": "r0633e42",
+      "Empties": 42,
+      "Move": "d3",
+      "Score": 3812,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11297,
+      "Ms": 1.022
+    },
+    {
+      "Id": "r0634e25",
+      "Empties": 25,
+      "Move": "c3",
+      "Score": 2412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11745,
+      "Ms": 1.1022
+    },
+    {
+      "Id": "r0635e19",
+      "Empties": 19,
+      "Move": "a1",
+      "Score": 4512,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4752,
+      "Ms": 0.4543
+    },
+    {
+      "Id": "r0636e21",
+      "Empties": 21,
+      "Move": "g4",
+      "Score": -1287,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5722,
+      "Ms": 0.5547
+    },
+    {
+      "Id": "r0637e54",
+      "Empties": 54,
+      "Move": "d3",
+      "Score": 475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5744,
+      "Ms": 0.5377
+    },
+    {
+      "Id": "r0638e43",
+      "Empties": 43,
+      "Move": "f7",
+      "Score": -762,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8251,
+      "Ms": 0.8075
+    },
+    {
+      "Id": "r0639e33",
+      "Empties": 33,
+      "Move": "e1",
+      "Score": 2662,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3113,
+      "Ms": 0.3246
+    },
+    {
+      "Id": "r0640e33",
+      "Empties": 33,
+      "Move": "e2",
+      "Score": -3025,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14454,
+      "Ms": 1.3455
+    },
+    {
+      "Id": "r0641e59",
+      "Empties": 59,
+      "Move": "c5",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2622,
+      "Ms": 0.2405
+    },
+    {
+      "Id": "r0642e25",
+      "Empties": 25,
+      "Move": "c1",
+      "Score": -2537,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13074,
+      "Ms": 1.2826
+    },
+    {
+      "Id": "r0643e38",
+      "Empties": 38,
+      "Move": "f7",
+      "Score": 2650,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4315,
+      "Ms": 0.4294
+    },
+    {
+      "Id": "r0644e44",
+      "Empties": 44,
+      "Move": "c6",
+      "Score": -1125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13086,
+      "Ms": 1.2917
+    },
+    {
+      "Id": "r0645e26",
+      "Empties": 26,
+      "Move": "h5",
+      "Score": 825,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15015,
+      "Ms": 1.3804
+    },
+    {
+      "Id": "r0646e59",
+      "Empties": 59,
+      "Move": "e3",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2646,
+      "Ms": 0.2277
+    },
+    {
+      "Id": "r0647e48",
+      "Empties": 48,
+      "Move": "g4",
+      "Score": 337,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 21694,
+      "Ms": 2.0247
+    },
+    {
+      "Id": "r0648e16",
+      "Empties": 16,
+      "Move": "h8",
+      "Score": -787,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3851,
+      "Ms": 0.3738
+    },
+    {
+      "Id": "r0649e38",
+      "Empties": 38,
+      "Move": "c1",
+      "Score": -4462,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 16550,
+      "Ms": 1.4989
+    },
+    {
+      "Id": "r0650e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2233
+    },
+    {
+      "Id": "r0651e32",
+      "Empties": 32,
+      "Move": "a8",
+      "Score": 1812,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8265,
+      "Ms": 0.7469
+    },
+    {
+      "Id": "r0652e55",
+      "Empties": 55,
+      "Move": "e7",
+      "Score": -475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8838,
+      "Ms": 0.8057
+    },
+    {
+      "Id": "r0653e29",
+      "Empties": 29,
+      "Move": "f3",
+      "Score": -2912,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13796,
+      "Ms": 1.1875
+    },
+    {
+      "Id": "r0654e41",
+      "Empties": 41,
+      "Move": "d6",
+      "Score": 1300,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12575,
+      "Ms": 1.2217
+    },
+    {
+      "Id": "r0655e22",
+      "Empties": 22,
+      "Move": "e8",
+      "Score": 3837,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6607,
+      "Ms": 0.6141
+    },
+    {
+      "Id": "r0656e54",
+      "Empties": 54,
+      "Move": "c3",
+      "Score": -150,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2448,
+      "Ms": 0.2276
+    },
+    {
+      "Id": "r0657e25",
+      "Empties": 25,
+      "Move": "f3",
+      "Score": 1687,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6841,
+      "Ms": 0.6608
+    },
+    {
+      "Id": "r0658e19",
+      "Empties": 19,
+      "Move": "h8",
+      "Score": -562,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 19103,
+      "Ms": 1.6773
+    },
+    {
+      "Id": "r0659e23",
+      "Empties": 23,
+      "Move": "c6",
+      "Score": -3650,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5023,
+      "Ms": 0.4574
+    },
+    {
+      "Id": "r0660e34",
+      "Empties": 34,
+      "Move": "d6",
+      "Score": 487,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 33331,
+      "Ms": 3.3029
+    },
+    {
+      "Id": "r0661e26",
+      "Empties": 26,
+      "Move": "f8",
+      "Score": -5662,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3685,
+      "Ms": 0.3746
+    },
+    {
+      "Id": "r0662e53",
+      "Empties": 53,
+      "Move": "e6",
+      "Score": -725,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6526,
+      "Ms": 0.5956
+    },
+    {
+      "Id": "r0663e52",
+      "Empties": 52,
+      "Move": "d6",
+      "Score": 575,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8222,
+      "Ms": 0.9084
+    },
+    {
+      "Id": "r0664e53",
+      "Empties": 53,
+      "Move": "d6",
+      "Score": 1625,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4368,
+      "Ms": 0.4186
+    },
+    {
+      "Id": "r0665e18",
+      "Empties": 18,
+      "Move": "a6",
+      "Score": 887,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4012,
+      "Ms": 0.3862
+    },
+    {
+      "Id": "r0666e33",
+      "Empties": 33,
+      "Move": "c7",
+      "Score": -3375,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4194,
+      "Ms": 0.3956
+    },
+    {
+      "Id": "r0667e57",
+      "Empties": 57,
+      "Move": "d6",
+      "Score": -275,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6182,
+      "Ms": 0.5655
+    },
+    {
+      "Id": "r0668e31",
+      "Empties": 31,
+      "Move": "h4",
+      "Score": 4387,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13124,
+      "Ms": 1.3291
+    },
+    {
+      "Id": "r0669e40",
+      "Empties": 40,
+      "Move": "f3",
+      "Score": 3387,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14518,
+      "Ms": 1.4687
+    },
+    {
+      "Id": "r0670e22",
+      "Empties": 22,
+      "Move": "a1",
+      "Score": 4425,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12671,
+      "Ms": 1.0788
+    },
+    {
+      "Id": "r0671e16",
+      "Empties": 16,
+      "Move": "h1",
+      "Score": 5475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7016,
+      "Ms": 0.5902
+    },
+    {
+      "Id": "r0672e31",
+      "Empties": 31,
+      "Move": "b7",
+      "Score": -3987,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 51806,
+      "Ms": 4.7429
+    },
+    {
+      "Id": "r0673e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.233
+    },
+    {
+      "Id": "r0674e19",
+      "Empties": 19,
+      "Move": "h8",
+      "Score": 625,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6803,
+      "Ms": 0.6499
+    },
+    {
+      "Id": "r0675e31",
+      "Empties": 31,
+      "Move": "d8",
+      "Score": 2575,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13188,
+      "Ms": 1.4017
+    },
+    {
+      "Id": "r0676e42",
+      "Empties": 42,
+      "Move": "d7",
+      "Score": -2237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3036,
+      "Ms": 0.3234
+    },
+    {
+      "Id": "r0677e19",
+      "Empties": 19,
+      "Move": "h8",
+      "Score": 1337,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8211,
+      "Ms": 0.7819
+    },
+    {
+      "Id": "r0678e26",
+      "Empties": 26,
+      "Move": "a1",
+      "Score": 987,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14564,
+      "Ms": 1.3485
+    },
+    {
+      "Id": "r0679e55",
+      "Empties": 55,
+      "Move": "f3",
+      "Score": -200,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6049,
+      "Ms": 0.6108
+    },
+    {
+      "Id": "r0680e29",
+      "Empties": 29,
+      "Move": "d8",
+      "Score": -1075,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5849,
+      "Ms": 0.5105
+    },
+    {
+      "Id": "r0681e55",
+      "Empties": 55,
+      "Move": "e7",
+      "Score": 362,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6668,
+      "Ms": 0.6114
+    },
+    {
+      "Id": "r0682e54",
+      "Empties": 54,
+      "Move": "f4",
+      "Score": -412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6436,
+      "Ms": 0.5891
+    },
+    {
+      "Id": "r0683e30",
+      "Empties": 30,
+      "Move": "a4",
+      "Score": -1400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7660,
+      "Ms": 0.7413
+    },
+    {
+      "Id": "r0684e31",
+      "Empties": 31,
+      "Move": "e3",
+      "Score": 1075,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4249,
+      "Ms": 0.3705
+    },
+    {
+      "Id": "r0685e20",
+      "Empties": 20,
+      "Move": "d8",
+      "Score": -262,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4899,
+      "Ms": 0.4343
+    },
+    {
+      "Id": "r0686e24",
+      "Empties": 24,
+      "Move": "a8",
+      "Score": -1825,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4920,
+      "Ms": 0.4942
+    },
+    {
+      "Id": "r0687e31",
+      "Empties": 31,
+      "Move": "h4",
+      "Score": 137,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7832,
+      "Ms": 0.7801
+    },
+    {
+      "Id": "r0688e26",
+      "Empties": 26,
+      "Move": "g5",
+      "Score": 1762,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3375,
+      "Ms": 0.3007
+    },
+    {
+      "Id": "r0689e47",
+      "Empties": 47,
+      "Move": "f3",
+      "Score": -962,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10032,
+      "Ms": 0.967
+    },
+    {
+      "Id": "r0690e16",
+      "Empties": 16,
+      "Move": "a8",
+      "Score": 4675,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3519,
+      "Ms": 0.3181
+    },
+    {
+      "Id": "r0691e40",
+      "Empties": 40,
+      "Move": "f5",
+      "Score": -2787,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13893,
+      "Ms": 1.4331
+    },
+    {
+      "Id": "r0692e27",
+      "Empties": 27,
+      "Move": "h4",
+      "Score": 2375,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11675,
+      "Ms": 1.0717
+    },
+    {
+      "Id": "r0693e59",
+      "Empties": 59,
+      "Move": "d6",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2789,
+      "Ms": 0.2451
+    },
+    {
+      "Id": "r0694e53",
+      "Empties": 53,
+      "Move": "e6",
+      "Score": 1237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5510,
+      "Ms": 0.4842
+    },
+    {
+      "Id": "r0695e35",
+      "Empties": 35,
+      "Move": "c6",
+      "Score": 4487,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 25621,
+      "Ms": 2.1802
+    },
+    {
+      "Id": "r0696e28",
+      "Empties": 28,
+      "Move": "f1",
+      "Score": -4650,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5524,
+      "Ms": 0.5196
+    },
+    {
+      "Id": "r0697e31",
+      "Empties": 31,
+      "Move": "e8",
+      "Score": 3187,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7019,
+      "Ms": 0.6942
+    },
+    {
+      "Id": "r0698e47",
+      "Empties": 47,
+      "Move": "c1",
+      "Score": -3212,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6276,
+      "Ms": 0.698
+    },
+    {
+      "Id": "r0699e17",
+      "Empties": 17,
+      "Move": "d1",
+      "Score": 2637,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5466,
+      "Ms": 0.5324
+    },
+    {
+      "Id": "r0700e38",
+      "Empties": 38,
+      "Move": "b3",
+      "Score": 2700,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 23583,
+      "Ms": 2.3253
+    },
+    {
+      "Id": "r0701e42",
+      "Empties": 42,
+      "Move": "h6",
+      "Score": -2362,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7851,
+      "Ms": 0.7627
+    },
+    {
+      "Id": "r0702e58",
+      "Empties": 58,
+      "Move": "d3",
+      "Score": 50,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2893,
+      "Ms": 0.2827
+    },
+    {
+      "Id": "r0703e35",
+      "Empties": 35,
+      "Move": "h1",
+      "Score": 1300,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10666,
+      "Ms": 1.0052
+    },
+    {
+      "Id": "r0704e59",
+      "Empties": 59,
+      "Move": "e3",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2646,
+      "Ms": 0.2261
+    },
+    {
+      "Id": "r0705e22",
+      "Empties": 22,
+      "Move": "h4",
+      "Score": -2037,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5624,
+      "Ms": 0.5433
+    },
+    {
+      "Id": "r0706e51",
+      "Empties": 51,
+      "Move": "f4",
+      "Score": 1000,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7615,
+      "Ms": 0.7289
+    },
+    {
+      "Id": "r0707e57",
+      "Empties": 57,
+      "Move": "g5",
+      "Score": 375,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1734,
+      "Ms": 0.1551
+    },
+    {
+      "Id": "r0708e38",
+      "Empties": 38,
+      "Move": "d2",
+      "Score": -612,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11209,
+      "Ms": 1.0669
+    },
+    {
+      "Id": "r0709e59",
+      "Empties": 59,
+      "Move": "c5",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2622,
+      "Ms": 0.2238
+    },
+    {
+      "Id": "r0710e44",
+      "Empties": 44,
+      "Move": "c4",
+      "Score": -937,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8360,
+      "Ms": 0.8864
+    },
+    {
+      "Id": "r0711e31",
+      "Empties": 31,
+      "Move": "d1",
+      "Score": 4600,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 36776,
+      "Ms": 3.4803
+    },
+    {
+      "Id": "r0712e54",
+      "Empties": 54,
+      "Move": "c3",
+      "Score": 237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5289,
+      "Ms": 0.4818
+    },
+    {
+      "Id": "r0713e17",
+      "Empties": 17,
+      "Move": "g6",
+      "Score": 3687,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4587,
+      "Ms": 0.4356
+    },
+    {
+      "Id": "r0714e57",
+      "Empties": 57,
+      "Move": "f4",
+      "Score": 225,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2629,
+      "Ms": 0.2326
+    },
+    {
+      "Id": "r0715e59",
+      "Empties": 59,
+      "Move": "d6",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2789,
+      "Ms": 0.2334
+    },
+    {
+      "Id": "r0716e57",
+      "Empties": 57,
+      "Move": "e3",
+      "Score": 1375,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1991,
+      "Ms": 0.1713
+    },
+    {
+      "Id": "r0717e16",
+      "Empties": 16,
+      "Move": "b3",
+      "Score": -3625,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2224,
+      "Ms": 0.2235
+    },
+    {
+      "Id": "r0718e21",
+      "Empties": 21,
+      "Move": "d1",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4582,
+      "Ms": 0.4753
+    },
+    {
+      "Id": "r0719e56",
+      "Empties": 56,
+      "Move": "d2",
+      "Score": 100,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5057,
+      "Ms": 0.446
+    },
+    {
+      "Id": "r0720e34",
+      "Empties": 34,
+      "Move": "a4",
+      "Score": -2412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2319,
+      "Ms": 0.2086
+    },
+    {
+      "Id": "r0721e18",
+      "Empties": 18,
+      "Move": "g5",
+      "Score": 1012,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3193,
+      "Ms": 0.3114
+    },
+    {
+      "Id": "r0722e43",
+      "Empties": 43,
+      "Move": "c6",
+      "Score": 1975,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15985,
+      "Ms": 1.5018
+    },
+    {
+      "Id": "r0723e41",
+      "Empties": 41,
+      "Move": "c6",
+      "Score": 4075,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4135,
+      "Ms": 0.4171
+    },
+    {
+      "Id": "r0724e59",
+      "Empties": 59,
+      "Move": "c5",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2622,
+      "Ms": 0.2203
+    },
+    {
+      "Id": "r0725e46",
+      "Empties": 46,
+      "Move": "c5",
+      "Score": -3462,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3352,
+      "Ms": 0.3085
+    },
+    {
+      "Id": "r0726e35",
+      "Empties": 35,
+      "Move": "d7",
+      "Score": -325,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 16729,
+      "Ms": 1.6135
+    },
+    {
+      "Id": "r0727e17",
+      "Empties": 17,
+      "Move": "c8",
+      "Score": 1687,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6152,
+      "Ms": 0.5699
+    },
+    {
+      "Id": "r0728e40",
+      "Empties": 40,
+      "Move": "c1",
+      "Score": -212,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7226,
+      "Ms": 0.7532
+    },
+    {
+      "Id": "r0729e29",
+      "Empties": 29,
+      "Move": "g1",
+      "Score": -1525,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7890,
+      "Ms": 0.7722
+    },
+    {
+      "Id": "r0730e47",
+      "Empties": 47,
+      "Move": "f6",
+      "Score": 1612,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8248,
+      "Ms": 0.8097
+    },
+    {
+      "Id": "r0731e20",
+      "Empties": 20,
+      "Move": "b6",
+      "Score": -4425,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5970,
+      "Ms": 0.5286
+    },
+    {
+      "Id": "r0732e54",
+      "Empties": 54,
+      "Move": "f3",
+      "Score": 162,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9065,
+      "Ms": 0.822
+    },
+    {
+      "Id": "r0733e18",
+      "Empties": 18,
+      "Move": "g3",
+      "Score": -800,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11862,
+      "Ms": 1.0811
+    },
+    {
+      "Id": "r0734e54",
+      "Empties": 54,
+      "Move": "g5",
+      "Score": -162,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5625,
+      "Ms": 0.5226
+    },
+    {
+      "Id": "r0735e39",
+      "Empties": 39,
+      "Move": "d8",
+      "Score": -4062,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7406,
+      "Ms": 0.7098
+    },
+    {
+      "Id": "r0736e21",
+      "Empties": 21,
+      "Move": "e7",
+      "Score": -650,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10019,
+      "Ms": 0.9211
+    },
+    {
+      "Id": "r0737e52",
+      "Empties": 52,
+      "Move": "f6",
+      "Score": 1162,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5738,
+      "Ms": 0.5076
+    },
+    {
+      "Id": "r0738e54",
+      "Empties": 54,
+      "Move": "f5",
+      "Score": -675,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6834,
+      "Ms": 0.5778
+    },
+    {
+      "Id": "r0739e25",
+      "Empties": 25,
+      "Move": "h7",
+      "Score": 3300,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17219,
+      "Ms": 1.6645
+    },
+    {
+      "Id": "r0740e28",
+      "Empties": 28,
+      "Move": "h4",
+      "Score": 837,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17581,
+      "Ms": 1.68
+    },
+    {
+      "Id": "r0741e24",
+      "Empties": 24,
+      "Move": "d2",
+      "Score": -612,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7425,
+      "Ms": 0.679
+    },
+    {
+      "Id": "r0742e38",
+      "Empties": 38,
+      "Move": "c6",
+      "Score": -462,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7250,
+      "Ms": 0.6729
+    },
+    {
+      "Id": "r0743e47",
+      "Empties": 47,
+      "Move": "c2",
+      "Score": -4125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1754,
+      "Ms": 0.1722
+    },
+    {
+      "Id": "r0744e54",
+      "Empties": 54,
+      "Move": "c6",
+      "Score": -387,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6246,
+      "Ms": 0.5255
+    },
+    {
+      "Id": "r0745e56",
+      "Empties": 56,
+      "Move": "f3",
+      "Score": 250,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4940,
+      "Ms": 0.4274
+    },
+    {
+      "Id": "r0746e18",
+      "Empties": 18,
+      "Move": "a4",
+      "Score": -787,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11948,
+      "Ms": 1.0395
+    },
+    {
+      "Id": "r0747e24",
+      "Empties": 24,
+      "Move": "h1",
+      "Score": -287,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7844,
+      "Ms": 0.8143
+    },
+    {
+      "Id": "r0748e43",
+      "Empties": 43,
+      "Move": "d6",
+      "Score": -2012,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7481,
+      "Ms": 0.7156
+    },
+    {
+      "Id": "r0749e24",
+      "Empties": 24,
+      "Move": "a8",
+      "Score": 6400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2798,
+      "Ms": 0.2534
+    },
+    {
+      "Id": "r0750e46",
+      "Empties": 46,
+      "Move": "f6",
+      "Score": 975,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7843,
+      "Ms": 0.703
+    },
+    {
+      "Id": "r0751e39",
+      "Empties": 39,
+      "Move": "a1",
+      "Score": 1100,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2151,
+      "Ms": 0.209
+    },
+    {
+      "Id": "r0752e40",
+      "Empties": 40,
+      "Move": "c2",
+      "Score": 3187,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 21611,
+      "Ms": 1.9921
+    },
+    {
+      "Id": "r0753e56",
+      "Empties": 56,
+      "Move": "c6",
+      "Score": 175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4001,
+      "Ms": 0.3414
+    },
+    {
+      "Id": "r0754e48",
+      "Empties": 48,
+      "Move": "d6",
+      "Score": -3150,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 19648,
+      "Ms": 1.8383
+    },
+    {
+      "Id": "r0755e26",
+      "Empties": 26,
+      "Move": "h1",
+      "Score": -875,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3104,
+      "Ms": 0.294
+    },
+    {
+      "Id": "r0756e39",
+      "Empties": 39,
+      "Move": "f4",
+      "Score": 1687,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 18941,
+      "Ms": 1.8257
+    },
+    {
+      "Id": "r0757e42",
+      "Empties": 42,
+      "Move": "f7",
+      "Score": -750,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13890,
+      "Ms": 1.3338
+    },
+    {
+      "Id": "r0758e47",
+      "Empties": 47,
+      "Move": "e1",
+      "Score": 2387,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11686,
+      "Ms": 1.0883
+    },
+    {
+      "Id": "r0759e17",
+      "Empties": 17,
+      "Move": "h1",
+      "Score": 2737,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11143,
+      "Ms": 1.0395
+    },
+    {
+      "Id": "r0760e22",
+      "Empties": 22,
+      "Move": "h2",
+      "Score": -1250,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6937,
+      "Ms": 0.6417
+    },
+    {
+      "Id": "r0761e34",
+      "Empties": 34,
+      "Move": "g8",
+      "Score": -750,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12464,
+      "Ms": 1.2237
+    },
+    {
+      "Id": "r0762e27",
+      "Empties": 27,
+      "Move": "a1",
+      "Score": -537,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 16460,
+      "Ms": 1.5899
+    },
+    {
+      "Id": "r0763e20",
+      "Empties": 20,
+      "Move": "h5",
+      "Score": -100,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3174,
+      "Ms": 0.2903
+    },
+    {
+      "Id": "r0764e25",
+      "Empties": 25,
+      "Move": "a8",
+      "Score": 850,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15959,
+      "Ms": 1.4016
+    },
+    {
+      "Id": "r0765e41",
+      "Empties": 41,
+      "Move": "a1",
+      "Score": 500,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6073,
+      "Ms": 0.583
+    },
+    {
+      "Id": "r0766e33",
+      "Empties": 33,
+      "Move": "f5",
+      "Score": -3362,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12973,
+      "Ms": 1.2909
+    },
+    {
+      "Id": "r0767e55",
+      "Empties": 55,
+      "Move": "e7",
+      "Score": 362,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6668,
+      "Ms": 0.5971
+    },
+    {
+      "Id": "r0768e22",
+      "Empties": 22,
+      "Move": "a1",
+      "Score": 2450,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4437,
+      "Ms": 0.4235
+    },
+    {
+      "Id": "r0769e24",
+      "Empties": 24,
+      "Move": "e1",
+      "Score": 2562,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9312,
+      "Ms": 0.9043
+    },
+    {
+      "Id": "r0770e17",
+      "Empties": 17,
+      "Move": "h8",
+      "Score": -925,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2749,
+      "Ms": 0.2758
+    },
+    {
+      "Id": "r0771e17",
+      "Empties": 17,
+      "Move": "h8",
+      "Score": 375,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9692,
+      "Ms": 1.0648
+    },
+    {
+      "Id": "r0772e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2446
+    },
+    {
+      "Id": "r0773e33",
+      "Empties": 33,
+      "Move": "b3",
+      "Score": -1200,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14628,
+      "Ms": 1.4315
+    },
+    {
+      "Id": "r0774e23",
+      "Empties": 23,
+      "Move": "d8",
+      "Score": 2675,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7038,
+      "Ms": 0.6823
+    },
+    {
+      "Id": "r0775e56",
+      "Empties": 56,
+      "Move": "f6",
+      "Score": 462,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3306,
+      "Ms": 0.3127
+    },
+    {
+      "Id": "r0776e54",
+      "Empties": 54,
+      "Move": "c6",
+      "Score": 200,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3274,
+      "Ms": 0.2954
+    },
+    {
+      "Id": "r0777e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2206
+    },
+    {
+      "Id": "r0778e25",
+      "Empties": 25,
+      "Move": "h1",
+      "Score": 775,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6171,
+      "Ms": 0.6114
+    },
+    {
+      "Id": "r0779e33",
+      "Empties": 33,
+      "Move": "h3",
+      "Score": 5362,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11593,
+      "Ms": 1.0641
+    },
+    {
+      "Id": "r0780e46",
+      "Empties": 46,
+      "Move": "d1",
+      "Score": -1075,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10667,
+      "Ms": 1.0561
+    },
+    {
+      "Id": "r0781e54",
+      "Empties": 54,
+      "Move": "f6",
+      "Score": 625,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6814,
+      "Ms": 0.6486
+    },
+    {
+      "Id": "r0782e48",
+      "Empties": 48,
+      "Move": "d3",
+      "Score": 1537,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9160,
+      "Ms": 0.8869
+    },
+    {
+      "Id": "r0783e38",
+      "Empties": 38,
+      "Move": "c3",
+      "Score": 1675,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7439,
+      "Ms": 0.7677
+    },
+    {
+      "Id": "r0784e18",
+      "Empties": 18,
+      "Move": "h8",
+      "Score": 250,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3466,
+      "Ms": 0.3714
+    },
+    {
+      "Id": "r0785e21",
+      "Empties": 21,
+      "Move": "a1",
+      "Score": -2637,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8742,
+      "Ms": 0.8703
+    },
+    {
+      "Id": "r0786e19",
+      "Empties": 19,
+      "Move": "e7",
+      "Score": -3125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9130,
+      "Ms": 0.853
+    },
+    {
+      "Id": "r0787e36",
+      "Empties": 36,
+      "Move": "e6",
+      "Score": 237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11537,
+      "Ms": 1.1101
+    },
+    {
+      "Id": "r0788e43",
+      "Empties": 43,
+      "Move": "c5",
+      "Score": 975,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5714,
+      "Ms": 0.5927
+    },
+    {
+      "Id": "r0789e16",
+      "Empties": 16,
+      "Move": "e7",
+      "Score": -1675,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6338,
+      "Ms": 0.5574
+    },
+    {
+      "Id": "r0790e44",
+      "Empties": 44,
+      "Move": "c4",
+      "Score": 712,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10736,
+      "Ms": 1.0873
+    },
+    {
+      "Id": "r0791e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.239
+    },
+    {
+      "Id": "r0792e41",
+      "Empties": 41,
+      "Move": "a8",
+      "Score": 3537,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7037,
+      "Ms": 0.7685
+    },
+    {
+      "Id": "r0793e51",
+      "Empties": 51,
+      "Move": "c6",
+      "Score": -525,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9947,
+      "Ms": 0.975
+    },
+    {
+      "Id": "r0794e53",
+      "Empties": 53,
+      "Move": "e3",
+      "Score": -987,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3376,
+      "Ms": 0.3054
+    },
+    {
+      "Id": "r0795e58",
+      "Empties": 58,
+      "Move": "c5",
+      "Score": 475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3872,
+      "Ms": 0.3381
+    },
+    {
+      "Id": "r0796e52",
+      "Empties": 52,
+      "Move": "c6",
+      "Score": 525,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4301,
+      "Ms": 0.398
+    },
+    {
+      "Id": "r0797e20",
+      "Empties": 20,
+      "Move": "a1",
+      "Score": 3850,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3532,
+      "Ms": 0.3181
+    },
+    {
+      "Id": "r0798e38",
+      "Empties": 38,
+      "Move": "g3",
+      "Score": 1150,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7501,
+      "Ms": 0.7768
+    },
+    {
+      "Id": "r0799e42",
+      "Empties": 42,
+      "Move": "f3",
+      "Score": 587,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 20510,
+      "Ms": 2.0382
+    },
+    {
+      "Id": "r0800e40",
+      "Empties": 40,
+      "Move": "e2",
+      "Score": 2537,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17135,
+      "Ms": 1.7514
+    },
+    {
+      "Id": "r0801e33",
+      "Empties": 33,
+      "Move": "h6",
+      "Score": -337,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14017,
+      "Ms": 1.3434
+    },
+    {
+      "Id": "r0802e39",
+      "Empties": 39,
+      "Move": "g5",
+      "Score": 4737,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6861,
+      "Ms": 0.6694
+    },
+    {
+      "Id": "r0803e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2254
+    },
+    {
+      "Id": "r0804e49",
+      "Empties": 49,
+      "Move": "d6",
+      "Score": 3262,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5539,
+      "Ms": 0.5523
+    },
+    {
+      "Id": "r0805e27",
+      "Empties": 27,
+      "Move": "f5",
+      "Score": -1662,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13940,
+      "Ms": 1.3258
+    },
+    {
+      "Id": "r0806e46",
+      "Empties": 46,
+      "Move": "h4",
+      "Score": -1812,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5344,
+      "Ms": 0.5418
+    },
+    {
+      "Id": "r0807e20",
+      "Empties": 20,
+      "Move": "c3",
+      "Score": 200,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11653,
+      "Ms": 1.0829
+    },
+    {
+      "Id": "r0808e50",
+      "Empties": 50,
+      "Move": "e6",
+      "Score": -2062,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5428,
+      "Ms": 0.5082
+    },
+    {
+      "Id": "r0809e48",
+      "Empties": 48,
+      "Move": "d6",
+      "Score": -2150,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2909,
+      "Ms": 0.2727
+    },
+    {
+      "Id": "r0810e25",
+      "Empties": 25,
+      "Move": "h7",
+      "Score": 3075,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 20575,
+      "Ms": 1.9104
+    },
+    {
+      "Id": "r0811e58",
+      "Empties": 58,
+      "Move": "c5",
+      "Score": 475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3872,
+      "Ms": 0.3536
+    },
+    {
+      "Id": "r0812e40",
+      "Empties": 40,
+      "Move": "h8",
+      "Score": 425,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15616,
+      "Ms": 1.5244
+    },
+    {
+      "Id": "r0813e48",
+      "Empties": 48,
+      "Move": "c6",
+      "Score": 1162,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 16422,
+      "Ms": 1.6132
+    },
+    {
+      "Id": "r0814e31",
+      "Empties": 31,
+      "Move": "a1",
+      "Score": 6400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11372,
+      "Ms": 1.0258
+    },
+    {
+      "Id": "r0815e27",
+      "Empties": 27,
+      "Move": "h6",
+      "Score": -1412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 18455,
+      "Ms": 1.8643
+    },
+    {
+      "Id": "r0816e30",
+      "Empties": 30,
+      "Move": "c1",
+      "Score": 1000,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 20783,
+      "Ms": 2.0771
+    },
+    {
+      "Id": "r0817e22",
+      "Empties": 22,
+      "Move": "e1",
+      "Score": -1612,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4581,
+      "Ms": 0.4551
+    },
+    {
+      "Id": "r0818e16",
+      "Empties": 16,
+      "Move": "h5",
+      "Score": 2800,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3940,
+      "Ms": 0.4062
+    },
+    {
+      "Id": "r0819e38",
+      "Empties": 38,
+      "Move": "f2",
+      "Score": -475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 42960,
+      "Ms": 4.2663
+    },
+    {
+      "Id": "r0820e54",
+      "Empties": 54,
+      "Move": "e7",
+      "Score": 825,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6231,
+      "Ms": 0.6034
+    },
+    {
+      "Id": "r0821e38",
+      "Empties": 38,
+      "Move": "c8",
+      "Score": 4800,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4769,
+      "Ms": 0.4742
+    },
+    {
+      "Id": "r0822e57",
+      "Empties": 57,
+      "Move": "f6",
+      "Score": -587,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5273,
+      "Ms": 0.465
+    },
+    {
+      "Id": "r0823e28",
+      "Empties": 28,
+      "Move": "e6",
+      "Score": -3175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11163,
+      "Ms": 1.0485
+    },
+    {
+      "Id": "r0824e38",
+      "Empties": 38,
+      "Move": "b1",
+      "Score": 475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8377,
+      "Ms": 0.8448
+    },
+    {
+      "Id": "r0825e38",
+      "Empties": 38,
+      "Move": "h3",
+      "Score": -337,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13405,
+      "Ms": 1.2867
+    },
+    {
+      "Id": "r0826e22",
+      "Empties": 22,
+      "Move": "f8",
+      "Score": -400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10221,
+      "Ms": 0.952
+    },
+    {
+      "Id": "r0827e46",
+      "Empties": 46,
+      "Move": "c6",
+      "Score": -262,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13482,
+      "Ms": 1.2999
+    },
+    {
+      "Id": "r0828e22",
+      "Empties": 22,
+      "Move": "h5",
+      "Score": 3987,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 18306,
+      "Ms": 1.8741
+    },
+    {
+      "Id": "r0829e22",
+      "Empties": 22,
+      "Move": "h4",
+      "Score": 4887,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9779,
+      "Ms": 1.1514
+    },
+    {
+      "Id": "r0830e16",
+      "Empties": 16,
+      "Move": "d1",
+      "Score": -50,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7035,
+      "Ms": 0.6566
+    },
+    {
+      "Id": "r0831e34",
+      "Empties": 34,
+      "Move": "d2",
+      "Score": 3612,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14426,
+      "Ms": 1.5721
+    },
+    {
+      "Id": "r0832e38",
+      "Empties": 38,
+      "Move": "f2",
+      "Score": -450,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9738,
+      "Ms": 0.9547
+    },
+    {
+      "Id": "r0833e44",
+      "Empties": 44,
+      "Move": "e3",
+      "Score": -3162,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5907,
+      "Ms": 0.5808
+    },
+    {
+      "Id": "r0834e49",
+      "Empties": 49,
+      "Move": "d6",
+      "Score": 537,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3563,
+      "Ms": 0.3555
+    },
+    {
+      "Id": "r0835e58",
+      "Empties": 58,
+      "Move": "e3",
+      "Score": 475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3887,
+      "Ms": 0.3548
+    },
+    {
+      "Id": "r0836e21",
+      "Empties": 21,
+      "Move": "h3",
+      "Score": -425,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 16633,
+      "Ms": 1.4509
+    },
+    {
+      "Id": "r0837e53",
+      "Empties": 53,
+      "Move": "e3",
+      "Score": 512,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3168,
+      "Ms": 0.3201
+    },
+    {
+      "Id": "r0838e58",
+      "Empties": 58,
+      "Move": "e6",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4852,
+      "Ms": 0.4175
+    },
+    {
+      "Id": "r0839e43",
+      "Empties": 43,
+      "Move": "d2",
+      "Score": -200,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 18959,
+      "Ms": 1.8403
+    },
+    {
+      "Id": "r0840e34",
+      "Empties": 34,
+      "Move": "h4",
+      "Score": -1500,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12546,
+      "Ms": 1.2505
+    },
+    {
+      "Id": "r0841e37",
+      "Empties": 37,
+      "Move": "d3",
+      "Score": 512,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 32439,
+      "Ms": 3.2919
+    },
+    {
+      "Id": "r0842e33",
+      "Empties": 33,
+      "Move": "e1",
+      "Score": 862,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5595,
+      "Ms": 0.5178
+    },
+    {
+      "Id": "r0843e41",
+      "Empties": 41,
+      "Move": "a4",
+      "Score": 1625,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4570,
+      "Ms": 0.4937
+    },
+    {
+      "Id": "r0844e23",
+      "Empties": 23,
+      "Move": "d8",
+      "Score": -675,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1953,
+      "Ms": 0.2309
+    },
+    {
+      "Id": "r0845e48",
+      "Empties": 48,
+      "Move": "c4",
+      "Score": -87,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7747,
+      "Ms": 0.7494
+    },
+    {
+      "Id": "r0846e25",
+      "Empties": 25,
+      "Move": "f8",
+      "Score": -850,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3112,
+      "Ms": 0.3302
+    },
+    {
+      "Id": "r0847e16",
+      "Empties": 16,
+      "Move": "h6",
+      "Score": -1875,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3882,
+      "Ms": 0.4009
+    },
+    {
+      "Id": "r0848e33",
+      "Empties": 33,
+      "Move": "h1",
+      "Score": -625,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15247,
+      "Ms": 1.486
+    },
+    {
+      "Id": "r0849e25",
+      "Empties": 25,
+      "Move": "a5",
+      "Score": 837,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3538,
+      "Ms": 0.3618
+    },
+    {
+      "Id": "r0850e33",
+      "Empties": 33,
+      "Move": "e1",
+      "Score": 2425,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5400,
+      "Ms": 0.5207
+    },
+    {
+      "Id": "r0851e21",
+      "Empties": 21,
+      "Move": "f3",
+      "Score": 1325,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10508,
+      "Ms": 0.9214
+    },
+    {
+      "Id": "r0852e46",
+      "Empties": 46,
+      "Move": "f7",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 22673,
+      "Ms": 2.1275
+    },
+    {
+      "Id": "r0853e42",
+      "Empties": 42,
+      "Move": "c5",
+      "Score": 3012,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5648,
+      "Ms": 0.5314
+    },
+    {
+      "Id": "r0854e49",
+      "Empties": 49,
+      "Move": "g6",
+      "Score": 1912,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10587,
+      "Ms": 0.9861
+    },
+    {
+      "Id": "r0855e19",
+      "Empties": 19,
+      "Move": "h6",
+      "Score": 2312,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7339,
+      "Ms": 0.6925
+    },
+    {
+      "Id": "r0856e16",
+      "Empties": 16,
+      "Move": "c8",
+      "Score": -287,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4444,
+      "Ms": 0.4099
+    },
+    {
+      "Id": "r0857e35",
+      "Empties": 35,
+      "Move": "f5",
+      "Score": 2337,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 32641,
+      "Ms": 3.3923
+    },
+    {
+      "Id": "r0858e29",
+      "Empties": 29,
+      "Move": "c6",
+      "Score": -2237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 31863,
+      "Ms": 3.3012
+    },
+    {
+      "Id": "r0859e39",
+      "Empties": 39,
+      "Move": "c6",
+      "Score": 287,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5367,
+      "Ms": 0.5681
+    },
+    {
+      "Id": "r0860e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2587
+    },
+    {
+      "Id": "r0861e47",
+      "Empties": 47,
+      "Move": "b4",
+      "Score": -1487,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 21187,
+      "Ms": 2.0667
+    },
+    {
+      "Id": "r0862e46",
+      "Empties": 46,
+      "Move": "g5",
+      "Score": -337,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10463,
+      "Ms": 0.9545
+    },
+    {
+      "Id": "r0863e19",
+      "Empties": 19,
+      "Move": "c4",
+      "Score": -3312,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5481,
+      "Ms": 0.5268
+    },
+    {
+      "Id": "r0864e30",
+      "Empties": 30,
+      "Move": "g6",
+      "Score": 87,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5493,
+      "Ms": 0.5114
+    },
+    {
+      "Id": "r0865e33",
+      "Empties": 33,
+      "Move": "a2",
+      "Score": 1287,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3090,
+      "Ms": 0.3184
+    },
+    {
+      "Id": "r0866e21",
+      "Empties": 21,
+      "Move": "h1",
+      "Score": 412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3101,
+      "Ms": 0.2969
+    },
+    {
+      "Id": "r0867e30",
+      "Empties": 30,
+      "Move": "c4",
+      "Score": -1012,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14134,
+      "Ms": 1.3813
+    },
+    {
+      "Id": "r0868e33",
+      "Empties": 33,
+      "Move": "c5",
+      "Score": 1825,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10902,
+      "Ms": 0.9995
+    },
+    {
+      "Id": "r0869e48",
+      "Empties": 48,
+      "Move": "e7",
+      "Score": 437,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5199,
+      "Ms": 0.4969
+    },
+    {
+      "Id": "r0870e49",
+      "Empties": 49,
+      "Move": "c7",
+      "Score": 325,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11564,
+      "Ms": 1.1559
+    },
+    {
+      "Id": "r0871e24",
+      "Empties": 24,
+      "Move": "g3",
+      "Score": 3450,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4756,
+      "Ms": 0.4622
+    },
+    {
+      "Id": "r0872e26",
+      "Empties": 26,
+      "Move": "h5",
+      "Score": 3100,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1897,
+      "Ms": 0.1903
+    },
+    {
+      "Id": "r0873e53",
+      "Empties": 53,
+      "Move": "f4",
+      "Score": -1675,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3418,
+      "Ms": 0.3947
+    },
+    {
+      "Id": "r0874e23",
+      "Empties": 23,
+      "Move": "a3",
+      "Score": 3912,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15146,
+      "Ms": 1.4214
+    },
+    {
+      "Id": "r0875e18",
+      "Empties": 18,
+      "Move": "h8",
+      "Score": 2862,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2800,
+      "Ms": 0.2977
+    },
+    {
+      "Id": "r0876e27",
+      "Empties": 27,
+      "Move": "e3",
+      "Score": -2962,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 21846,
+      "Ms": 2.1407
+    },
+    {
+      "Id": "r0877e38",
+      "Empties": 38,
+      "Move": "f1",
+      "Score": -4700,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9246,
+      "Ms": 0.9184
+    },
+    {
+      "Id": "r0878e38",
+      "Empties": 38,
+      "Move": "e8",
+      "Score": -1612,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7168,
+      "Ms": 0.7333
+    },
+    {
+      "Id": "r0879e47",
+      "Empties": 47,
+      "Move": "e7",
+      "Score": 700,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8837,
+      "Ms": 0.8169
+    },
+    {
+      "Id": "r0880e30",
+      "Empties": 30,
+      "Move": "c7",
+      "Score": -825,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13569,
+      "Ms": 1.3923
+    },
+    {
+      "Id": "r0881e17",
+      "Empties": 17,
+      "Move": "a8",
+      "Score": 2487,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6962,
+      "Ms": 0.6476
+    },
+    {
+      "Id": "r0882e16",
+      "Empties": 16,
+      "Move": "f2",
+      "Score": -1637,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6148,
+      "Ms": 0.5709
+    },
+    {
+      "Id": "r0883e58",
+      "Empties": 58,
+      "Move": "d3",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4916,
+      "Ms": 0.4443
+    },
+    {
+      "Id": "r0884e49",
+      "Empties": 49,
+      "Move": "f5",
+      "Score": 1125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5554,
+      "Ms": 0.5423
+    },
+    {
+      "Id": "r0885e23",
+      "Empties": 23,
+      "Move": "d3",
+      "Score": 4500,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3424,
+      "Ms": 0.3538
+    },
+    {
+      "Id": "r0886e45",
+      "Empties": 45,
+      "Move": "f3",
+      "Score": 2950,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9070,
+      "Ms": 0.8708
+    },
+    {
+      "Id": "r0887e25",
+      "Empties": 25,
+      "Move": "h7",
+      "Score": 3175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6249,
+      "Ms": 0.566
+    },
+    {
+      "Id": "r0888e21",
+      "Empties": 21,
+      "Move": "a4",
+      "Score": 3112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6018,
+      "Ms": 0.5458
+    },
+    {
+      "Id": "r0889e41",
+      "Empties": 41,
+      "Move": "e3",
+      "Score": -1212,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13689,
+      "Ms": 1.2996
+    },
+    {
+      "Id": "r0890e52",
+      "Empties": 52,
+      "Move": "d6",
+      "Score": 175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4598,
+      "Ms": 0.4205
+    },
+    {
+      "Id": "r0891e43",
+      "Empties": 43,
+      "Move": "a3",
+      "Score": 2937,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6430,
+      "Ms": 0.6086
+    },
+    {
+      "Id": "r0892e59",
+      "Empties": 59,
+      "Move": "f4",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2780,
+      "Ms": 0.2492
+    },
+    {
+      "Id": "r0893e50",
+      "Empties": 50,
+      "Move": "c3",
+      "Score": 500,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7563,
+      "Ms": 0.7042
+    },
+    {
+      "Id": "r0894e48",
+      "Empties": 48,
+      "Move": "g4",
+      "Score": 575,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5283,
+      "Ms": 0.5126
+    },
+    {
+      "Id": "r0895e54",
+      "Empties": 54,
+      "Move": "a5",
+      "Score": 1887,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4052,
+      "Ms": 0.4129
+    },
+    {
+      "Id": "r0896e45",
+      "Empties": 45,
+      "Move": "h1",
+      "Score": 3712,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8163,
+      "Ms": 0.795
+    },
+    {
+      "Id": "r0897e54",
+      "Empties": 54,
+      "Move": "c3",
+      "Score": -1200,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5339,
+      "Ms": 0.4891
+    },
+    {
+      "Id": "r0898e58",
+      "Empties": 58,
+      "Move": "f5",
+      "Score": 50,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3128,
+      "Ms": 0.2852
+    },
+    {
+      "Id": "r0899e32",
+      "Empties": 32,
+      "Move": "c6",
+      "Score": -212,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 19792,
+      "Ms": 2.0606
+    },
+    {
+      "Id": "r0900e44",
+      "Empties": 44,
+      "Move": "f3",
+      "Score": 1625,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4669,
+      "Ms": 0.4603
+    },
+    {
+      "Id": "r0901e30",
+      "Empties": 30,
+      "Move": "a8",
+      "Score": 575,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 28651,
+      "Ms": 2.8901
+    },
+    {
+      "Id": "r0902e53",
+      "Empties": 53,
+      "Move": "c1",
+      "Score": 4350,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3221,
+      "Ms": 0.2933
+    },
+    {
+      "Id": "r0903e45",
+      "Empties": 45,
+      "Move": "c4",
+      "Score": 2450,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9174,
+      "Ms": 0.8717
+    },
+    {
+      "Id": "r0904e51",
+      "Empties": 51,
+      "Move": "f6",
+      "Score": -512,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6867,
+      "Ms": 0.6492
+    },
+    {
+      "Id": "r0905e29",
+      "Empties": 29,
+      "Move": "f2",
+      "Score": -1675,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17211,
+      "Ms": 1.581
+    },
+    {
+      "Id": "r0906e42",
+      "Empties": 42,
+      "Move": "f5",
+      "Score": -3187,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6193,
+      "Ms": 0.6062
+    },
+    {
+      "Id": "r0907e24",
+      "Empties": 24,
+      "Move": "a8",
+      "Score": 650,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4716,
+      "Ms": 0.476
+    },
+    {
+      "Id": "r0908e24",
+      "Empties": 24,
+      "Move": "a4",
+      "Score": -612,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4673,
+      "Ms": 0.4749
+    },
+    {
+      "Id": "r0909e23",
+      "Empties": 23,
+      "Move": "a1",
+      "Score": 2325,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2738,
+      "Ms": 0.2832
+    },
+    {
+      "Id": "r0910e23",
+      "Empties": 23,
+      "Move": "b7",
+      "Score": 1000,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12429,
+      "Ms": 1.1209
+    },
+    {
+      "Id": "r0911e42",
+      "Empties": 42,
+      "Move": "f4",
+      "Score": -2775,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7384,
+      "Ms": 0.7751
+    },
+    {
+      "Id": "r0912e37",
+      "Empties": 37,
+      "Move": "c2",
+      "Score": 3737,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 15632,
+      "Ms": 1.6055
+    },
+    {
+      "Id": "r0913e50",
+      "Empties": 50,
+      "Move": "c4",
+      "Score": 1112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8845,
+      "Ms": 0.8851
+    },
+    {
+      "Id": "r0914e45",
+      "Empties": 45,
+      "Move": "d6",
+      "Score": 1637,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13464,
+      "Ms": 1.44
+    },
+    {
+      "Id": "r0915e48",
+      "Empties": 48,
+      "Move": "b5",
+      "Score": -1512,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4838,
+      "Ms": 0.4666
+    },
+    {
+      "Id": "r0916e47",
+      "Empties": 47,
+      "Move": "e3",
+      "Score": 1312,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13551,
+      "Ms": 1.3115
+    },
+    {
+      "Id": "r0917e17",
+      "Empties": 17,
+      "Move": "a1",
+      "Score": -212,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1790,
+      "Ms": 0.2063
+    },
+    {
+      "Id": "r0918e43",
+      "Empties": 43,
+      "Move": "e6",
+      "Score": 2137,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13788,
+      "Ms": 1.4156
+    },
+    {
+      "Id": "r0919e59",
+      "Empties": 59,
+      "Move": "f4",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2780,
+      "Ms": 0.2474
+    },
+    {
+      "Id": "r0920e38",
+      "Empties": 38,
+      "Move": "c6",
+      "Score": -787,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10970,
+      "Ms": 1.0284
+    },
+    {
+      "Id": "r0921e26",
+      "Empties": 26,
+      "Move": "g2",
+      "Score": 4525,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12322,
+      "Ms": 1.1207
+    },
+    {
+      "Id": "r0922e56",
+      "Empties": 56,
+      "Move": "f5",
+      "Score": -675,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1938,
+      "Ms": 0.1867
+    },
+    {
+      "Id": "r0923e46",
+      "Empties": 46,
+      "Move": "f7",
+      "Score": 2087,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5988,
+      "Ms": 0.573
+    },
+    {
+      "Id": "r0924e55",
+      "Empties": 55,
+      "Move": "f4",
+      "Score": -137,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6705,
+      "Ms": 0.5835
+    },
+    {
+      "Id": "r0925e24",
+      "Empties": 24,
+      "Move": "h8",
+      "Score": 3975,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8823,
+      "Ms": 0.8034
+    },
+    {
+      "Id": "r0926e49",
+      "Empties": 49,
+      "Move": "f2",
+      "Score": -1225,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17502,
+      "Ms": 1.5715
+    },
+    {
+      "Id": "r0927e55",
+      "Empties": 55,
+      "Move": "e7",
+      "Score": -912,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4825,
+      "Ms": 0.4043
+    },
+    {
+      "Id": "r0928e28",
+      "Empties": 28,
+      "Move": "e2",
+      "Score": -2225,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6547,
+      "Ms": 0.6439
+    },
+    {
+      "Id": "r0929e58",
+      "Empties": 58,
+      "Move": "f5",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5036,
+      "Ms": 0.4349
+    },
+    {
+      "Id": "r0930e56",
+      "Empties": 56,
+      "Move": "c4",
+      "Score": -412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3984,
+      "Ms": 0.3465
+    },
+    {
+      "Id": "r0931e29",
+      "Empties": 29,
+      "Move": "d3",
+      "Score": -1762,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4557,
+      "Ms": 0.4286
+    },
+    {
+      "Id": "r0932e22",
+      "Empties": 22,
+      "Move": "a6",
+      "Score": 3587,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4010,
+      "Ms": 0.4193
+    },
+    {
+      "Id": "r0933e45",
+      "Empties": 45,
+      "Move": "f2",
+      "Score": -50,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12010,
+      "Ms": 1.1387
+    },
+    {
+      "Id": "r0934e38",
+      "Empties": 38,
+      "Move": "g4",
+      "Score": 825,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6585,
+      "Ms": 0.7323
+    },
+    {
+      "Id": "r0935e51",
+      "Empties": 51,
+      "Move": "e3",
+      "Score": 2600,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13541,
+      "Ms": 1.3759
+    },
+    {
+      "Id": "r0936e44",
+      "Empties": 44,
+      "Move": "e3",
+      "Score": -3262,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5792,
+      "Ms": 0.6047
+    },
+    {
+      "Id": "r0937e37",
+      "Empties": 37,
+      "Move": "c3",
+      "Score": -325,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4617,
+      "Ms": 0.4789
+    },
+    {
+      "Id": "r0938e19",
+      "Empties": 19,
+      "Move": "h4",
+      "Score": -1237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4777,
+      "Ms": 0.4831
+    },
+    {
+      "Id": "r0939e20",
+      "Empties": 20,
+      "Move": "h8",
+      "Score": 3250,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7859,
+      "Ms": 0.7193
+    },
+    {
+      "Id": "r0940e16",
+      "Empties": 16,
+      "Move": "h3",
+      "Score": -1587,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4278,
+      "Ms": 0.4452
+    },
+    {
+      "Id": "r0941e55",
+      "Empties": 55,
+      "Move": "c3",
+      "Score": 425,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3529,
+      "Ms": 0.319
+    },
+    {
+      "Id": "r0942e31",
+      "Empties": 31,
+      "Move": "e8",
+      "Score": -2512,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7360,
+      "Ms": 0.7847
+    },
+    {
+      "Id": "r0943e57",
+      "Empties": 57,
+      "Move": "c5",
+      "Score": 1375,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2103,
+      "Ms": 0.1894
+    },
+    {
+      "Id": "r0944e53",
+      "Empties": 53,
+      "Move": "f4",
+      "Score": 1362,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4497,
+      "Ms": 0.4197
+    },
+    {
+      "Id": "r0945e19",
+      "Empties": 19,
+      "Move": "g8",
+      "Score": -2412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5848,
+      "Ms": 0.5747
+    },
+    {
+      "Id": "r0946e54",
+      "Empties": 54,
+      "Move": "c2",
+      "Score": 2400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2335,
+      "Ms": 0.224
+    },
+    {
+      "Id": "r0947e28",
+      "Empties": 28,
+      "Move": "d6",
+      "Score": -2650,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 29675,
+      "Ms": 2.7391
+    },
+    {
+      "Id": "r0948e48",
+      "Empties": 48,
+      "Move": "f1",
+      "Score": 262,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4318,
+      "Ms": 0.4033
+    },
+    {
+      "Id": "r0949e35",
+      "Empties": 35,
+      "Move": "c2",
+      "Score": 1050,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9713,
+      "Ms": 0.9923
+    },
+    {
+      "Id": "r0950e19",
+      "Empties": 19,
+      "Move": "b8",
+      "Score": 662,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 32564,
+      "Ms": 2.8172
+    },
+    {
+      "Id": "r0951e54",
+      "Empties": 54,
+      "Move": "f4",
+      "Score": -837,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5671,
+      "Ms": 0.5082
+    },
+    {
+      "Id": "r0952e26",
+      "Empties": 26,
+      "Move": "a5",
+      "Score": -1612,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4923,
+      "Ms": 0.4545
+    },
+    {
+      "Id": "r0953e50",
+      "Empties": 50,
+      "Move": "d3",
+      "Score": -537,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7716,
+      "Ms": 0.807
+    },
+    {
+      "Id": "r0954e36",
+      "Empties": 36,
+      "Move": "a2",
+      "Score": 2562,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6932,
+      "Ms": 0.7762
+    },
+    {
+      "Id": "r0955e39",
+      "Empties": 39,
+      "Move": "d6",
+      "Score": -1625,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6769,
+      "Ms": 0.7202
+    },
+    {
+      "Id": "r0956e54",
+      "Empties": 54,
+      "Move": "c6",
+      "Score": 1362,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 5176,
+      "Ms": 0.4437
+    },
+    {
+      "Id": "r0957e35",
+      "Empties": 35,
+      "Move": "d3",
+      "Score": -2275,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12700,
+      "Ms": 1.2887
+    },
+    {
+      "Id": "r0958e46",
+      "Empties": 46,
+      "Move": "f6",
+      "Score": 450,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10811,
+      "Ms": 1.0947
+    },
+    {
+      "Id": "r0959e27",
+      "Empties": 27,
+      "Move": "c4",
+      "Score": 4450,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12216,
+      "Ms": 1.4053
+    },
+    {
+      "Id": "r0960e57",
+      "Empties": 57,
+      "Move": "f4",
+      "Score": 1375,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 1888,
+      "Ms": 0.2026
+    },
+    {
+      "Id": "r0961e26",
+      "Empties": 26,
+      "Move": "c1",
+      "Score": 550,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 17304,
+      "Ms": 1.8303
+    },
+    {
+      "Id": "r0962e25",
+      "Empties": 25,
+      "Move": "c7",
+      "Score": -1300,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8457,
+      "Ms": 0.8363
+    },
+    {
+      "Id": "r0963e45",
+      "Empties": 45,
+      "Move": "h5",
+      "Score": -1037,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14752,
+      "Ms": 1.513
+    },
+    {
+      "Id": "r0964e18",
+      "Empties": 18,
+      "Move": "f5",
+      "Score": -137,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4403,
+      "Ms": 0.4725
+    },
+    {
+      "Id": "r0965e21",
+      "Empties": 21,
+      "Move": "c2",
+      "Score": 1225,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8952,
+      "Ms": 0.8889
+    },
+    {
+      "Id": "r0966e46",
+      "Empties": 46,
+      "Move": "f4",
+      "Score": -1137,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2890,
+      "Ms": 0.3047
+    },
+    {
+      "Id": "r0967e17",
+      "Empties": 17,
+      "Move": "b1",
+      "Score": 1212,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9628,
+      "Ms": 0.9172
+    },
+    {
+      "Id": "r0968e58",
+      "Empties": 58,
+      "Move": "f4",
+      "Score": 475,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4005,
+      "Ms": 0.3759
+    },
+    {
+      "Id": "r0969e30",
+      "Empties": 30,
+      "Move": "g3",
+      "Score": -3237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 34931,
+      "Ms": 3.6177
+    },
+    {
+      "Id": "r0970e54",
+      "Empties": 54,
+      "Move": "c5",
+      "Score": -400,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4198,
+      "Ms": 0.4189
+    },
+    {
+      "Id": "r0971e58",
+      "Empties": 58,
+      "Move": "c4",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4714,
+      "Ms": 0.4251
+    },
+    {
+      "Id": "r0972e52",
+      "Empties": 52,
+      "Move": "b5",
+      "Score": -1000,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7682,
+      "Ms": 0.7585
+    },
+    {
+      "Id": "r0973e19",
+      "Empties": 19,
+      "Move": "b3",
+      "Score": 937,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10653,
+      "Ms": 1.1944
+    },
+    {
+      "Id": "r0974e56",
+      "Empties": 56,
+      "Move": "d3",
+      "Score": 62,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4226,
+      "Ms": 0.3907
+    },
+    {
+      "Id": "r0975e40",
+      "Empties": 40,
+      "Move": "f1",
+      "Score": 2337,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6600,
+      "Ms": 0.7346
+    },
+    {
+      "Id": "r0976e58",
+      "Empties": 58,
+      "Move": "f5",
+      "Score": 50,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3128,
+      "Ms": 0.2979
+    },
+    {
+      "Id": "r0977e47",
+      "Empties": 47,
+      "Move": "f6",
+      "Score": -362,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 14108,
+      "Ms": 1.4643
+    },
+    {
+      "Id": "r0978e16",
+      "Empties": 16,
+      "Move": "a8",
+      "Score": 175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2556,
+      "Ms": 0.2871
+    },
+    {
+      "Id": "r0979e24",
+      "Empties": 24,
+      "Move": "g6",
+      "Score": 237,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11362,
+      "Ms": 1.1277
+    },
+    {
+      "Id": "r0980e23",
+      "Empties": 23,
+      "Move": "e1",
+      "Score": -3412,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 13050,
+      "Ms": 1.2397
+    },
+    {
+      "Id": "r0981e57",
+      "Empties": 57,
+      "Move": "e3",
+      "Score": 787,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3403,
+      "Ms": 0.3038
+    },
+    {
+      "Id": "r0982e28",
+      "Empties": 28,
+      "Move": "b1",
+      "Score": 3437,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3683,
+      "Ms": 0.4009
+    },
+    {
+      "Id": "r0983e16",
+      "Empties": 16,
+      "Move": "f4",
+      "Score": -350,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7249,
+      "Ms": 0.6778
+    },
+    {
+      "Id": "r0984e22",
+      "Empties": 22,
+      "Move": "c6",
+      "Score": 5187,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7943,
+      "Ms": 0.7472
+    },
+    {
+      "Id": "r0985e16",
+      "Empties": 16,
+      "Move": "d1",
+      "Score": 387,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7222,
+      "Ms": 0.658
+    },
+    {
+      "Id": "r0986e39",
+      "Empties": 39,
+      "Move": "f2",
+      "Score": -512,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 23406,
+      "Ms": 2.6093
+    },
+    {
+      "Id": "r0987e39",
+      "Empties": 39,
+      "Move": "b3",
+      "Score": 787,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 10815,
+      "Ms": 1.0843
+    },
+    {
+      "Id": "r0988e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2658
+    },
+    {
+      "Id": "r0989e28",
+      "Empties": 28,
+      "Move": "c3",
+      "Score": -500,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 6797,
+      "Ms": 0.7281
+    },
+    {
+      "Id": "r0990e34",
+      "Empties": 34,
+      "Move": "h3",
+      "Score": 1425,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9628,
+      "Ms": 1.0819
+    },
+    {
+      "Id": "r0991e58",
+      "Empties": 58,
+      "Move": "f5",
+      "Score": 50,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 3128,
+      "Ms": 0.2911
+    },
+    {
+      "Id": "r0992e51",
+      "Empties": 51,
+      "Move": "c5",
+      "Score": -50,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 11962,
+      "Ms": 1.1434
+    },
+    {
+      "Id": "r0993e22",
+      "Empties": 22,
+      "Move": "g5",
+      "Score": 2812,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 7512,
+      "Ms": 0.7092
+    },
+    {
+      "Id": "r0994e60",
+      "Empties": 60,
+      "Move": "d3",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2723,
+      "Ms": 0.2338
+    },
+    {
+      "Id": "r0995e38",
+      "Empties": 38,
+      "Move": "h5",
+      "Score": -2162,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 8500,
+      "Ms": 0.836
+    },
+    {
+      "Id": "r0996e58",
+      "Empties": 58,
+      "Move": "d3",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 4916,
+      "Ms": 0.4328
+    },
+    {
+      "Id": "r0997e38",
+      "Empties": 38,
+      "Move": "c1",
+      "Score": 5762,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 9670,
+      "Ms": 0.9202
+    },
+    {
+      "Id": "r0998e34",
+      "Empties": 34,
+      "Move": "h2",
+      "Score": -925,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 12906,
+      "Ms": 1.2634
+    },
+    {
+      "Id": "r0999e37",
+      "Empties": 37,
+      "Move": "d7",
+      "Score": -1025,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 41251,
+      "Ms": 3.8522
+    },
+    {
+      "Id": "r1000e59",
+      "Empties": 59,
+      "Move": "e3",
+      "Score": -175,
+      "Kind": "Heuristic",
+      "Depth": 8,
+      "Nodes": 2646,
+      "Ms": 0.2359
+    }
+  ],
+  "Engine": "stello"
+}

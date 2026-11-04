@@ -1,0 +1,5011 @@
+{
+  "Command": "solve-bench",
+  "Date": "2026-11-04 20:27",
+  "ProcessorCount": 24,
+  "Limits": "solve",
+  "HashBits": 19,
+  "Passes": 1,
+  "Results": [
+    {
+      "Id": "r00001e17",
+      "Empties": 17,
+      "Move": "a6",
+      "Score": 18,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 1544625,
+      "Ms": 34.4916
+    },
+    {
+      "Id": "r00002e19",
+      "Empties": 19,
+      "Move": "g3",
+      "Score": 34,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 4931847,
+      "Ms": 100.5412
+    },
+    {
+      "Id": "r00003e24",
+      "Empties": 24,
+      "Move": "a6",
+      "Score": 42,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 184141511,
+      "Ms": 4263.2379
+    },
+    {
+      "Id": "r00004e22",
+      "Empties": 22,
+      "Move": "e8",
+      "Score": 14,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 25434801,
+      "Ms": 461.3468
+    },
+    {
+      "Id": "r00005e15",
+      "Empties": 15,
+      "Move": "e8",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 191596,
+      "Ms": 4.265
+    },
+    {
+      "Id": "r00006e21",
+      "Empties": 21,
+      "Move": "c5",
+      "Score": 22,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 10856472,
+      "Ms": 216.2326
+    },
+    {
+      "Id": "r00007e19",
+      "Empties": 19,
+      "Move": "g4",
+      "Score": -32,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 2809158,
+      "Ms": 52.0565
+    },
+    {
+      "Id": "r00008e20",
+      "Empties": 20,
+      "Move": "f1",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 11353490,
+      "Ms": 228.8097
+    },
+    {
+      "Id": "r00009e17",
+      "Empties": 17,
+      "Move": "f4",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 1163223,
+      "Ms": 21.3242
+    },
+    {
+      "Id": "r00010e17",
+      "Empties": 17,
+      "Move": "d3",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 2091254,
+      "Ms": 37.5291
+    },
+    {
+      "Id": "r00011e19",
+      "Empties": 19,
+      "Move": "a4",
+      "Score": 2,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 1624160,
+      "Ms": 31.3812
+    },
+    {
+      "Id": "r00012e20",
+      "Empties": 20,
+      "Move": "a3",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 1534870,
+      "Ms": 43.744
+    },
+    {
+      "Id": "r00013e21",
+      "Empties": 21,
+      "Move": "a4",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 2565682,
+      "Ms": 54.2611
+    },
+    {
+      "Id": "r00014e15",
+      "Empties": 15,
+      "Move": "a8",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 216487,
+      "Ms": 3.7617
+    },
+    {
+      "Id": "r00015e17",
+      "Empties": 17,
+      "Move": "h1",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 4779630,
+      "Ms": 89.7466
+    },
+    {
+      "Id": "r00016e23",
+      "Empties": 23,
+      "Move": "e8",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 32369414,
+      "Ms": 629.7638
+    },
+    {
+      "Id": "r00017e24",
+      "Empties": 24,
+      "Move": "a3",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 362948907,
+      "Ms": 7278.3948
+    },
+    {
+      "Id": "r00018e21",
+      "Empties": 21,
+      "Move": "a2",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 7624271,
+      "Ms": 182.9167
+    },
+    {
+      "Id": "r00019e19",
+      "Empties": 19,
+      "Move": "f3",
+      "Score": -10,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 4267392,
+      "Ms": 83.4955
+    },
+    {
+      "Id": "r00020e14",
+      "Empties": 14,
+      "Move": "a1",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 60664,
+      "Ms": 1.5974
+    },
+    {
+      "Id": "r00021e15",
+      "Empties": 15,
+      "Move": "g4",
+      "Score": -2,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 883826,
+      "Ms": 16.6545
+    },
+    {
+      "Id": "r00022e21",
+      "Empties": 21,
+      "Move": "c6",
+      "Score": 20,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 10658049,
+      "Ms": 189.2637
+    },
+    {
+      "Id": "r00023e14",
+      "Empties": 14,
+      "Move": "g6",
+      "Score": -40,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 89837,
+      "Ms": 1.5318
+    },
+    {
+      "Id": "r00024e24",
+      "Empties": 24,
+      "Move": "h7",
+      "Score": 32,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 486496962,
+      "Ms": 8092.1418
+    },
+    {
+      "Id": "r00025e23",
+      "Empties": 23,
+      "Move": "g7",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 179342124,
+      "Ms": 3677.7925
+    },
+    {
+      "Id": "r00026e20",
+      "Empties": 20,
+      "Move": "b5",
+      "Score": -38,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 8070984,
+      "Ms": 140.0756
+    },
+    {
+      "Id": "r00027e19",
+      "Empties": 19,
+      "Move": "h5",
+      "Score": -40,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 6819803,
+      "Ms": 115.3802
+    },
+    {
+      "Id": "r00028e23",
+      "Empties": 23,
+      "Move": "d8",
+      "Score": -20,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 374380294,
+      "Ms": 7018.5378
+    },
+    {
+      "Id": "r00029e21",
+      "Empties": 21,
+      "Move": "h4",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 14610756,
+      "Ms": 332.2741
+    },
+    {
+      "Id": "r00030e20",
+      "Empties": 20,
+      "Move": "h5",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 5962853,
+      "Ms": 102.7918
+    },
+    {
+      "Id": "r00031e17",
+      "Empties": 17,
+      "Move": "g4",
+      "Score": -28,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 575226,
+      "Ms": 10.6754
+    },
+    {
+      "Id": "r00032e16",
+      "Empties": 16,
+      "Move": "h5",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 575896,
+      "Ms": 10.4163
+    },
+    {
+      "Id": "r00033e24",
+      "Empties": 24,
+      "Move": "g3",
+      "Score": 2,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 115635874,
+      "Ms": 2175.6117
+    },
+    {
+      "Id": "r00034e17",
+      "Empties": 17,
+      "Move": "b8",
+      "Score": 12,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 131597,
+      "Ms": 2.8009
+    },
+    {
+      "Id": "r00035e19",
+      "Empties": 19,
+      "Move": "c4",
+      "Score": -46,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 15789160,
+      "Ms": 238.3579
+    },
+    {
+      "Id": "r00036e20",
+      "Empties": 20,
+      "Move": "a5",
+      "Score": 42,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 29454932,
+      "Ms": 426.3745
+    },
+    {
+      "Id": "r00037e16",
+      "Empties": 16,
+      "Move": "a1",
+      "Score": 36,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 494875,
+      "Ms": 9.488
+    },
+    {
+      "Id": "r00038e24",
+      "Empties": 24,
+      "Move": "h6",
+      "Score": -28,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 226888661,
+      "Ms": 5467.9983
+    },
+    {
+      "Id": "r00039e15",
+      "Empties": 15,
+      "Move": "f1",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 438165,
+      "Ms": 7.5231
+    },
+    {
+      "Id": "r00040e17",
+      "Empties": 17,
+      "Move": "c1",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 323116,
+      "Ms": 6.5022
+    },
+    {
+      "Id": "r00041e14",
+      "Empties": 14,
+      "Move": "d7",
+      "Score": -40,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 295507,
+      "Ms": 5.6254
+    },
+    {
+      "Id": "r00042e22",
+      "Empties": 22,
+      "Move": "h1",
+      "Score": 12,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 19281998,
+      "Ms": 421.8334
+    },
+    {
+      "Id": "r00043e20",
+      "Empties": 20,
+      "Move": "h8",
+      "Score": -46,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 4769840,
+      "Ms": 90.5571
+    },
+    {
+      "Id": "r00044e24",
+      "Empties": 24,
+      "Move": "a3",
+      "Score": -32,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 315432766,
+      "Ms": 8487.8818
+    },
+    {
+      "Id": "r00045e16",
+      "Empties": 16,
+      "Move": "c1",
+      "Score": -2,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 370659,
+      "Ms": 7.0111
+    },
+    {
+      "Id": "r00046e23",
+      "Empties": 23,
+      "Move": "h1",
+      "Score": 56,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 353579479,
+      "Ms": 6927.1966
+    },
+    {
+      "Id": "r00047e20",
+      "Empties": 20,
+      "Move": "b6",
+      "Score": 18,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 2476871,
+      "Ms": 60.8472
+    },
+    {
+      "Id": "r00048e17",
+      "Empties": 17,
+      "Move": "d1",
+      "Score": -26,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 3734095,
+      "Ms": 62.8201
+    },
+    {
+      "Id": "r00049e23",
+      "Empties": 23,
+      "Move": "a2",
+      "Score": 48,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 15120731,
+      "Ms": 366.5948
+    },
+    {
+      "Id": "r00050e23",
+      "Empties": 23,
+      "Move": "e3",
+      "Score": -22,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 45562878,
+      "Ms": 1161.0745
+    },
+    {
+      "Id": "r00051e15",
+      "Empties": 15,
+      "Move": "h1",
+      "Score": 18,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 102162,
+      "Ms": 2.1951
+    },
+    {
+      "Id": "r00052e16",
+      "Empties": 16,
+      "Move": "b5",
+      "Score": -38,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 1861662,
+      "Ms": 28.7157
+    },
+    {
+      "Id": "r00053e20",
+      "Empties": 20,
+      "Move": "g5",
+      "Score": 30,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 60969225,
+      "Ms": 1003.2361
+    },
+    {
+      "Id": "r00055e22",
+      "Empties": 22,
+      "Move": "h6",
+      "Score": 32,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 11415426,
+      "Ms": 226.7826
+    },
+    {
+      "Id": "r00056e14",
+      "Empties": 14,
+      "Move": "a2",
+      "Score": 18,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 37964,
+      "Ms": 0.901
+    },
+    {
+      "Id": "r00057e16",
+      "Empties": 16,
+      "Move": "a5",
+      "Score": -22,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 1001571,
+      "Ms": 19.1011
+    },
+    {
+      "Id": "r00058e19",
+      "Empties": 19,
+      "Move": "c6",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 9540066,
+      "Ms": 167.7752
+    },
+    {
+      "Id": "r00059e22",
+      "Empties": 22,
+      "Move": "a4",
+      "Score": 44,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 312341377,
+      "Ms": 5338.1711
+    },
+    {
+      "Id": "r00060e23",
+      "Empties": 23,
+      "Move": "h2",
+      "Score": 34,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 49710093,
+      "Ms": 1246.3767
+    },
+    {
+      "Id": "r00061e22",
+      "Empties": 22,
+      "Move": "a3",
+      "Score": -38,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 54429114,
+      "Ms": 1049.5284
+    },
+    {
+      "Id": "r00062e16",
+      "Empties": 16,
+      "Move": "d8",
+      "Score": -4,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 626185,
+      "Ms": 11.0793
+    },
+    {
+      "Id": "r00063e24",
+      "Empties": 24,
+      "Move": "h4",
+      "Score": 24,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 252640453,
+      "Ms": 4800.1933
+    },
+    {
+      "Id": "r00064e22",
+      "Empties": 22,
+      "Move": "f2",
+      "Score": -18,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 160970062,
+      "Ms": 3342.0889
+    },
+    {
+      "Id": "r00065e23",
+      "Empties": 23,
+      "Move": "b1",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 170427288,
+      "Ms": 3695.8636
+    },
+    {
+      "Id": "r00066e16",
+      "Empties": 16,
+      "Move": "e7",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 219306,
+      "Ms": 3.8131
+    },
+    {
+      "Id": "r00067e20",
+      "Empties": 20,
+      "Move": "a2",
+      "Score": -4,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 3750952,
+      "Ms": 76.8014
+    },
+    {
+      "Id": "r00068e22",
+      "Empties": 22,
+      "Move": "a1",
+      "Score": -20,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 22884810,
+      "Ms": 526.6003
+    },
+    {
+      "Id": "r00069e19",
+      "Empties": 19,
+      "Move": "d7",
+      "Score": 12,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 32985750,
+      "Ms": 678.2471
+    },
+    {
+      "Id": "r00070e24",
+      "Empties": 24,
+      "Move": "h4",
+      "Score": 2,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 122311872,
+      "Ms": 2755.0181
+    },
+    {
+      "Id": "r00071e19",
+      "Empties": 19,
+      "Move": "d7",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 7300978,
+      "Ms": 126.3885
+    },
+    {
+      "Id": "r00072e17",
+      "Empties": 17,
+      "Move": "a4",
+      "Score": -6,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 284144,
+      "Ms": 5.231
+    },
+    {
+      "Id": "r00073e22",
+      "Empties": 22,
+      "Move": "e8",
+      "Score": 46,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 21956437,
+      "Ms": 487.1328
+    },
+    {
+      "Id": "r00074e23",
+      "Empties": 23,
+      "Move": "e6",
+      "Score": -10,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 184628045,
+      "Ms": 4213.3692
+    },
+    {
+      "Id": "r00075e18",
+      "Empties": 18,
+      "Move": "b1",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1644109,
+      "Ms": 31.8762
+    },
+    {
+      "Id": "r00076e14",
+      "Empties": 14,
+      "Move": "f7",
+      "Score": -18,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 61440,
+      "Ms": 1.3147
+    },
+    {
+      "Id": "r00077e18",
+      "Empties": 18,
+      "Move": "h3",
+      "Score": -24,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1566395,
+      "Ms": 26.7782
+    },
+    {
+      "Id": "r00078e14",
+      "Empties": 14,
+      "Move": "h8",
+      "Score": 20,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 30028,
+      "Ms": 0.8323
+    },
+    {
+      "Id": "r00079e24",
+      "Empties": 24,
+      "Move": "e7",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 145341171,
+      "Ms": 2546.4537
+    },
+    {
+      "Id": "r00080e24",
+      "Empties": 24,
+      "Move": "f5",
+      "Score": -28,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 439025791,
+      "Ms": 8878.5634
+    },
+    {
+      "Id": "r00081e22",
+      "Empties": 22,
+      "Move": "a6",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 28811853,
+      "Ms": 586.1552
+    },
+    {
+      "Id": "r00082e23",
+      "Empties": 23,
+      "Move": "a1",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 46457869,
+      "Ms": 1107.8526
+    },
+    {
+      "Id": "r00083e24",
+      "Empties": 24,
+      "Move": "a5",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 565665726,
+      "Ms": 9783.082
+    },
+    {
+      "Id": "r00084e23",
+      "Empties": 23,
+      "Move": "g3",
+      "Score": 12,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 239733413,
+      "Ms": 4965.355
+    },
+    {
+      "Id": "r00085e23",
+      "Empties": 23,
+      "Move": "a6",
+      "Score": 14,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 90579612,
+      "Ms": 2396.2494
+    },
+    {
+      "Id": "r00086e19",
+      "Empties": 19,
+      "Move": "h1",
+      "Score": -10,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 6662724,
+      "Ms": 135.6945
+    },
+    {
+      "Id": "r00087e15",
+      "Empties": 15,
+      "Move": "f2",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 53607,
+      "Ms": 1.3316
+    },
+    {
+      "Id": "r00088e16",
+      "Empties": 16,
+      "Move": "d7",
+      "Score": -24,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 238444,
+      "Ms": 4.8629
+    },
+    {
+      "Id": "r00089e22",
+      "Empties": 22,
+      "Move": "g2",
+      "Score": 34,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 74687579,
+      "Ms": 1825.7879
+    },
+    {
+      "Id": "r00090e14",
+      "Empties": 14,
+      "Move": "a8",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 60358,
+      "Ms": 1.2329
+    },
+    {
+      "Id": "r00091e23",
+      "Empties": 23,
+      "Move": "c6",
+      "Score": 2,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 71516097,
+      "Ms": 1566.8948
+    },
+    {
+      "Id": "r00092e23",
+      "Empties": 23,
+      "Move": "a6",
+      "Score": 12,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 12869599,
+      "Ms": 306.6204
+    },
+    {
+      "Id": "r00093e21",
+      "Empties": 21,
+      "Move": "g2",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 15113228,
+      "Ms": 347.4475
+    },
+    {
+      "Id": "r00094e18",
+      "Empties": 18,
+      "Move": "h1",
+      "Score": -24,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 3007001,
+      "Ms": 50.8007
+    },
+    {
+      "Id": "r00095e20",
+      "Empties": 20,
+      "Move": "h7",
+      "Score": -6,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 1431593,
+      "Ms": 34.1009
+    },
+    {
+      "Id": "r00096e24",
+      "Empties": 24,
+      "Move": "h2",
+      "Score": -10,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 1358125121,
+      "Ms": 25050.1188
+    },
+    {
+      "Id": "r00097e15",
+      "Empties": 15,
+      "Move": "g7",
+      "Score": -22,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 222310,
+      "Ms": 3.4884
+    },
+    {
+      "Id": "r00098e20",
+      "Empties": 20,
+      "Move": "a1",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 55496296,
+      "Ms": 1271.412
+    },
+    {
+      "Id": "r00099e16",
+      "Empties": 16,
+      "Move": "h1",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 526721,
+      "Ms": 8.7905
+    },
+    {
+      "Id": "r00100e20",
+      "Empties": 20,
+      "Move": "f1",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 4098077,
+      "Ms": 83.5262
+    },
+    {
+      "Id": "r00101e18",
+      "Empties": 18,
+      "Move": "g8",
+      "Score": 2,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1059423,
+      "Ms": 19.3848
+    },
+    {
+      "Id": "r00102e18",
+      "Empties": 18,
+      "Move": "d8",
+      "Score": 36,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1271949,
+      "Ms": 23.6393
+    },
+    {
+      "Id": "r00103e19",
+      "Empties": 19,
+      "Move": "d3",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 7783280,
+      "Ms": 150.1562
+    },
+    {
+      "Id": "r00104e23",
+      "Empties": 23,
+      "Move": "a2",
+      "Score": 40,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 336944434,
+      "Ms": 7055.3803
+    },
+    {
+      "Id": "r00105e20",
+      "Empties": 20,
+      "Move": "h8",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 2908841,
+      "Ms": 67.2294
+    },
+    {
+      "Id": "r00106e23",
+      "Empties": 23,
+      "Move": "f5",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 80601453,
+      "Ms": 2537.8642
+    },
+    {
+      "Id": "r00107e15",
+      "Empties": 15,
+      "Move": "e1",
+      "Score": -24,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 231459,
+      "Ms": 7.3287
+    },
+    {
+      "Id": "r00108e21",
+      "Empties": 21,
+      "Move": "a6",
+      "Score": 2,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 41628740,
+      "Ms": 893.3507
+    },
+    {
+      "Id": "r00109e23",
+      "Empties": 23,
+      "Move": "d2",
+      "Score": -16,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 544152384,
+      "Ms": 10715.8203
+    },
+    {
+      "Id": "r00110e18",
+      "Empties": 18,
+      "Move": "a4",
+      "Score": 24,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 4974014,
+      "Ms": 99.3171
+    },
+    {
+      "Id": "r00111e22",
+      "Empties": 22,
+      "Move": "g8",
+      "Score": -2,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 33129142,
+      "Ms": 739.1367
+    },
+    {
+      "Id": "r00112e14",
+      "Empties": 14,
+      "Move": "g8",
+      "Score": -36,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 33547,
+      "Ms": 0.9185
+    },
+    {
+      "Id": "r00113e22",
+      "Empties": 22,
+      "Move": "a2",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 66219993,
+      "Ms": 1455.6581
+    },
+    {
+      "Id": "r00114e22",
+      "Empties": 22,
+      "Move": "d1",
+      "Score": -38,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 54227843,
+      "Ms": 1135.3581
+    },
+    {
+      "Id": "r00115e21",
+      "Empties": 21,
+      "Move": "e1",
+      "Score": 34,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 11949419,
+      "Ms": 243.8421
+    },
+    {
+      "Id": "r00116e18",
+      "Empties": 18,
+      "Move": "a5",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 3807039,
+      "Ms": 70.9823
+    },
+    {
+      "Id": "r00117e21",
+      "Empties": 21,
+      "Move": "h7",
+      "Score": 12,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 7856232,
+      "Ms": 183.9083
+    },
+    {
+      "Id": "r00118e20",
+      "Empties": 20,
+      "Move": "f1",
+      "Score": 14,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 57173715,
+      "Ms": 1016.1688
+    },
+    {
+      "Id": "r00119e16",
+      "Empties": 16,
+      "Move": "a8",
+      "Score": -4,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 551606,
+      "Ms": 11.0731
+    },
+    {
+      "Id": "r00120e21",
+      "Empties": 21,
+      "Move": "h6",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 18026838,
+      "Ms": 410.0785
+    },
+    {
+      "Id": "r00121e23",
+      "Empties": 23,
+      "Move": "h4",
+      "Score": -38,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 73332640,
+      "Ms": 1243.3234
+    },
+    {
+      "Id": "r00122e14",
+      "Empties": 14,
+      "Move": "f3",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 87449,
+      "Ms": 1.6951
+    },
+    {
+      "Id": "r00123e17",
+      "Empties": 17,
+      "Move": "e1",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 741949,
+      "Ms": 14.3786
+    },
+    {
+      "Id": "r00124e19",
+      "Empties": 19,
+      "Move": "b1",
+      "Score": 38,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 6611607,
+      "Ms": 123.4055
+    },
+    {
+      "Id": "r00125e18",
+      "Empties": 18,
+      "Move": "c6",
+      "Score": -32,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 9991172,
+      "Ms": 187.8722
+    },
+    {
+      "Id": "r00126e14",
+      "Empties": 14,
+      "Move": "h7",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 71721,
+      "Ms": 1.9077
+    },
+    {
+      "Id": "r00127e24",
+      "Empties": 24,
+      "Move": "c8",
+      "Score": -6,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 208920999,
+      "Ms": 4537.5454
+    },
+    {
+      "Id": "r00128e20",
+      "Empties": 20,
+      "Move": "a8",
+      "Score": 22,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 17677229,
+      "Ms": 374.1913
+    },
+    {
+      "Id": "r00129e20",
+      "Empties": 20,
+      "Move": "e1",
+      "Score": 2,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 1951022,
+      "Ms": 41.5799
+    },
+    {
+      "Id": "r00130e14",
+      "Empties": 14,
+      "Move": "d2",
+      "Score": -26,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 84451,
+      "Ms": 1.7277
+    },
+    {
+      "Id": "r00131e24",
+      "Empties": 24,
+      "Move": "e3",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 223179430,
+      "Ms": 4497.4619
+    },
+    {
+      "Id": "r00132e15",
+      "Empties": 15,
+      "Move": "f5",
+      "Score": 42,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 237730,
+      "Ms": 4.2497
+    },
+    {
+      "Id": "r00133e15",
+      "Empties": 15,
+      "Move": "a8",
+      "Score": 32,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 162475,
+      "Ms": 3.459
+    },
+    {
+      "Id": "r00134e14",
+      "Empties": 14,
+      "Move": "h1",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 23318,
+      "Ms": 0.6016
+    },
+    {
+      "Id": "r00135e21",
+      "Empties": 21,
+      "Move": "e8",
+      "Score": 24,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 148667074,
+      "Ms": 3194.5176
+    },
+    {
+      "Id": "r00136e21",
+      "Empties": 21,
+      "Move": "h8",
+      "Score": 60,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 5663297,
+      "Ms": 110.0395
+    },
+    {
+      "Id": "r00137e21",
+      "Empties": 21,
+      "Move": "b8",
+      "Score": 30,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 64186370,
+      "Ms": 1208.4119
+    },
+    {
+      "Id": "r00138e16",
+      "Empties": 16,
+      "Move": "d6",
+      "Score": -42,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 317518,
+      "Ms": 6.3729
+    },
+    {
+      "Id": "r00139e22",
+      "Empties": 22,
+      "Move": "b3",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 314025772,
+      "Ms": 5573.3213
+    },
+    {
+      "Id": "r00140e21",
+      "Empties": 21,
+      "Move": "f8",
+      "Score": 8,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 4954468,
+      "Ms": 109.1416
+    },
+    {
+      "Id": "r00141e16",
+      "Empties": 16,
+      "Move": "f8",
+      "Score": 38,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 1411558,
+      "Ms": 19.7429
+    },
+    {
+      "Id": "r00142e22",
+      "Empties": 22,
+      "Move": "c6",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 56402916,
+      "Ms": 1458.6527
+    },
+    {
+      "Id": "r00143e14",
+      "Empties": 14,
+      "Move": "d7",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 68562,
+      "Ms": 1.1369
+    },
+    {
+      "Id": "r00144e20",
+      "Empties": 20,
+      "Move": "g2",
+      "Score": -28,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 14393338,
+      "Ms": 302.6732
+    },
+    {
+      "Id": "r00145e19",
+      "Empties": 19,
+      "Move": "h6",
+      "Score": 40,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 5741788,
+      "Ms": 105.8126
+    },
+    {
+      "Id": "r00146e22",
+      "Empties": 22,
+      "Move": "b3",
+      "Score": -28,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 26850985,
+      "Ms": 570.9092
+    },
+    {
+      "Id": "r00147e15",
+      "Empties": 15,
+      "Move": "a6",
+      "Score": 24,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 65479,
+      "Ms": 1.6951
+    },
+    {
+      "Id": "r00148e23",
+      "Empties": 23,
+      "Move": "f6",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 88460250,
+      "Ms": 1812.5067
+    },
+    {
+      "Id": "r00149e20",
+      "Empties": 20,
+      "Move": "a2",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 2213265,
+      "Ms": 49.3507
+    },
+    {
+      "Id": "r00150e17",
+      "Empties": 17,
+      "Move": "h8",
+      "Score": 52,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 9680302,
+      "Ms": 119.3744
+    },
+    {
+      "Id": "r00151e22",
+      "Empties": 22,
+      "Move": "f2",
+      "Score": -28,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 41359870,
+      "Ms": 827.4608
+    },
+    {
+      "Id": "r00152e22",
+      "Empties": 22,
+      "Move": "h4",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 30865746,
+      "Ms": 609.3372
+    },
+    {
+      "Id": "r00153e15",
+      "Empties": 15,
+      "Move": "e8",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 282433,
+      "Ms": 4.56
+    },
+    {
+      "Id": "r00154e20",
+      "Empties": 20,
+      "Move": "h1",
+      "Score": -30,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 8252458,
+      "Ms": 175.0252
+    },
+    {
+      "Id": "r00155e24",
+      "Empties": 24,
+      "Move": "c3",
+      "Score": -4,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 140773675,
+      "Ms": 3674.3576
+    },
+    {
+      "Id": "r00156e14",
+      "Empties": 14,
+      "Move": "b1",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 74819,
+      "Ms": 1.3161
+    },
+    {
+      "Id": "r00157e18",
+      "Empties": 18,
+      "Move": "h5",
+      "Score": 18,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 3599395,
+      "Ms": 71.5618
+    },
+    {
+      "Id": "r00158e14",
+      "Empties": 14,
+      "Move": "h6",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 77897,
+      "Ms": 1.7916
+    },
+    {
+      "Id": "r00159e24",
+      "Empties": 24,
+      "Move": "e8",
+      "Score": 8,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 445254583,
+      "Ms": 9260.187
+    },
+    {
+      "Id": "r00160e21",
+      "Empties": 21,
+      "Move": "c1",
+      "Score": -28,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 33443203,
+      "Ms": 540.4439
+    },
+    {
+      "Id": "r00161e17",
+      "Empties": 17,
+      "Move": "c7",
+      "Score": -30,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 134406,
+      "Ms": 2.4575
+    },
+    {
+      "Id": "r00162e20",
+      "Empties": 20,
+      "Move": "a8",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 2443137,
+      "Ms": 51.4588
+    },
+    {
+      "Id": "r00163e22",
+      "Empties": 22,
+      "Move": "h8",
+      "Score": -18,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 17465398,
+      "Ms": 347.9169
+    },
+    {
+      "Id": "r00164e15",
+      "Empties": 15,
+      "Move": "e6",
+      "Score": 30,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 207059,
+      "Ms": 3.5332
+    },
+    {
+      "Id": "r00165e22",
+      "Empties": 22,
+      "Move": "h1",
+      "Score": -24,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 21306056,
+      "Ms": 394.4481
+    },
+    {
+      "Id": "r00166e15",
+      "Empties": 15,
+      "Move": "h8",
+      "Score": 8,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 82015,
+      "Ms": 1.7596
+    },
+    {
+      "Id": "r00167e14",
+      "Empties": 14,
+      "Move": "a8",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 425789,
+      "Ms": 7.6892
+    },
+    {
+      "Id": "r00168e20",
+      "Empties": 20,
+      "Move": "c5",
+      "Score": 34,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 23220622,
+      "Ms": 364.3509
+    },
+    {
+      "Id": "r00169e17",
+      "Empties": 17,
+      "Move": "e8",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 743229,
+      "Ms": 15.7439
+    },
+    {
+      "Id": "r00170e24",
+      "Empties": 24,
+      "Move": "d6",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 392586702,
+      "Ms": 7448.9434
+    },
+    {
+      "Id": "r00171e23",
+      "Empties": 23,
+      "Move": "a1",
+      "Score": 38,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 440727936,
+      "Ms": 9913.2232
+    },
+    {
+      "Id": "r00172e20",
+      "Empties": 20,
+      "Move": "a3",
+      "Score": -22,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 5989549,
+      "Ms": 98.2446
+    },
+    {
+      "Id": "r00173e14",
+      "Empties": 14,
+      "Move": "b4",
+      "Score": -34,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 26776,
+      "Ms": 0.8838
+    },
+    {
+      "Id": "r00174e18",
+      "Empties": 18,
+      "Move": "h4",
+      "Score": -2,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 4277576,
+      "Ms": 80.988
+    },
+    {
+      "Id": "r00175e23",
+      "Empties": 23,
+      "Move": "h2",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 62925961,
+      "Ms": 1142.9598
+    },
+    {
+      "Id": "r00176e20",
+      "Empties": 20,
+      "Move": "c1",
+      "Score": 2,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 23217226,
+      "Ms": 420.3454
+    },
+    {
+      "Id": "r00177e18",
+      "Empties": 18,
+      "Move": "a2",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 330579,
+      "Ms": 6.7495
+    },
+    {
+      "Id": "r00178e23",
+      "Empties": 23,
+      "Move": "g4",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 106487526,
+      "Ms": 2002.2505
+    },
+    {
+      "Id": "r00179e22",
+      "Empties": 22,
+      "Move": "h1",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 84901763,
+      "Ms": 1578.66
+    },
+    {
+      "Id": "r00180e19",
+      "Empties": 19,
+      "Move": "h6",
+      "Score": -16,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 3642642,
+      "Ms": 66.8448
+    },
+    {
+      "Id": "r00181e14",
+      "Empties": 14,
+      "Move": "a3",
+      "Score": 34,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 250426,
+      "Ms": 3.9159
+    },
+    {
+      "Id": "r00182e15",
+      "Empties": 15,
+      "Move": "c1",
+      "Score": 24,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 162899,
+      "Ms": 2.9051
+    },
+    {
+      "Id": "r00183e20",
+      "Empties": 20,
+      "Move": "e8",
+      "Score": -26,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 15816719,
+      "Ms": 289.8773
+    },
+    {
+      "Id": "r00184e20",
+      "Empties": 20,
+      "Move": "c6",
+      "Score": -60,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 3044708,
+      "Ms": 70.0125
+    },
+    {
+      "Id": "r00185e22",
+      "Empties": 22,
+      "Move": "d8",
+      "Score": -10,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 113021576,
+      "Ms": 2042.0465
+    },
+    {
+      "Id": "r00186e24",
+      "Empties": 24,
+      "Move": "h1",
+      "Score": 38,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 2518991933,
+      "Ms": 49180.8874
+    },
+    {
+      "Id": "r00187e20",
+      "Empties": 20,
+      "Move": "g3",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 24831925,
+      "Ms": 426.5377
+    },
+    {
+      "Id": "r00188e15",
+      "Empties": 15,
+      "Move": "a6",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 308336,
+      "Ms": 5.8023
+    },
+    {
+      "Id": "r00189e24",
+      "Empties": 24,
+      "Move": "h8",
+      "Score": 38,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 253223334,
+      "Ms": 5184.2418
+    },
+    {
+      "Id": "r00190e15",
+      "Empties": 15,
+      "Move": "a8",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 63091,
+      "Ms": 1.6051
+    },
+    {
+      "Id": "r00191e18",
+      "Empties": 18,
+      "Move": "c4",
+      "Score": -6,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 3361695,
+      "Ms": 63.9785
+    },
+    {
+      "Id": "r00192e15",
+      "Empties": 15,
+      "Move": "g8",
+      "Score": 32,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 520797,
+      "Ms": 11.0533
+    },
+    {
+      "Id": "r00193e14",
+      "Empties": 14,
+      "Move": "c1",
+      "Score": -20,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 91359,
+      "Ms": 1.9633
+    },
+    {
+      "Id": "r00194e14",
+      "Empties": 14,
+      "Move": "h7",
+      "Score": 20,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 42139,
+      "Ms": 0.9442
+    },
+    {
+      "Id": "r00195e18",
+      "Empties": 18,
+      "Move": "a3",
+      "Score": 8,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1074706,
+      "Ms": 20.1933
+    },
+    {
+      "Id": "r00196e15",
+      "Empties": 15,
+      "Move": "g8",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 185348,
+      "Ms": 4.0011
+    },
+    {
+      "Id": "r00197e17",
+      "Empties": 17,
+      "Move": "h7",
+      "Score": 8,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 650505,
+      "Ms": 13.2652
+    },
+    {
+      "Id": "r00198e16",
+      "Empties": 16,
+      "Move": "d1",
+      "Score": 18,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 145815,
+      "Ms": 3.7561
+    },
+    {
+      "Id": "r00199e15",
+      "Empties": 15,
+      "Move": "c8",
+      "Score": -26,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 644872,
+      "Ms": 11.2452
+    },
+    {
+      "Id": "r00200e19",
+      "Empties": 19,
+      "Move": "a6",
+      "Score": -30,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 3156499,
+      "Ms": 69.5471
+    },
+    {
+      "Id": "r00201e18",
+      "Empties": 18,
+      "Move": "c1",
+      "Score": -42,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1853101,
+      "Ms": 28.0309
+    },
+    {
+      "Id": "r00202e23",
+      "Empties": 23,
+      "Move": "a8",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 54997911,
+      "Ms": 1247.965
+    },
+    {
+      "Id": "r00203e14",
+      "Empties": 14,
+      "Move": "c6",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 65812,
+      "Ms": 1.7479
+    },
+    {
+      "Id": "r00204e22",
+      "Empties": 22,
+      "Move": "h8",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 8214849,
+      "Ms": 200.2096
+    },
+    {
+      "Id": "r00205e19",
+      "Empties": 19,
+      "Move": "a2",
+      "Score": 38,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 5510099,
+      "Ms": 119.9015
+    },
+    {
+      "Id": "r00206e17",
+      "Empties": 17,
+      "Move": "h4",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 1200997,
+      "Ms": 32.8912
+    },
+    {
+      "Id": "r00207e22",
+      "Empties": 22,
+      "Move": "a4",
+      "Score": -22,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 64905254,
+      "Ms": 1601.0344
+    },
+    {
+      "Id": "r00208e17",
+      "Empties": 17,
+      "Move": "d6",
+      "Score": -6,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 573162,
+      "Ms": 10.995
+    },
+    {
+      "Id": "r00209e20",
+      "Empties": 20,
+      "Move": "a8",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 3556132,
+      "Ms": 71.5773
+    },
+    {
+      "Id": "r00210e20",
+      "Empties": 20,
+      "Move": "a6",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 6984243,
+      "Ms": 185.7976
+    },
+    {
+      "Id": "r00211e22",
+      "Empties": 22,
+      "Move": "h1",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 43266899,
+      "Ms": 997.1713
+    },
+    {
+      "Id": "r00212e21",
+      "Empties": 21,
+      "Move": "c2",
+      "Score": 30,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 31604558,
+      "Ms": 690.5055
+    },
+    {
+      "Id": "r00213e20",
+      "Empties": 20,
+      "Move": "f7",
+      "Score": -58,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 9177445,
+      "Ms": 254.162
+    },
+    {
+      "Id": "r00214e23",
+      "Empties": 23,
+      "Move": "a6",
+      "Score": 12,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 118434380,
+      "Ms": 2439.0946
+    },
+    {
+      "Id": "r00215e20",
+      "Empties": 20,
+      "Move": "h2",
+      "Score": 34,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 26612987,
+      "Ms": 549.0451
+    },
+    {
+      "Id": "r00216e16",
+      "Empties": 16,
+      "Move": "a4",
+      "Score": -2,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 350236,
+      "Ms": 5.5731
+    },
+    {
+      "Id": "r00217e17",
+      "Empties": 17,
+      "Move": "e7",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 351530,
+      "Ms": 8.1101
+    },
+    {
+      "Id": "r00218e22",
+      "Empties": 22,
+      "Move": "f8",
+      "Score": 64,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 115750367,
+      "Ms": 2131.3177
+    },
+    {
+      "Id": "r00219e20",
+      "Empties": 20,
+      "Move": "f1",
+      "Score": 24,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 49436667,
+      "Ms": 1063.4719
+    },
+    {
+      "Id": "r00220e16",
+      "Empties": 16,
+      "Move": "e8",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 516433,
+      "Ms": 9.2561
+    },
+    {
+      "Id": "r00221e15",
+      "Empties": 15,
+      "Move": "a7",
+      "Score": 56,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 218935,
+      "Ms": 2.7957
+    },
+    {
+      "Id": "r00222e20",
+      "Empties": 20,
+      "Move": "f1",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 5615253,
+      "Ms": 117.0453
+    },
+    {
+      "Id": "r00223e21",
+      "Empties": 21,
+      "Move": "h3",
+      "Score": 32,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 74429811,
+      "Ms": 1527.2829
+    },
+    {
+      "Id": "r00224e22",
+      "Empties": 22,
+      "Move": "f5",
+      "Score": 20,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 340615835,
+      "Ms": 5946.1077
+    },
+    {
+      "Id": "r00225e14",
+      "Empties": 14,
+      "Move": "a8",
+      "Score": 34,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 72003,
+      "Ms": 1.2699
+    },
+    {
+      "Id": "r00226e15",
+      "Empties": 15,
+      "Move": "g1",
+      "Score": 38,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 449239,
+      "Ms": 6.935
+    },
+    {
+      "Id": "r00227e24",
+      "Empties": 24,
+      "Move": "h5",
+      "Score": 8,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 34210822,
+      "Ms": 952.3347
+    },
+    {
+      "Id": "r00228e16",
+      "Empties": 16,
+      "Move": "a2",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 102200,
+      "Ms": 2.4007
+    },
+    {
+      "Id": "r00229e16",
+      "Empties": 16,
+      "Move": "f3",
+      "Score": -16,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 122981,
+      "Ms": 2.5943
+    },
+    {
+      "Id": "r00230e20",
+      "Empties": 20,
+      "Move": "d7",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 12388959,
+      "Ms": 248.5137
+    },
+    {
+      "Id": "r00231e21",
+      "Empties": 21,
+      "Move": "b6",
+      "Score": -18,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 14765069,
+      "Ms": 316.1683
+    },
+    {
+      "Id": "r00232e21",
+      "Empties": 21,
+      "Move": "h6",
+      "Score": 42,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 32325654,
+      "Ms": 571.7442
+    },
+    {
+      "Id": "r00233e22",
+      "Empties": 22,
+      "Move": "e1",
+      "Score": -2,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 35123966,
+      "Ms": 681.1624
+    },
+    {
+      "Id": "r00234e21",
+      "Empties": 21,
+      "Move": "f1",
+      "Score": -24,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 24217002,
+      "Ms": 467.7826
+    },
+    {
+      "Id": "r00235e18",
+      "Empties": 18,
+      "Move": "b8",
+      "Score": -20,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1903531,
+      "Ms": 41.2328
+    },
+    {
+      "Id": "r00236e15",
+      "Empties": 15,
+      "Move": "d2",
+      "Score": -16,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 171377,
+      "Ms": 3.6032
+    },
+    {
+      "Id": "r00237e22",
+      "Empties": 22,
+      "Move": "f4",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 84658330,
+      "Ms": 1798.5565
+    },
+    {
+      "Id": "r00238e21",
+      "Empties": 21,
+      "Move": "c7",
+      "Score": -42,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 33595719,
+      "Ms": 563.4162
+    },
+    {
+      "Id": "r00239e14",
+      "Empties": 14,
+      "Move": "f8",
+      "Score": -22,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 23338,
+      "Ms": 0.5606
+    },
+    {
+      "Id": "r00240e23",
+      "Empties": 23,
+      "Move": "d8",
+      "Score": -6,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 59098698,
+      "Ms": 1299.4389
+    },
+    {
+      "Id": "r00241e17",
+      "Empties": 17,
+      "Move": "h2",
+      "Score": -6,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 2091101,
+      "Ms": 37.6081
+    },
+    {
+      "Id": "r00242e15",
+      "Empties": 15,
+      "Move": "d7",
+      "Score": -22,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 95045,
+      "Ms": 2.111
+    },
+    {
+      "Id": "r00243e16",
+      "Empties": 16,
+      "Move": "b7",
+      "Score": -4,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 189870,
+      "Ms": 3.7209
+    },
+    {
+      "Id": "r00244e14",
+      "Empties": 14,
+      "Move": "h7",
+      "Score": -4,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 589115,
+      "Ms": 10.2113
+    },
+    {
+      "Id": "r00245e20",
+      "Empties": 20,
+      "Move": "a3",
+      "Score": 14,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 9067467,
+      "Ms": 186.8452
+    },
+    {
+      "Id": "r00246e24",
+      "Empties": 24,
+      "Move": "b5",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 511463388,
+      "Ms": 10285.2815
+    },
+    {
+      "Id": "r00247e20",
+      "Empties": 20,
+      "Move": "h1",
+      "Score": 14,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 10860980,
+      "Ms": 219.9096
+    },
+    {
+      "Id": "r00248e22",
+      "Empties": 22,
+      "Move": "g6",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 12615524,
+      "Ms": 299.9889
+    },
+    {
+      "Id": "r00249e17",
+      "Empties": 17,
+      "Move": "b1",
+      "Score": -18,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 547609,
+      "Ms": 11.3427
+    },
+    {
+      "Id": "r00250e17",
+      "Empties": 17,
+      "Move": "f8",
+      "Score": -18,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 209950,
+      "Ms": 4.4931
+    },
+    {
+      "Id": "r00251e17",
+      "Empties": 17,
+      "Move": "a7",
+      "Score": 42,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 166300,
+      "Ms": 4.6895
+    },
+    {
+      "Id": "r00252e15",
+      "Empties": 15,
+      "Move": "b3",
+      "Score": -32,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 661231,
+      "Ms": 10.3693
+    },
+    {
+      "Id": "r00253e16",
+      "Empties": 16,
+      "Move": "d8",
+      "Score": 50,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 1256932,
+      "Ms": 16.6471
+    },
+    {
+      "Id": "r00254e22",
+      "Empties": 22,
+      "Move": "a4",
+      "Score": 12,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 88606705,
+      "Ms": 1928.8608
+    },
+    {
+      "Id": "r00255e22",
+      "Empties": 22,
+      "Move": "g8",
+      "Score": 30,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 65237445,
+      "Ms": 1171.3576
+    },
+    {
+      "Id": "r00256e16",
+      "Empties": 16,
+      "Move": "f4",
+      "Score": -32,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 263544,
+      "Ms": 6.7804
+    },
+    {
+      "Id": "r00257e16",
+      "Empties": 16,
+      "Move": "h8",
+      "Score": -2,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 95001,
+      "Ms": 1.5981
+    },
+    {
+      "Id": "r00258e21",
+      "Empties": 21,
+      "Move": "b1",
+      "Score": 44,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 2549718,
+      "Ms": 59.3499
+    },
+    {
+      "Id": "r00259e17",
+      "Empties": 17,
+      "Move": "a8",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 573411,
+      "Ms": 12.8693
+    },
+    {
+      "Id": "r00260e19",
+      "Empties": 19,
+      "Move": "a5",
+      "Score": 42,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 24589156,
+      "Ms": 465.6366
+    },
+    {
+      "Id": "r00261e18",
+      "Empties": 18,
+      "Move": "h4",
+      "Score": 42,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 7943638,
+      "Ms": 137.758
+    },
+    {
+      "Id": "r00262e21",
+      "Empties": 21,
+      "Move": "c2",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 31935523,
+      "Ms": 600.7217
+    },
+    {
+      "Id": "r00263e17",
+      "Empties": 17,
+      "Move": "a4",
+      "Score": 42,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 338657,
+      "Ms": 6.8386
+    },
+    {
+      "Id": "r00264e17",
+      "Empties": 17,
+      "Move": "e3",
+      "Score": 40,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 709934,
+      "Ms": 12.2351
+    },
+    {
+      "Id": "r00265e15",
+      "Empties": 15,
+      "Move": "e2",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 98193,
+      "Ms": 1.7596
+    },
+    {
+      "Id": "r00266e24",
+      "Empties": 24,
+      "Move": "c1",
+      "Score": -20,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 38879039,
+      "Ms": 899.8559
+    },
+    {
+      "Id": "r00267e16",
+      "Empties": 16,
+      "Move": "g2",
+      "Score": -38,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 4240040,
+      "Ms": 68.9386
+    },
+    {
+      "Id": "r00268e15",
+      "Empties": 15,
+      "Move": "f7",
+      "Score": 12,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 492399,
+      "Ms": 9.4106
+    },
+    {
+      "Id": "r00269e19",
+      "Empties": 19,
+      "Move": "h8",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 861659,
+      "Ms": 24.4159
+    },
+    {
+      "Id": "r00270e21",
+      "Empties": 21,
+      "Move": "c1",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 3438661,
+      "Ms": 82.179
+    },
+    {
+      "Id": "r00271e23",
+      "Empties": 23,
+      "Move": "a1",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 440922159,
+      "Ms": 8569.0124
+    },
+    {
+      "Id": "r00272e22",
+      "Empties": 22,
+      "Move": "e8",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 47789778,
+      "Ms": 967.0649
+    },
+    {
+      "Id": "r00273e23",
+      "Empties": 23,
+      "Move": "a8",
+      "Score": 56,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 117922856,
+      "Ms": 2309.781
+    },
+    {
+      "Id": "r00274e22",
+      "Empties": 22,
+      "Move": "a1",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 34962812,
+      "Ms": 739.6196
+    },
+    {
+      "Id": "r00275e23",
+      "Empties": 23,
+      "Move": "f8",
+      "Score": 14,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 137847444,
+      "Ms": 3187.5342
+    },
+    {
+      "Id": "r00276e14",
+      "Empties": 14,
+      "Move": "h8",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 39505,
+      "Ms": 0.9583
+    },
+    {
+      "Id": "r00277e14",
+      "Empties": 14,
+      "Move": "h6",
+      "Score": -32,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 135427,
+      "Ms": 2.5853
+    },
+    {
+      "Id": "r00278e20",
+      "Empties": 20,
+      "Move": "g7",
+      "Score": -42,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 7145932,
+      "Ms": 127.0347
+    },
+    {
+      "Id": "r00279e17",
+      "Empties": 17,
+      "Move": "h6",
+      "Score": -4,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 1553139,
+      "Ms": 29.087
+    },
+    {
+      "Id": "r00280e14",
+      "Empties": 14,
+      "Move": "c7",
+      "Score": -10,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 62673,
+      "Ms": 1.1443
+    },
+    {
+      "Id": "r00281e21",
+      "Empties": 21,
+      "Move": "d3",
+      "Score": 8,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 50761552,
+      "Ms": 1053.7733
+    },
+    {
+      "Id": "r00282e17",
+      "Empties": 17,
+      "Move": "a1",
+      "Score": 8,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 200410,
+      "Ms": 4.479
+    },
+    {
+      "Id": "r00283e22",
+      "Empties": 22,
+      "Move": "a5",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 41462145,
+      "Ms": 848.5662
+    },
+    {
+      "Id": "r00284e21",
+      "Empties": 21,
+      "Move": "f8",
+      "Score": -34,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 10679241,
+      "Ms": 182.4073
+    },
+    {
+      "Id": "r00285e14",
+      "Empties": 14,
+      "Move": "a3",
+      "Score": 40,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 100393,
+      "Ms": 1.755
+    },
+    {
+      "Id": "r00286e24",
+      "Empties": 24,
+      "Move": "b6",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 582979042,
+      "Ms": 12258.1927
+    },
+    {
+      "Id": "r00287e16",
+      "Empties": 16,
+      "Move": "a5",
+      "Score": -22,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 592980,
+      "Ms": 10.3541
+    },
+    {
+      "Id": "r00288e16",
+      "Empties": 16,
+      "Move": "h3",
+      "Score": 48,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 823029,
+      "Ms": 13.6021
+    },
+    {
+      "Id": "r00289e18",
+      "Empties": 18,
+      "Move": "a3",
+      "Score": 8,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 2203045,
+      "Ms": 39.9376
+    },
+    {
+      "Id": "r00290e21",
+      "Empties": 21,
+      "Move": "a1",
+      "Score": 36,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 595378,
+      "Ms": 18.1188
+    },
+    {
+      "Id": "r00291e15",
+      "Empties": 15,
+      "Move": "a6",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 799360,
+      "Ms": 14.2128
+    },
+    {
+      "Id": "r00292e16",
+      "Empties": 16,
+      "Move": "e8",
+      "Score": 14,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 455331,
+      "Ms": 9.2532
+    },
+    {
+      "Id": "r00293e16",
+      "Empties": 16,
+      "Move": "a8",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 1185936,
+      "Ms": 19.9975
+    },
+    {
+      "Id": "r00294e22",
+      "Empties": 22,
+      "Move": "a8",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 11249264,
+      "Ms": 244.7816
+    },
+    {
+      "Id": "r00295e21",
+      "Empties": 21,
+      "Move": "a6",
+      "Score": -6,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 1510797,
+      "Ms": 35.8589
+    },
+    {
+      "Id": "r00296e22",
+      "Empties": 22,
+      "Move": "e8",
+      "Score": -6,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 66522246,
+      "Ms": 1329.7276
+    },
+    {
+      "Id": "r00297e22",
+      "Empties": 22,
+      "Move": "h8",
+      "Score": 36,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 15072617,
+      "Ms": 303.0319
+    },
+    {
+      "Id": "r00298e14",
+      "Empties": 14,
+      "Move": "a1",
+      "Score": 42,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 77351,
+      "Ms": 1.4535
+    },
+    {
+      "Id": "r00299e18",
+      "Empties": 18,
+      "Move": "c8",
+      "Score": 2,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1559758,
+      "Ms": 35.0858
+    },
+    {
+      "Id": "r00300e15",
+      "Empties": 15,
+      "Move": "h1",
+      "Score": 34,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 354372,
+      "Ms": 9.4453
+    },
+    {
+      "Id": "r00301e24",
+      "Empties": 24,
+      "Move": "h5",
+      "Score": 22,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 548695399,
+      "Ms": 13200.6199
+    },
+    {
+      "Id": "r00302e22",
+      "Empties": 22,
+      "Move": "a1",
+      "Score": -4,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 65350800,
+      "Ms": 1081.0183
+    },
+    {
+      "Id": "r00303e19",
+      "Empties": 19,
+      "Move": "a1",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 2524915,
+      "Ms": 56.8499
+    },
+    {
+      "Id": "r00304e17",
+      "Empties": 17,
+      "Move": "b1",
+      "Score": -10,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 1074155,
+      "Ms": 20.1928
+    },
+    {
+      "Id": "r00305e19",
+      "Empties": 19,
+      "Move": "d8",
+      "Score": 12,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 1466843,
+      "Ms": 30.2211
+    },
+    {
+      "Id": "r00306e18",
+      "Empties": 18,
+      "Move": "f8",
+      "Score": 32,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1853862,
+      "Ms": 40.3791
+    },
+    {
+      "Id": "r00307e16",
+      "Empties": 16,
+      "Move": "c1",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 691512,
+      "Ms": 12.2861
+    },
+    {
+      "Id": "r00308e15",
+      "Empties": 15,
+      "Move": "e1",
+      "Score": -18,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 80079,
+      "Ms": 1.5059
+    },
+    {
+      "Id": "r00309e21",
+      "Empties": 21,
+      "Move": "h6",
+      "Score": -22,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 86344014,
+      "Ms": 1285.2338
+    },
+    {
+      "Id": "r00310e14",
+      "Empties": 14,
+      "Move": "a3",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 82628,
+      "Ms": 1.4306
+    },
+    {
+      "Id": "r00311e22",
+      "Empties": 22,
+      "Move": "f5",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 22458910,
+      "Ms": 414.3602
+    },
+    {
+      "Id": "r00312e19",
+      "Empties": 19,
+      "Move": "a1",
+      "Score": 2,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 1037159,
+      "Ms": 19.9781
+    },
+    {
+      "Id": "r00313e19",
+      "Empties": 19,
+      "Move": "a3",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 1836150,
+      "Ms": 34.9428
+    },
+    {
+      "Id": "r00314e18",
+      "Empties": 18,
+      "Move": "a1",
+      "Score": 32,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 7891923,
+      "Ms": 137.3991
+    },
+    {
+      "Id": "r00315e23",
+      "Empties": 23,
+      "Move": "b6",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 132279185,
+      "Ms": 2585.6302
+    },
+    {
+      "Id": "r00316e15",
+      "Empties": 15,
+      "Move": "a5",
+      "Score": 2,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 541047,
+      "Ms": 9.3017
+    },
+    {
+      "Id": "r00317e18",
+      "Empties": 18,
+      "Move": "a8",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 4860065,
+      "Ms": 84.2521
+    },
+    {
+      "Id": "r00318e23",
+      "Empties": 23,
+      "Move": "a6",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 147661276,
+      "Ms": 3343.8073
+    },
+    {
+      "Id": "r00319e23",
+      "Empties": 23,
+      "Move": "b5",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 117351018,
+      "Ms": 2376.4267
+    },
+    {
+      "Id": "r00320e19",
+      "Empties": 19,
+      "Move": "h6",
+      "Score": -42,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 5467460,
+      "Ms": 96.4019
+    },
+    {
+      "Id": "r00321e23",
+      "Empties": 23,
+      "Move": "h6",
+      "Score": 14,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 12075441,
+      "Ms": 313.6303
+    },
+    {
+      "Id": "r00322e17",
+      "Empties": 17,
+      "Move": "h7",
+      "Score": -38,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 369294,
+      "Ms": 6.7053
+    },
+    {
+      "Id": "r00323e18",
+      "Empties": 18,
+      "Move": "b6",
+      "Score": 32,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 8752638,
+      "Ms": 150.904
+    },
+    {
+      "Id": "r00324e21",
+      "Empties": 21,
+      "Move": "a1",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 947366,
+      "Ms": 23.3893
+    },
+    {
+      "Id": "r00325e16",
+      "Empties": 16,
+      "Move": "a8",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 1828684,
+      "Ms": 32.232
+    },
+    {
+      "Id": "r00326e17",
+      "Empties": 17,
+      "Move": "d1",
+      "Score": -30,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 1734019,
+      "Ms": 31.4686
+    },
+    {
+      "Id": "r00327e19",
+      "Empties": 19,
+      "Move": "d3",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 950307,
+      "Ms": 23.707
+    },
+    {
+      "Id": "r00328e20",
+      "Empties": 20,
+      "Move": "d1",
+      "Score": -34,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 7338194,
+      "Ms": 134.1943
+    },
+    {
+      "Id": "r00329e15",
+      "Empties": 15,
+      "Move": "c1",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 149945,
+      "Ms": 2.6683
+    },
+    {
+      "Id": "r00330e20",
+      "Empties": 20,
+      "Move": "a2",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 8254362,
+      "Ms": 172.0608
+    },
+    {
+      "Id": "r00331e21",
+      "Empties": 21,
+      "Move": "f1",
+      "Score": 22,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 53076463,
+      "Ms": 1055.6228
+    },
+    {
+      "Id": "r00332e17",
+      "Empties": 17,
+      "Move": "f1",
+      "Score": -6,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 601436,
+      "Ms": 13.3442
+    },
+    {
+      "Id": "r00333e20",
+      "Empties": 20,
+      "Move": "e1",
+      "Score": -6,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 6327988,
+      "Ms": 109.464
+    },
+    {
+      "Id": "r00334e16",
+      "Empties": 16,
+      "Move": "h1",
+      "Score": -16,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 207305,
+      "Ms": 4.2548
+    },
+    {
+      "Id": "r00335e18",
+      "Empties": 18,
+      "Move": "b8",
+      "Score": -20,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 2388891,
+      "Ms": 44.8568
+    },
+    {
+      "Id": "r00336e20",
+      "Empties": 20,
+      "Move": "a8",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 36680602,
+      "Ms": 645.706
+    },
+    {
+      "Id": "r00337e16",
+      "Empties": 16,
+      "Move": "b1",
+      "Score": 20,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 1022737,
+      "Ms": 15.416
+    },
+    {
+      "Id": "r00338e21",
+      "Empties": 21,
+      "Move": "b1",
+      "Score": 12,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 44763289,
+      "Ms": 956.6979
+    },
+    {
+      "Id": "r00339e15",
+      "Empties": 15,
+      "Move": "a4",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 171262,
+      "Ms": 3.17
+    },
+    {
+      "Id": "r00340e15",
+      "Empties": 15,
+      "Move": "h1",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 143210,
+      "Ms": 3.0488
+    },
+    {
+      "Id": "r00341e16",
+      "Empties": 16,
+      "Move": "a4",
+      "Score": -18,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 148913,
+      "Ms": 3.0116
+    },
+    {
+      "Id": "r00342e24",
+      "Empties": 24,
+      "Move": "a3",
+      "Score": 40,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 11385643,
+      "Ms": 424.3301
+    },
+    {
+      "Id": "r00343e23",
+      "Empties": 23,
+      "Move": "f8",
+      "Score": 46,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 686335865,
+      "Ms": 17053.3961
+    },
+    {
+      "Id": "r00344e14",
+      "Empties": 14,
+      "Move": "f8",
+      "Score": 44,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 246062,
+      "Ms": 2.9532
+    },
+    {
+      "Id": "r00345e18",
+      "Empties": 18,
+      "Move": "a3",
+      "Score": 14,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1568500,
+      "Ms": 28.8835
+    },
+    {
+      "Id": "r00346e19",
+      "Empties": 19,
+      "Move": "h1",
+      "Score": 22,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 5139709,
+      "Ms": 100.1995
+    },
+    {
+      "Id": "r00347e15",
+      "Empties": 15,
+      "Move": "c7",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 161296,
+      "Ms": 2.8668
+    },
+    {
+      "Id": "r00348e18",
+      "Empties": 18,
+      "Move": "d2",
+      "Score": -50,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1411023,
+      "Ms": 22.4086
+    },
+    {
+      "Id": "r00349e16",
+      "Empties": 16,
+      "Move": "c2",
+      "Score": 38,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 2904410,
+      "Ms": 38.6658
+    },
+    {
+      "Id": "r00350e24",
+      "Empties": 24,
+      "Move": "a6",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 86152923,
+      "Ms": 1777.4655
+    },
+    {
+      "Id": "r00351e17",
+      "Empties": 17,
+      "Move": "a1",
+      "Score": 8,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 262874,
+      "Ms": 6.7853
+    },
+    {
+      "Id": "r00352e24",
+      "Empties": 24,
+      "Move": "h3",
+      "Score": -18,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 57729051,
+      "Ms": 1494.0786
+    },
+    {
+      "Id": "r00353e22",
+      "Empties": 22,
+      "Move": "b5",
+      "Score": -40,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 55731056,
+      "Ms": 1115.1972
+    },
+    {
+      "Id": "r00354e19",
+      "Empties": 19,
+      "Move": "f6",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 3660911,
+      "Ms": 75.0824
+    },
+    {
+      "Id": "r00355e15",
+      "Empties": 15,
+      "Move": "c8",
+      "Score": -28,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 183756,
+      "Ms": 3.1083
+    },
+    {
+      "Id": "r00356e24",
+      "Empties": 24,
+      "Move": "g4",
+      "Score": 14,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 187312810,
+      "Ms": 4052.1455
+    },
+    {
+      "Id": "r00357e24",
+      "Empties": 24,
+      "Move": "h8",
+      "Score": 46,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 69964751,
+      "Ms": 1709.55
+    },
+    {
+      "Id": "r00358e24",
+      "Empties": 24,
+      "Move": "g3",
+      "Score": -2,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 369289717,
+      "Ms": 7651.9061
+    },
+    {
+      "Id": "r00359e17",
+      "Empties": 17,
+      "Move": "e1",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 2157155,
+      "Ms": 41.7288
+    },
+    {
+      "Id": "r00360e23",
+      "Empties": 23,
+      "Move": "h5",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 21849030,
+      "Ms": 418.231
+    },
+    {
+      "Id": "r00361e19",
+      "Empties": 19,
+      "Move": "a5",
+      "Score": 22,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 3573436,
+      "Ms": 75.9269
+    },
+    {
+      "Id": "r00362e15",
+      "Empties": 15,
+      "Move": "d1",
+      "Score": 34,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 105298,
+      "Ms": 1.9897
+    },
+    {
+      "Id": "r00363e14",
+      "Empties": 14,
+      "Move": "a1",
+      "Score": 2,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 49947,
+      "Ms": 1.0131
+    },
+    {
+      "Id": "r00364e24",
+      "Empties": 24,
+      "Move": "c2",
+      "Score": 62,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 29615345,
+      "Ms": 1516.0313
+    },
+    {
+      "Id": "r00365e18",
+      "Empties": 18,
+      "Move": "a1",
+      "Score": 42,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1832719,
+      "Ms": 30.2418
+    },
+    {
+      "Id": "r00366e19",
+      "Empties": 19,
+      "Move": "b6",
+      "Score": 38,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 8784831,
+      "Ms": 175.1083
+    },
+    {
+      "Id": "r00367e22",
+      "Empties": 22,
+      "Move": "h3",
+      "Score": 8,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 12481187,
+      "Ms": 284.2517
+    },
+    {
+      "Id": "r00368e22",
+      "Empties": 22,
+      "Move": "h1",
+      "Score": -26,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 75430460,
+      "Ms": 1350.931
+    },
+    {
+      "Id": "r00369e20",
+      "Empties": 20,
+      "Move": "a5",
+      "Score": 8,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 11546999,
+      "Ms": 220.0295
+    },
+    {
+      "Id": "r00370e19",
+      "Empties": 19,
+      "Move": "a2",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 4261153,
+      "Ms": 72.1277
+    },
+    {
+      "Id": "r00371e22",
+      "Empties": 22,
+      "Move": "c3",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 40090232,
+      "Ms": 741.4129
+    },
+    {
+      "Id": "r00372e16",
+      "Empties": 16,
+      "Move": "h8",
+      "Score": 14,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 241338,
+      "Ms": 4.4493
+    },
+    {
+      "Id": "r00373e14",
+      "Empties": 14,
+      "Move": "f8",
+      "Score": -18,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 172237,
+      "Ms": 2.9073
+    },
+    {
+      "Id": "r00374e24",
+      "Empties": 24,
+      "Move": "b1",
+      "Score": -4,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 391152527,
+      "Ms": 7236.0855
+    },
+    {
+      "Id": "r00375e20",
+      "Empties": 20,
+      "Move": "c8",
+      "Score": -6,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 25907446,
+      "Ms": 510.2856
+    },
+    {
+      "Id": "r00376e16",
+      "Empties": 16,
+      "Move": "c8",
+      "Score": -4,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 665719,
+      "Ms": 12.3151
+    },
+    {
+      "Id": "r00377e22",
+      "Empties": 22,
+      "Move": "e7",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 33920320,
+      "Ms": 778.7107
+    },
+    {
+      "Id": "r00378e15",
+      "Empties": 15,
+      "Move": "f5",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 98603,
+      "Ms": 2.1237
+    },
+    {
+      "Id": "r00379e20",
+      "Empties": 20,
+      "Move": "d1",
+      "Score": 20,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 21922781,
+      "Ms": 352.3358
+    },
+    {
+      "Id": "r00380e18",
+      "Empties": 18,
+      "Move": "b7",
+      "Score": -4,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1249585,
+      "Ms": 24.9723
+    },
+    {
+      "Id": "r00381e21",
+      "Empties": 21,
+      "Move": "a4",
+      "Score": -26,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 12412013,
+      "Ms": 247.4195
+    },
+    {
+      "Id": "r00382e15",
+      "Empties": 15,
+      "Move": "f5",
+      "Score": 42,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 460202,
+      "Ms": 7.8033
+    },
+    {
+      "Id": "r00383e23",
+      "Empties": 23,
+      "Move": "e8",
+      "Score": 58,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 243994000,
+      "Ms": 5621.4356
+    },
+    {
+      "Id": "r00384e24",
+      "Empties": 24,
+      "Move": "b2",
+      "Score": -36,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 777296324,
+      "Ms": 15934.2729
+    },
+    {
+      "Id": "r00385e24",
+      "Empties": 24,
+      "Move": "e1",
+      "Score": 30,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 164853835,
+      "Ms": 3303.1726
+    },
+    {
+      "Id": "r00386e18",
+      "Empties": 18,
+      "Move": "a4",
+      "Score": 38,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 3067289,
+      "Ms": 59.6487
+    },
+    {
+      "Id": "r00387e19",
+      "Empties": 19,
+      "Move": "a1",
+      "Score": 38,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 3665777,
+      "Ms": 83.5719
+    },
+    {
+      "Id": "r00388e18",
+      "Empties": 18,
+      "Move": "d8",
+      "Score": 24,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1379188,
+      "Ms": 24.9653
+    },
+    {
+      "Id": "r00389e15",
+      "Empties": 15,
+      "Move": "f8",
+      "Score": 8,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 163377,
+      "Ms": 3.1029
+    },
+    {
+      "Id": "r00390e14",
+      "Empties": 14,
+      "Move": "b3",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 53366,
+      "Ms": 1.6412
+    },
+    {
+      "Id": "r00391e15",
+      "Empties": 15,
+      "Move": "b7",
+      "Score": 18,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 618352,
+      "Ms": 12.906
+    },
+    {
+      "Id": "r00392e20",
+      "Empties": 20,
+      "Move": "c2",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 9061088,
+      "Ms": 189.1554
+    },
+    {
+      "Id": "r00393e17",
+      "Empties": 17,
+      "Move": "g1",
+      "Score": -20,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 774371,
+      "Ms": 16.9905
+    },
+    {
+      "Id": "r00394e24",
+      "Empties": 24,
+      "Move": "a1",
+      "Score": 58,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 91854803,
+      "Ms": 2073.3968
+    },
+    {
+      "Id": "r00395e19",
+      "Empties": 19,
+      "Move": "f5",
+      "Score": 24,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 4286283,
+      "Ms": 88.0539
+    },
+    {
+      "Id": "r00396e15",
+      "Empties": 15,
+      "Move": "h6",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 391211,
+      "Ms": 6.9019
+    },
+    {
+      "Id": "r00397e15",
+      "Empties": 15,
+      "Move": "c6",
+      "Score": -20,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 119232,
+      "Ms": 1.9745
+    },
+    {
+      "Id": "r00398e20",
+      "Empties": 20,
+      "Move": "h4",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 5173653,
+      "Ms": 142.0348
+    },
+    {
+      "Id": "r00399e14",
+      "Empties": 14,
+      "Move": "b6",
+      "Score": -2,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 42825,
+      "Ms": 0.9077
+    },
+    {
+      "Id": "r00400e17",
+      "Empties": 17,
+      "Move": "a5",
+      "Score": 40,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 351441,
+      "Ms": 8.7544
+    },
+    {
+      "Id": "r00401e15",
+      "Empties": 15,
+      "Move": "e8",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 121312,
+      "Ms": 2.8205
+    },
+    {
+      "Id": "r00402e15",
+      "Empties": 15,
+      "Move": "h1",
+      "Score": -18,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 341871,
+      "Ms": 8.4351
+    },
+    {
+      "Id": "r00403e21",
+      "Empties": 21,
+      "Move": "a8",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 11765999,
+      "Ms": 256.1588
+    },
+    {
+      "Id": "r00404e24",
+      "Empties": 24,
+      "Move": "b6",
+      "Score": -4,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 344084408,
+      "Ms": 8001.1005
+    },
+    {
+      "Id": "r00405e15",
+      "Empties": 15,
+      "Move": "a1",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 91897,
+      "Ms": 2.8131
+    },
+    {
+      "Id": "r00406e16",
+      "Empties": 16,
+      "Move": "h7",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 483464,
+      "Ms": 10.3065
+    },
+    {
+      "Id": "r00407e21",
+      "Empties": 21,
+      "Move": "d8",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 4139273,
+      "Ms": 102.3112
+    },
+    {
+      "Id": "r00408e22",
+      "Empties": 22,
+      "Move": "c4",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 108902835,
+      "Ms": 2076.2903
+    },
+    {
+      "Id": "r00409e22",
+      "Empties": 22,
+      "Move": "h3",
+      "Score": 34,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 47566005,
+      "Ms": 1087.1198
+    },
+    {
+      "Id": "r00410e23",
+      "Empties": 23,
+      "Move": "f6",
+      "Score": 22,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 18042054,
+      "Ms": 420.7068
+    },
+    {
+      "Id": "r00411e15",
+      "Empties": 15,
+      "Move": "h7",
+      "Score": 30,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 621783,
+      "Ms": 11.2471
+    },
+    {
+      "Id": "r00412e22",
+      "Empties": 22,
+      "Move": "g6",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 30118419,
+      "Ms": 627.2555
+    },
+    {
+      "Id": "r00413e23",
+      "Empties": 23,
+      "Move": "e3",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 71248511,
+      "Ms": 1449.0773
+    },
+    {
+      "Id": "r00414e22",
+      "Empties": 22,
+      "Move": "h3",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 21551352,
+      "Ms": 501.3805
+    },
+    {
+      "Id": "r00415e22",
+      "Empties": 22,
+      "Move": "h6",
+      "Score": 12,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 25647124,
+      "Ms": 581.8217
+    },
+    {
+      "Id": "r00416e17",
+      "Empties": 17,
+      "Move": "h8",
+      "Score": -4,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 710378,
+      "Ms": 13.5554
+    },
+    {
+      "Id": "r00417e23",
+      "Empties": 23,
+      "Move": "g7",
+      "Score": -10,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 59414047,
+      "Ms": 1265.5006
+    },
+    {
+      "Id": "r00418e16",
+      "Empties": 16,
+      "Move": "h5",
+      "Score": 34,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 1276644,
+      "Ms": 22.5803
+    },
+    {
+      "Id": "r00419e23",
+      "Empties": 23,
+      "Move": "a4",
+      "Score": -10,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 71128672,
+      "Ms": 1452.5417
+    },
+    {
+      "Id": "r00420e18",
+      "Empties": 18,
+      "Move": "h5",
+      "Score": 2,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 7726170,
+      "Ms": 138.5991
+    },
+    {
+      "Id": "r00421e22",
+      "Empties": 22,
+      "Move": "f2",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 93487440,
+      "Ms": 1894.121
+    },
+    {
+      "Id": "r00422e22",
+      "Empties": 22,
+      "Move": "e8",
+      "Score": -22,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 76977007,
+      "Ms": 1695.9852
+    },
+    {
+      "Id": "r00423e18",
+      "Empties": 18,
+      "Move": "c8",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 2631205,
+      "Ms": 43.5784
+    },
+    {
+      "Id": "r00424e15",
+      "Empties": 15,
+      "Move": "a8",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 142119,
+      "Ms": 2.7508
+    },
+    {
+      "Id": "r00425e17",
+      "Empties": 17,
+      "Move": "h5",
+      "Score": 8,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 2356950,
+      "Ms": 44.681
+    },
+    {
+      "Id": "r00426e18",
+      "Empties": 18,
+      "Move": "f7",
+      "Score": -48,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 2882954,
+      "Ms": 51.0992
+    },
+    {
+      "Id": "r00427e16",
+      "Empties": 16,
+      "Move": "a6",
+      "Score": 12,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 262072,
+      "Ms": 5.9178
+    },
+    {
+      "Id": "r00428e20",
+      "Empties": 20,
+      "Move": "f8",
+      "Score": 20,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 5346562,
+      "Ms": 119.5518
+    },
+    {
+      "Id": "r00429e18",
+      "Empties": 18,
+      "Move": "b1",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 2329652,
+      "Ms": 40.955
+    },
+    {
+      "Id": "r00430e18",
+      "Empties": 18,
+      "Move": "d7",
+      "Score": 2,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1450182,
+      "Ms": 24.5885
+    },
+    {
+      "Id": "r00431e22",
+      "Empties": 22,
+      "Move": "g3",
+      "Score": -46,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 104235807,
+      "Ms": 1897.6781
+    },
+    {
+      "Id": "r00432e23",
+      "Empties": 23,
+      "Move": "h1",
+      "Score": 18,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 39060318,
+      "Ms": 797.9508
+    },
+    {
+      "Id": "r00433e17",
+      "Empties": 17,
+      "Move": "h4",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 608439,
+      "Ms": 9.9985
+    },
+    {
+      "Id": "r00434e16",
+      "Empties": 16,
+      "Move": "c1",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 815754,
+      "Ms": 14.1555
+    },
+    {
+      "Id": "r00435e17",
+      "Empties": 17,
+      "Move": "h8",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 797013,
+      "Ms": 15.0275
+    },
+    {
+      "Id": "r00436e19",
+      "Empties": 19,
+      "Move": "c8",
+      "Score": 40,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 16417062,
+      "Ms": 259.3794
+    },
+    {
+      "Id": "r00437e18",
+      "Empties": 18,
+      "Move": "h1",
+      "Score": -16,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 3454305,
+      "Ms": 74.535
+    },
+    {
+      "Id": "r00438e24",
+      "Empties": 24,
+      "Move": "h5",
+      "Score": -20,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 261887884,
+      "Ms": 6281.7914
+    },
+    {
+      "Id": "r00439e23",
+      "Empties": 23,
+      "Move": "g7",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 161831478,
+      "Ms": 3101.0618
+    },
+    {
+      "Id": "r00440e20",
+      "Empties": 20,
+      "Move": "f1",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 6367610,
+      "Ms": 130.0593
+    },
+    {
+      "Id": "r00441e16",
+      "Empties": 16,
+      "Move": "a5",
+      "Score": 48,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 423230,
+      "Ms": 7.7469
+    },
+    {
+      "Id": "r00442e21",
+      "Empties": 21,
+      "Move": "a8",
+      "Score": 36,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 18210542,
+      "Ms": 340.5281
+    },
+    {
+      "Id": "r00443e14",
+      "Empties": 14,
+      "Move": "f8",
+      "Score": 8,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 29968,
+      "Ms": 0.9172
+    },
+    {
+      "Id": "r00444e20",
+      "Empties": 20,
+      "Move": "a1",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 10151095,
+      "Ms": 218.1854
+    },
+    {
+      "Id": "r00445e14",
+      "Empties": 14,
+      "Move": "h6",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 29671,
+      "Ms": 0.7143
+    },
+    {
+      "Id": "r00446e21",
+      "Empties": 21,
+      "Move": "g3",
+      "Score": 24,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 18118213,
+      "Ms": 364.361
+    },
+    {
+      "Id": "r00447e21",
+      "Empties": 21,
+      "Move": "d1",
+      "Score": -28,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 27564245,
+      "Ms": 427.7942
+    },
+    {
+      "Id": "r00448e14",
+      "Empties": 14,
+      "Move": "e8",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 110693,
+      "Ms": 1.6592
+    },
+    {
+      "Id": "r00449e23",
+      "Empties": 23,
+      "Move": "a8",
+      "Score": 32,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 145267210,
+      "Ms": 2663.5342
+    },
+    {
+      "Id": "r00450e21",
+      "Empties": 21,
+      "Move": "a6",
+      "Score": 18,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 6565212,
+      "Ms": 137.8968
+    },
+    {
+      "Id": "r00451e23",
+      "Empties": 23,
+      "Move": "e8",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 138313603,
+      "Ms": 3015.2765
+    },
+    {
+      "Id": "r00452e23",
+      "Empties": 23,
+      "Move": "h7",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 81750156,
+      "Ms": 1790.2868
+    },
+    {
+      "Id": "r00453e15",
+      "Empties": 15,
+      "Move": "g1",
+      "Score": -28,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 641578,
+      "Ms": 10.3285
+    },
+    {
+      "Id": "r00454e18",
+      "Empties": 18,
+      "Move": "a3",
+      "Score": -32,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1728798,
+      "Ms": 28.0456
+    },
+    {
+      "Id": "r00455e16",
+      "Empties": 16,
+      "Move": "h2",
+      "Score": -42,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 661151,
+      "Ms": 10.5435
+    },
+    {
+      "Id": "r00456e22",
+      "Empties": 22,
+      "Move": "e8",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 23654370,
+      "Ms": 435.8876
+    },
+    {
+      "Id": "r00457e17",
+      "Empties": 17,
+      "Move": "h8",
+      "Score": -2,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 286012,
+      "Ms": 5.1953
+    },
+    {
+      "Id": "r00458e15",
+      "Empties": 15,
+      "Move": "b6",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 142800,
+      "Ms": 3.0089
+    },
+    {
+      "Id": "r00459e14",
+      "Empties": 14,
+      "Move": "a8",
+      "Score": -20,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 78766,
+      "Ms": 1.4006
+    },
+    {
+      "Id": "r00460e15",
+      "Empties": 15,
+      "Move": "h8",
+      "Score": 42,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 123759,
+      "Ms": 2.0167
+    },
+    {
+      "Id": "r00461e14",
+      "Empties": 14,
+      "Move": "c8",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 14,
+      "Nodes": 44009,
+      "Ms": 0.8212
+    },
+    {
+      "Id": "r00462e23",
+      "Empties": 23,
+      "Move": "b4",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 572367914,
+      "Ms": 10433.6114
+    },
+    {
+      "Id": "r00463e23",
+      "Empties": 23,
+      "Move": "f5",
+      "Score": 14,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 132006886,
+      "Ms": 2766.1733
+    },
+    {
+      "Id": "r00464e22",
+      "Empties": 22,
+      "Move": "e8",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 120891450,
+      "Ms": 2558.5766
+    },
+    {
+      "Id": "r00465e18",
+      "Empties": 18,
+      "Move": "a8",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1979894,
+      "Ms": 41.7296
+    },
+    {
+      "Id": "r00466e24",
+      "Empties": 24,
+      "Move": "d3",
+      "Score": -44,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 147627836,
+      "Ms": 3539.3367
+    },
+    {
+      "Id": "r00467e23",
+      "Empties": 23,
+      "Move": "e3",
+      "Score": 32,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 230612552,
+      "Ms": 4904.8641
+    },
+    {
+      "Id": "r00468e21",
+      "Empties": 21,
+      "Move": "c5",
+      "Score": 14,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 20114335,
+      "Ms": 413.9364
+    },
+    {
+      "Id": "r00469e24",
+      "Empties": 24,
+      "Move": "f7",
+      "Score": -36,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 459901887,
+      "Ms": 9359.19
+    },
+    {
+      "Id": "r00470e19",
+      "Empties": 19,
+      "Move": "d8",
+      "Score": 48,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 1725249,
+      "Ms": 45.9655
+    },
+    {
+      "Id": "r00471e16",
+      "Empties": 16,
+      "Move": "a1",
+      "Score": -4,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 533164,
+      "Ms": 11.4928
+    },
+    {
+      "Id": "r00472e18",
+      "Empties": 18,
+      "Move": "b8",
+      "Score": 22,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 5970658,
+      "Ms": 127.0495
+    },
+    {
+      "Id": "r00473e18",
+      "Empties": 18,
+      "Move": "d1",
+      "Score": 50,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 2187372,
+      "Ms": 36.0949
+    },
+    {
+      "Id": "r00474e24",
+      "Empties": 24,
+      "Move": "h1",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 25645259,
+      "Ms": 540.7581
+    },
+    {
+      "Id": "r00475e17",
+      "Empties": 17,
+      "Move": "c5",
+      "Score": -22,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 569961,
+      "Ms": 12.2373
+    },
+    {
+      "Id": "r00476e20",
+      "Empties": 20,
+      "Move": "g3",
+      "Score": 8,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 33867290,
+      "Ms": 602.02
+    },
+    {
+      "Id": "r00477e19",
+      "Empties": 19,
+      "Move": "b2",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 2796963,
+      "Ms": 51.8984
+    },
+    {
+      "Id": "r00478e16",
+      "Empties": 16,
+      "Move": "e8",
+      "Score": 42,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 173976,
+      "Ms": 3.4407
+    },
+    {
+      "Id": "r00479e16",
+      "Empties": 16,
+      "Move": "a8",
+      "Score": 52,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 790252,
+      "Ms": 15.5506
+    },
+    {
+      "Id": "r00480e20",
+      "Empties": 20,
+      "Move": "h3",
+      "Score": 48,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 28524580,
+      "Ms": 420.5426
+    },
+    {
+      "Id": "r00481e20",
+      "Empties": 20,
+      "Move": "a1",
+      "Score": 50,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 13690551,
+      "Ms": 261.8305
+    },
+    {
+      "Id": "r00482e21",
+      "Empties": 21,
+      "Move": "e3",
+      "Score": 8,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 33761291,
+      "Ms": 705.0486
+    },
+    {
+      "Id": "r00483e16",
+      "Empties": 16,
+      "Move": "h6",
+      "Score": -28,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 93733,
+      "Ms": 2.0389
+    },
+    {
+      "Id": "r00484e20",
+      "Empties": 20,
+      "Move": "h8",
+      "Score": 24,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 8973008,
+      "Ms": 187.8377
+    },
+    {
+      "Id": "r00485e15",
+      "Empties": 15,
+      "Move": "f5",
+      "Score": -38,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 121718,
+      "Ms": 2.4471
+    },
+    {
+      "Id": "r00486e17",
+      "Empties": 17,
+      "Move": "e1",
+      "Score": 14,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 1730028,
+      "Ms": 35.4466
+    },
+    {
+      "Id": "r00487e19",
+      "Empties": 19,
+      "Move": "c8",
+      "Score": 26,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 15101177,
+      "Ms": 303.6922
+    },
+    {
+      "Id": "r00488e21",
+      "Empties": 21,
+      "Move": "f5",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 7419132,
+      "Ms": 160.3124
+    },
+    {
+      "Id": "r00489e23",
+      "Empties": 23,
+      "Move": "c2",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 122156249,
+      "Ms": 2720.5638
+    },
+    {
+      "Id": "r00490e16",
+      "Empties": 16,
+      "Move": "h6",
+      "Score": 12,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 535549,
+      "Ms": 10.0622
+    },
+    {
+      "Id": "r00491e22",
+      "Empties": 22,
+      "Move": "g4",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 57044902,
+      "Ms": 1188.8598
+    },
+    {
+      "Id": "r00492e17",
+      "Empties": 17,
+      "Move": "a4",
+      "Score": 46,
+      "Kind": "Exact",
+      "Depth": 17,
+      "Nodes": 2037506,
+      "Ms": 37.028
+    },
+    {
+      "Id": "r00493e18",
+      "Empties": 18,
+      "Move": "f3",
+      "Score": -46,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 942526,
+      "Ms": 19.934
+    },
+    {
+      "Id": "r00495e22",
+      "Empties": 22,
+      "Move": "a1",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 45929039,
+      "Ms": 822.8445
+    },
+    {
+      "Id": "r00496e18",
+      "Empties": 18,
+      "Move": "e3",
+      "Score": -20,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 913688,
+      "Ms": 17.7857
+    },
+    {
+      "Id": "r00497e16",
+      "Empties": 16,
+      "Move": "d8",
+      "Score": 42,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 252693,
+      "Ms": 5.5757
+    },
+    {
+      "Id": "r00498e18",
+      "Empties": 18,
+      "Move": "c6",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 18,
+      "Nodes": 1126363,
+      "Ms": 22.7731
+    },
+    {
+      "Id": "r00499e15",
+      "Empties": 15,
+      "Move": "d3",
+      "Score": 24,
+      "Kind": "Exact",
+      "Depth": 15,
+      "Nodes": 43215,
+      "Ms": 0.9703
+    },
+    {
+      "Id": "r00500e19",
+      "Empties": 19,
+      "Move": "a3",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 19,
+      "Nodes": 1725730,
+      "Ms": 36.7036
+    },
+    {
+      "Id": "r00501e21",
+      "Empties": 21,
+      "Move": "e7",
+      "Score": 36,
+      "Kind": "Exact",
+      "Depth": 21,
+      "Nodes": 14463495,
+      "Ms": 321.4037
+    },
+    {
+      "Id": "r00502e16",
+      "Empties": 16,
+      "Move": "a3",
+      "Score": 24,
+      "Kind": "Exact",
+      "Depth": 16,
+      "Nodes": 361378,
+      "Ms": 6.987
+    }
+  ],
+  "Engine": "stello"
+}

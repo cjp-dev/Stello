@@ -1,0 +1,1011 @@
+{
+  "Command": "mid-bench",
+  "Date": "2026-11-04 20:15",
+  "ProcessorCount": 24,
+  "Limits": "depth 10",
+  "HashBits": 19,
+  "Passes": 3,
+  "Results": [
+    {
+      "Id": "g01e48",
+      "Empties": 48,
+      "Move": "c4",
+      "Score": 275,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 37483,
+      "Ms": 4.276
+    },
+    {
+      "Id": "g01e42",
+      "Empties": 42,
+      "Move": "d2",
+      "Score": 862,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 47096,
+      "Ms": 5.2697
+    },
+    {
+      "Id": "g01e36",
+      "Empties": 36,
+      "Move": "b6",
+      "Score": 1775,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 64601,
+      "Ms": 7.0313
+    },
+    {
+      "Id": "g01e30",
+      "Empties": 30,
+      "Move": "e8",
+      "Score": 1762,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 31899,
+      "Ms": 3.5529
+    },
+    {
+      "Id": "g01e26",
+      "Empties": 26,
+      "Move": "h7",
+      "Score": 1450,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 21314,
+      "Ms": 2.3783
+    },
+    {
+      "Id": "g02e48",
+      "Empties": 48,
+      "Move": "d6",
+      "Score": 50,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 45918,
+      "Ms": 4.8087
+    },
+    {
+      "Id": "g02e42",
+      "Empties": 42,
+      "Move": "b1",
+      "Score": 150,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 28549,
+      "Ms": 2.9799
+    },
+    {
+      "Id": "g02e36",
+      "Empties": 36,
+      "Move": "e6",
+      "Score": 125,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 36444,
+      "Ms": 3.5991
+    },
+    {
+      "Id": "g02e30",
+      "Empties": 30,
+      "Move": "c7",
+      "Score": 87,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 80990,
+      "Ms": 8.5796
+    },
+    {
+      "Id": "g02e26",
+      "Empties": 26,
+      "Move": "h6",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 12143,
+      "Ms": 1.3407
+    },
+    {
+      "Id": "g03e48",
+      "Empties": 48,
+      "Move": "f5",
+      "Score": 87,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 31466,
+      "Ms": 3.3374
+    },
+    {
+      "Id": "g03e42",
+      "Empties": 42,
+      "Move": "e3",
+      "Score": 150,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 135003,
+      "Ms": 14.0888
+    },
+    {
+      "Id": "g03e36",
+      "Empties": 36,
+      "Move": "h3",
+      "Score": 300,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 44044,
+      "Ms": 4.1009
+    },
+    {
+      "Id": "g03e30",
+      "Empties": 30,
+      "Move": "b8",
+      "Score": 1587,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 28448,
+      "Ms": 3.0404
+    },
+    {
+      "Id": "g03e26",
+      "Empties": 26,
+      "Move": "c3",
+      "Score": 1562,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 18904,
+      "Ms": 2.0552
+    },
+    {
+      "Id": "g04e48",
+      "Empties": 48,
+      "Move": "g4",
+      "Score": 400,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 23837,
+      "Ms": 2.5188
+    },
+    {
+      "Id": "g04e42",
+      "Empties": 42,
+      "Move": "c6",
+      "Score": -62,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 38208,
+      "Ms": 3.7542
+    },
+    {
+      "Id": "g04e36",
+      "Empties": 36,
+      "Move": "c8",
+      "Score": -750,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 67545,
+      "Ms": 7.1553
+    },
+    {
+      "Id": "g04e30",
+      "Empties": 30,
+      "Move": "b4",
+      "Score": -837,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 83559,
+      "Ms": 8.7939
+    },
+    {
+      "Id": "g04e26",
+      "Empties": 26,
+      "Move": "b4",
+      "Score": -950,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 65798,
+      "Ms": 6.844
+    },
+    {
+      "Id": "g05e48",
+      "Empties": 48,
+      "Move": "c1",
+      "Score": 200,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 56117,
+      "Ms": 5.8312
+    },
+    {
+      "Id": "g05e42",
+      "Empties": 42,
+      "Move": "f6",
+      "Score": 325,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 29066,
+      "Ms": 3.1988
+    },
+    {
+      "Id": "g05e36",
+      "Empties": 36,
+      "Move": "f1",
+      "Score": 12,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 28873,
+      "Ms": 3.1358
+    },
+    {
+      "Id": "g05e30",
+      "Empties": 30,
+      "Move": "g4",
+      "Score": -312,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 37072,
+      "Ms": 4.0735
+    },
+    {
+      "Id": "g05e26",
+      "Empties": 26,
+      "Move": "c7",
+      "Score": -300,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 21153,
+      "Ms": 2.1607
+    },
+    {
+      "Id": "g06e48",
+      "Empties": 48,
+      "Move": "b4",
+      "Score": 37,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 25632,
+      "Ms": 2.5633
+    },
+    {
+      "Id": "g06e42",
+      "Empties": 42,
+      "Move": "f2",
+      "Score": 512,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 25906,
+      "Ms": 2.6084
+    },
+    {
+      "Id": "g06e36",
+      "Empties": 36,
+      "Move": "e8",
+      "Score": 575,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 19816,
+      "Ms": 2.0377
+    },
+    {
+      "Id": "g06e30",
+      "Empties": 30,
+      "Move": "e1",
+      "Score": 1325,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 10560,
+      "Ms": 1.1087
+    },
+    {
+      "Id": "g06e26",
+      "Empties": 26,
+      "Move": "b8",
+      "Score": 400,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 13309,
+      "Ms": 1.297
+    },
+    {
+      "Id": "g07e48",
+      "Empties": 48,
+      "Move": "c7",
+      "Score": 0,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 36849,
+      "Ms": 3.8218
+    },
+    {
+      "Id": "g07e42",
+      "Empties": 42,
+      "Move": "f5",
+      "Score": -1325,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 21791,
+      "Ms": 2.2052
+    },
+    {
+      "Id": "g07e36",
+      "Empties": 36,
+      "Move": "e7",
+      "Score": -1900,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 18297,
+      "Ms": 1.7741
+    },
+    {
+      "Id": "g07e30",
+      "Empties": 30,
+      "Move": "g7",
+      "Score": -1225,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 9819,
+      "Ms": 0.942
+    },
+    {
+      "Id": "g07e26",
+      "Empties": 26,
+      "Move": "c1",
+      "Score": -1287,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 18262,
+      "Ms": 1.6792
+    },
+    {
+      "Id": "g08e48",
+      "Empties": 48,
+      "Move": "g6",
+      "Score": -100,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 19333,
+      "Ms": 2.0869
+    },
+    {
+      "Id": "g08e42",
+      "Empties": 42,
+      "Move": "g3",
+      "Score": -550,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 31617,
+      "Ms": 3.0825
+    },
+    {
+      "Id": "g08e36",
+      "Empties": 36,
+      "Move": "d2",
+      "Score": -875,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 160455,
+      "Ms": 16.1995
+    },
+    {
+      "Id": "g08e30",
+      "Empties": 30,
+      "Move": "g3",
+      "Score": 112,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 61368,
+      "Ms": 6.8105
+    },
+    {
+      "Id": "g08e26",
+      "Empties": 26,
+      "Move": "g3",
+      "Score": -375,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 37770,
+      "Ms": 3.7638
+    },
+    {
+      "Id": "g09e48",
+      "Empties": 48,
+      "Move": "e6",
+      "Score": 87,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 29758,
+      "Ms": 3.0799
+    },
+    {
+      "Id": "g09e42",
+      "Empties": 42,
+      "Move": "f2",
+      "Score": -25,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 15062,
+      "Ms": 1.4367
+    },
+    {
+      "Id": "g09e36",
+      "Empties": 36,
+      "Move": "f6",
+      "Score": 425,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 22378,
+      "Ms": 2.2244
+    },
+    {
+      "Id": "g09e30",
+      "Empties": 30,
+      "Move": "f7",
+      "Score": 300,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 17753,
+      "Ms": 1.6536
+    },
+    {
+      "Id": "g09e26",
+      "Empties": 26,
+      "Move": "c1",
+      "Score": -312,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 10305,
+      "Ms": 1.1172
+    },
+    {
+      "Id": "g10e48",
+      "Empties": 48,
+      "Move": "f4",
+      "Score": -12,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 42660,
+      "Ms": 4.4709
+    },
+    {
+      "Id": "g10e42",
+      "Empties": 42,
+      "Move": "f1",
+      "Score": -300,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 38043,
+      "Ms": 3.7615
+    },
+    {
+      "Id": "g10e36",
+      "Empties": 36,
+      "Move": "a4",
+      "Score": -262,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 24070,
+      "Ms": 2.3544
+    },
+    {
+      "Id": "g10e30",
+      "Empties": 30,
+      "Move": "b2",
+      "Score": -212,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 24752,
+      "Ms": 2.4058
+    },
+    {
+      "Id": "g10e26",
+      "Empties": 26,
+      "Move": "b2",
+      "Score": 687,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 39832,
+      "Ms": 4.2922
+    },
+    {
+      "Id": "g11e48",
+      "Empties": 48,
+      "Move": "c2",
+      "Score": -125,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 9991,
+      "Ms": 1.1504
+    },
+    {
+      "Id": "g11e42",
+      "Empties": 42,
+      "Move": "d8",
+      "Score": -287,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 73942,
+      "Ms": 7.4703
+    },
+    {
+      "Id": "g11e36",
+      "Empties": 36,
+      "Move": "b8",
+      "Score": -912,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 70434,
+      "Ms": 7.4432
+    },
+    {
+      "Id": "g11e30",
+      "Empties": 30,
+      "Move": "g8",
+      "Score": -1150,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 17131,
+      "Ms": 1.8699
+    },
+    {
+      "Id": "g11e26",
+      "Empties": 26,
+      "Move": "d1",
+      "Score": -287,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 16802,
+      "Ms": 1.7303
+    },
+    {
+      "Id": "g12e48",
+      "Empties": 48,
+      "Move": "f7",
+      "Score": -162,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 51406,
+      "Ms": 5.0497
+    },
+    {
+      "Id": "g12e42",
+      "Empties": 42,
+      "Move": "f3",
+      "Score": 187,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 26039,
+      "Ms": 2.6987
+    },
+    {
+      "Id": "g12e36",
+      "Empties": 36,
+      "Move": "f8",
+      "Score": 350,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 48961,
+      "Ms": 5.0843
+    },
+    {
+      "Id": "g12e30",
+      "Empties": 30,
+      "Move": "a2",
+      "Score": 800,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 27223,
+      "Ms": 2.8632
+    },
+    {
+      "Id": "g12e26",
+      "Empties": 26,
+      "Move": "f7",
+      "Score": 812,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 36918,
+      "Ms": 3.6255
+    },
+    {
+      "Id": "g13e48",
+      "Empties": 48,
+      "Move": "c7",
+      "Score": -225,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 92784,
+      "Ms": 8.9691
+    },
+    {
+      "Id": "g13e42",
+      "Empties": 42,
+      "Move": "d7",
+      "Score": 1062,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 9026,
+      "Ms": 0.9361
+    },
+    {
+      "Id": "g13e36",
+      "Empties": 36,
+      "Move": "g4",
+      "Score": 1950,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 32780,
+      "Ms": 3.4271
+    },
+    {
+      "Id": "g13e30",
+      "Empties": 30,
+      "Move": "c8",
+      "Score": 1387,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 21525,
+      "Ms": 2.3276
+    },
+    {
+      "Id": "g13e26",
+      "Empties": 26,
+      "Move": "c2",
+      "Score": 2462,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 28785,
+      "Ms": 2.7464
+    },
+    {
+      "Id": "g14e48",
+      "Empties": 48,
+      "Move": "d6",
+      "Score": -50,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 41719,
+      "Ms": 4.4795
+    },
+    {
+      "Id": "g14e42",
+      "Empties": 42,
+      "Move": "b5",
+      "Score": 162,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 89230,
+      "Ms": 9.0077
+    },
+    {
+      "Id": "g14e36",
+      "Empties": 36,
+      "Move": "d1",
+      "Score": 450,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 39679,
+      "Ms": 3.9161
+    },
+    {
+      "Id": "g14e30",
+      "Empties": 30,
+      "Move": "c7",
+      "Score": 387,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 20630,
+      "Ms": 2.2513
+    },
+    {
+      "Id": "g14e26",
+      "Empties": 26,
+      "Move": "b1",
+      "Score": 287,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 22186,
+      "Ms": 2.3283
+    },
+    {
+      "Id": "g15e48",
+      "Empties": 48,
+      "Move": "c6",
+      "Score": 200,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 40137,
+      "Ms": 4.6357
+    },
+    {
+      "Id": "g15e42",
+      "Empties": 42,
+      "Move": "g3",
+      "Score": 37,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 26384,
+      "Ms": 2.6647
+    },
+    {
+      "Id": "g15e36",
+      "Empties": 36,
+      "Move": "h3",
+      "Score": 562,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 15677,
+      "Ms": 1.6128
+    },
+    {
+      "Id": "g15e30",
+      "Empties": 30,
+      "Move": "b6",
+      "Score": -37,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 21930,
+      "Ms": 2.24
+    },
+    {
+      "Id": "g15e26",
+      "Empties": 26,
+      "Move": "c7",
+      "Score": -150,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 29220,
+      "Ms": 2.8577
+    },
+    {
+      "Id": "g16e48",
+      "Empties": 48,
+      "Move": "a5",
+      "Score": -425,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 118927,
+      "Ms": 12.3532
+    },
+    {
+      "Id": "g16e42",
+      "Empties": 42,
+      "Move": "f4",
+      "Score": -812,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 72412,
+      "Ms": 7.4172
+    },
+    {
+      "Id": "g16e36",
+      "Empties": 36,
+      "Move": "e2",
+      "Score": -937,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 44443,
+      "Ms": 5.0881
+    },
+    {
+      "Id": "g16e30",
+      "Empties": 30,
+      "Move": "b6",
+      "Score": -950,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 54128,
+      "Ms": 5.8893
+    },
+    {
+      "Id": "g16e26",
+      "Empties": 26,
+      "Move": "a7",
+      "Score": -1625,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 11858,
+      "Ms": 1.2293
+    },
+    {
+      "Id": "g17e48",
+      "Empties": 48,
+      "Move": "c2",
+      "Score": 362,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 41284,
+      "Ms": 4.2261
+    },
+    {
+      "Id": "g17e42",
+      "Empties": 42,
+      "Move": "f6",
+      "Score": 137,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 96316,
+      "Ms": 10.7434
+    },
+    {
+      "Id": "g17e36",
+      "Empties": 36,
+      "Move": "b1",
+      "Score": 1275,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 25981,
+      "Ms": 2.8318
+    },
+    {
+      "Id": "g17e30",
+      "Empties": 30,
+      "Move": "g3",
+      "Score": 1525,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 25950,
+      "Ms": 3.0862
+    },
+    {
+      "Id": "g17e26",
+      "Empties": 26,
+      "Move": "h5",
+      "Score": 2325,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 8031,
+      "Ms": 0.8408
+    },
+    {
+      "Id": "g18e48",
+      "Empties": 48,
+      "Move": "f4",
+      "Score": 437,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 29361,
+      "Ms": 3.2534
+    },
+    {
+      "Id": "g18e42",
+      "Empties": 42,
+      "Move": "b3",
+      "Score": 1875,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 24479,
+      "Ms": 2.5515
+    },
+    {
+      "Id": "g18e36",
+      "Empties": 36,
+      "Move": "c6",
+      "Score": 1800,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 46596,
+      "Ms": 4.4784
+    },
+    {
+      "Id": "g18e30",
+      "Empties": 30,
+      "Move": "f1",
+      "Score": 3650,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 12405,
+      "Ms": 1.2617
+    },
+    {
+      "Id": "g18e26",
+      "Empties": 26,
+      "Move": "e7",
+      "Score": 4450,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 7852,
+      "Ms": 0.7543
+    },
+    {
+      "Id": "g19e48",
+      "Empties": 48,
+      "Move": "d2",
+      "Score": -50,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 97454,
+      "Ms": 10.5559
+    },
+    {
+      "Id": "g19e42",
+      "Empties": 42,
+      "Move": "b5",
+      "Score": -187,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 37202,
+      "Ms": 3.8779
+    },
+    {
+      "Id": "g19e36",
+      "Empties": 36,
+      "Move": "b5",
+      "Score": -212,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 35156,
+      "Ms": 3.5918
+    },
+    {
+      "Id": "g19e30",
+      "Empties": 30,
+      "Move": "c7",
+      "Score": 787,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 39022,
+      "Ms": 4.1974
+    },
+    {
+      "Id": "g19e26",
+      "Empties": 26,
+      "Move": "a2",
+      "Score": 1250,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 16128,
+      "Ms": 1.6444
+    },
+    {
+      "Id": "g20e48",
+      "Empties": 48,
+      "Move": "d6",
+      "Score": 212,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 17940,
+      "Ms": 1.7957
+    },
+    {
+      "Id": "g20e42",
+      "Empties": 42,
+      "Move": "c2",
+      "Score": -575,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 20881,
+      "Ms": 1.8856
+    },
+    {
+      "Id": "g20e36",
+      "Empties": 36,
+      "Move": "f8",
+      "Score": -1037,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 13852,
+      "Ms": 1.2515
+    },
+    {
+      "Id": "g20e30",
+      "Empties": 30,
+      "Move": "f6",
+      "Score": -2287,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 12779,
+      "Ms": 1.1577
+    },
+    {
+      "Id": "g20e26",
+      "Empties": 26,
+      "Move": "b2",
+      "Score": -2612,
+      "Kind": "Heuristic",
+      "Depth": 10,
+      "Nodes": 7565,
+      "Ms": 0.6988
+    }
+  ],
+  "Engine": "stello"
+}

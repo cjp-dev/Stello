@@ -45,8 +45,8 @@ This plan is in `Plans/making-stello-3-1-plan.md`. Its findings document, `Plans
 - **Branch and documents:** create the branch, the plan and findings copies, and a git tag `v3.0` on baa44e5.
 - **The 3.0 baseline:**
   - record the 1-thread signatures (FFO #40–49, mid-bench depths 10 and 12, the random positions, handover, endrand) as reference JSONs in `Plans/benchmark-results/v3.0-ref/`;
-  - a `StelloV3Baseline` test pins the signatures of the 105 positions for 3.0. It is updated deliberately, with a note in the findings, whenever a kept fix changes nodes.
-- **A/B in matches:** `opt=` switches on the Rust engine. The pattern already exists: `selective`, `ybwc` and `soft_time_percent` in `Stello.Rust/stello-core/src/search/options.rs` and `tools/Stello.Benchmark/MatchCommands.cs`.
+  - a `StelloV3Baseline` test pins the signatures of the 105 positions for 3.0, independently of the frozen Stello 2.0 signatures. It is updated deliberately, with a note in the findings, whenever a kept fix changes nodes.
+- **A/B in matches:** repeat `opt=<key>=<value>` for Rust engine search switches, such as `opt=selective=off,opt=ybwc=off,opt=soft-pct=80`. The pattern already exists: `selective`, `ybwc` and `soft_time_percent` in `Stello.Rust/stello-core/src/search/options.rs` and `tools/Stello.Benchmark/MatchCommands.cs`.
 
 ## Phase 1: real bugs (wrong results or wrong UX)
 1. **An aborted solve is reported as Exact.**
@@ -272,4 +272,4 @@ The order puts speed first (it changes no nodes), then the threads, the search, 
 
 ## Status
 - Plan written on 4 November 2026, with the user's decisions above.
-- **Phase 0: started (2026-11-04).** Branch, plan, findings and the tag `v3.0` on baa44e5 are done; the 3.0 reference JSONs and the baseline signature test are still to do.
+- **Phase 0: done (2026-11-04).** Branch, plan, findings and the tag `v3.0` on baa44e5 were already in place. The seven 1-thread reference JSONs are in `Plans/benchmark-results/v3.0-ref/`; `StelloV3BaselineTests` pins the 105 signatures independently of frozen Stello 2.0; the match tool accepts repeated `opt=<key>=<value>` search switches.

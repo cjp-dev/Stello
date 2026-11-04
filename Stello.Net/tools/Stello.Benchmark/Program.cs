@@ -13,8 +13,10 @@ internal static class Program
                                     Play side A against side B, two games per start position with the colours swapped.
                                     A side is a list such as "time-ms=100", "depth=8", "game-s=60,hash-bits=20,name=new"
                                     or "engine=egaroucid,time-ms=100,book=on": engine (stello, stello-v2 = Stello 2.0 in C#, stello-v1 = Stello 1 or egaroucid), time-ms
-                                    (per move), game-s (per game), depth (Stello) or level (Egaroucid), eval (Stello: another pattern evaluation file), soft-pct (1-100) and mpc (Multi-ProbCut t × 100) (Stello 2's
-                                    search switches), threads (Stello: 1-256 threads sharing the hash tables, 1), ybwc (Stello: on/off, on; off = Lazy SMP alone), hash-bits
+                                    (per move), game-s (per game), depth (Stello) or level (Egaroucid), eval (Stello: another pattern evaluation file),
+                                    soft-pct (1-100), mpc (Multi-ProbCut t × 100), and opt (repeatable Stello search switches, e.g.
+                                    opt=selective=off, opt=soft-pct=80, opt=mpc=150, opt=ybwc=off),
+                                    threads (Stello: 1-256 threads sharing the hash tables, 1), ybwc (Stello: on/off, on; off = Lazy SMP alone), hash-bits
                                     (Stello 19; Egaroucid 21, the same memory), book (on/off, off), book-file (Stello: another text book, turns the book on), book-acc (Egaroucid, 0),
                                     seed (Egaroucid's book choice, 1), name.
           solve-bench [--engine stello|stello-v2|stello-v1|egaroucid] [--eval <file>] [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits N]

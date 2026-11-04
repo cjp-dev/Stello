@@ -4,9 +4,8 @@ using V2 = Stello.Engine.V2;
 namespace Stello.Engine.Tests;
 
 /// <summary>
-/// Stello 2.0 (Stello.Engine.V2) is the frozen baseline of Stello 3.0: it must keep searching exactly as recorded. The
-/// engine being developed (Stello.Engine) must search exactly so too, as long as Part 1 of the 3.0 plan keeps it a pure
-/// port (Plans/making-stello-3-plan.md).
+/// Stello 2.0 (Stello.Engine.V2) is frozen and must keep searching exactly as recorded. Stello 3.0's baseline is pinned
+/// separately by <see cref="StelloV3BaselineTests"/>.
 /// </summary>
 public class StelloV2Tests
 {
@@ -28,11 +27,6 @@ public class StelloV2Tests
     [MemberData(nameof(Signatures))]
     public void FrozenEngine_MatchesTheRecordedSignature(string signature) =>
         Assert.Equal(signature, Search(signature, (board, player, limits) => new V2.SearchEngine().Search(board, player, limits)));
-
-    [Theory]
-    [MemberData(nameof(Signatures))]
-    public void CurrentEngine_MatchesTheRecordedSignature(string signature) =>
-        Assert.Equal(signature, Search(signature, (board, player, limits) => new SearchEngine().Search(board, player, limits)));
 
     private static string Search(string signature, Func<Board, Player, SearchLimits, SearchResult> search)
     {

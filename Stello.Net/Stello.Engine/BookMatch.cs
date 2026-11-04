@@ -106,7 +106,7 @@ internal sealed class StelloMatchPlayer(int hashBits, OpeningBook? book, SearchO
 /// <param name="Book">The book to play from, or null to search every move.</param>
 /// <param name="CreatePlayer">Makes the engine of the side; null for Stello's engine with <paramref name="Book"/>.</param>
 /// <param name="Description">What the side is, for the report; null for Stello's limits and hash size.</param>
-/// <param name="Options">Stello 2's search options, if the side has any other than the defaults (for the benchmarks).</param>
+/// <param name="Options">The search options, if the side has any other than the defaults (for the benchmarks).</param>
 internal sealed record MatchSide(
     string Name,
     SearchLimits Limits,
