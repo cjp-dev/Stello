@@ -769,3 +769,4 @@ The 1-thread matches play 12 games at a time and the 8-thread matches 2, so the 
   - 01, the docs README and the root README.
 - **Checks:** 0 broken links, all 40 Mermaid diagrams render, and there are no stale memory numbers outside the frozen docs and the historical chapters (where 2.0's 48 MB is labelled as 2.0).
 - **About** now also says that the brain can think on several threads at once.
+- **The user's WPF check on Windows (2026-11-04): OK** (the Threads setting, play, nodes per second with threads).
