@@ -18,7 +18,7 @@ What the work on Stello 3.0 teaches us, written down as we go: the decisions, th
 | 6 Lazy SMP | done (2026-11-02) | Helpers run their own iterative deepening 1 + ctz(i+1) plies ahead, and up to 3 help each solve pass; 4 threads beat 1 with 55.3 % (+37 Elo) and 8 threads with 53.0 % (+21) at 500 ms; time to depth 1.53× (4 threads) and 1.66–1.76× (8); FFO only about 10 % faster (YBWC is phase 7) |
 | 7 YBWC | done (2026-11-03) | YBWC (after Egaroucid's ybwc.hpp) plus Lazy SMP on half the workers; FFO #40–49 1.98×/3.29×/3.97× faster with 4/8/16 threads (Egaroucid C++ 2.61×/4.15×/4.86×); depth 16 2.09× with 8 threads; at 8 threads beats Lazy SMP alone with 54.4 % at 500 ms and 54.7 % at 2 s |
 | 8 Threads in the browser | done (2026-11-03) | A threaded WebAssembly package (pinned nightly, shared memory) whose threads are Web Workers, loaded only when more than 1 thread is asked for and the page is cross-origin isolated; in Chromium FFO #40–44 3.5× faster and midgame 1.93× with 8 threads, all exact; Move Now ≤ 7 ms; the single-threaded package is the fallback |
-| 9 Threads setting and the 3.0 release | part A done (2026-11-03) | A Threads setting in both apps (Automatic: cores − 1 on the desktop, all in the browser); the book recalculation stays at 1 thread per worker (user); final matches wait for the user's go |
+| 9 Threads setting and the 3.0 release | parts A and B done (2026-11-04); release to come | A Threads setting in both apps (Automatic: cores − 1 on the desktop, all in the browser); the book recalculation stays at 1 thread per worker (user); final matches: against 2.0 +78 Elo (1 thread) and +121 (8 threads) at 500 ms; against the Egaroucid port even at 2 s with 8 threads; docs chapter 26 |
 
 ## Baseline (Stello 2.0, C#, 1 thread)
 
@@ -754,3 +754,18 @@ The result files are `benchmark-results/v3final-solve-bench-40-49-t{1,8,24}.json
 | Egaroucid port (1 thread) | 8 | +237 | +115 | −1 |
 
 The 1-thread matches play 12 games at a time and the 8-thread matches 2, so the opponent runs on a more or less loaded machine (see match 10); compare rows of the same thread count. FFO #40–49: 25.8 s with 1 thread, 7.81 s with 8 and 6.56 s with 24. Part B is complete.
+
+## Phase 9: the docs (2026-11-04)
+- **A new Part 3 chapter,** [26 Phases 5–9: threads](../docs/26-phases-5-9-threads.md): the decisions, what was measured before each choice, the gates, the browser results, the user decisions, and all final matches with the Elo summary, FFO, and what comes next. The glossary and references are now chapters 27 and 28.
+- **Part 1 updated for threads:**
+  - 06: the shared tables, the pool, Lazy SMP, YBWC;
+  - 07: the seqlock slot, memory, the new sizes 4–1,024 MB;
+  - 08: threads in the solver;
+  - 09: how the other threads stop;
+  - 12: `match --threads`, and why recalc has none;
+  - 14: ABI 3, and threads in the browser with its build;
+  - 15: the Threads setting and memory labels;
+  - 17: the `threads=`/`ybwc=` keys;
+  - 01, the docs README and the root README.
+- **Checks:** 0 broken links, all 40 Mermaid diagrams render, and there are no stale memory numbers outside the frozen docs and the historical chapters (where 2.0's 48 MB is labelled as 2.0).
+- **About** now also says that the brain can think on several threads at once.

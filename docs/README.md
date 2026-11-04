@@ -4,7 +4,7 @@ Stello is an Othello program. Its "brain" is the engine, which decides the compu
 
 - **the board and rules**: bitboards and fast move generation;
 - **the evaluation**: a pattern evaluation, 15 patterns of squares with weights trained on 500 million positions, in 10 stages of the game;
-- **the search**: alpha-beta with principal variation search, Multi-ProbCut, move ordering and a hash table;
+- **the search**: alpha-beta with principal variation search, Multi-ProbCut, move ordering and a hash table, on one thread or several (Lazy SMP and YBWC);
 - **the endgame solver**: perfect play near the end of the game, adapted from Egaroucid;
 - **the opening book**: about 11 000 known opening positions, which can learn from games.
 
@@ -17,7 +17,7 @@ These documents explain how the parts work, how they fit together and how they c
 | **Stello C++** | 1992 | The original program by Claus Pedersen, written in C++ (later MFC, Visual C++ 6): a hand-made evaluation of edges, corners and mobility, alpha-beta with a selective search, an endgame solver and an opening book that learns from games. The source is in [Stello C++](../Stello%20C++). |
 | **Stello .NET 1.0** ("Stello 1") | September–October 2026 | The C++ program ported to C# and .NET 10, with a WPF app for Windows and a Blazor WebAssembly app for the browser. The engine works as in C++, made faster with bitboards; the opening book was imported and recalculated. How it was ported, phase by phase, is in [Stello porting documentation.md](../Plans/Stello%20porting%20documentation.md). Its engine is kept, frozen, as `Stello.Engine.V1` for matches. |
 | **Stello .NET 2.0** | November 2026 | A new trained pattern evaluation, an endgame solver adapted from Egaroucid, a new search (PVS everywhere, Multi-ProbCut, evaluation ordering) and the opening book recalculated by the new engine. It scores about 95 % against Stello 1 and beats the C# port of Egaroucid at short time limits ([chapter 24](24-results-and-what-comes-next.md)). Its C# engine is kept, frozen, as `Stello.Engine.V2`. |
-| **Stello 3.0** (preview) | November 2026 | The same search rewritten in Rust, node for node: 2.8–3.1 times faster in the midgame and 1.75 times on the FFO endgames, in the Windows app through a native library and in the browser compiled to WebAssembly. It scores 59.6 % against Stello 2.0 at 500 ms per move ([chapter 25](25-phases-0-4-the-engine-in-rust.md)). The final 3.0 will add a parallel search on several threads. |
+| **Stello 3.0** | November 2026 | The same search rewritten in Rust, node for node: 2.8–3.1 times faster in the midgame and 1.75 times on the FFO endgames, in the Windows app through a native library and in the browser compiled to WebAssembly ([chapter 25](25-phases-0-4-the-engine-in-rust.md)). Then a parallel search on several threads, with a shared hash table, Lazy SMP and YBWC, in both apps: with 8 threads the FFO endgames are solved 3.3 times faster. Against Stello 2.0 it scores +78 Elo on 1 thread and +121 Elo on 8 threads at 500 ms per move ([chapter 26](26-phases-5-9-threads.md)). |
 
 The documentation of Stello 1 is kept as it was in the **[Stello 1 documentation](stello-1/README.md)** (archive).
 
@@ -57,16 +57,16 @@ The time limit can stop the search at any point; the best move found so far is t
 | 03 | [Rules and move generation](03-rules-and-move-generation.md) | Legal moves with shift-and-mask, flips, pass, game over, perft |
 | 04 | [Evaluation](04-evaluation.md) | The pattern evaluation: patterns, places and folding, stages, reading the indices fast, the weights file |
 | 05 | [Move ordering](05-move-ordering.md) | Square values, the response table, the hash move, evaluation ordering in deeper nodes |
-| 06 | [Midgame search](06-midgame-search.md) | Negamax alpha-beta, iterative deepening, PVS, Multi-ProbCut with a fitted error model, the score scale |
-| 07 | [Transposition table](07-transposition-table.md) | Two-entry slots, bounds, replacement, enhanced transposition cutoff, the endgame table |
-| 08 | [Endgame solver](08-endgame-solver.md) | When it runs, the win/loss/draw and exact passes, the layers by empty squares, stable discs, parity, stopping |
+| 06 | [Midgame search](06-midgame-search.md) | Negamax alpha-beta, iterative deepening, PVS, Multi-ProbCut with a fitted error model, the score scale; threads: the thread pool, Lazy SMP and YBWC |
+| 07 | [Transposition table](07-transposition-table.md) | Two-entry slots, bounds, replacement, enhanced transposition cutoff, the endgame table, the sizes, sharing the table between threads with a seqlock per slot |
+| 08 | [Endgame solver](08-endgame-solver.md) | When it runs, the win/loss/draw and exact passes, the layers by empty squares, stable discs, parity, stopping, YBWC in the solver |
 | 09 | [Time control](09-time-control.md) | Time modes, time per move, the soft and hard limits, "Move Now" |
 | 10 | [Opening book](10-opening-book.md) | Positions in canonical form, the text and binary files, the import of the C++ book, `BookTracker` |
 | 11 | [Book learning](11-book-learning.md) | Adding games, dropout expansion, minimax, self-play |
 | 12 | [Book tool](12-book-tool.md) | The console tool for the master book: import, build, verify, statistics, recalculating the leaves, comparing and matching books |
 | 13 | [Game record](13-game-record.md) | Move history, undo/redo, the text file format |
-| 14 | [App integration](14-app-integration.md) | The game loop, threading, engine hosts, the native library and the WebAssembly worker, the Rust toolchain, settings, data files |
-| 15 | [GUI and settings](15-gui-and-settings.md) | The web and desktop interfaces, menu commands, settings, real-time analysis |
+| 14 | [App integration](14-app-integration.md) | The game loop, threading, engine hosts, the native library and the WebAssembly worker, search threads on the desktop and in the browser, the Rust toolchain, settings, data files |
+| 15 | [GUI and settings](15-gui-and-settings.md) | The web and desktop interfaces, menu commands, settings (with Threads), real-time analysis |
 
 ### Part 2: From Stello 1 to Stello 2.0
 
@@ -87,23 +87,24 @@ The time limit can stop the search at any point; the best move found so far is t
 | # | Chapter | Content |
 |---|---|---|
 | 25 | [Phases 0–4: the engine in Rust](25-phases-0-4-the-engine-in-rust.md) | Why Rust, the decisions, the frozen Stello 2.0, the port with node-for-node parity, the speed pass, the web app on WebAssembly, 3.0 against 2.0, and what comes next |
+| 26 | [Phases 5–9: threads](26-phases-5-9-threads.md) | The shared hash table and the thread pool, Lazy SMP, YBWC, threads in the browser, the Threads setting, the final matches, and what comes next |
 
 ### Reference
 
 | # | Chapter | Content |
 |---|---|---|
-| 26 | [Glossary](26-glossary.md) | The terms used in these documents |
-| 27 | [References](27-references.md) | Articles, papers and source code on the internet |
+| 27 | [Glossary](27-glossary.md) | The terms used in these documents |
+| 28 | [References](28-references.md) | Articles, papers and source code on the internet |
 
 ## Reading paths
 
 - **Everything:** read the chapters in order.
-- **Just the engine:** 01, 02, 03, 04, 05, 06, 07, 08, 09; and 25 for how it moved to Rust.
+- **Just the engine:** 01, 02, 03, 04, 05, 06, 07, 08, 09; and 25 for how it moved to Rust, 26 for how it got threads.
 - **Just the opening book:** 01, 02 (square numbers), 10, 11, 12.
 - **UI and application architecture:** 01, 13, 14, 15.
 - **Tuning the engine:** 17 (how to measure a change), then 23 for what has been tried, with its measurements, and 24 for the ideas that remain.
 - **The story of Stello 2.0:** 16 to 24, then the working documents [improve-stello-strength-plan.md](../Plans/improve-stello-strength-plan.md) and [improve-stello-strength-findings.md](../Plans/improve-stello-strength-findings.md).
-- **The story of Stello 3.0:** 25, then [making-stello-3-plan.md](../Plans/making-stello-3-plan.md) and [making-stello-3-findings.md](../Plans/making-stello-3-findings.md).
+- **The story of Stello 3.0:** 25 and 26, then [making-stello-3-plan.md](../Plans/making-stello-3-plan.md) and [making-stello-3-findings.md](../Plans/making-stello-3-findings.md).
 
 ## How to view these documents
 

@@ -6,7 +6,7 @@
 
 Stello has two front ends on one view model (`MainViewModel`, chapter 14): the **web app** (Blazor WebAssembly) and the **desktop app** (WPF). The web app follows the tournament game GUI blueprint ([general-game-gui-specification.md](https://github.com/cjp-dev/GameShell/blob/main/docs/general-game-gui-specification.md), v1.1, kept in the shared GameShell library): a wooden board, a 4-layer dual-card player scoreboard, fixed board orientation, quick action buttons, the analysis panel, a move history and synthesized sounds. The desktop app has a plainer window with a board, the status and the analysis, plus the book-learning commands ([below](#the-desktop-app)).
 
-This chapter documents the visual layout, the menus, the settings dialog, the status that marks a modified game, the opening book and transposition table settings, the analysis panel, and the keyboard shortcuts. Everything up to the desktop section describes the web app; the settings dialog and the analysis are shared.
+This chapter documents the visual layout, the menus, the settings dialog, the status that marks a modified game, the opening book, transposition table and threads settings, the analysis panel, and the keyboard shortcuts. Everything up to the desktop section describes the web app; the settings dialog and the analysis are shared.
 
 ---
 
@@ -83,7 +83,7 @@ The web app's header has four menus (`Home.razor`):
 * *(Separator)*
 * **Switch sides:** Gives the human the other colour without resetting or rotating the board, and switches between vs Computer (Black) and vs Computer (White). Enabled only against the computer, on the human's turn, while the game is not over. It marks the game modified (`IsStatusModified` becomes true), and the computer moves at once.
 * *(Separator)*
-* **Settings... (`F2`):** Opens the modal Game Settings dialog to configure engine thinking limits, opening book usage, and transposition table capacity.
+* **Settings... (`F2`):** Opens the modal Game Settings dialog to configure engine thinking limits, opening book usage, transposition table capacity and the number of threads.
 
 ### 3. Options Menu
 * **Analysis (`Ctrl+A`):** Toggles the visibility of the real-time AI search analysis side panel.
@@ -169,17 +169,18 @@ In timed matches (`TimePerGame`), if the human's clock reaches 0:00 against the 
 
 ## Game Settings dialog
 
-Accessed via **Game $\rightarrow$ Settings...**, the modal settings dialog lets players configure computer thinking limits, opening book usage, and transposition table memory.
+Accessed via **Game $\rightarrow$ Settings...**, the modal settings dialog lets players configure computer thinking limits, opening book usage, transposition table memory and the threads the computer searches with.
 
 ![Stello Settings Dialog](images/gui-settings.png)
 
-The dialog is arranged into two distinct fieldset groups:
+The dialog is arranged into three fieldset groups:
 
 ```mermaid
 graph TD
     Settings["Settings Dialog"]
     Settings --> Section1["1. How long may the computer think?<br/>Fixed depth • Time per move • Time per game"]
-    Settings --> Section2["2. Stello Opening Book &amp; Transposition Table<br/>11,200 Canonical Positions • 3 MB to 768 MB TT Capacity"]
+    Settings --> Section2["2. Stello Opening Book &amp; Transposition Table<br/>11,200 Canonical Positions • 4 MB to 1,024 MB TT Capacity"]
+    Settings --> Section3["3. Threads<br/>Automatic • 1 up to the device's threads"]
 ```
 
 ### 1. Computer Thinking Limits
@@ -193,23 +194,27 @@ graph TD
 
 | Entries Option | Hash Bits | Entries / Table | Combined Memory | Description |
 |---|---|---|---|---|
-| **65,536 entries (3 MB)** | 15 | 65,536 | $3.15\text{ MB}$ | Ultra-compact memory for low-resource environments |
-| **262,144 entries (12 MB)** | 17 | 262,144 | $12.58\text{ MB}$ | Lightweight cache for fast mobile browsers |
-| **1,048,576 entries (48 MB) - Default** | 19 | 1,048,576 | $50.33\text{ MB}$ | Tournament balance of speed and cache hit rates |
-| **4,194,304 entries (192 MB)** | 21 | 4,194,304 | $201.33\text{ MB}$ | Deep tactical searches and endgame solving |
-| **16,777,216 entries (768 MB)** | 23 | 16,777,216 | $805.31\text{ MB}$ | Maximum transposition table cache for 64-bit desktop |
+| **65,536 entries (4 MB)** | 15 | 65,536 | $4.19\text{ MB}$ | Ultra-compact memory for low-resource environments |
+| **262,144 entries (16 MB)** | 17 | 262,144 | $16.78\text{ MB}$ | Lightweight cache for fast mobile browsers |
+| **1,048,576 entries (64 MB) - Default** | 19 | 1,048,576 | $67.11\text{ MB}$ | Tournament balance of speed and cache hit rates |
+| **4,194,304 entries (256 MB)** | 21 | 4,194,304 | $268.44\text{ MB}$ | Deep tactical searches and endgame solving |
+| **16,777,216 entries (1,024 MB)** | 23 | 16,777,216 | $1{,}073.74\text{ MB}$ | Maximum transposition table cache for 64-bit desktop |
 
 #### Memory Calculation & Architecture
-Each transposition table slot holds 2 entries (primary and replacement). Each entry occupies 24 bytes:
-* 16 bytes for the position bitboards (`ulong Own`, `ulong Opponent`)
-* 2 bytes for the evaluation score (`short Value`)
-* 1 byte for search depth (`sbyte Depth`)
-* 1 byte for cutoff bound type (`Bound`)
-* 1 byte for best move coordinate (`sbyte Move`)
-* 1 byte for aging tag (`byte Tag`)
-* 2 bytes padding alignment
+Each transposition table slot is one 64-byte cache line ([chapter 07](07-transposition-table.md)): an 8-byte sequence word, which lets all the search threads share the table safely, and 2 entries (primary and replacement) of 24 bytes. Each entry is stored as three 64-bit words:
+* 16 bytes for the position bitboards (`own`, `opponent`)
+* 8 bytes packed into one word: the score (`value`, 2 bytes), the search depth (`depth`, 1 byte), the bound type (`bound`, 1 byte), the best move (`mv`, 1 byte), the extra key (`tag`, 1 byte: the side to move in the midgame table) and the table's generation when it was stored (`generation`, 2 bytes, for clearing without writing the table)
 
-The total entries per table equals $2^{\text{hashBits} + 1}$ (the number in the option label). Because the search engine keeps two tables of that size—one for the heuristic midgame search and one for the exact endgame solver—the combined memory equals $2 \times 2^{\text{hashBits} + 1} \times 24\text{ bytes}$. The option labels give this in MiB ($2^{20}$ bytes); the Combined Memory column gives it in MB ($10^6$ bytes). When the capacity setting changes, the engine host dynamically reinitializes the engine with the requested hash size.
+The total entries per table equals $2^{\text{hashBits} + 1}$ (the number in the option label), in $2^{\text{hashBits}}$ slots. Because the search engine keeps two tables of that size—one for the heuristic midgame search and one for the exact endgame solver—the combined memory equals $2 \times 2^{\text{hashBits}} \times 64\text{ bytes}$. The option labels give this in MiB ($2^{20}$ bytes); the Combined Memory column gives it in MB ($10^6$ bytes). Stello 2.0 had no sequence word and 48-byte slots, so its labels said 3, 12, 48, 192 and 768 MB; Stello 3.0 needs a third more memory for the same number of entries ([chapter 26](26-phases-5-9-threads.md)). When the capacity setting changes, the engine host dynamically reinitializes the engine with the requested hash size.
+
+### 3. Threads
+The computer can search with several threads at once ([chapter 06](06-midgame-search.md#threads)), which makes it reach more depth in the same time. The **Threads** group chooses how many:
+
+* **Automatic** (the default) is shown with the number it means on this device, e.g. `Automatic (7 threads)`. On the desktop it is the processor's threads minus one (at least 1), so one is left for the app; in the browser it is all of `navigator.hardwareConcurrency`, because the page's own thread is not one of the engine's.
+* **1 thread**, **2 threads**, ... up to the device's number of threads. The dialog says how many there are: "of N on this computer" in the desktop app, "Search with (of N on this device):" in the web app.
+* The setting is stored with the others as `GameSettings.Threads`; Automatic is stored as 0 (`AutomaticThreads`), so the same saved settings follow the device they are used on, and old settings files without the field read as Automatic. A chosen number above what a device has is used as the device's number (`ThreadsFor`, [chapter 14](14-app-integration.md#search-threads)).
+* **In the browser** more than 1 thread needs the threaded engine package. The engine's Web Worker loads its package when it starts, so changing between 1 thread and more restarts the worker (with empty hash tables; the opening book state is kept); another number above 1 does not. Without cross-origin isolation, or if the threaded package cannot be loaded, the computer plays on 1 thread ([chapter 14](14-app-integration.md#threads-in-the-browser)).
+* Book learning in the desktop app (Evaluate Book, Self-play) always searches with 1 thread.
 
 ---
 
@@ -239,8 +244,8 @@ When enabled via **Options $\rightarrow$ Analysis** (`Ctrl+A`), the telemetry si
 | **Depth** | Current search depth in plies (e.g., `10 plies`), or `to the end (20 empty)` when the endgame is solved. Empty for a book move or when there is no search (a pass or a single legal move). |
 | **Score** | The search's score for the computer, the side that is searching, in discs with one decimal (the search scores in 1/100 disc, [chapter 04](04-evaluation.md)):<br/>• Positive (e.g. `+2.4 discs`): Advantage for the engine.<br/>• Negative (e.g. `-1.5 discs`): Advantage for the opponent.<br/>• Solved endgame: the final disc difference (e.g. `+4 discs`, `-2 discs`), or only `Win`, `Loss` or `Draw` when just the result is known (also for a heuristic score beyond ±32 600).<br/>• `Book`: the move comes from the opening book. |
 | **Best move** | Coordinate of the currently leading principal variation candidate (e.g., `f4`). |
-| **Nodes** | Total board states evaluated during the search, formatted with thousands separators (`226.269`). |
-| **Speed** | Search throughput in nodes per second (`nps`). |
+| **Nodes** | Total board states evaluated during the search, over all its threads, formatted with thousands separators (`226.269`). |
+| **Speed** | Search throughput in nodes per second (`nps`), over all threads. |
 | **Time** | Elapsed thinking duration in stopwatch format (`m\:ss\.f`, e.g. `0:05.0`). |
 
 ### Natural Feel Delay ($250\text{ ms}$)
@@ -249,7 +254,7 @@ Instant moves, such as opening-book moves and single legal moves, would otherwis
 ### Web Worker Engine Host in the Browser
 In Blazor WebAssembly (`Stello.Web`), running deep searches directly on the main UI thread would block JavaScript execution and cause interface stutter. Stello runs the search in a dedicated **Web Worker**:
 1. `WebEngineHost` plays a book move itself, on the page. Otherwise it sends the search request as a compact JSON message to `engine-worker.js`.
-2. The Web Worker runs Stello's Rust engine compiled to WebAssembly (`stello-wasm`), off the page's thread.
+2. The Web Worker runs Stello's Rust engine compiled to WebAssembly (`stello-wasm`), off the page's thread. With more than 1 thread it loads the threaded package and starts more Web Workers that share its memory, one per extra thread (chapter 14).
 3. The worker sends progress reports to the page at most every $100\text{ ms}$ (and whenever the depth or the best move changes) to update the analysis panel.
 4. **Move Now** or a cancel sets a stop signal in memory shared with the worker, which the engine reads at its next abort check (every 1,024 nodes). If that is not possible, the worker is terminated and started again (chapter 14).
 
@@ -317,7 +322,7 @@ The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs t
 - **The board** (`BoardView`) is green (`#1E7A3C`), with a dark dot on each legal move and a red dot (`#E03030`) on the last move; it is sized to the window and centred together with the panels.
 - **Status** shows the status text (with the notices of chapter 14), the disc count (`Black 5 – White 5`), the human's colour (`You play Black`), and in `TimePerGame` mode the computer's clock (`Computer time left: 4:40`).
 - **Analysis** has seven fields: Move, Depth, Score, Best move, Nodes, Speed and Time, bound to the `AnalysisViewModel` properties of the same names. They show the same text as in the web app.
-- **Settings** ([SettingsWindow.xaml](../Stello.Net/Stello.Net/Views/SettingsWindow.xaml)) has the groups "Thinking Limits" (the three modes with sliders) and "Stello Opening Book & Transposition Table" (the checkbox "Enable Stello Opening Book (11,200 canonical positions)" and a "Table Capacity" slider over the same five sizes as the web app's list).
+- **Settings** ([SettingsWindow.xaml](../Stello.Net/Stello.Net/Views/SettingsWindow.xaml)) has the groups "Thinking Limits" (the three modes with sliders) and "Stello Opening Book & Transposition Table" (the checkbox "Enable Stello Opening Book (11,200 canonical positions)" and a "Table Capacity" slider over the same five sizes as the web app's list, labelled "65,536 (4 MB)" to "16,777,216 (1,024 MB)"), and "Threads" ("Search with:", a list with "Automatic (N threads)" and 1 up to the computer's threads, and "of N on this computer").
 - There are no game modes, board styles, sound, quick action buttons, move history or Help pages. The window position and size are saved with the settings (chapter 14).
 
 ---
@@ -328,12 +333,13 @@ The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs t
 |---|---|---|
 | [`Home.razor`](../Stello.Net/Stello.Web/Pages/Home.razor) | `Home` | Web page: Stello's menus, board styles and shortcuts, built from the shared [GameShell](https://github.com/cjp-dev/GameShell) components (`ShellLayout` with menu bar and mobile drawer, `StatusPanel`, `AnalysisPanel`, `MoveHistoryPanel`) |
 | [`DialogHost.razor`](https://github.com/cjp-dev/GameShell/blob/main/src/GameShell/Dialogs/DialogHost.razor) | `DialogHost` | Shared modal dialog host (GameShell) for the About box, timeout confirmations and game notices |
-| [`SettingsForm.razor`](../Stello.Net/Stello.Web/Components/SettingsForm.razor) | `SettingsForm` | The Settings form, shown in the dialog host |
+| [`SettingsForm.razor`](../Stello.Net/Stello.Web/Components/SettingsForm.razor) | `SettingsForm` | The Settings form, shown in the dialog host, with the Threads list |
 | [`AnalysisAdapter.cs`](../Stello.Net/Stello.Web/Services/AnalysisAdapter.cs) | `AnalysisAdapter` | Shows the `AnalysisViewModel` in GameShell's 7-field analysis panel |
 | [`MainViewModel.cs`](../Stello.Net/Stello.App/ViewModels/MainViewModel.cs) | `MainViewModel` | Central orchestrator managing game flow, competitive integrity (`IsStatusModified`), clocks, and undo/redo |
-| [`SettingsViewModel.cs`](../Stello.Net/Stello.App/ViewModels/SettingsViewModel.cs) | `SettingsViewModel` | Data backing for thinking limits, opening book toggle, and transposition table capacity |
+| [`SettingsViewModel.cs`](../Stello.Net/Stello.App/ViewModels/SettingsViewModel.cs) | `SettingsViewModel` | Data backing for thinking limits, opening book toggle, transposition table capacity (`TranspositionTableEntriesText`), and threads (`Threads`, `ThreadChoices`, `ThreadsText`, `DeviceThreads`) |
+| [`GameSettings.cs`](../Stello.Net/Stello.App/Models/GameSettings.cs), [`ThreadCounts.cs`](../Stello.Net/Stello.App/Models/ThreadCounts.cs) | `GameSettings`, `ThreadCounts` | The stored settings (`Threads`, `AutomaticThreads`, `ThreadsFor`); the device's thread counts on the desktop (`ForThisProcess`) and in the browser (`ForBrowser`) |
 | [`AnalysisViewModel.cs`](../Stello.Net/Stello.App/ViewModels/AnalysisViewModel.cs) | `AnalysisViewModel` | Observable ViewModel formatting depth, evaluation score, node counts, and elapsed search time |
-| [`WebEngineHost.cs`](../Stello.Net/Stello.Web/Services/WebEngineHost.cs) | `WebEngineHost` | The book move on the page, the Web Worker's lifecycle, the message serializer, and the cancellation controller |
+| [`WebEngineHost.cs`](../Stello.Net/Stello.Web/Services/WebEngineHost.cs) | `WebEngineHost` | The book move on the page, the Web Worker's lifecycle (a new worker between 1 and more threads), the message serializer, and the cancellation controller |
 | [`engine-worker.js`](../Stello.Net/Stello.Web/wwwroot/js/engine-worker.js), [`stello-wasm/src/lib.rs`](../Stello.Rust/stello-wasm/src/lib.rs) | `init`, `search` | The Web Worker and the Rust engine in WebAssembly, which makes a new engine when the hash bits change |
 | [`LocalEngineHost.cs`](../Stello.Net/Stello.App/Services/LocalEngineHost.cs) | `LocalEngineHost` | Desktop background task runner for search and book operations |
 | [`SoundWaves.cs`](../Stello.Net/Stello.App/Services/SoundWaves.cs) | `SoundWaves` | Procedural 16-bit PCM WAV synthesized sound generator |
@@ -341,7 +347,7 @@ The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs t
 | [`AboutInfo.cs`](../Stello.Net/Stello.App/Models/AboutInfo.cs) | `AboutInfo` | The title, version, picture caption and paragraphs of the About box, shared by both apps |
 | [`MainWindow.xaml`](../Stello.Net/Stello.Net/MainWindow.xaml) | `MainWindow` | WPF desktop application window, menus and key bindings |
 | [`BoardView.xaml`](../Stello.Net/Stello.Net/Views/BoardView.xaml), [`AboutWindow.xaml`](../Stello.Net/Stello.Net/Views/AboutWindow.xaml) | `BoardView`, `AboutWindow` | The WPF board and About box |
-| [`SettingsWindow.xaml`](../Stello.Net/Stello.Net/Views/SettingsWindow.xaml) | `SettingsWindow` | WPF desktop modal settings dialog with sliders and capacity labels |
+| [`SettingsWindow.xaml`](../Stello.Net/Stello.Net/Views/SettingsWindow.xaml) | `SettingsWindow` | WPF desktop modal settings dialog with sliders, capacity labels and the Threads box |
 
 ---
 

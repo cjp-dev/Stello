@@ -54,6 +54,8 @@ A side is a short list of `key=value` settings, separated by commas. It needs ex
 | `mpc=100` | Multi-ProbCut's t × 100: a cut needs the shallow search to be t standard deviations outside the window (default 100, [chapter 06](06-midgame-search.md#selective-search)) | Stello 2.0 |
 | `name=new` | the name in the report and in the file name | all |
 
+Since Stello 3.0, `engine=stello` is the Rust engine and `engine=stello-v2` the frozen Stello 2.0 ([chapter 25](25-phases-0-4-the-engine-in-rust.md)), and `engine=stello` has two more keys: `threads=N` (1–256, default 1) and `ybwc=on|off` (default on); with threads, keep `--workers` × threads within the cores ([chapter 26](26-phases-5-9-threads.md#threads-through-every-layer)). `mid-bench` and `solve-bench` take `--threads N` too.
+
 For example `--a time-ms=100,name=old --b time-ms=200,name=new`. Neither side uses the opening book unless it has `book=on`, so the games test the search and the evaluation. A key that does not belong to the side's engine is an error.
 
 The keys `eval`, `soft-pct` and `mpc` are what is left of the switches of the 2.0 work. Each change was tried behind a switch and a key, and the key went once the change was kept or dropped: `eval=classic`, `danger=` and `endgame=` of phases 2 and 3 (the old evaluation and solver are only in Stello 1 now, so play `engine=stello-v1`), and `sel-margin=`, `sel-percent=`, `order=`, `killers=`, `etc=`, `end-dist=` and the other switches of phase 5 ([chapter 23](23-phase-5-the-search.md)). Their result files keep the keys in their names.

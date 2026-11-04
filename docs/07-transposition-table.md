@@ -4,7 +4,7 @@
 
 ## In short
 
-In Othello the same position is often reached by different move orders: a **transposition**. The transposition table (also called the hash table) remembers what the search found out about each position it has searched: the score, whether that score is exact or only a bound, how deep the search was, and the best move. When the position comes up again, the stored result can end the search of that position at once, or at least give the best move to try first. Stello has two tables, one for the midgame search and one for the endgame solver, with two entries per slot so that deep results are not pushed out by shallow ones.
+In Othello the same position is often reached by different move orders: a **transposition**. The transposition table (also called the hash table) remembers what the search found out about each position it has searched: the score, whether that score is exact or only a bound, how deep the search was, and the best move. When the position comes up again, the stored result can end the search of that position at once, or at least give the best move to try first. Stello has two tables, one for the midgame search and one for the endgame solver, with two entries per slot so that deep results are not pushed out by shallow ones. All the threads of a search share both tables. Each slot is one 64-byte cache line with a sequence lock, so a thread never takes a half-written entry of another thread for a valid one.
 
 ## Data structures
 
@@ -28,23 +28,51 @@ An `Entry` is a `Copy` struct of 24 bytes:
 | `Lower` | The true score is at least the value (it failed high: ≥ β) | `HI_HASH` |
 | `Upper` | The true score is at most the value (it failed low: ≤ α) | `LO_HASH` |
 
-`TranspositionTable::new(bits)` allocates $2^{\text{bits}}$ slots of two entries. `SearchEngine` takes the hash bits (10–26, default 19) and creates two tables of that size (one for the heuristic midgame and one for the exact endgame solver):
+### The slot
 
-$$2 \times \big(2^{19} \text{ slots} \times 2 \text{ entries} \times 24 \text{ bytes}\big) = 48 \text{ MiB total}$$
+The entries are not stored as `Entry` structs. Each slot is a `Slot` of eight 64-bit words, aligned to 64 bytes so that it fills exactly one cache line ([table.rs](../Stello.Rust/stello-core/src/search/table.rs#L101-L110)):
 
-### Configurable Capacity Options
+| Word | Contents |
+|---|---|
+| 0 | `sequence`: even while the slot is free, odd while a writer holds it |
+| 1–3 | The first entry ("deepest"): `own`, `opponent`, and one packed word |
+| 4–6 | The second entry ("always replaced"): `own`, `opponent`, and one packed word |
+| 7 | Unused: the padding to 64 bytes |
 
-In the Settings dialog (chapter 15), players choose the number of entries **per table** from 5 power-of-two tiers. The engine has two tables, so the memory is twice that of one table. The sizes in the option labels are in MiB ($2^{20}$ bytes); the Combined Memory column gives the same sizes in MB ($10^6$ bytes):
+All seven used words are `AtomicU64`. The packed word holds the rest of the entry, from the low bits up ([table.rs](../Stello.Rust/stello-core/src/search/table.rs#L51-L82)):
 
-| Option Label | `hashBits` | Entries / Table | Combined Memory | Target Environment |
-|---|---|---|---|---|
-| **65,536 entries (3 MB)** | 15 | 65,536 | $3.15\text{ MB}$ | Ultra-compact memory for resource-constrained devices |
-| **262,144 entries (12 MB)** | 17 | 262,144 | $12.58\text{ MB}$ | Lightweight cache for mobile browsers |
-| **1,048,576 entries (48 MB) - Default** | 19 | 1,048,576 | $50.33\text{ MB}$ | Balanced tournament search performance |
-| **4,194,304 entries (192 MB)** | 21 | 4,194,304 | $201.33\text{ MB}$ | Deep searches and complex endgame solving |
-| **16,777,216 entries (768 MB)** | 23 | 16,777,216 | $805.31\text{ MB}$ | Maximum 64-bit desktop cache |
+| Bits | Field |
+|---|---|
+| 0–15 | `value` |
+| 16–23 | `depth` |
+| 24–31 | `bound` |
+| 32–39 | `mv` |
+| 40–47 | `tag` |
+| 48–63 | `generation` |
 
-The setting is converted via $\text{hashBits} = \log_2(\text{entries}) - 1$ and passed in `SearchLimits.HashBits`. If the active search engine's `HashBits` does not match the requested size, `LocalEngineHost` (desktop) and the WebAssembly engine's `search` in the Web Worker ([chapter 14](14-app-integration.md)) recreate the engine with the requested capacity before launching the search.
+A packed word of zero is an empty entry (`Bound::None`, generation 0), so zeroed memory is an empty table. `get` unpacks the three words into an `Entry` again.
+
+### Memory
+
+`TranspositionTable::new(bits)` allocates $2^{\text{bits}}$ slots. `SearchEngine` takes the hash bits (10–26, default 19) and creates two tables of that size (one for the heuristic midgame and one for the exact endgame solver):
+
+$$2 \times \big(2^{19} \text{ slots} \times 64 \text{ bytes}\big) = 64 \text{ MiB total}$$
+
+Two entries need 48 bytes. The sequence word and the padding take the other quarter of the slot: a third more memory is the price of sharing the table between threads. Stello 2.0 had 48-byte slots and took 48 MiB at the default size; 3.0 takes 64 MiB for the same number of entries ([chapter 26](26-phases-5-9-threads.md#the-hash-table-seqlock-spin-lock-or-xor) has the measurements behind the choice).
+
+### The sizes in the settings
+
+In the Settings dialog ([chapter 15](15-gui-and-settings.md)), players choose the number of entries **per table** from 5 power-of-two sizes. The engine has two tables, so the memory is twice that of one table. The sizes in the option labels are in MiB ($2^{20}$ bytes); the Combined Memory column gives the same sizes in MB ($10^6$ bytes):
+
+| Option label (web) | `hashBits` | Entries / table | Combined memory |
+|---|---|---|---|
+| **65,536 entries (4 MB)** | 15 | 65,536 | $4.19\text{ MB}$ |
+| **262,144 entries (16 MB)** | 17 | 262,144 | $16.78\text{ MB}$ |
+| **1,048,576 entries (64 MB) - Default** | 19 | 1,048,576 | $67.11\text{ MB}$ |
+| **4,194,304 entries (256 MB)** | 21 | 4,194,304 | $268.44\text{ MB}$ |
+| **16,777,216 entries (1,024 MB)** | 23 | 16,777,216 | $1{,}073.74\text{ MB}$ |
+
+The desktop labels are the same without the word "entries" ([SettingsViewModel.cs](../Stello.Net/Stello.App/ViewModels/SettingsViewModel.cs#L88-L95)). The setting is converted via $\text{hashBits} = \log_2(\text{entries}) - 1$ and passed in `SearchLimits.HashBits`. If the active search engine's `HashBits` does not match the requested size, `LocalEngineHost` (desktop) and the WebAssembly engine's `search` in the Web Worker ([chapter 14](14-app-integration.md)) recreate the engine with the requested capacity before launching the search. The threaded WebAssembly engine's shared memory may grow to 2 GiB, so the largest size fits there too ([chapter 14](14-app-integration.md#threads-in-the-browser)).
 
 ## Algorithm
 
@@ -65,11 +93,11 @@ $$
 
 ### Looking up: `get`
 
-`get(own, opponent, tag)` checks the two entries of the slot and returns the entry it finds, if any. An entry is a hit only if `own`, `opponent` and `tag` are all equal and the entry is in use: its bound is not `None` and its generation is the table's. Because the whole position is stored, there are **no false hits**: an entry can never belong to a different position that happens to have the same hash.
+`get(own, opponent, tag)` checks the two entries of the slot and returns the entry it finds, if any. An entry is a hit only if `own`, `opponent` and `tag` are all equal and the entry is in use: its bound is not `None` and its generation is the table's. Because the whole position is stored, there are **no false hits**: an entry can never belong to a different position that happens to have the same hash. With several threads, `get` also checks that no other thread wrote the slot while it read it ([Sharing the table between threads](#sharing-the-table-between-threads)).
 
 ### Storing: `store`
 
-`store(own, opponent, tag, depth, bound, value, mv)` keeps the deepest result in the first entry and uses the second entry for everything else:
+`store(own, opponent, tag, depth, bound, value, mv)` holds the slot's lock while it decides and writes. It keeps the deepest result in the first entry and uses the second entry for everything else:
 
 ```mermaid
 flowchart TD
@@ -124,6 +152,55 @@ Midgame values (heuristic scores in 1/100 disc, depending on the search depth, o
 
 `clear` does not write the table. Each table has a 16-bit generation counter, which `clear` increases, and every entry records the generation it was stored in. An entry of an older generation counts as empty: `get` does not find it, and `store` treats it as an unused first entry. So clearing costs nothing, however large the table; only when the counter wraps, after 65,535 clears, is the whole table set to zero once (an all-zero entry is an empty one), and the count starts again at 1. A new table starts at generation 1, so its zeroed entries (generation 0) are empty too. The tools that clear the tables before each of many short searches gain the most ([chapter 25](25-phases-0-4-the-engine-in-rust.md)).
 
+### Sharing the table between threads
+
+A search with more than one thread ([chapter 06](06-midgame-search.md#threads)) runs on several threads that all read and write the same two tables. They do so through `&self`: there is no lock on the whole table. Instead each slot has its own **sequence lock** (seqlock), the `sequence` word at the start of its cache line.
+
+**A store** ([`store`](../Stello.Rust/stello-core/src/search/table.rs#L211-L242), [`Slot::lock`](../Stello.Rust/stello-core/src/search/table.rs#L133-L158)):
+
+1. The writer reads the sequence. If it is even, the writer makes it odd with a compare-and-swap: it now holds the slot. If another writer holds it, it waits in a short spin loop; a write is only a few stores.
+2. It applies the replacement rules above and writes the words of the entries it changes.
+3. It stores the sequence + 2: even again, and larger than before.
+
+**A probe** ([`get`](../Stello.Rust/stello-core/src/search/table.rs#L183-L209)):
+
+1. The reader reads the sequence. If it is odd, a writer holds the slot, and the probe returns a miss at once. A reader never waits.
+2. It reads the words of the two entries and looks for its position. If neither entry matches, it is a miss; a miss read during a write is a miss either way.
+3. If an entry matches, it reads the sequence again. The hit counts only if the sequence did not change. Otherwise it is a miss.
+
+```mermaid
+sequenceDiagram
+    participant W as Writer (store)
+    participant S as Slot (sequence and 6 words)
+    participant R as Reader (get)
+    R->>S: read the sequence: 8 (even, free)
+    W->>S: compare-and-swap 8 to 9 (odd, locked)
+    W->>S: write own, opponent and the packed word
+    R->>S: read own, opponent and the packed word<br/>(they may come from two writes)
+    W->>S: store the sequence 10 (free)
+    R->>S: read the sequence again: 10
+    Note over S,R: 10 is not 8: a miss, the words are not used
+```
+
+**Why a torn read is never taken for a valid entry.** The three words of an entry are written one after the other. Without the check, a reader could combine the discs of one position with the discs or the value of another, and take the mix for the position it looks for. With the check, every write that overlaps the reader's reads changes the sequence between its two reads: the writer makes it odd before its first store and adds 2 after its last. The memory orderings make sure of that: the compare-and-swap is an acquire and is followed by a release fence, the unlock is a release, and the reader's second read of the sequence follows an acquire fence. So if the reader saw any word of a write, it also sees the changed sequence. A missed hit costs only a little search; a false hit could give a wrong score.
+
+**With one thread** the lock is never contended. The table finds and replaces exactly what the C# 2.0 table did, so the search stays node-for-node identical to 2.0.
+
+**`clear`** needs `&mut self`: the table to itself. It runs between searches only, when no other thread uses the table.
+
+**What was measured before choosing** (phase 5, on one thread, one pinned CPU, fastest of 3 passes; mid-bench depth 10 / mid-bench depth 12 / random positions at depth 8 / FFO #40–49, from [the findings](../Plans/making-stello-3-findings.md#the-hash-table-a-seqlock-per-slot)):
+
+| Variant | Time | Cost |
+|---|---|---|
+| Unchanged (single-threaded, 48-byte slot) | 0.346 / 1.001 / 0.856 / 25.0 s | — |
+| **Seqlock, 64-byte slot (chosen)** | 0.345 / 1.007 / 0.855 / 24.9 s | 0–0.6 % |
+| Spin lock per slot on probe and store (as in Egaroucid) | 0.351 / 1.021 / 0.865 / 25.0 s | 1.5–2 % |
+| Hyatt's XOR check, 48-byte slot | 0.341 / 1.008 / 0.848 / 25.1 s | About 0 %, but only probabilistic |
+
+- **The spin lock** makes every probe take and release the lock, which costs time even when no other thread is there.
+- **The XOR check** ("lockless hashing") stores the key XOR the data, so a torn entry usually fails the key check. It keeps the 48-byte slot. But it is only probabilistic: two positions that differ in one disc's colour can let a torn read pass.
+- **The seqlock** costs nothing measurable and is strict. Its price is memory: a third more ([Memory](#memory)).
+
 ## Worked examples
 
 ### A transposition
@@ -172,21 +249,24 @@ The deep result A survived two shallow stores (steps 2 and 3); only a deeper res
 - **Two entries per slot.** With one entry per slot, as in C++, deep endgame results were overwritten by many shallow ones; the second entry keeps them. The measurements from the port, which also set the default of $2^{19}$ slots, are in the [Stello 1 documentation](stello-1/07-transposition-table.md).
 - **One bound and one move per entry.** An entry with both bounds and two moves was tried for the midgame and was not better ([chapter 23](23-phase-5-the-search.md)).
 - **Bounds narrow the endgame window.** In the endgame, a stored bound that does not end the search still narrows (α, β), which C++ did not do.
+- **One shared table, not one per thread.** The threads help each other through the table: Lazy SMP helpers only fill it ([chapter 06](06-midgame-search.md#lazy-smp)). So all threads must share it, and a slot lock is cheaper than any lock on the whole table.
+- **A reader never waits.** A probe of a slot that is being written is a miss, not a wait. Writers wait only for other writers of the same slot, which is rare with $2^{19}$ slots.
 
 ## Where in the code
 
 | File | Main members |
 |---|---|
-| [search/table.rs](../Stello.Rust/stello-core/src/search/table.rs) | `Bound`, `Entry` (`is_live`, `matches`), `TranspositionTable` (`new`, `get`, `store`, `prefetch`, `clear`, `slot`) |
+| [search/table.rs](../Stello.Rust/stello-core/src/search/table.rs) | `Bound`, `Entry` (`pack`, `unpack`, `is_live`, `matches`), `Slot` (`load`, `put`, `lock`, `unlock`), `TranspositionTable` (`new`, `get`, `store`, `prefetch`, `clear`, `slot`), `zeroed_slots` |
 | [search/engine.rs](../Stello.Rust/stello-core/src/search/engine.rs) | `midgame_table` and `endgame_table`, the midgame use in `Searcher::search` (with `MIDGAME_ETC_MIN_LOOK` and the prefetch), `SearchEngine::clear_hash` |
 | [endgame/search.rs](../Stello.Rust/stello-core/src/endgame/search.rs) | The endgame use in `end_window` and `end_deep`, `END_ETC_MIN_EMPTIES` |
-| [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs) | The C# `ClearHash` and `HashBits`, passed on to the Rust engine (chapter 14) |
+| [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs) | The C# `ClearHash` and `HashBits`, passed on to the Rust engine (chapter 14); `HashBytesPerSlot` (2 × 64), the memory it reports to the garbage collector |
 | C++: [Minmax.cpp](../Stello%20C++/BRAIN/Minmax.cpp), [HASH.H](../Stello%20C++/BRAIN/HASH.H) | `f_hash_put`, the C++ hash table |
-| C# 2.0 (frozen): [Stello.Engine.V2/Search/TranspositionTable.cs](../Stello.Net/Stello.Engine.V2/Search/TranspositionTable.cs) | The C# original, the same table without the generation (its `Clear` writes every entry) |
+| C# 2.0 (frozen): [Stello.Engine.V2/Search/TranspositionTable.cs](../Stello.Net/Stello.Engine.V2/Search/TranspositionTable.cs) | The C# original, the same table without the generation (its `Clear` writes every entry) and without the lock, in 48-byte slots |
 
 ## Tests
 
-- Rust, the unit tests in [search/table.rs](../Stello.Rust/stello-core/src/search/table.rs): store and find; another tag is not found; a shallower result for the same position does not replace the deeper one; after a clear an old entry is not found and counts as empty when storing; over 70,000 clears the generation wraps and the table still works; an entry is 24 bytes.
+- Rust, the unit tests in [search/table.rs](../Stello.Rust/stello-core/src/search/table.rs): store and find; another tag is not found; a shallower result for the same position does not replace the deeper one; after a clear an old entry is not found and counts as empty when storing; over 70,000 clears the generation wraps and the table still works; packing and unpacking keep every field, and an empty entry packs to zero. A compile-time check makes sure that a slot is 64 bytes.
+- **The hammer test** ([`many_threads_never_read_a_torn_entry`](../Stello.Rust/stello-core/src/search/table.rs#L355-L394)): 8 threads store and probe 2,048 positions in a table of 1,024 slots, a million times each. Every field of a hit is made from its position, so a torn entry would show. With the sequence check disabled it failed 2 runs in 3; with it, it passes. It and the pool tests also pass under Miri, and ThreadSanitizer finds no reports ([chapter 26](26-phases-5-9-threads.md)).
 - [TranspositionTableTests.cs](../Stello.Net/Stello.Engine.Tests/TranspositionTableTests.cs), on the frozen C# 2.0 table: store and find; another position or tag is not found; the deeper result for the same position is kept; a deep entry survives many shallow entries in the same slot; clear removes everything.
 - The search and endgame tests (chapters 06 and 08) check that the table gives the same nodes and scores as in 2.0 in real searches.
 
@@ -195,6 +275,9 @@ The deep result A survived two shallow stores (steps 2 and 3); only a deeper res
 - [Transposition Table – Chess Programming Wiki](https://www.chessprogramming.org/Transposition_Table): what is stored, the three bound types, collisions, and replacement schemes including the two-tier system.
 - [Negamax – Wikipedia](https://en.wikipedia.org/wiki/Negamax): pseudocode for negamax with a transposition table.
 - [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html): "Transposition tables", with the same tiger-opening example.
+- [Seqlock – Wikipedia](https://en.wikipedia.org/wiki/Seqlock): the sequence lock, with readers that retry instead of waiting.
+- [Shared Hash Table – Chess Programming Wiki](https://www.chessprogramming.org/Shared_Hash_Table): how parallel searches share one table, with locks or with Hyatt's lockless XOR trick.
+- [References](28-references.md#26-phases-59-threads): more on threads.
 
 ---
 

@@ -23,7 +23,7 @@ dotnet run -c Release --project Stello.Net/tools/Stello.BookTool -- <command> [a
 | `stats <book>` | Statistics for a book in any of the three formats |
 | `recalc <book.txt> [--time-s 60 \| --depth N] [--workers N] [--save-every 10] [--hash-bits 19]` | Searches the leaves again, backs up and sorts, and writes `<book>.report.txt` |
 | `compare <old book> <new book> [--out <report.txt>]` | Reports the values and first moves that changed |
-| `match <book A> <book B> (--starts <report.txt> \| --starts-ply N) [--max-starts N] [--depth 10 \| --time-s S] [--workers N] [--hash-bits 19]` | Plays the two books against each other |
+| `match <book A> <book B> (--starts <report.txt> \| --starts-ply N) [--max-starts N] [--depth 10 \| --time-s S] [--workers N] [--threads 1] [--hash-bits 19]` | Plays the two books against each other; `--threads` is each engine's search threads (1–256), and workers × threads should stay within the cores |
 
 Books are written to a temporary file first and then renamed (`WriteAtomically`), so a failed run never leaves half a book; the reports of `recalc` and `compare` are written directly. A file that cannot be read gives the error and exit code 1. `--workers` is the number of engines that search at the same time; the default is half the number of logical processors (the physical cores with hyper-threading). Each engine has two hash tables of $2^{\text{hash-bits}}$ slots (48 MiB at 19, chapter 07). Ctrl+C stops `recalc` and `match` cleanly; they then exit with code 2.
 
@@ -216,7 +216,7 @@ Only the 1 091 exact values from the C++ book have no known effort; all other le
 - **Internals of the engine.** The tool uses the internal book types of `Stello.Engine` through `InternalsVisibleTo`, so the apps only see `OpeningBook`.
 - **The engine's own endgame switch.** `recalc` does not decide when to solve exactly; the normal search does that, as in a game, within the time limit.
 - **The book is the checkpoint.** Unlike the Checkers book tool, there is no separate `.partial` file: the effort stored with each value tells what is done.
-- **Workers instead of a parallel search.** The engine searches on one thread; running one engine per core on different positions uses all cores without changing the search.
+- **Workers instead of a parallel search.** Since Stello 3.0 the engine can search on several threads, but `recalc` keeps 1 thread per worker and has no `--threads` (a user decision). Running one engine per core on different positions scales almost perfectly; threads within one search scale far less. On the whole master book at depth 14, 24 workers × 1 thread did 11,191 positions per minute, 3 × 8 did 4,160 and 1 × 24 did 1,816 ([chapter 26](26-phases-5-9-threads.md#the-user-decisions)). Only `match` has `--threads`, for comparing engines.
 - **Only the leaves.** The values of the other book moves follow from the leaves by back-up. New moves are not added (that is dropout expansion, chapter 11, and the planned drop-out expansion of the book tool).
 
 ## Where in the code

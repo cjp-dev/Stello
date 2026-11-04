@@ -1,4 +1,4 @@
-# 26 – Glossary
+# 27 – Glossary
 
 [Back to the index](README.md)
 
@@ -22,6 +22,7 @@ The terms used in these documents. The last column gives the chapter that explai
 | Cargo, crate | Rust's build tool and package manager, and a Rust package. `Stello.Rust` is a Cargo workspace of four crates; the .NET builds run Cargo. | [01](01-overview.md#the-projects), [14](14-app-integration.md#how-each-app-gets-the-engine) |
 | Clog search | Egaroucid's 5-ply full-width search, before a selective search, for moves that end the game soon. | [18](18-the-egaroucid-port.md#how-egaroucid-finds-a-move) |
 | Competitive integrity | The unranked status of a game; taking back moves, switching sides, or modifying settings mid-match turns STATUS crimson red (#E74C3C). | [15](15-gui-and-settings.md#1-status-header--competitive-integrity) |
+| Cross-origin isolation | A page served with the COOP and COEP headers (`staticwebapp.config.json`), so that it may use `SharedArrayBuffer`. The web app needs it for the stop signal and for the threaded engine; `self.crossOriginIsolated` tells. | [14](14-app-integration.md#threads-in-the-browser) |
 | Cutoff | Stopping the search of a position because one move already reaches beta. | [06](06-midgame-search.md#negamax-with-alpha-beta) |
 | Dangerous corner move | Stello 1: a corner move that the edge tables mark as risky; the search looks one ply deeper instead of evaluating it. | [Stello 1: 04](stello-1/04-evaluation.md#dangerous-corner-moves) |
 | Dropout expansion | Book learning step: the best move that is not yet in the book is searched and added to it. | [11](11-book-learning.md#evaluating-the-book-evaluatepositions) |
@@ -54,8 +55,9 @@ The terms used in these documents. The last column gives the chapter that explai
 | Hash table | See transposition table. | [07](07-transposition-table.md) |
 | Index | The filling of a pattern's squares (empty, own, opponent's) read as a number in base 3; it selects the pattern's weight. | [04](04-evaluation.md#patterns-and-indices) |
 | Iterative deepening | Searching to depth 1, then 2, then 3, …, until the time is used; each search orders the next. | [06](06-midgame-search.md#iterative-deepening) |
+| Lazy SMP | A parallel search in which helper threads search the same root and help only through the shared hash table. Stello's helpers run their own iterative deepening 1 + ctz(i + 1) plies ahead of the main thread; with YBWC on, half the other threads are helpers. | [06](06-midgame-search.md#lazy-smp), [26](26-phases-5-9-threads.md#phase-6-lazy-smp) |
 | Legacy square number | The C++ square number 10 × row + column, both counted from 1 (a1 = 11, h8 = 88). Used only by the C++ opening book file, which is read to import it. | [02](02-board-and-squares.md#legacy-square-numbers) |
-| Local table | The solver's small table of bounds for 6 to 12 empty squares, 1,024 slots per number of empty squares, from Egaroucid. | [08](08-endgame-solver.md#data-structures) |
+| Local table | The solver's small table of bounds for 6 to 12 empty squares, 1,024 slots per number of empty squares, from Egaroucid. Each search thread has its own. | [08](08-endgame-solver.md#data-structures) |
 | Lone empty square | An empty square with no empty neighbour; the last layers of the solver try these first. | [08](08-endgame-solver.md#5-and-6-empty-squares) |
 | `look` | The remaining search depth after the current move (the C++ convention). A search with `look` = n looks n + 1 plies ahead. | [06](06-midgame-search.md#data-structures) |
 | Master book | The opening book shipped with the apps: the text file `Stello.Net/Book/opening-book.txt`, built to `opening-book.bin`. Its positions were learned by the C++ program; its values were recalculated by Stello 2.0. | [10](10-opening-book.md#the-text-file-the-master-book), [12](12-book-tool.md#recalculating-the-master-book) |
@@ -83,17 +85,22 @@ The terms used in these documents. The last column gives the chapter that explai
 | rustup | The installer and toolchain manager of Rust; it also adds targets such as `wasm32-unknown-unknown`. | [14](14-app-integration.md#how-each-app-gets-the-engine) |
 | Score scale | The unit of the midgame search: 1/100 disc, with evaluations capped at ±64 discs. A finished game scores ±(32,600 + discs). | [04](04-evaluation.md#from-weights-to-search-scores) |
 | Selective search | Pruning where a shallow search decides whether a position is clearly outside the window and can be cut. Stello's is Multi-ProbCut. | [06](06-midgame-search.md#selective-search) |
+| Seqlock | A sequence lock: a writer makes a counter odd while it writes and even (and larger) when it is done; a reader that sees the counter change takes what it read as a miss. Each slot of Stello's hash tables has one, so a torn entry is never taken for a valid one. | [07](07-transposition-table.md#sharing-the-table-between-threads) |
 | Self-play | Book learning where the engine plays games against itself with the book and adds them to it. | [11](11-book-learning.md#self-play-playgame-and-selfplay) |
-| SharedArrayBuffer | Memory that a page and its Web Workers share; the web app writes the stop signal into 4 bytes of it, and the engine reads it with `Atomics.load`. Only available when the page is cross-origin isolated. | [14](14-app-integration.md#the-engine-in-the-browser) |
+| SharedArrayBuffer | Memory that a page and its Web Workers share. The web app writes the stop signal into 4 bytes of it, and the engine reads it with `Atomics.load`. The threaded WebAssembly engine runs all its threads on one shared memory. Only available when the page is cross-origin isolated. | [14](14-app-integration.md#the-engine-in-the-browser), [14](14-app-integration.md#threads-in-the-browser) |
 | Signature | A recorded search: position, limit, move, score, kind, depth and nodes. The 105 signatures of Stello 2.0 check both the frozen C# engine and the Rust engine. | [25](25-phases-0-4-the-engine-in-rust.md#phase-0-the-set-up-and-the-frozen-stello-20) |
 | Soft limit | The time after which no new iteration of the search is started: two thirds of the hard limit. | [09](09-time-control.md#how-the-search-uses-the-limits) |
+| Spawner | The function the thread pool starts its workers with: `std::thread` by default, and in the threaded WebAssembly engine one that hands the worker's body to a waiting Web Worker. | [06](06-midgame-search.md#the-thread-pool), [14](14-app-integration.md#threads-in-the-browser) |
+| Split point | A node whose younger brothers YBWC searches on other threads. It has a stop and a cut flag, and points to the split point above it, so a stop reaches every search below. | [06](06-midgame-search.md#ybwc) |
 | Stable disc | A disc that can never be flipped again. If the opponent's stable discs already decide the window, the solver stops at once (the stable-disc cutoff). | [08](08-endgame-solver.md#the-stable-disc-cutoff) |
 | Stage | A range of disc counts with its own pattern weights; the evaluation has 10. | [04](04-evaluation.md#stages) |
-| Stello 1, Stello 2.0, Stello 3.0 | Stello 1 is the C# port of the C++ program, the engine before 2.0, frozen in `Stello.Engine.V1` as the baseline. Stello 2.0 is the C# engine of the first 2.0 release (1 November 2026) and the final 2.0 (2 November 2026), frozen in `Stello.Engine.V2`. Stello 3.0 is the engine of the apps: the same search in Rust (`Stello.Rust`), behind `Stello.Engine`'s `SearchEngine`; the preview has one thread, the final 3.0 will add threads. | [01](01-overview.md), [16](16-the-goal-and-the-plan.md), [25](25-phases-0-4-the-engine-in-rust.md) |
+| Stello 1, Stello 2.0, Stello 3.0 | Stello 1 is the C# port of the C++ program, the engine before 2.0, frozen in `Stello.Engine.V1` as the baseline. Stello 2.0 is the C# engine of the first 2.0 release (1 November 2026) and the final 2.0 (2 November 2026), frozen in `Stello.Engine.V2`. Stello 3.0 is the engine of the apps: the same search in Rust (`Stello.Rust`), behind `Stello.Engine`'s `SearchEngine`, on one thread or more (Lazy SMP and YBWC). | [01](01-overview.md), [16](16-the-goal-and-the-plan.md), [25](25-phases-0-4-the-engine-in-rust.md), [26](26-phases-5-9-threads.md) |
+| Thread pool | `ThreadPool` in `search/pool.rs`: a fixed set of worker threads, started at the first search with more than 1 thread and kept. Each worker has its own state; tasks run in a scope that waits for them; `try_spawn` refuses at once when no worker is idle. | [06](06-midgame-search.md#the-thread-pool) |
+| Threads | The threads of one search (`SearchLimits.Threads`, 1–256), and the setting of that name in both apps. Automatic (stored as 0) is the cores − 1 on the desktop and `navigator.hardwareConcurrency` in the browser. | [15](15-gui-and-settings.md#3-threads), [14](14-app-integration.md#search-threads) |
 | Training data | Egaroucid's self-play and match games with their final scores, on which the evaluation was trained. Its terms forbid redistribution, so it is not in the repository. | [20](20-phases-0-2-the-evaluation.md) |
 | Transposition | The same position reached by different move orders. | [07](07-transposition-table.md#a-transposition) |
 | Transposition table | A table that remembers search results for positions, so a transposition is not searched twice. | [07](07-transposition-table.md) |
-| Transposition table capacity | The configurable memory size across midgame and endgame tables (65K to 16.7M entries, 3 MB to 768 MB). | [07](07-transposition-table.md#configurable-capacity-options) |
+| Transposition table capacity | The configurable size of the midgame and endgame tables together: 65,536 to 16,777,216 entries per table, 4 MB to 1,024 MB (2^bits slots × 64 bytes × 2 tables). | [07](07-transposition-table.md#the-sizes-in-the-settings) |
 | wasm-bindgen | The Rust tool and crate that let WebAssembly and JavaScript call each other; it writes the JavaScript glue of `stello-wasm`. Its command-line version must equal the crate's (0.2.130). | [14](14-app-integration.md#how-each-app-gets-the-engine) |
 | Web Worker | A browser thread without a page; the web app runs the Rust engine, compiled to WebAssembly, in one so the page stays responsive. | [14](14-app-integration.md#the-engine-in-the-browser) |
 | WebAssembly (WASM) | A portable binary format that browsers run at near-native speed. The web app's .NET code is compiled to it ahead of time, and the Rust engine is compiled to it for the worker. | [14](14-app-integration.md#the-engine-in-the-browser) |
@@ -101,8 +108,9 @@ The terms used in these documents. The last column gives the chapter that explai
 | Win/loss/draw pass | The first endgame pass, which only finds out whether the side to move wins, loses or draws; it is much faster than the exact score. | [08](08-endgame-solver.md#two-passes) |
 | Window | The pair (alpha, beta); only scores between them need to be exact. | [06](06-midgame-search.md#negamax-with-alpha-beta) |
 | Wrapper | `Stello.Engine.SearchEngine` since 3.0: a C# class with Stello 2.0's API that calls the Rust engine and owns it through a `SafeHandle`. | [01](01-overview.md#the-engine-at-a-glance), [25](25-phases-0-4-the-engine-in-rust.md#the-wrapper) |
+| YBWC | Young Brothers Wait Concept (Feldmann and others): after the first child of a node has been searched, its younger brothers may be searched in parallel. Stello splits midgame nodes whose children are searched 6 or more plies deep, and endgame nodes whose children have 16 or more empty squares. | [06](06-midgame-search.md#ybwc), [08](08-endgame-solver.md#threads-in-the-solver) |
 | X-square | The square diagonally next to a corner: b2, g2, b7, g7. | [05](05-move-ordering.md#data-structures) |
 
 ---
 
-Previous: [25 Phases 0–4: the engine in Rust](25-phases-0-4-the-engine-in-rust.md) · Next: [27 References](27-references.md)
+Previous: [26 Phases 5–9: threads](26-phases-5-9-threads.md) · Next: [28 References](28-references.md)

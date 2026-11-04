@@ -17,8 +17,8 @@ public static class AboutInfo
         "Takuto Yamana, and its endgame solver is adapted from Egaroucid's. It knows more than 11,000 opening positions, and near " +
         "the end of the game it works out the exact result and plays perfectly.",
         "The C++ original from 1992 was ported to C# and .NET 10 in 2026. Since version 3.0 the brain is written in Rust, which " +
-        "makes it two to three times faster. The same brain runs in the Windows program (WPF) and in the browser (Blazor " +
-        "WebAssembly), where it is compiled to WebAssembly.",
+        "makes it two to three times faster, and it can think on several threads at once (the Threads setting). The same " +
+        "brain runs in the Windows program (WPF) and in the browser (Blazor WebAssembly), where it is compiled to WebAssembly.",
         "Stello is free software under the GNU General Public License version 3 (GPL-3.0-only). The source code is at " +
         "https://github.com/cjp-dev/Stello.",
     ];

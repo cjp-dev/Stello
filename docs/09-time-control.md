@@ -102,10 +102,12 @@ At about 10 million nodes per second over whole games ([Stello 3.0 against 2.0 a
 
 The engine reads cancel and Move Now through the `StopSignal` trait (`is_cancelled`, `is_move_now`), at the start and at every abort check:
 
-- **On the desktop and in the tools** they are `SearchSignals`, two atomic flags that any thread may set. The C# `SearchEngine` makes one pair per engine and clears them before each search; it registers its `cancellationToken` and `moveNowToken` so that cancelling a token sets the flag at once (`stello_signals_cancel`, `stello_signals_move_now` in the C ABI). The search itself runs on the calling thread.
+- **On the desktop and in the tools** they are `SearchSignals`, two atomic flags that any thread may set. The C# `SearchEngine` makes one pair per engine and clears them before each search; it registers its `cancellationToken` and `moveNowToken` so that cancelling a token sets the flag at once (`stello_signals_cancel`, `stello_signals_move_now` in the C ABI). The search's main thread is the calling thread.
 - **In the browser** the engine runs in a Web Worker, which cannot receive messages while the search runs. The page writes the signal into a `SharedArrayBuffer` (1 Move Now, 2 cancel), and the WebAssembly engine reads it with `Atomics.load` at every abort check (`HostSignal` in the WebAssembly crate).
 
-The clock is `system_clock` (`std::time::Instant`). WebAssembly has no clock in Rust's standard library, so the web build sets `performance.now()` with `SearchEngine::set_clock`. How each app loads the engine is in [chapter 14](14-app-integration.md).
+**With more than 1 thread** ([chapter 06](06-midgame-search.md#threads)) only the main thread reads these signals and keeps the time. The other threads stop through flags of their own: a Lazy SMP helper has no time limit and stops when the main thread's iterations end, and a search split off by YBWC stops when its split point, or one above it, is stopped (`SplitStop`). A split-off search also copies the main search's start and hard limit and checks them itself. While the main thread waits for its brothers at a split, it checks cancel, Move Now and the hard limit about every millisecond, and stops the brothers if it must. In the tests, Move Now and cancel stop 8 threads in under 200 ms; in release, the worst overshoot of a 150 ms move with 8 threads was 4.9 ms ([chapter 26](26-phases-5-9-threads.md#the-gate-of-phase-7)).
+
+The clock is `system_clock` (`std::time::Instant`). WebAssembly has no clock in Rust's standard library, so the web build sets one with `SearchEngine::set_clock`: `performance.timeOrigin + performance.now()`. `performance.now()` alone counts from each worker's own start, and the threads of the threaded package, each a Web Worker, compare their time with the search's start. How each app loads the engine is in [chapter 14](14-app-integration.md).
 
 ### Move Now
 

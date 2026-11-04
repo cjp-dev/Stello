@@ -8,7 +8,7 @@ This chapter describes the endgame solver of Stello 3.0. It is Stello 2.0's solv
 
 Near the end of the game the engine stops guessing. The **endgame solver** searches every line to the end of the game and computes the true result with perfect play by both sides, as a final disc difference. It works in two passes: first it only finds out whether the side to move **wins, loses or draws**, then, if there is time, the **exact score**.
 
-The solver is adapted from Egaroucid, through Stello's C# port of it ([chapter 18](18-the-egaroucid-port.md)). It is a chain of routines, one for each range of empty squares. The last 13 empty squares are searched by Egaroucid's code, adapted to Stello's bitboards: a small local table, ordering by the opponent's mobility and by parity, a cutoff from stable discs, and special code for the last 4 squares. Above 13 empty squares the solver uses Stello's endgame transposition table, enhanced transposition cutoffs, and move ordering by mobility and Stello's pattern evaluation. It solves the FFO positions #40–49 in 26 seconds on one thread.
+The solver is adapted from Egaroucid, through Stello's C# port of it ([chapter 18](18-the-egaroucid-port.md)). It is a chain of routines, one for each range of empty squares. The last 13 empty squares are searched by Egaroucid's code, adapted to Stello's bitboards: a small local table, ordering by the opponent's mobility and by parity, a cutoff from stable discs, and special code for the last 4 squares. Above 13 empty squares the solver uses Stello's endgame transposition table, enhanced transposition cutoffs, and move ordering by mobility and Stello's pattern evaluation. It solves the FFO positions #40–49 in 26 seconds on one thread, and in 7.8 seconds on 8 threads, which share the work of a node once its first move has been searched ([Threads in the solver](#threads-in-the-solver)).
 
 ## Data structures
 
@@ -203,6 +203,47 @@ In this position `solve_shallow` tries a1, (a6), b6, (b8), g1 and h1; a6 and b8 
 - **Stop** (cancel) ends the search with `SearchError::Cancelled` and no result; the C# wrapper turns it into `OperationCanceledException` ([chapter 09](09-time-control.md)). **Move Now** or the hard time limit unwinds the search with `Abort::Stop` (an `Err` passed up with `?`), which `Searcher::run` catches; it returns the best move found so far. If that happens in pass 1, the result is the midgame move or a win or draw found so far; in pass 2 it is the result of pass 1, or a better exact move found so far.
 - **In the web app** the engine is the Rust code compiled to WebAssembly, in a Web Worker ([engine-worker.js](../Stello.Net/Stello.Web/wwwroot/js/engine-worker.js)) that cannot receive messages while it searches ([chapter 14](14-app-integration.md)). The page sets a signal in a `SharedArrayBuffer` instead, and the engine's stop signal in [stello-wasm/src/lib.rs](../Stello.Rust/stello-wasm/src/lib.rs) (`HostSignal`) reads it with `Atomics.load` at each of these checks, so Stop and Move Now answer within about a millisecond even during a long solve ([findings](../Plans/making-stello-3-findings.md#gate-p3-release-aot-publish-in-headless-chromium-served-with-coopcoep-and-brotli)). Its `ProgressPoster` forwards a report to the page at most every 100 ms, unless the depth or the best move changed.
 
+## Threads in the solver
+
+With more than 1 thread the solver splits its nodes over the threads with YBWC, as the midgame search does ([chapter 06](06-midgame-search.md#ybwc)). The machinery is the same `Searcher::split`; only the nodes that split and the way a child is searched are the solver's own.
+
+- **The tables.** All threads share the endgame transposition table ([chapter 07](07-transposition-table.md#sharing-the-table-between-threads)). Each thread has its own local table for 6 to 12 empty squares, in its `ThreadState`, so the many small nodes near the end never touch shared memory. `clear_hash` clears the local tables of all threads.
+- **Where nodes split.** `end_window` splits after its first child ([search.rs](../Stello.Rust/stello-core/src/endgame/search.rs#L223)); `end_deep` after the first child it searched, where the stored best move, searched first, counts ([search.rs](../Stello.Rust/stello-core/src/endgame/search.rs#L379)). It counts only if it raised the best score, though: when ETC has already given a better bound from a child that fails low, a stored move that does not beat it is not counted, and the node splits one move later. That costs only parallelism, not correctness. Both split only when the children have 16 or more empty squares (`YBWC_END_MIN_EMPTIES`, [engine.rs](../Stello.Rust/stello-core/src/search/engine.rs#L256)). Egaroucid has the same kind of limit; here 15 and 16 were the fastest on FFO #40–49 with 8 and 16 threads. Below it, a node's subtree is too small to be worth a thread.
+- **The children.** The brothers are handed out best first, in the solver's own order, and the moves `end_deep` already decided (the stored best move, and the children that ETC showed to fail low) are left out (`end_children`). A brother is first searched with a null window at α through `end_null`, which chooses the layer by the number of empty squares. A fail high at an `end_window` node that is below β is searched again with `end_window`, from the null window's lower bound up to β, as the single-threaded PVS does (`EndgameChild`, [search.rs](../Stello.Rust/stello-core/src/endgame/search.rs#L900)).
+- **The root.** `solve_root` still searches the root moves one after another; the splits begin in `end_window` one ply below.
+- **No Lazy SMP in the solver.** The midgame helpers stop when the midgame iterations end, so every worker is free for YBWC in both passes. Helpers that solve the same root were measured: with YBWC on, 3 of them made FFO #40–49 with 8 threads take 11.2 s instead of 8.0 s, because they take the workers that YBWC uses better. With YBWC off (`SearchOptions::ybwc`, kept to compare with phase 6), up to 3 helpers (`SOLVE_HELPERS`, [engine.rs](../Stello.Rust/stello-core/src/search/engine.rs#L240)) solve each pass with the same window, their root moves rotated so that they begin with different moves. Their results are not used; they fill the endgame table. More than 3 made it worse: with 7, FFO #49 took 15 s instead of 8.8 s, because they filled the table with less useful entries.
+- **Exact with any number of threads.** The threads only change which thread searches what; every result is still proved. FFO #40–49 with 2 to 16 threads, and 500 random endgames with 8 and with 16 threads, gave every score and move equal to Stello 2.0's (the random endgames in 180 s and 150 s, against 974 s for 2.0).
+
+FFO #40–49 in solve mode, through the C# wrapper, every score and move correct (phase 7, [findings](../Plans/making-stello-3-findings.md#numbers-through-the-wrapper-machine-idle)); Egaroucid's own C++ solver (hash bits 21) on the same machine for comparison:
+
+| Threads | Stello 3.0 | Speed-up | Lazy SMP alone (YBWC off) | Egaroucid C++ | Speed-up |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 25.6 s | 1.00× | | 11.46 s | 1.00× |
+| 4 | 12.9 s | 1.98× | 24.3 s | 4.39 s | 2.61× |
+| 8 | 7.8 s | 3.29× | 23.5 s | 2.76 s | 4.15× |
+| 16 | 6.45 s | 3.97× | 23.7 s | 2.36 s | 4.86× |
+
+Egaroucid gains more from threads; part of the gap may be that it also splits at the root ([chapter 26](26-phases-5-9-threads.md#what-comes-next)). The C# port of Egaroucid is single-threaded.
+
+The final measurement of 3.0, position by position (3 November 2026, one pass each, results [1 thread](../Plans/benchmark-results/v3final-solve-bench-40-49-t1.json), [8](../Plans/benchmark-results/v3final-solve-bench-40-49-t8.json), [24](../Plans/benchmark-results/v3final-solve-bench-40-49-t24.json)):
+
+| Position | Empty squares | 1 thread | 8 threads | 24 threads |
+|---|---:|---:|---:|---:|
+| #40 | 20 | 0.23 s | 0.10 s | 0.10 s |
+| #41 | 22 | 0.28 s | 0.08 s | 0.08 s |
+| #42 | 22 | 0.44 s | 0.16 s | 0.16 s |
+| #43 | 23 | 0.91 s | 0.20 s | 0.25 s |
+| #44 | 23 | 0.30 s | 0.11 s | 0.14 s |
+| #45 | 24 | 6.30 s | 1.63 s | 1.35 s |
+| #46 | 24 | 1.19 s | 0.34 s | 0.35 s |
+| #47 | 25 | 0.66 s | 0.25 s | 0.29 s |
+| #48 | 25 | 6.77 s | 2.23 s | 1.53 s |
+| #49 | 26 | 8.77 s | 2.70 s | 2.31 s |
+| **Total** | | **25.8 s** | **7.81 s** (3.30×) | **6.56 s** (3.93×) |
+| Nodes per second | | 42.6 M | 205.8 M | 260.5 M |
+
+The threads search more nodes than 1 thread (FFO #49: 382 M with 1, 599 M with 8), since a brother handed out before a cutoff is found is wasted work; the speed-up comes from searching them at the same time. The small positions gain least: at 20–23 empty squares few nodes have children with 16 or more.
+
 ## Worked examples
 
 ### Ordering at 7 to 10 empty squares
@@ -265,14 +306,16 @@ How the solver was developed, and the ideas that were tried and dropped, are in 
 - **Fail-soft everywhere.** A null-window search returns the best bound it found, not just α or α + 1. That makes the stored bounds tighter, and lets pass 2 start from the bound of pass 1.
 - **When to start solving** is a fixed rule: the midgame iterations must reach 7 empty squares from the end. Starting a little earlier or later, and a selective (probabilistic) solve as in Egaroucid, were measured and gave no gain.
 - **The same nodes as Stello 2.0.** The Rust solver visits exactly the nodes of the C# solver it was ported from, including its quirks: `end_window` and `end_deep` count an evaluation at a final score but the layers below do not, `ordering_value` counts a node without an abort check, and `last4` … `last1` count each pass as a node. So the recorded 2.0 searches and `solve-bench --compare` check every change, and speed work is kept only when the nodes stay the same ([chapter 25](25-phases-0-4-the-engine-in-rust.md)).
+- **Threads split, they do not race.** In the solver every thread works on a different part of the same proof (YBWC), instead of solving the same position side by side (Lazy SMP). Side-by-side solves mostly repeat work and fill the shared table; splits make FFO #40–49 3.3 times faster with 8 threads.
 - **Licence.** The adapted files carry Egaroucid's copyright and are GPL-3.0, as noted in their module comments.
 
 ## Where in the code
 
 | File | Main members |
 |---|---|
-| [search/engine.rs](../Stello.Rust/stello-core/src/search/engine.rs) | The solver part of `Searcher::iterate`, `ENDGAME_DISTANCE`, `solve_root`, `final_score`, `move_to_front`, `check_abort`, `report`, `SearchEngine::clear_hash` |
-| [endgame/search.rs](../Stello.Rust/stello-core/src/endgame/search.rs) | `solve_child`, `end_null`, `end_window`, `end_deep`, `ordering_value`, `end_local`, `end_simple`, `end_fast`, `count_end_node`, `solve_shallow`, `solve_last2`, `solve_last`, `stability_cut`, `fill_end_moves`, `swap_next_best`, `EndMove`, `EndgameState`, the layer limits and the ordering weights |
+| [search/engine.rs](../Stello.Rust/stello-core/src/search/engine.rs) | The solver part of `Searcher::iterate`, `ENDGAME_DISTANCE`, `solve_root`, `final_score`, `move_to_front`, `check_abort`, `report`, `SearchEngine::clear_hash`; for threads [`SOLVE_HELPERS`](../Stello.Rust/stello-core/src/search/engine.rs#L240), [`YBWC_END_MIN_EMPTIES`](../Stello.Rust/stello-core/src/search/engine.rs#L256), [`solve_iteration`](../Stello.Rust/stello-core/src/search/engine.rs#L667) |
+| [search/ybwc.rs](../Stello.Rust/stello-core/src/search/ybwc.rs), [search/pool.rs](../Stello.Rust/stello-core/src/search/pool.rs) | `Searcher::split`, `SplitChild`, and the thread pool ([chapter 06](06-midgame-search.md#threads)) |
+| [endgame/search.rs](../Stello.Rust/stello-core/src/endgame/search.rs) | `solve_child`, `end_null`, `end_window`, `end_deep` (with their splits), `EndgameChild`, `end_children`, `ordering_value`, `end_local`, `end_simple`, `end_fast`, `count_end_node`, `solve_shallow`, `solve_last2`, `solve_last`, `stability_cut`, `fill_end_moves`, `swap_next_best`, `EndMove`, `EndgameState`, the layer limits and the ordering weights |
 | [endgame/last.rs](../Stello.Rust/stello-core/src/endgame/last.rs) | `last4`, `last3`, `last2`, `last1`, `last_flip_count`, `LAST_LINES`, `LAST_FLIP_COUNTS` |
 | [endgame/bits.rs](../Stello.Rust/stello-core/src/endgame/bits.rs) | `flips`, `RAYS`, `legal_moves`, `lone_empties`, `parity`, `weighted_moves`, `moves_corners_twice`, `potential_mobility`, `score_with_empties`, `score_with_odd_empties`, `FLIP_NEIGHBOURS`, `QUADRANT_BIT`, the stability thresholds, `LEGAL_UNDEFINED` |
 | [endgame/stable.rs](../Stello.Rust/stello-core/src/endgame/stable.rs) | `stable::of`: the stable edge tables, full lines, and growing from stable discs; `stable::init` |
@@ -290,6 +333,7 @@ How the solver was developed, and the ideas that were tried and dropped, are in 
 The Rust tests (`cargo test` in `Stello.Rust`):
 
 - [tests/search.rs](../Stello.Rust/stello-core/tests/search.rs): the recorded Stello 2.0 solves of FFO #40–44 (move, score, kind, depth and nodes, from [stello-v2-signatures.txt](../Stello.Net/Stello.Engine.Tests/Data/stello-v2-signatures.txt)); 120 random endings with 2 to 11 empty squares, where the solver's score and the score after its move agree with a plain minimax to the end; Move Now and cancel from another thread during the solve of FFO #49;
+- [tests/threads.rs](../Stello.Rust/stello-core/tests/threads.rs): FFO #40–44 with 2, 4 and 8 threads give the published exact score and a move with that score; random endings with 14–20 empty squares, solved with 4 threads on one engine without clearing its tables, score as with 1 thread; endings with 19–21 empty squares, where the solver splits, are exact with 3, 8 and 16 threads on small tables, with Multi-ProbCut on and off in the midgame part; with YBWC off the solves are exact too; Move Now and cancel stop a solve of FFO #49 with 8 threads within 200 ms; the hand-over from the midgame to the solver with 4 threads gives the single-threaded win/loss/draw or exact result; and a unit test in [search/engine.rs](../Stello.Rust/stello-core/src/search/engine.rs) has 8 threads solve different positions at the same time on one engine's small tables, with the single-threaded scores;
 - [tests/parity.rs](../Stello.Rust/stello-core/tests/parity.rs): the solver's `flips`, `legal_moves`, `potential_mobility`, `lone_empties`, `parity` and the ordering value at depth 0 equal the C# values written by `Stello.Engine.V2` for 6,214 positions;
 - unit tests: `solve_shallow` gives the exact score and correct bounds on 300 random endings ([endgame/search.rs](../Stello.Rust/stello-core/src/endgame/search.rs)); `last_flip_count` equals the count of `flips` on 20,000 boards × 64 squares ([endgame/last.rs](../Stello.Rust/stello-core/src/endgame/last.rs)); `score_with_empties` and `score_with_odd_empties` give the empty squares to the winner ([endgame/bits.rs](../Stello.Rust/stello-core/src/endgame/bits.rs)); corners and full edges are stable ([endgame/stable.rs](../Stello.Rust/stello-core/src/endgame/stable.rs)).
 
@@ -314,7 +358,8 @@ The C# tests in [EndgameTests.cs](../Stello.Net/Stello.Engine.Tests/EndgameTests
 - [The FFO endgame test suite – radagast.se](http://radagast.se/othello/ffotest.html): the positions, their correct scores and moves.
 - [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html): the "Endgame" section explains why move ordering decides everything.
 - [Enhanced Transposition Cutoff – Chess Programming Wiki](https://www.chessprogramming.org/Enhanced_Transposition_Cutoff).
-- [Glossary](26-glossary.md) and [References](27-references.md).
+- [Young Brothers Wait Concept – Chess Programming Wiki](https://www.chessprogramming.org/Young_Brothers_Wait_Concept), and [chapter 26](26-phases-5-9-threads.md) for how the threads were added to the solver and measured.
+- [Glossary](27-glossary.md) and [References](28-references.md).
 
 ---
 

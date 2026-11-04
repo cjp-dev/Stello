@@ -4,7 +4,7 @@
 
 ## In short
 
-The engine is a plain library: it knows nothing about windows, threads, clocks or files. Both apps, the WPF desktop app and the web app, drive it from one class, `MainViewModel` in `Stello.App`. It runs a **game loop** that plays passes and computer moves until the human is to move. It runs every search and every book-learning job through an **engine host**: on a background task in the desktop app, in a Web Worker in the browser, so the window stays responsive. The search itself is Stello's Rust engine in both apps: a **native library** that the desktop app calls through a C ABI, and a **WebAssembly module** in the browser's worker. It **stops the computer** before any command that changes the game. It turns the user's **settings** into `SearchLimits` and keeps the **computer's clock**. It also decides where the **opening book** is loaded from and saved to; the trained **evaluation** is built into the Rust engine itself. This chapter explains these parts; the layout of the windows and pages is in chapter 15.
+The engine is a plain library: it knows nothing about windows, threads, clocks or files. Both apps, the WPF desktop app and the web app, drive it from one class, `MainViewModel` in `Stello.App`. It runs a **game loop** that plays passes and computer moves until the human is to move. It runs every search and every book-learning job through an **engine host**: on a background task in the desktop app, in a Web Worker in the browser, so the window stays responsive. The search itself is Stello's Rust engine in both apps: a **native library** that the desktop app calls through a C ABI, and a **WebAssembly module** in the browser's worker. The search may use **several threads** (the Threads setting, chapter 15): on the desktop the native library starts them itself; in the browser a second, threaded WebAssembly package runs them as extra Web Workers on a shared memory. It **stops the computer** before any command that changes the game. It turns the user's **settings** into `SearchLimits` and keeps the **computer's clock**. It also decides where the **opening book** is loaded from and saved to; the trained **evaluation** is built into the Rust engine itself. This chapter explains these parts; the layout of the windows and pages is in chapter 15.
 
 ## Data structures
 
@@ -16,13 +16,13 @@ The state that matters for the engine:
 |---|---|
 | `_game` | The `Game` (chapter 13), including which colour the human plays (`Human`) |
 | `GameMode` | `HumanVsComputer` (the default, the human plays Black), `ComputerVsHuman` or `HumanVsHuman` (two players); chosen in the web app's Game menu (`SetGameMode`). The enum also has `ComputerVsComputer`, which no menu offers |
-| `_engine` | The `IEngineHost` that runs the searches and owns the opening book. In the desktop app it is `LocalEngineHost`, with the game's `ComputerPlayer` (its `SearchEngine`, the book and the `BookTracker`, chapter 10); in the browser it is `WebEngineHost`, which keeps the book and a `ComputerPlayer` for the book moves on the page and sends only the searches to the worker |
+| `_engine` | The `IEngineHost` that runs the searches and owns the opening book. In the desktop app it is `LocalEngineHost`, with the game's `ComputerPlayer` (its `SearchEngine`, the book and the `BookTracker`, chapter 10); in the browser it is `WebEngineHost`, which keeps the book and a `ComputerPlayer` for the book moves on the page and sends only the searches to the worker. Its `Threads` (a `ThreadCounts`) says how many threads the device offers and what Automatic means there ([below](#search-threads)) |
 | `IsThinking`, `IsLearning` | True while a search or a learning job runs; they enable and disable commands |
 | `Idle` | The task of the running game loop; it completes when the human is to move or the game is over |
 | `Learning` | The task of the running learning job |
 | `_cancel`, `_moveNow`, `_learningCancel` | The cancellation sources of the current search (two tokens, chapter 09) and of learning |
 | `_searchId` | A number that goes up with each computer move, to recognise old progress reports |
-| `Settings` | The `GameSettings`: mode, depth, seconds per move, minutes per game, opening book toggle, transposition table capacity |
+| `Settings` | The `GameSettings`: mode, depth, seconds per move, minutes per game, opening book toggle, transposition table capacity, threads |
 | `_blackTimeLeft`, `_whiteTimeLeft`, `_timeLeftAtPly` | The player clocks, and their snapshot pairs before each ply so undo restores consumed time |
 | `IsGameModified`, `IsStatusModified` | `IsGameModified` is set by Back against the computer, Switch Sides, a settings change after the first move and continuing after a timeout, and cleared by New Game, Open and a new game mode; `IsStatusModified` is `IsGameModified` in a game against the computer (chapter 15) |
 | `Analysis` | The `AnalysisViewModel` that shows `SearchInfo` and `SearchResult` (chapter 09) |
@@ -59,7 +59,7 @@ Settings and the book are written to a temporary file first and then renamed ove
 
 | Data | Source in the repository | How it gets into the apps |
 |---|---|---|
-| The search engine (chapters 03–09) | [Stello.Rust](../Stello.Rust) (crates `stello-core`, `stello-ffi`, `stello-wasm`) | Built by Cargo during the .NET build (next section): the native library `stello_engine.dll` / `libstello_engine.so` next to the desktop app, the tools and the tests, and the WebAssembly module in the web app's `wwwroot/engine/`. Neither is committed |
+| The search engine (chapters 03–09) | [Stello.Rust](../Stello.Rust) (crates `stello-core`, `stello-ffi`, `stello-wasm`) | Built by Cargo during the .NET build (next section): the native library `stello_engine.dll` / `libstello_engine.so` next to the desktop app, the tools and the tests, and two WebAssembly packages in the web app: the single-threaded one in `wwwroot/engine/` and the threaded one in `wwwroot/engine-mt/` ([Threads in the browser](#threads-in-the-browser)). None of them is committed |
 | The evaluation weights (chapter 04) | [Stello.Net/Book/stello-eval.bin](../Stello.Net/Book/stello-eval.bin) | `stello-core` embeds it with `include_bytes!` (`BUILT_IN_FILE` in [weights.rs](../Stello.Rust/stello-core/src/eval/weights.rs)), so the native library and the WebAssembly module carry it, with no file to load. The C# evaluation in `Stello.Engine` is not embedded; the trainer and the benchmark tool, which use it, copy the file to their `Data` folder |
 | The opening book (chapter 10) | [Stello.Net/Book/opening-book.bin](../Stello.Net/Book/opening-book.bin), built by the book tool (chapter 12) | `Stello.Net.csproj` links it as `Data\OPENING`, copied next to the program. `Stello.Web.csproj` copies it to `wwwroot/data/OPENING.bin` before every build (target `CopyOpeningBook`; the copy is git-ignored), because the development server does not serve linked files |
 | This documentation | `docs/**` | `Stello.Web.csproj` copies it to `wwwroot/content/docs/` (target `CopyDocs`), where the web app's Docs pages show it (Help menu, chapter 15) |
@@ -71,18 +71,29 @@ The web app's .NET code (the view models, the book, the game record) is publishe
 
 | | Desktop app, tools and tests | Web app |
 |---|---|---|
-| Crate | `stello-ffi`, a C ABI library (`cdylib`) named `stello_engine` | `stello-wasm`, a [wasm-bindgen](27-references.md#25-phases-04-the-engine-in-rust) package (`--target web`) |
-| MSBuild target | `BuildStelloNative` in [Stello.Engine.csproj](../Stello.Net/Stello.Engine/Stello.Engine.csproj), before every build of `Stello.Engine` | `BuildStelloWasm` in [Stello.Web.csproj](../Stello.Net/Stello.Web/Stello.Web.csproj), before every build of the web app |
-| What Cargo builds | `cargo build --release -p stello-ffi`, into `Stello.Rust/target/<os>` (`linux`, `windows`: each OS has its own folder, because the repository folder is shared between the Linux sandbox and Windows) | `cargo build --release --target wasm32-unknown-unknown -p stello-wasm`, then `wasm-bindgen --target web --no-typescript` writes `stello_wasm.js` and `stello_wasm_bg.wasm` to `wwwroot/engine/` (git-ignored) |
-| When | Only when a Rust source, a Cargo file or `stello-eval.bin` is newer than the library (`StelloRustSource`) | The same (`StelloWasmSource`) |
-| Where it goes | The library is a `None` item of `Stello.Engine`, so it is copied to the output of every project that references it: the WPF app, the tools and the tests. The web app removes it from its output and its publish (`RemoveStelloNativeEngine`) | The worker loads it from `engine/stello_wasm_bg.wasm` |
-| How it is loaded | `[LibraryImport("stello_engine")]` in [Native/StelloNative.cs](../Stello.Net/Stello.Engine/Native/StelloNative.cs), from the application's folder, at the first search. `EnsureLoaded` checks the ABI version once and explains a missing library | `engine-worker.js` imports the module and calls `init` |
-| Switched off with | `-p:StelloNativeEngine=false` (a build that never searches; the web app's publish uses it) | `-p:StelloWasmEngine=false` (a check of the C# code without Rust) |
+| Crate | `stello-ffi`, a C ABI library (`cdylib`) named `stello_engine` | `stello-wasm`, a [wasm-bindgen](28-references.md#25-phases-04-the-engine-in-rust) package (`--target web`) |
+| MSBuild target | `BuildStelloNative` in [Stello.Engine.csproj](../Stello.Net/Stello.Engine/Stello.Engine.csproj), before every build of `Stello.Engine` | `BuildStelloWasm` in [Stello.Web.csproj](../Stello.Net/Stello.Web/Stello.Web.csproj), before every build of the web app, then `BuildStelloWasmThreads` ([line 171](../Stello.Net/Stello.Web/Stello.Web.csproj#L171)) for the threaded package |
+| What Cargo builds | `cargo build --release -p stello-ffi`, into `Stello.Rust/target/<os>` (`linux`, `windows`: each OS has its own folder, because the repository folder is shared between the Linux sandbox and Windows) | `cargo build --release --target wasm32-unknown-unknown -p stello-wasm`, then `wasm-bindgen --target web --no-typescript` writes `stello_wasm.js` and `stello_wasm_bg.wasm` to `wwwroot/engine/` (git-ignored). The threaded package is the same crate built with a pinned nightly into `target/<os>-wasm-mt` and packaged into `wwwroot/engine-mt/` (git-ignored) |
+| When | Only when a Rust source, a Cargo file or `stello-eval.bin` is newer than the library (`StelloRustSource`) | The same (`StelloWasmSource`), for each package |
+| Where it goes | The library is a `None` item of `Stello.Engine`, so it is copied to the output of every project that references it: the WPF app, the tools and the tests. The web app removes it from its output and its publish (`RemoveStelloNativeEngine`) | Both packages are content of the web app (`IncludeStelloWasm`). The worker loads one of them: `engine/` or `engine-mt/` |
+| How it is loaded | `[LibraryImport("stello_engine")]` in [Native/StelloNative.cs](../Stello.Net/Stello.Engine/Native/StelloNative.cs), from the application's folder, at the first search. `EnsureLoaded` checks once that the library has ABI version 3 ([`AbiVersion`](../Stello.Net/Stello.Engine/Native/StelloNative.cs#L16)) and explains a missing library or another version | `engine-worker.js` imports the package and calls `init` |
+| Threads | The library starts its own threads (`std::thread`) at the first search with more than 1 thread ([chapter 06](06-midgame-search.md#the-thread-pool)) | The threaded package gets its threads from Web Workers that the engine worker starts ([Threads in the browser](#threads-in-the-browser)) |
+| Switched off with | `-p:StelloNativeEngine=false` (a build that never searches; the web app's publish uses it) | `-p:StelloWasmEngine=false` (a check of the C# code without Rust); `-p:StelloWasmThreads=false` builds only the single-threaded package |
 
 The toolchain:
 
 - **For the desktop app on Windows:** Rust from [rustup](https://rustup.rs) with its default toolchain, `x86_64-pc-windows-msvc`, which needs Visual Studio's C++ build tools for the linker (the "Desktop development with C++" workload). The DLL links the C runtime statically (`+crt-static` in [.cargo/config.toml](../Stello.Rust/.cargo/config.toml)), so the app needs no Visual C++ redistributable. Cargo is found on the PATH or in `%USERPROFILE%\.cargo\bin`, or the property `StelloCargo` gives its path; without it, or without the linker, the build stops with a message that says what to install. A Linux build can check the Windows DLL with `-p:StelloCargoTarget=x86_64-pc-windows-gnu` and MinGW.
-- **For the web app:** also the target (`rustup target add wasm32-unknown-unknown`) and `wasm-bindgen-cli` of exactly the version of the `wasm-bindgen` crate, 0.2.130 (`cargo install wasm-bindgen-cli --version 0.2.130 --locked`). `BuildStelloWasm` checks all three and names the missing one. The deploy workflow, [azure-static-web-apps.yml](../.github/workflows/azure-static-web-apps.yml), installs Rust stable with the target and the prebuilt wasm-bindgen 0.2.130, and publishes with `-p:StelloNativeEngine=false`.
+- **For the web app:** also the target (`rustup target add wasm32-unknown-unknown`) and `wasm-bindgen-cli` of exactly the version of the `wasm-bindgen` crate, 0.2.130 (`cargo install wasm-bindgen-cli --version 0.2.130 --locked`). `BuildStelloWasm` checks all three and names the missing one.
+- **For the threaded web package:** the nightly Rust named by the property `StelloWasmNightly` (`nightly-2026-11-02`, [Stello.Web.csproj line 81](../Stello.Net/Stello.Web/Stello.Web.csproj#L81)) with its standard library source: `rustup toolchain install nightly-2026-11-02 --profile minimal --component rust-src`. It is pinned in the project, not in a `rust-toolchain` file, so the rest of the workspace stays on stable. The property `StelloWasmThreads` decides what happens without it:
+
+  | `StelloWasmThreads` | Without the nightly or rust-src | Used by |
+  |---|---|---|
+  | `auto` (the default) | A warning with the rustup command; only the single-threaded package is built, and an old `engine-mt` folder is removed. A Windows build without the nightly still works | Local builds |
+  | `required` | An error | The deploy workflow |
+  | `false` | The threaded package is not built, and nothing is checked | Builds that do not need it |
+
+  The check runs `rustc +nightly-2026-11-02 --print sysroot` with `RUSTUP_AUTO_INSTALL=0`, so a build never downloads a toolchain.
+- **The deploy workflow**, [azure-static-web-apps.yml](../.github/workflows/azure-static-web-apps.yml), installs Rust stable with the target ([line 41](../.github/workflows/azure-static-web-apps.yml#L41)), the pinned nightly with `rust-src` ([line 49](../.github/workflows/azure-static-web-apps.yml#L49); its version must equal `StelloWasmNightly`) and the prebuilt wasm-bindgen 0.2.130, and publishes with `-p:StelloNativeEngine=false -p:StelloWasmThreads=required` ([line 69](../.github/workflows/azure-static-web-apps.yml#L69)), so the live site always has both packages.
 
 ## Algorithm
 
@@ -162,6 +173,26 @@ sequenceDiagram
 
 - **Book learning** (chapter 11) runs the same way in `LearnAsync`: `StopAsync`, then `IsLearning = true` (which disables the game commands), then `IEngineHost.LearnAsync`, which runs the learning job on `Task.Run` with its own `SearchEngine` and reports a `Progress<BookLearningProgress>` to the status panel. The book is shared with the game's `ComputerPlayer`, which is safe because the game loop does not run while learning runs. When the job ends (finished, stopped or failed), the book is saved, the `BookTracker` is reset, a summary is shown, and the game loop starts again.
 
+### Search threads
+
+The background task above is the thread the app sees. The search itself may run on more threads: the Rust engine's own (Lazy SMP and YBWC, [chapter 06](06-midgame-search.md#threads)). How many it uses comes from the Threads setting (chapter 15) and travels with the limits of each search:
+
+1. **The device.** `IEngineHost.Threads` is a [`ThreadCounts`](../Stello.Net/Stello.App/Models/ThreadCounts.cs): `Device`, the most the setting offers, and `Default`, what Automatic uses. On the desktop (`ThreadCounts.ForThisProcess`) these are `Environment.ProcessorCount` and one fewer (at least 1), so one thread is left for the app. In the browser (`ThreadCounts.ForBrowser`, made in [Program.cs](../Stello.Net/Stello.Web/Program.cs#L18) from `navigator.hardwareConcurrency`) both are the browser's count, because the page's own thread is not one of the engine's.
+2. **The setting.** `GameSettings.ThreadsFor(counts)` ([GameSettings.cs](../Stello.Net/Stello.App/Models/GameSettings.cs#L66)) gives the device's default for Automatic (stored as 0), or the chosen number capped at the device's.
+3. **The limits.** `ComputerMoveAsync` passes it to `GameSettings.ToLimits` ([MainViewModel.cs](../Stello.Net/Stello.App/ViewModels/MainViewModel.cs#L702)), which sets `SearchLimits.Threads`: an `init` property, 1 to `SearchLimits.MaxThreads` (256), default 1, checked when it is set ([SearchLimits.cs](../Stello.Net/Stello.Engine/SearchLimits.cs#L56)). Only the Rust engine reads it; the frozen Stello 1 and 2.0 engines always search with 1.
+4. **The desktop.** `LocalEngineHost` → `ComputerPlayer.ChooseMove` → `SearchEngine.Search`, as for every search. The wrapper calls `stello_engine_set_threads` only when the number differs from the last one it set ([SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs#L108)). The Rust engine starts its worker threads at the first search with more than 1 and keeps them for the next searches with the same number. Book learning makes its own `SearchEngine` with the default limits, so it stays on 1 thread.
+5. **The browser.** `WebEngineHost` writes the threads into the `MoveRequest`, and the worker caps them at what its package and the device can run ([below](#threads-in-the-browser)).
+
+The C ABI has version 3 (`ABI_VERSION` in [stello-ffi](../Stello.Rust/stello-ffi/src/lib.rs#L57)). Each version only adds functions; the earlier ones are unchanged:
+
+| ABI version | Adds | C# |
+|---|---|---|
+| 1 | The engine, the signals and the search (phase 2) | `StelloNative`'s first functions |
+| 2 | `stello_engine_set_threads(engine, threads)`: 1–256, else `STELLO_INVALID_ARGUMENT` ([line 254](../Stello.Rust/stello-ffi/src/lib.rs#L254)) | `SetThreads`, called from `Search` when `SearchLimits.Threads` changes |
+| 3 | `stello_engine_set_ybwc(engine, ybwc)`: YBWC on (the default) or off, for comparisons ([line 274](../Stello.Rust/stello-ffi/src/lib.rs#L274)) | `SetYbwc`, called once when the engine is made if `SearchOptions.Ybwc` is false ([SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs#L206)) |
+
+The wrapper requires exactly this version ([`AbiVersion`](../Stello.Net/Stello.Engine/Native/StelloNative.cs#L16) = 3). Progress and the iteration callback still run on the thread that called `Search`, with the nodes of all threads. The hash tables now take 64 bytes per slot, one cache line with the slot's lock ([chapter 07](07-transposition-table.md)), so the wrapper tells the .NET garbage collector about $2 \times 64 \times 2^{\text{hashBits}}$ bytes of native memory (`HashBytesPerSlot`, [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs#L31)): 64 MiB at the default 19 bits.
+
 ### The engine in the browser
 
 WebAssembly runs the page on one thread, so a search on the page would freeze it. The web app therefore runs the search in a **Web Worker**: a small JavaScript module, `engine-worker.js`, with Stello's Rust engine compiled to WebAssembly ([stello-wasm](../Stello.Rust/stello-wasm/src/lib.rs)). The book stays on the page. `WebEngineHost`, the `IEngineHost` on the page side, plays the book move itself (`ComputerPlayer.TryChooseBookMove`, the book step of `ChooseMove`, with the page's `BookTracker`) and sends only the searches to the worker. It talks to the worker through `engine-client.js`, with the JSON messages of `EngineProtocol`, and it shares one 4-byte `SharedArrayBuffer` with the worker for the stop signal:
@@ -175,16 +206,16 @@ flowchart LR
     subgraph Worker["Web Worker (JavaScript)"]
         W["engine-worker.js"] --> R["stello-wasm<br/>Rust SearchEngine<br/>(WebAssembly)"]
     end
-    Client -- "init (hash bits, signal buffer),<br/>search (JSON request)" --> W
+    Client -- "init (hash bits, threads, signal buffer),<br/>search (JSON request)" --> W
     W -- "progress, response" --> Client
     Client -. "signal: 1 = Move Now, 2 = cancel<br/>(SharedArrayBuffer)" .-> R
 ```
 
-- **Starting.** `WebEngineHost` starts the worker at once (`start`, then `init` with 19 hash bits and the signal buffer), so the worker is usually ready before the computer's first search. `init` makes the engine and decodes the built-in evaluation; the worker needs no book. A request with other hash bits than the engine's makes a new engine in `search` (chapter 07), and the host resets its `BookTracker`, as the desktop app's new `ComputerPlayer` does.
+- **Starting.** `WebEngineHost` starts the worker at once (`start`, then `init` with 19 hash bits, the threads of the saved setting and the signal buffer), so the worker is usually ready before the computer's first search. The threads decide which package the worker loads ([Threads in the browser](#threads-in-the-browser)). `init` makes the engine and decodes the built-in evaluation; the worker needs no book. A request with other hash bits than the engine's makes a new engine in `search` (chapter 07), and the host resets its `BookTracker`, as the desktop app's new `ComputerPlayer` does.
 - **The messages.** `search` takes the JSON of a `MoveRequest` and returns the JSON of a `MoveResponse`. Rust reads and writes it itself ([protocol.rs](../Stello.Rust/stello-wasm/src/protocol.rs)), because JavaScript's `JSON.parse` would round the 64-bit boards. The page uses `EngineProtocol.WriteRequest`, `ReadResult` and `ReadProgress`.
 - **Progress.** `ProgressPoster` in `stello-wasm` posts a report at most every 100 ms, but always when the depth or the best move changes, so the page is not flooded.
 - **Stopping.** The worker runs the search synchronously and reads no message until it is over, so a stop request cannot be a message. Move Now writes 1 and cancel writes 2 into the shared buffer (`signal`, with `Atomics.store`); the client clears it before each new request. The engine reads it (`host.signal()`, an `Atomics.load`) at every abort check, every 1,024 nodes (chapter 09), and stops exactly as in the desktop app; the worker keeps its hash tables. In Chromium the engine answers in under 1 ms, and a click on Move Now changes the board in about 25 ms ([findings, gate P3](../Plans/making-stello-3-findings.md#gate-p3-release-aot-publish-in-headless-chromium-served-with-coopcoep-and-brotli)).
-- **The clock.** WebAssembly has no clock in Rust's standard library, so the engine is timed with `performance.now()` (`set_clock`, chapter 09).
+- **The clock.** WebAssembly has no clock in Rust's standard library, so the engine is timed by the browser (`set_clock`, chapter 09): with `performance.timeOrigin + performance.now()` ([lib.rs](../Stello.Rust/stello-wasm/src/lib.rs#L54)), in both packages. `performance.now()` alone counts from the start of each worker, and the threads of a search compare their time with the start of the search, which the engine worker took.
 - **The fallback.** A `SharedArrayBuffer` exists only when the page is cross-origin isolated; [staticwebapp.config.json](../Stello.Net/Stello.Web/wwwroot/staticwebapp.config.json) sends the headers `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` for this. If there is no buffer, if the search has not ended 300 ms after the signal, or if a Move Now result cannot be read, the host **terminates the worker** and starts a new one (`Restart`). A search that fails also gets a new worker for the next search.
 
 ```mermaid
@@ -220,9 +251,71 @@ sequenceDiagram
 - A restarted worker has an empty hash table, and the host resets its `BookTracker`. The page does not wait for the worker, and it is usually ready before the computer's next move: it starts in about 90 ms ([findings, gate P3](../Plans/making-stello-3-findings.md#gate-p3-release-aot-publish-in-headless-chromium-served-with-coopcoep-and-brotli)).
 - **Add Game to Book** runs on the page (`BookLearner.AddGame`, which does not search), and the changed book is saved in the browser's local storage. Evaluate Book and Self-play are only in the desktop app (`SupportsLearning` is false).
 
+### Threads in the browser
+
+WebAssembly has threads only when its memory is a `SharedArrayBuffer` that several Web Workers use, and only on a page that is **cross-origin isolated** (the two headers in [staticwebapp.config.json](../Stello.Net/Stello.Web/wwwroot/staticwebapp.config.json)). Rust's `std::thread::spawn` does not work there: the threads must come from JavaScript. So the web app has two packages of the same crate, `stello-wasm`:
+
+| | `wwwroot/engine` | `wwwroot/engine-mt` |
+|---|---|---|
+| Threads | 1, whatever a request asks for | Up to the request's `Threads`, capped at `navigator.hardwareConcurrency` |
+| Rust | Stable | The pinned nightly `nightly-2026-11-02`, with `-Z build-std=std,panic_abort` (the standard library rebuilt with atomics) |
+| Target features | The default | `+atomics,+bulk-memory,+mutable-globals` ([Stello.Web.csproj line 90](../Stello.Net/Stello.Web/Stello.Web.csproj#L90)) |
+| Memory | Its own, growing | Shared and imported (`--shared-memory --import-memory`), at most 2 GiB (`--max-memory=2147483648`), so the 1,024 MB hash setting fits; plus the thread-local storage exports that wasm-bindgen needs |
+| `threaded()` | `false` | `true` |
+| Loaded when | Otherwise, and as the fallback | `init` asks for more than 1 thread, `self.crossOriginIsolated` is true and `SharedArrayBuffer` exists |
+
+Only the package that is used is downloaded. The two differ only in how the engine gets its threads: the threaded package gives the engine's pool ([chapter 06](06-midgame-search.md#the-thread-pool)) a `Spawner` that runs each pool thread on a Web Worker (`new_engine` in [lib.rs](../Stello.Rust/stello-wasm/src/lib.rs#L134)).
+
+```mermaid
+flowchart LR
+    subgraph Page["Page thread (.NET)"]
+        Host["WebEngineHost"] --> Client["engine-client.js"]
+    end
+    subgraph EW["Engine worker: engine-worker.js"]
+        Main["The search's main thread<br/>(stello-wasm, engine-mt)"]
+    end
+    subgraph Pool["Pool workers: engine-pool-worker.js"]
+        P1["Pool worker 1<br/>poolWorker()"]
+        P2["Pool worker 2<br/>poolWorker()"]
+        PN["... threads − 1 in all"]
+    end
+    Mem[("Shared WebAssembly memory<br/>hash tables, positions,<br/>the queue of thread bodies")]
+    Client -- "init, search" --> EW
+    EW -- "progress, response" --> Client
+    EW -- "starts them, posts<br/>{ module, memory }" --> Pool
+    Main <--> Mem
+    P1 <--> Mem
+    P2 <--> Mem
+    PN <--> Mem
+    Client -. "stop signal<br/>(SharedArrayBuffer)" .-> Main
+```
+
+- **Loading** (`load` in [engine-worker.js](../Stello.Net/Stello.Web/wwwroot/js/engine-worker.js#L31)). At `init` the worker imports `../engine-mt/stello_wasm.js`, fetches and compiles the module once (`WebAssembly.compile`) and instantiates it, which makes the shared memory. If any step fails, it prints a console warning ("The threaded engine could not be loaded; the single-threaded one plays.") and loads `../engine` instead. `init` answers `{ version, mode, threads }`: `mode` is `'threaded'` or `'single'`, and `threads` is the most the engine can use (`hardwareConcurrency`, or 1). `engine-client.js` keeps it for `info()`.
+- **The pool workers** ([engine-pool-worker.js](../Stello.Net/Stello.Web/wwwroot/js/engine-pool-worker.js)). The engine worker starts them itself, as nested workers, and posts each the compiled module, the memory and the address of the glue code. Each instantiates the module on the same memory (`initSync({ module, memory })`), answers `'ready'` and calls `poolWorker()`, which never returns: it waits for a thread body with `Atomics.wait` (through Rust's `Condvar`), runs it, and waits again. A worker may block like this; the page's main thread never runs this code and never blocks.
+- **How the engine gets a thread** ([threads.rs](../Stello.Rust/stello-wasm/src/threads.rs)). `web_spawner` is the engine's `Spawner`: it puts the body in a queue in the shared memory and wakes a pool worker that waits, or fails if none waits; the engine's pool then simply has fewer threads. The workers of the previous pool may still be on their way back to the wait when a new pool starts, so `web_spawner` waits for one of them, but at most 200 ms (`RETURN_WAIT`). A review found that this wait first had no limit: if fewer Web Workers had started than the pool asked for, it would have waited for the new pool's own threads, which end only with the pool, and the search would have hung.
+- **Before each search** (`prepare`, [line 87](../Stello.Net/Stello.Web/wwwroot/js/engine-worker.js#L87)). The worker caps the request's threads at `hardwareConcurrency` (at 1 in the single-threaded package) and rewrites the request if it changed them. With more than 1 it makes sure that threads − 1 pool workers exist and wait (`ensurePoolWorkers`): it starts the missing ones, waits for their `'ready'` and then, at most 2 s, until the engine counts them as idle (`idleThreads()`). A worker that cannot start leaves the search with fewer threads. The pool workers are started once and kept; the first ones already start at `init`, so the first search finds them ready.
+- **Stopping.** Only the engine worker reads the page's stop signal. The other threads stop through the engine's own flags ([chapter 06](06-midgame-search.md#threads)), and the main thread also reads the signal while it waits for them, so Move Now and cancel answer within milliseconds with any number of threads (table below).
+- **Changing the number of threads.** The package is chosen at `init`, so `WebEngineHost` starts a new worker when a search asks for more than 1 thread after one with 1, or the other way round ([WebEngineHost.cs](../Stello.Net/Stello.Web/Services/WebEngineHost.cs#L88)). The new worker has empty hash tables, but the host keeps its `BookTracker`. Another number above 1 needs no restart: the worker starts more pool workers if it needs them.
+
+Measured in headless Chromium on a Release AOT publish served with COOP/COEP, `hardwareConcurrency` 24 (engine times, [findings, gate P8](../Plans/making-stello-3-findings.md#gate-p8-local-passed)):
+
+| Threads | FFO #40–44 (exact) | Speed-up | Midgame depth 14, 20 positions | Speed-up | Move Now / cancel |
+|---:|---:|---:|---:|---:|---|
+| 1 (single-threaded package) | 2.87 s | 1.00× | 1.72 s | 1.00× | 0.1–1.2 ms |
+| 2 | 1.93 s | 1.49× | 1.62 s | 1.06× | ≤ 2.1 ms |
+| 4 | 1.24 s | 2.31× | 1.06 s | 1.62× | ≤ 1.5 ms |
+| 8 | 0.82 s | 3.50× | 0.89 s | 1.93× | ≤ 6.5 ms |
+| 24 | 0.89 s | 3.22× | 0.90 s | 1.91× | ≤ 15.6 ms |
+
+- Every solve was exact, and every midgame move legal and at depth 14. The threaded package with 1 thread searches the same nodes as the single-threaded one, 3–8 % slower; with 1 thread the worker loads `engine`.
+- In the game with 8 threads the engine played at 1 s per move at depth 25 and about 21 M nodes/s; Move Now took 83 ms through the user interface. With the Threads setting at 1 the single-threaded package ran at 3.7 M nodes/s, at 8 the threaded one at 22 M, and at Automatic (24) at 33 M ([findings, phase 9](../Plans/making-stello-3-findings.md#the-setting)).
+- **The fallbacks were checked:** served without COOP/COEP and asked for 8 threads, the app runs single-threaded, plays, and Move Now works; with `engine-mt` missing, it runs single-threaded with the console warning.
+- **The first visit** (brotli) is 6.85 MB with 1 thread (only `engine/`) and 6.88 MB with 8 threads (only `engine-mt/`).
+- **Not verified:** Firefox and Safari (nested workers and shared memory), and mobile devices.
+
 ### Settings and the clock
 
-`GameSettings.ToLimits` turns the settings into the limits for the next computer move (chapter 09):
+`GameSettings.ToLimits(computerTimeLeft, threads)` turns the settings into the limits for the next computer move (chapter 09), with `Threads` set to the threads of [Search threads](#search-threads):
 
 | Mode | Setting | Range | Default | `SearchLimits` |
 |---|---|---|---|---|
@@ -232,7 +325,8 @@ sequenceDiagram
 
 `GameSettings` also configures engine features:
 - `UseOpeningBook` (`bool`, default `true`): enables or disables opening book lookups.
-- `TranspositionTableEntries` (`int`, default `1_048_576`): the entries in each of the two hash tables (midgame and endgame, chapter 07), a power of two from 65 536 to 16 777 216; `HashBits` is $\log_2(\text{entries}) - 1$ (each slot holds two entries), so the default gives 19.
+- `TranspositionTableEntries` (`int`, default `1_048_576`): the entries in each of the two hash tables (midgame and endgame, chapter 07), a power of two from 65 536 to 16 777 216; `HashBits` is $\log_2(\text{entries}) - 1$ (each slot holds two entries), so the default gives 19. The memory is $2 \times 64 \times 2^{\text{HashBits}}$ bytes: 4, 16, 64, 256 or 1,024 MB (chapter 15).
+- `Threads` (`int`, default 0 = `AutomaticThreads`): the threads to search with; 0 means the device's default, so the same saved settings mean cores − 1 on a desktop and all of the browser's threads in a browser. `Normalize` keeps it within 0–256, and `ThreadsFor` caps a chosen number at the device's.
 - When `HashBits` differs from the current engine's size, `LocalEngineHost` makes a new `ComputerPlayer` with a `SearchEngine` of the new size (and so a fresh `BookTracker`). In the browser the worker makes a new engine of the new size, and `WebEngineHost` resets its `BookTracker`.
 
 `GameSettings.Normalize` clamps the values into these ranges, rounds the table size up to a power of two (or uses the default if it is out of range), and replaces any other mode (including `Solve`) by the default mode. It is used when the settings are loaded and when the settings dialog closes.
@@ -288,6 +382,8 @@ After Back, the computer gets back the time of the moves that were taken back, w
 - **Old progress reports.** The search id is needed because `Progress<T>` posts reports: one can arrive after the result, or after the next search has started. The order of reports and result relies on the UI thread's `SynchronizationContext`. Without one (for example in a console program), `Progress<T>` calls back on the thread pool, and a late report can overwrite the final analysis.
 - **Services behind interfaces.** Files and dialogs are behind `IBookStore`, `ISettingsStore` and `IDialogService`, so `MainViewModelTests` run the real view model and the real engine with fakes and a temporary file.
 - **Files in AppData.** C++ read and wrote `rev.cfg`, `OPENING` and `selfplay` in the current directory. The app keeps the shipped book read-only and writes only to `%AppData%\Stello`. See [Stello porting documentation.md](../Plans/Stello%20porting%20documentation.md), phases 5 and 6.
+- **Two web packages instead of one.** The threaded package needs a nightly Rust, a cross-origin isolated page and a browser that allows nested workers with shared memory, and with 1 thread it is 3–8 % slower. Keeping the stable single-threaded package as the default and the fallback means that a page, a browser or a local build without any of these still plays at full single-thread speed.
+- **Our own small pool of Web Workers, not wasm-bindgen-rayon.** The engine already has its pool and the `Spawner` hook, and Rayon would add two crates only to run long-lived bodies. With our own, the engine worker starts the Web Workers asynchronously before a search, so Rust never waits for a worker the browser has not started yet. It is about 70 lines of Rust and 60 of JavaScript.
 - **Kept C++ behaviour.** Back re-enables the book (`BookTracker.Reset`), the human continues with the side to move after Open, and the clock is restored as with C++ `timesleft[]`, including the side effect in the worked example.
 
 ## Where in the code
@@ -296,20 +392,23 @@ After Back, the computer gets back the time of the moves that were taken back, w
 |---|---|
 | [MainViewModel.cs](../Stello.Net/Stello.App/ViewModels/MainViewModel.cs) | `Start`, `RunAsync`, `ComputerMoveAsync`, `WaitForNaturalDelayAsync`, `StopAsync`, `Stop`, `Play`, `NewGame`, `Open`, `Undo`, `Redo`, `SwitchSides`, `SetGameMode`, `MoveNow`, `EditSettings`, `ResetClock`, `RestoreClock`, `HandleTimeoutAsync`, `LearnAsync` |
 | [LocalEngineHost.cs](../Stello.Net/Stello.App/Services/LocalEngineHost.cs) | `ChooseMoveAsync`, `ResetBookTracker`, `AddGameToBookAsync`, `LearnAsync`, `CreateLearner` |
-| [WebEngineHost.cs](../Stello.Net/Stello.Web/Services/WebEngineHost.cs) | `ChooseMoveAsync` (the book move with `TryChooseBookMove`; Move Now and cancel: the signal, then `Restart`), `StartAsync`, `Restart`, `ResetBookTracker`, `AddGameToBookAsync`, `OnProgress` |
+| [WebEngineHost.cs](../Stello.Net/Stello.Web/Services/WebEngineHost.cs) | `ChooseMoveAsync` (the book move with `TryChooseBookMove`; a new worker between 1 and more threads; Move Now and cancel: the signal, then `Restart`), `Threads`, `StartAsync`, `Restart`, `ResetBookTracker`, `AddGameToBookAsync`, `OnProgress` |
 | [EngineProtocol.cs](../Stello.Net/Stello.Web/Worker/EngineProtocol.cs) | The JSON requests, results and progress reports (`MoveRequest`, `MoveResponse`, `ProgressReport`); `WriteRequest`, `ReadResult`, `ReadProgress`, `MoveNowResult` |
-| [engine-worker.js](../Stello.Net/Stello.Web/wwwroot/js/engine-worker.js), [engine-client.js](../Stello.Net/Stello.Web/wwwroot/js/engine-client.js) | The worker's message loop (`init`, `search`) and its `host` (`progress`, `signal`); the page side: `start`, `call`, `signal`, `terminate` |
-| [stello-wasm/src/lib.rs](../Stello.Rust/stello-wasm/src/lib.rs), [protocol.rs](../Stello.Rust/stello-wasm/src/protocol.rs) | `init`, `search`, `version`; `HostSignal` (the stop signal), `ProgressPoster`, `browser_clock`; reading and writing `EngineProtocol`'s JSON |
-| [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs), [Native/StelloNative.cs](../Stello.Net/Stello.Engine/Native/StelloNative.cs) | The C# wrapper over the native library: `Search`, `ClearHash`; the `[LibraryImport]` functions, `EnsureLoaded`, `EngineHandle`, `SignalsHandle` |
-| [stello-ffi/src/lib.rs](../Stello.Rust/stello-ffi/src/lib.rs) | The C ABI: `stello_engine_create`, `stello_engine_search`, `stello_engine_clear_hash`, `stello_signals_create`, `stello_signals_cancel`, `stello_signals_move_now`, `stello_version`, `stello_abi_version` |
-| [StartupBook.cs](../Stello.Net/Stello.Web/Services/StartupBook.cs), [Program.cs](../Stello.Net/Stello.Web/Program.cs) | Loading the web app's book; wiring the web app's services |
+| [engine-worker.js](../Stello.Net/Stello.Web/wwwroot/js/engine-worker.js), [engine-client.js](../Stello.Net/Stello.Web/wwwroot/js/engine-client.js) | The worker's message loop (`init`, `search`) and its `host` (`progress`, `signal`); `load` (which package), `ensurePoolWorkers`, `prepare` (the threads of a request); the page side: `start`, `call`, `info`, `signal`, `terminate` |
+| [engine-pool-worker.js](../Stello.Net/Stello.Web/wwwroot/js/engine-pool-worker.js) | A thread of the threaded package: `initSync` on the shared memory, then `poolWorker` |
+| [stello-wasm/src/lib.rs](../Stello.Rust/stello-wasm/src/lib.rs), [protocol.rs](../Stello.Rust/stello-wasm/src/protocol.rs) | `init`, `search`, `version`, `threaded`; `HostSignal` (the stop signal), `ProgressPoster`, `browser_clock` and `absolute_now`, `new_engine` (sets the clock and, in the threaded package, the spawner); reading and writing `EngineProtocol`'s JSON (with `Threads`) |
+| [stello-wasm/src/threads.rs](../Stello.Rust/stello-wasm/src/threads.rs) | The threaded package only: `web_spawner`, `RETURN_WAIT`, `idle_threads` (`idleThreads`), `pool_worker` (`poolWorker`) |
+| [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs), [Native/StelloNative.cs](../Stello.Net/Stello.Engine/Native/StelloNative.cs) | The C# wrapper over the native library: `Search` (sets the threads when they change), `ClearHash`, `HashBytesPerSlot`; the `[LibraryImport]` functions (`SetThreads`, `SetYbwc`), `AbiVersion`, `EnsureLoaded`, `EngineHandle`, `SignalsHandle` |
+| [SearchLimits.cs](../Stello.Net/Stello.Engine/SearchLimits.cs), [SearchOptions.cs](../Stello.Net/Stello.Engine/Search/SearchOptions.cs) | `Threads`, `MaxThreads`; `Ybwc` |
+| [stello-ffi/src/lib.rs](../Stello.Rust/stello-ffi/src/lib.rs) | The C ABI: `stello_engine_create`, `stello_engine_search`, `stello_engine_clear_hash`, `stello_engine_set_threads`, `stello_engine_set_ybwc`, `stello_signals_create`, `stello_signals_cancel`, `stello_signals_move_now`, `stello_version`, `stello_abi_version`, `ABI_VERSION` |
+| [StartupBook.cs](../Stello.Net/Stello.Web/Services/StartupBook.cs), [Program.cs](../Stello.Net/Stello.Web/Program.cs) | Loading the web app's book; wiring the web app's services, with the browser's `ThreadCounts` and the worker's first threads |
 | [staticwebapp.config.json](../Stello.Net/Stello.Web/wwwroot/staticwebapp.config.json) | The cross-origin isolation headers |
 | [AnalysisViewModel.cs](../Stello.Net/Stello.App/ViewModels/AnalysisViewModel.cs) | `Update`, `FormatScore` |
-| [GameSettings.cs](../Stello.Net/Stello.App/Models/GameSettings.cs) | `Default`, `Normalize`, `ToLimits`, `GameTime`, `UseOpeningBook`, `TranspositionTableEntries`, `HashBits` |
+| [GameSettings.cs](../Stello.Net/Stello.App/Models/GameSettings.cs), [ThreadCounts.cs](../Stello.Net/Stello.App/Models/ThreadCounts.cs) | `Default`, `Normalize`, `ToLimits`, `GameTime`, `UseOpeningBook`, `TranspositionTableEntries`, `HashBits`, `Threads`, `AutomaticThreads`, `ThreadsFor`; `ThreadCounts` (`ForThisProcess`, `ForBrowser`) |
 | [weights.rs](../Stello.Rust/stello-core/src/eval/weights.rs) | `BUILT_IN_FILE` (the embedded evaluation), `EvalWeights::built_in` |
 | [Stello.Engine.csproj](../Stello.Net/Stello.Engine/Stello.Engine.csproj) | The target `BuildStelloNative`, `StelloRustSource`, the properties `StelloNativeEngine`, `StelloCargo`, `StelloCargoTarget` |
-| [Stello.Net.csproj](../Stello.Net/Stello.Net/Stello.Net.csproj), [Stello.Web.csproj](../Stello.Net/Stello.Web/Stello.Web.csproj) | The linked book `Data\OPENING`; the targets `BuildStelloWasm`, `RemoveStelloNativeEngine`, `CopyOpeningBook`, `CopyDocs`, `CopyAboutPicture`, the property `StelloWasmEngine` |
-| [.cargo/config.toml](../Stello.Rust/.cargo/config.toml), [azure-static-web-apps.yml](../.github/workflows/azure-static-web-apps.yml) | The Windows linkers (MinGW for the check build, `+crt-static` for MSVC); the deploy workflow's Rust and wasm-bindgen steps |
+| [Stello.Net.csproj](../Stello.Net/Stello.Net/Stello.Net.csproj), [Stello.Web.csproj](../Stello.Net/Stello.Web/Stello.Web.csproj) | The linked book `Data\OPENING`; the targets `BuildStelloWasm`, `BuildStelloWasmThreads`, `IncludeStelloWasm`, `RemoveStelloNativeEngine`, `CopyOpeningBook`, `CopyDocs`, `CopyAboutPicture`, the properties `StelloWasmEngine`, `StelloWasmThreads`, `StelloWasmNightly` |
+| [.cargo/config.toml](../Stello.Rust/.cargo/config.toml), [azure-static-web-apps.yml](../.github/workflows/azure-static-web-apps.yml) | The Windows linkers (MinGW for the check build, `+crt-static` for MSVC); the deploy workflow's Rust, nightly and wasm-bindgen steps |
 | [AppSettings.cs](../Stello.Net/Stello.App/Models/AppSettings.cs) | `AppSettings`, `WindowPlacement` |
 | [SoundWaves.cs](../Stello.Net/Stello.App/Services/SoundWaves.cs) | `Create`: the sounds as 16-bit PCM WAV bytes |
 | [BookLoader.cs](../Stello.Net/Stello.Net/Services/BookLoader.cs) | `Load` |
@@ -338,16 +437,23 @@ After Back, the computer gets back the time of the moves that were taken back, w
 - [ViewModelTests.cs](../Stello.Net/Stello.Net.Tests/ViewModelTests.cs): how scores are shown, `SettingsViewModel`, and `GameSettings.ToLimits` for each mode.
 - [NewGuiFeaturesTests.cs](../Stello.Net/Stello.Net.Tests/NewGuiFeaturesTests.cs): the move history and the sounds, Back and Switch Sides mark the game modified and New Game clears it, `SetGameMode`, the clock texts, the book and table settings of `SettingsViewModel`, and `ComputerPlayer` without the book when `UseOpeningBook` is off.
 
-- [NativeEngineTests.cs](../Stello.Net/Stello.Engine.Tests/NativeEngineTests.cs): the C# wrapper over the native library (the library's version and ABI, the options, progress and iterations, exceptions in the callbacks, cancel and Move Now, engines on several threads, rejected options).
-- [engine.test.mjs](../Stello.Rust/stello-wasm/tests/engine.test.mjs): 9 Node tests of the built WebAssembly package (`node --test Stello.Rust/stello-wasm/tests/engine.test.mjs`): the recorded Stello 2.0 searches and solves, the progress throttling, a time per move with the JavaScript clock, Move Now and cancel in a midgame search and in a solve, other hash bits, rejected requests, and an evaluation passed as bytes. The unit tests in `protocol.rs` check the JSON.
+- [NativeEngineTests.cs](../Stello.Net/Stello.Engine.Tests/NativeEngineTests.cs): the C# wrapper over the native library (the library's version and ABI, the options, progress and iterations, exceptions in the callbacks, cancel and Move Now, engines on several threads, rejected options), and the threads: `Threads` is 1 by default and checked (0 and 257 throw), 4 threads solve exactly and the same engine searches as Stello 2.0 again with 1 afterwards, Lazy SMP alone (`Ybwc = false`) solves exactly, and the frozen Stello 2.0 ignores `Threads`.
+- The unit tests in [stello-ffi/src/lib.rs](../Stello.Rust/stello-ffi/src/lib.rs#L607): `stello_engine_set_threads` refuses a null engine, 0 and 257 and accepts 4; `stello_engine_set_ybwc` refuses a null engine; searches with the threads set finish.
+- [engine.test.mjs](../Stello.Rust/stello-wasm/tests/engine.test.mjs): 10 Node tests of the single-threaded WebAssembly package (`node --test Stello.Rust/stello-wasm/tests/engine.test.mjs`): the version, the recorded Stello 2.0 searches and solves, a request for more threads searched with 1, the progress throttling, a time per move with the JavaScript clock, Move Now and cancel in a midgame search and in a solve, other hash bits, rejected requests, and an evaluation passed as bytes. The unit tests in `protocol.rs` check the JSON.
+- [engine-mt.test.mjs](../Stello.Rust/stello-wasm/tests/engine-mt.test.mjs): 5 Node tests of the threaded package, skipped if it was not built. Its pool threads are `worker_threads` running [pool-worker.mjs](../Stello.Rust/stello-wasm/tests/pool-worker.mjs) on the shared memory, as `engine-pool-worker.js` does in the browser: it is the threaded build; with 1 thread it equals the Stello 2.0 signatures node for node; with 4 threads FFO #40–44 are solved exactly, midgame searches reach their depth with a legal move, and Move Now and cancel answer at once.
+- [NewGuiFeaturesTests.cs](../Stello.Net/Stello.Net.Tests/NewGuiFeaturesTests.cs) also checks `ThreadCounts` (the desktop keeps one thread for the app, the browser uses all) and `ThreadsFor` (chapter 15).
 
-No test checks the clock restore on Back and Forward; the worked example above was a separate run. `WebEngineHost` itself has no unit test; it was checked in Chromium ([findings, gate P3](../Plans/making-stello-3-findings.md#gate-p3-release-aot-publish-in-headless-chromium-served-with-coopcoep-and-brotli)).
+No test checks the clock restore on Back and Forward; the worked example above was a separate run. `WebEngineHost` itself has no unit test; it was checked in Chromium ([findings, gate P3](../Plans/making-stello-3-findings.md#gate-p3-release-aot-publish-in-headless-chromium-served-with-coopcoep-and-brotli)), and with threads, the restart between 1 and more threads and the fallbacks ([gate P8](../Plans/making-stello-3-findings.md#gate-p8-local-passed)). The WPF Threads box was built here but needs a check on Windows.
 
 ## Further reading
 
 - [Introduction to the MVVM Toolkit – Microsoft Learn](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/): the library behind `ObservableObject`, `[ObservableProperty]` and the commands.
 - [RelayCommand attribute – Microsoft Learn](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/generators/relaycommand): generated commands, `CanExecute`, `NotifyCanExecuteChangedFor`, and why an async command is disabled while it runs.
 - [Progress&lt;T&gt; class – Microsoft Learn](https://learn.microsoft.com/dotnet/api/system.progress-1): callbacks run on the `SynchronizationContext` captured when the object is created, or on the thread pool if there is none.
+- [SharedArrayBuffer and cross-origin isolation – MDN](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer#security_requirements): why shared memory needs the COOP and COEP headers.
+- [Atomics.wait – MDN](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Atomics/wait): blocking is allowed in workers but not on the page's main thread.
+- [The threads proposal for WebAssembly](https://github.com/WebAssembly/threads): shared memory, atomics, `memory.atomic.wait` and `notify`.
+- [References](28-references.md#26-phases-59-threads) for the parallel search; how the threads came to be is in [chapter 26](26-phases-5-9-threads.md).
 - [Cancellation in managed threads – Microsoft Learn](https://learn.microsoft.com/dotnet/standard/threading/cancellation-in-managed-threads): the cooperative cancellation model with `CancellationTokenSource` and `OperationCanceledException`.
 
 ---

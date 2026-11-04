@@ -1,4 +1,4 @@
-# 27 – References
+# 28 – References
 
 [Back to the index](README.md)
 
@@ -167,6 +167,27 @@ Articles, papers and source code on the internet that explain the techniques use
 | [is_x86_feature_detected – Rust documentation](https://doc.rust-lang.org/std/arch/macro.is_x86_feature_detected.html) | The run-time check behind the choice of the fast path. |
 | [Edax's flip_carry_64.c on GitHub](https://github.com/abulmo/edax-reversi/blob/master/src/flip_carry_64.c) | Per-square flip functions, an idea left for later. |
 
+## 26 Phases 5–9: threads
+
+| Link | What you find there |
+|---|---|
+| [Parallel Search – Chess Programming Wiki](https://www.chessprogramming.org/Parallel_Search) | An overview of the ways to search a game tree on several threads. |
+| [Lazy SMP – Chess Programming Wiki](https://www.chessprogramming.org/Lazy_SMP) | Threads that search the same root at different depths and help each other only through the shared hash table (Julien Marcel, Daniel Homan and others, 2012–2013). |
+| [Young Brothers Wait Concept – Chess Programming Wiki](https://www.chessprogramming.org/Young_Brothers_Wait_Concept) | YBWC: the younger brothers of a node are searched in parallel only after the oldest brother is done; with the history and the papers. |
+| Rainer Feldmann, Burkhard Monien, Peter Mysliwietz, Oliver Vornberger (1989). *Distributed Game-Tree Search.* ICCA Journal, Vol. 12, No. 2, pp. 65–73 | The paper that introduced YBWC to a wider audience. |
+| Rainer Feldmann (1993). *Game Tree Search on Massively Parallel Systems.* PhD thesis, University of Paderborn ([Rainer Feldmann – Chess Programming Wiki](https://www.chessprogramming.org/Rainer_Feldmann)) | YBWC in full, measured on hundreds of processors. |
+| [Shared Hash Table – Chess Programming Wiki](https://www.chessprogramming.org/Shared_Hash_Table) | One hash table for all threads: locks, and Hyatt's lockless XOR check. |
+| [Seqlock – Wikipedia](https://en.wikipedia.org/wiki/Seqlock) | The sequence lock that guards each slot of Stello's tables (chapter 07). |
+| [Egaroucid's ai.hpp](https://github.com/Nyanyan/Egaroucid/blob/main/src/engine/ai.hpp), [ybwc.hpp](https://github.com/Nyanyan/Egaroucid/blob/main/src/engine/ybwc.hpp) and [thread_pool.hpp](https://github.com/Nyanyan/Egaroucid/blob/main/src/engine/thread_pool.hpp) on GitHub | The Lazy SMP helpers, the YBWC splits and the thread pool that Stello's threads are modelled on. |
+| [std::thread::scope – Rust documentation](https://doc.rust-lang.org/std/thread/fn.scope.html) | Scoped threads, which may borrow from the caller; the model of the pool's scopes. |
+| [Miri on GitHub](https://github.com/rust-lang/miri) and [ThreadSanitizer – Clang](https://clang.llvm.org/docs/ThreadSanitizer.html) | The two tools that checked the table and the pool for undefined behaviour and data races. |
+| [WebAssembly threads proposal on GitHub](https://github.com/WebAssembly/threads) | Shared memory and atomic instructions in WebAssembly, which the threaded package uses. |
+| [Atomics.wait – MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Atomics/wait) | How a Web Worker waits on shared memory; not allowed on a page's main thread. |
+| [crossOriginIsolated – MDN](https://developer.mozilla.org/en-US/docs/Web/API/Window/crossOriginIsolated) and [Making your website cross-origin isolated – web.dev](https://web.dev/articles/coop-coep) | Why `SharedArrayBuffer` needs the COOP and COEP headers. |
+| [navigator.hardwareConcurrency – MDN](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/hardwareConcurrency) | The browser's thread count, the web app's Automatic setting. |
+| [build-std – the Cargo Book](https://doc.rust-lang.org/cargo/reference/unstable.html#build-std) | Building the standard library with atomics, which the threaded WebAssembly package needs nightly Rust for. |
+| [wasm-bindgen-rayon on GitHub](https://github.com/RReverser/wasm-bindgen-rayon) | The usual way to run Rust threads on Web Workers; Stello uses its own small pool instead (chapter 14). |
+
 ## Writing these documents
 
 | Link | What you find there |
@@ -177,4 +198,4 @@ Articles, papers and source code on the internet that explain the techniques use
 
 ---
 
-Previous: [26 Glossary](26-glossary.md) · Next: [Index](README.md)
+Previous: [27 Glossary](27-glossary.md) · Next: [Index](README.md)
