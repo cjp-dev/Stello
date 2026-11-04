@@ -11,7 +11,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 |---|---|---|
 | **Part 1: Stello 3.1** | | |
 | 0 Set-up and the new baseline | done (2026-11-04) | 3.0 one-thread JSON references, 105-signature baseline test, and Rust-engine `opt=` match switches; Stello tests pass |
-| 1 Real bugs | not started | |
+| 1 Real bugs | in progress | Item 1: a stopped solve no longer reports a bound as Exact (nodes unchanged) |
 | 2 The parity quirks | not started | |
 | 3 The apps | not started | |
 | 4 Tools and verification gaps | not started | |
@@ -51,3 +51,30 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
   - the 3.0 signatures equal the 2.0 ones, with only the header comment different;
   - the solution builds with 0 warnings; 488 engine tests and all 42 Egaroucid tests pass. The two timing failures on Windows did not happen here, so they were load on that machine;
   - a smoke match with `opt=selective=off,opt=ybwc=off` plays and shows both switches in the header.
+
+## Phase 1: real bugs
+
+### Item 1: an aborted solve was reported as Exact (fixed 2026-11-04)
+- **What was wrong:** `solve_root` ([engine.rs](../Stello.Rust/stello-core/src/search/engine.rs)) wrote each better root move into `best` with the pass's kind. A Move Now or the hard time limit in the middle of a pass then returned a bound as solved:
+  - in pass 2 (exact), the best score so far is only a lower bound until every root move is searched, but it came back as `Exact`;
+  - in pass 1 (win/loss/draw), a move found to draw came back as `Exact` 0, though a later move could still win; and with no midgame result before the solve, a first move that lost came back as a `WinLossDraw` loss.
+
+  `BookSearch` stores `Exact` as `BookOrigin.Exact`, and `recalc` never searches an exact value again.
+- **The fix:** a stopped pass keeps the last completed pass's result.
+  - In pass 2, `solve_root` no longer touches `best`, so a stop returns pass 1's win/loss/draw result with its move.
+  - In pass 1, a win still counts at once (one winning move proves it); a draw keeps its move as `Heuristic` 0; nothing else changes `best`.
+  - The completed passes set the result as before. `best` only feeds the reports and the result, so the search is unchanged.
+  - The frozen C# engines (`Stello.Engine.V1`/`V2`) keep the old behaviour; they are references.
+- **Tests:** two new Rust tests in [tests/search.rs](../Stello.Rust/stello-core/tests/search.rs) set Move Now from the progress callback. Both failed before the fix, with `Exact`:
+  - in the exact pass of FFO #40, the result must be `WinLossDraw`, a win, depth 20;
+  - after the first draw report in the win/loss/draw pass of FFO #41, the result must not be `Exact` or `WinLossDraw`.
+- **Baseline:** unchanged. `StelloV3BaselineTests` passes (105 signatures). `solve-bench` FFO #40–49 against `v3.0-ref/ffo-40-49.json` is identical: all 10 searches have the same nodes, move and score.
+- **Checks:**
+  - `cargo test --workspace --release` and clippy pass;
+  - all 488 `Stello.Engine.Tests` pass, with the rebuilt native DLL;
+  - `Stello.Net.Tests`: 85 of 87 pass. The two failures (`AnalysisViewModelTests.Update_ShowsTheSearchProgress` and `NewGuiFeaturesTests.AnalysisViewModel_SpeedAndUpdatedEvent`, expecting `+40` but getting `+0.4 discs`) fail the same way without this change. They are pre-existing, a heuristic-score display mismatch, and are left for phase 3.
+- **The master book:**
+  - The recalculation report (`Stello.Net/Book/opening-book.report.txt`, 60 s per position, 2026-11-02) came from Stello 2.0, which has the same fault.
+  - The book holds 2,988 exact values found with a time limit (`X:60s`), at 17–31 empty squares after the move; 258 of them are draws.
+  - A stopped solve stores the same depth (all empty squares) as a finished one, so the book cannot tell them apart. The risk grows with the empty squares: 933 have 26 or more.
+  - They are marked for the phase 11 recalculation in the plan. The 1,091 exact values without a time limit are not affected.

@@ -232,6 +232,7 @@ The order puts speed first (it changes no nodes), then the threads, the search, 
 ## Phase 11: the opening book
 1. **A recalculation with the final 3.2 engine:**
    - `BookEffort.EngineVersion` 4 → 5, which also redoes the 5 proven draws that version 4 made heuristic, and any entries found in phase 1.1;
+   - from phase 1.1: the 2,988 `X` (exact) values with a time limit (`X:60s`, 17–31 empty squares after the move) may be bounds from a stopped solve and cannot be told apart in the book. `recalc` keeps exact values, so it must be made to re-solve these (for example: treat a timed `X` from engine version ≤ 4 as unproven). The 1,091 `X` values without a limit (solve or older) are not affected;
    - 1 thread per worker, run on the user's go (hours).
 2. **Search the moves the book lacks,** as C++ `calclib` did: each book position gets a search of its moves that are not in the book (`BookSearch` already has the `onlyMoves` search), and good ones are added.
 3. **Drop-Out Expansion (`Plans/Opening book improvment.md` phase 3):** decide with the user at that point:
@@ -273,3 +274,4 @@ The order puts speed first (it changes no nodes), then the threads, the search, 
 ## Status
 - Plan written on 4 November 2026, with the user's decisions above.
 - **Phase 0: done (2026-11-04).** Branch, plan, findings and the tag `v3.0` on baa44e5 were already in place. The seven 1-thread reference JSONs are in `Plans/benchmark-results/v3.0-ref/`; `StelloV3BaselineTests` pins the 105 signatures independently of frozen Stello 2.0; the match tool accepts repeated `opt=<key>=<value>` search switches.
+- **Phase 1: in progress.** Item 1 (an aborted solve reported as Exact) is fixed.

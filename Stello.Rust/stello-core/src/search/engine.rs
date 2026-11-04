@@ -1182,9 +1182,13 @@ impl<'a> Searcher<'a> {
                 alpha = alpha.max(score);
                 improvements[improved] = mv;
                 improved += 1;
-                if kind == ScoreKind::Exact || score >= 0 || best.kind == ScoreKind::None {
-                    let kind = if kind == ScoreKind::WinLossDraw && score == 0 { ScoreKind::Exact } else { kind };
+                // What a stop in the middle of the pass returns. A win is proven by one move; a draw or a score is
+                // only a bound until every move is searched, so the exact pass keeps the win/loss/draw result, and a
+                // draw here keeps its move without claiming a solved score.
+                if kind == ScoreKind::WinLossDraw && score > 0 {
                     *best = Best { mv, score, kind, depth: empties };
+                } else if kind == ScoreKind::WinLossDraw && score == 0 {
+                    *best = Best { mv, score, kind: ScoreKind::Heuristic, depth: best.depth };
                 }
             }
 

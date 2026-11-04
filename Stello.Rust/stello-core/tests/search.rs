@@ -187,6 +187,49 @@ fn move_now_and_cancel_stop_a_solve() {
     }
 }
 
+/// Move Now from the progress callback at the first report of the solver that `stop_at` accepts.
+fn solve_with_move_now_at(board: &Board, player: Player, stop_at: impl Fn(&SearchInfo) -> bool) -> SearchResult {
+    let signals = SearchSignals::new();
+    let mut engine = SearchEngine::new(16, SearchOptions::default());
+    let mut stopped = false;
+    let mut progress = |info: &SearchInfo| {
+        if !stopped && stop_at(info) {
+            stopped = true;
+            signals.move_now();
+        }
+    };
+    let result = engine.search(board, player, &SearchLimits::SOLVE, Some(&mut progress), &signals, None).unwrap();
+    assert!(stopped, "the search never reached the report to stop at");
+    result
+}
+
+/// Move Now in the exact pass (FFO #40, +38): the first move's score is only a bound, so the result is the completed
+/// win/loss/draw pass's, not an Exact score.
+#[test]
+fn move_now_in_the_exact_pass_keeps_the_win_loss_draw_result() {
+    let (board, player) = position("ffo-40-59.txt", "40");
+    let empties = board.empty_count() as i32;
+    let result = solve_with_move_now_at(&board, player, |info| info.depth == empties && info.kind == ScoreKind::Exact);
+    assert_eq!(result.kind, ScoreKind::WinLossDraw);
+    assert!(result.score > 0, "{}", result.score);
+    assert_eq!(result.depth, empties);
+    assert!(board.legal_moves(player) & result.mv.0.unwrap().bit() != 0);
+}
+
+/// Move Now in the win/loss/draw pass after a draw is found (FFO #41, a draw): a later move could still win, so the
+/// draw is not reported as Exact.
+#[test]
+fn move_now_after_a_draw_in_the_win_loss_draw_pass_is_not_exact() {
+    let (board, player) = position("ffo-40-59.txt", "41");
+    let empties = board.empty_count() as i32;
+    let result = solve_with_move_now_at(&board, player, |info| {
+        info.depth == empties && info.kind == ScoreKind::WinLossDraw && info.score == 0
+    });
+    assert_ne!(result.kind, ScoreKind::Exact);
+    assert_ne!(result.kind, ScoreKind::WinLossDraw);
+    assert!(board.legal_moves(player) & result.mv.0.unwrap().bit() != 0);
+}
+
 #[test]
 fn trivial_positions_need_no_search() {
     let mut engine = SearchEngine::new(10, SearchOptions::default());
