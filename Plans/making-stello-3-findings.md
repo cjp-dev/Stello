@@ -18,7 +18,7 @@ What the work on Stello 3.0 teaches us, written down as we go: the decisions, th
 | 6 Lazy SMP | done (2026-11-02) | Helpers run their own iterative deepening 1 + ctz(i+1) plies ahead, and up to 3 help each solve pass; 4 threads beat 1 with 55.3 % (+37 Elo) and 8 threads with 53.0 % (+21) at 500 ms; time to depth 1.53× (4 threads) and 1.66–1.76× (8); FFO only about 10 % faster (YBWC is phase 7) |
 | 7 YBWC | done (2026-11-03) | YBWC (after Egaroucid's ybwc.hpp) plus Lazy SMP on half the workers; FFO #40–49 1.98×/3.29×/3.97× faster with 4/8/16 threads (Egaroucid C++ 2.61×/4.15×/4.86×); depth 16 2.09× with 8 threads; at 8 threads beats Lazy SMP alone with 54.4 % at 500 ms and 54.7 % at 2 s |
 | 8 Threads in the browser | done (2026-11-03) | A threaded WebAssembly package (pinned nightly, shared memory) whose threads are Web Workers, loaded only when more than 1 thread is asked for and the page is cross-origin isolated; in Chromium FFO #40–44 3.5× faster and midgame 1.93× with 8 threads, all exact; Move Now ≤ 7 ms; the single-threaded package is the fallback |
-| 9 Threads setting and the 3.0 release | parts A and B done (2026-11-04); release to come | A Threads setting in both apps (Automatic: cores − 1 on the desktop, all in the browser); the book recalculation stays at 1 thread per worker (user); final matches: against 2.0 +78 Elo (1 thread) and +121 (8 threads) at 500 ms; against the Egaroucid port even at 2 s with 8 threads; docs chapter 26 |
+| 9 Threads setting and the 3.0 release | done (2026-11-04) | A Threads setting in both apps (Automatic: cores − 1 on the desktop, all in the browser); the book recalculation stays at 1 thread per worker (user); final matches: against 2.0 +78 Elo (1 thread) and +121 (8 threads) at 500 ms; against the Egaroucid port even at 2 s with 8 threads; docs chapter 26 |
 
 ## Baseline (Stello 2.0, C#, 1 thread)
 
@@ -770,3 +770,11 @@ The 1-thread matches play 12 games at a time and the 8-thread matches 2, so the 
 - **Checks:** 0 broken links, all 40 Mermaid diagrams render, and there are no stale memory numbers outside the frozen docs and the historical chapters (where 2.0's 48 MB is labelled as 2.0).
 - **About** now also says that the brain can think on several threads at once.
 - **The user's WPF check on Windows (2026-11-04): OK** (the Threads setting, play, nodes per second with threads).
+
+## The Stello 3.0 release (2026-11-04)
+- **The release:** with the user's OK, main was fast-forwarded from c9aa054 to 261b5f9 (16 commits, phases 5–9). Deploy run 41770100838 succeeded, the first with the nightly Rust step and the threaded package.
+- **The live check** (headless Chromium):
+  - the site is cross-origin isolated, and `engine/`, `engine-mt/` and `engine-pool-worker.js` are served;
+  - the Threads setting: 1 thread runs the single-threaded package (3.8 M nodes/s), 8 threads the threaded one (22.7 M), back to 1 the single-threaded one, and Automatic (24) the threaded one (36.3 M). The saved setting survives a reload;
+  - with Automatic, a game at 1 s per move reached depth 21–25 at 34–38 M nodes/s. Move Now answered in 0.06 s, and a 22-empty solve took 0.31 s at 67 M nodes/s. About shows 3.0 with threads, and chapter 26 is served. There were no page errors.
+- **The plan is finished.** What remains are the ideas in "Not done, and ideas for later" (phase 7) and the user's item after the plan: align the WPF GUI with the web apps.

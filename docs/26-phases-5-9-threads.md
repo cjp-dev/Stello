@@ -347,7 +347,27 @@ For comparison, Stello 2.0 took 46.8 s on 1 thread ([the baseline](../Plans/maki
 
 ### The release
 
-What remained after the matches: these documents, the user's check of the WPF app on Windows, and the release itself (About 3.0, the fast-forward of main, the deploy, whose workflow then runs with the nightly for the first time, and the live check with threads).
+After the matches came these documents and the user's check of the WPF app on Windows (OK). Then main was fast-forwarded to 261b5f9 on 4 November 2026. The deploy (run 41770100838) succeeded, including its first run with the nightly Rust for the threaded package.
+
+The live check in headless Chromium:
+- **Isolation and files:** the site is cross-origin isolated (COOP/COEP), and both packages (`engine/`, `engine-mt/`) and `engine-pool-worker.js` are served.
+- **The Threads setting:**
+
+  | Setting | Package | Speed |
+  |---|---|---|
+  | 1 thread | single-threaded | 3.8 M nodes/s |
+  | 8 threads | threaded | 22.7 M nodes/s |
+  | back to 1 thread | single-threaded | 3.7 M nodes/s |
+  | Automatic (24) | threaded | 36.3 M nodes/s |
+
+  After a reload the saved Automatic setting starts the threaded package.
+- **With Automatic,** the default for a new visitor:
+  - a game at 1 s per move reached depth 21–25 at 34–38 M nodes/s;
+  - Move Now answered in 0.06 s;
+  - a position with 22 empty squares was solved in 0.31 s at 67 M nodes/s;
+  - About shows the 3.0 text with threads;
+  - this chapter opens in the docs viewer;
+  - there were no page errors.
 
 ## What comes next
 
