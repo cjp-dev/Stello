@@ -11,7 +11,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 |---|---|---|
 | **Part 1: Stello 3.1** | | |
 | 0 Set-up and the new baseline | done (2026-11-04) | 3.0 one-thread JSON references, 105-signature baseline test, and Rust-engine `opt=` match switches; Stello tests pass |
-| 1 Real bugs | in progress | Item 1: a stopped solve no longer reports a bound as Exact (nodes unchanged); item 2: the natural delay is no longer charged to the computer's clock |
+| 1 Real bugs | in progress | Item 1: a stopped solve no longer reports a bound as Exact (nodes unchanged); item 2: the natural delay is no longer charged to the computer's clock; item 3: Back and Forward restore both clocks of the destination position |
 | 2 The parity quirks | not started | |
 | 3 The apps | not started | |
 | 4 Tools and verification gaps | not started | |
