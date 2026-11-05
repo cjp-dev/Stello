@@ -396,6 +396,46 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task TimePerGame_UndoInTwoHumanGameRestoresBothClocks()
+    {
+        MainViewModel vm = Create(new GameSettings(TimeControlMode.TimePerGame, 8, 5, 1));
+        await vm.SetGameMode(GameMode.HumanVsHuman);
+
+        Play(vm, "f5");
+        await vm.Idle;
+        await Task.Delay(1300);
+        Assert.NotEqual("1:00", vm.WhiteClockText);
+
+        Play(vm, vm.Squares.First(s => s.IsLegalMove).Name);
+        await vm.Idle;
+        await vm.UndoCommand.ExecuteAsync(null);
+        await vm.Idle;
+
+        Assert.Equal("1:00", vm.BlackClockText);
+        Assert.Equal("1:00", vm.WhiteClockText);
+    }
+
+    [Fact]
+    public async Task TimePerGame_RedoRestoresTheComputerTimeAfterItsMove()
+    {
+        MainViewModel vm = Create(new GameSettings(TimeControlMode.TimePerGame, 8, 5, 1));
+        vm.ComputerDelayMs = 0;
+
+        Play(vm, "f5");
+        await vm.Idle;
+        TimeSpan afterComputerMove = vm.ComputerTimeLeft;
+        Assert.True(afterComputerMove < TimeSpan.FromMinutes(1));
+
+        await vm.UndoCommand.ExecuteAsync(null);
+        await vm.Idle;
+        Assert.Equal(TimeSpan.FromMinutes(1), vm.ComputerTimeLeft);
+
+        await vm.RedoCommand.ExecuteAsync(null);
+        await vm.Idle;
+        Assert.Equal(afterComputerMove, vm.ComputerTimeLeft);
+    }
+
+    [Fact]
     public async Task HumanTimeout_DecliningToContinueEndsTheGame()
     {
         MainViewModel vm = Create(new GameSettings(TimeControlMode.TimePerGame, 8, 5, 1));

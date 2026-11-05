@@ -23,7 +23,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private readonly ISoundService _soundService;
     private readonly bool _settingsLoaded;
 
-    // Clock history before each ply so undo restores consumed time.
+    // Clock history at each ply so undo and redo restore both players' clocks.
     private readonly Dictionary<int, (TimeSpan Black, TimeSpan White)> _timeLeftAtPly = [];
 
     private Game _game = new();
@@ -628,6 +628,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                     return;
                 }
 
+                _timeLeftAtPly[_game.Ply] = (_blackTimeLeft, _whiteTimeLeft);
+
                 if (_game.MustPass)
                 {
                     _soundService.Play(SoundType.Pass);
@@ -695,7 +697,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         Board board = _game.Board;
         Player player = _game.ToMove;
-        _timeLeftAtPly[_game.Ply] = (_blackTimeLeft, _whiteTimeLeft);
 
         // The clock timer keeps ticking down the computer's time while it thinks, for display.
         // After the search the clock is set from this starting value, so the time is charged only once.
@@ -861,6 +862,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _blackTimeLeft = Settings.GameTime;
         _whiteTimeLeft = Settings.GameTime;
         _timeLeftAtPly.Clear();
+        for (int ply = 0; ply <= _game.Ply; ply++)
+        {
+            _timeLeftAtPly[ply] = (_blackTimeLeft, _whiteTimeLeft);
+        }
+
         _lastTickTimestamp = 0;
         _hasHumanContinuedOnTime = false;
         _isTimeoutPrompting = false;
@@ -871,11 +877,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private void RestoreClock()
     {
-        int next = _timeLeftAtPly.Keys.Where(ply => ply >= _game.Ply).DefaultIfEmpty(-1).Min();
-        if (next >= 0)
+        if (_timeLeftAtPly.TryGetValue(_game.Ply, out var clock))
         {
-            (_blackTimeLeft, _whiteTimeLeft) = _timeLeftAtPly[next];
+            (_blackTimeLeft, _whiteTimeLeft) = clock;
         }
+
+        _lastTickTimestamp = Stopwatch.GetTimestamp();
     }
 
     private void OnClockTimerTick(object? state)

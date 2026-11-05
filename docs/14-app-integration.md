@@ -23,7 +23,7 @@ The state that matters for the engine:
 | `_cancel`, `_moveNow`, `_learningCancel` | The cancellation sources of the current search (two tokens, chapter 09) and of learning |
 | `_searchId` | A number that goes up with each computer move, to recognise old progress reports |
 | `Settings` | The `GameSettings`: mode, depth, seconds per move, minutes per game, opening book toggle, transposition table capacity, threads |
-| `_blackTimeLeft`, `_whiteTimeLeft`, `_timeLeftAtPly` | The player clocks, and their snapshot pairs before each ply so undo restores consumed time |
+| `_blackTimeLeft`, `_whiteTimeLeft`, `_timeLeftAtPly` | The player clocks, and their snapshot pairs for every ply so Undo and Redo restore the destination position's clocks |
 | `IsGameModified`, `IsStatusModified` | `IsGameModified` is set by Back against the computer, Switch Sides, a settings change after the first move and continuing after a timeout, and cleared by New Game, Open and a new game mode; `IsStatusModified` is `IsGameModified` in a game against the computer (chapter 15) |
 | `Analysis` | The `AnalysisViewModel` that shows `SearchInfo` and `SearchResult` (chapter 09) |
 
@@ -334,7 +334,7 @@ Measured in headless Chromium on a Release AOT publish served with COOP/COEP, `h
 In timed games (`TimePerGame`):
 - Both Black and White start at `MinutesPerGame`. `ResetClock` sets both back to the full time on New Game, on Open, and when settings change.
 - A 250 ms heartbeat runs down the active player's clock (`_blackTimeLeft` or `_whiteTimeLeft`). While the computer thinks this is only for display: after the search, `ComputerMoveAsync` sets its clock to the value at the start of the search minus the search time, so thinking time is charged once.
-- Before each computer move, `_timeLeftAtPly[ply]` stores the `(Black, White)` remaining times. After `Undo` and `Redo`, `RestoreClock` restores both clocks to the stored snapshot.
+- At each ply, `_timeLeftAtPly[ply]` stores the `(Black, White)` remaining times for that position. After `Undo` and `Redo`, `RestoreClock` restores both clocks to the snapshot for the destination position. Opening a saved game initializes its existing positions with the full clocks, since game files do not contain clock history.
 - If the human runs out of time against the computer, a Yes/No dialog asks "You ran out of time! Do you want to continue playing?": Yes freezes the human's clock at 0:00 and sets `IsGameModified` (so `IsStatusModified` is true). No ends the game, as does the computer's clock (or either clock with two players) running out. `_lostOnTime` then makes `IsGameOver` true: the status reads "Black ran out of time. Game over, White won on time.", moves, Undo, Redo and Switch Sides are blocked, and New Game starts without asking.
 
 ### Loading the book
@@ -365,15 +365,15 @@ A run of `MainViewModel` with an empty book and 1 minute per game: the human (Bl
 | Step | Ply | Computer's clock | Why |
 |---|---|---|---|
 | Start | 0 | 1:00.000 | `MinutesPerGame` = 1 |
-| f5, the computer thinks 0.778 s and plays d6 | 2 | 0:59.222 | Stored `_timeLeftAtPly[1]` = 1:00.000 |
-| c3, 0.953 s, f4 | 4 | 0:58.269 | Stored `[3]` = 0:59.222 |
-| f3, 0.760 s, g5 | 6 | 0:57.508 | Stored `[5]` = 0:58.269 |
-| Back | 4 | 0:58.269 | First stored ply ≥ 4 is 5 |
-| Back | 2 | 0:59.222 | First stored ply ≥ 2 is 3 |
-| Forward | 4 | 0:58.269 | First stored ply ≥ 4 is 5 |
-| Forward | 6 | 0:58.269 | No stored ply ≥ 6, so the clock is not changed |
+| f5, the computer thinks 0.778 s and plays d6 | 2 | 0:59.222 | Snapshots `[1]` = 1:00.000; `[2]` = 0:59.222 |
+| c3, 0.953 s, f4 | 4 | 0:58.269 | Snapshots `[3]` = 0:59.222; `[4]` = 0:58.269 |
+| f3, 0.760 s, g5 | 6 | 0:57.508 | Snapshots `[5]` = 0:58.269; `[6]` = 0:57.508 |
+| Back | 4 | 0:58.269 | Restore snapshot `[4]` |
+| Back | 2 | 0:59.222 | Restore snapshot `[2]` |
+| Forward | 4 | 0:58.269 | Restore snapshot `[4]` |
+| Forward | 6 | 0:57.508 | Restore snapshot `[6]` |
 
-After Back, the computer gets back the time of the moves that were taken back, which is the point: it will play those positions again. The last row shows a side effect: after going Forward to a position after the computer's last move, the 0.760 s of g5 is not charged again. C++ behaves the same way: it stored the time for ply $p$ and $p + 1$ before each computer move (`timesleft` in [Kontrol.cpp](../Stello%20C++/BRAIN/Kontrol.cpp)).
+After Back, the computer gets back the time of the moves that were taken back, which is the point: it will play those positions again. Forward restores each recorded position, including the time charged for the computer's move. C++ stores the time for ply $p$ and $p + 1$ before each computer move (`timesleft` in [Kontrol.cpp](../Stello%20C++/BRAIN/Kontrol.cpp)).
 
 ## Design notes
 
@@ -428,7 +428,8 @@ After Back, the computer gets back the time of the moves that were taken back, w
   - Back and Forward move between the human's turns; Switch Sides makes the computer move at once;
   - Move Now and New Game stop the search;
   - saving and opening a game, the side to move after Open, a damaged file, an automatic pass after Open, a finished game;
-  - the settings change the clock, cancelling keeps them, the clock runs down in `TimePerGame` mode, and the computer's thinking time is charged once;
+  - the settings change the clock, cancelling keeps them, the clock runs down in `TimePerGame` mode, the computer's thinking time is charged once, and the natural delay is not charged;
+  - Back and Forward restore both clocks to the destination ply, including Redo of a computer move and Undo in a two-human timed game;
   - a timeout: declining to continue ends the game, continuing keeps it going, the computer's timeout ends it without asking, and New Game after a timeout starts without confirmation;
   - the pass notice in the status line, the two-player game-over text that names the winner, and the move count ("N moves");
   - settings, the analysis panel and the window position are saved, and a save failure is shown;
@@ -443,7 +444,7 @@ After Back, the computer gets back the time of the moves that were taken back, w
 - [engine-mt.test.mjs](../Stello.Rust/stello-wasm/tests/engine-mt.test.mjs): 5 Node tests of the threaded package, skipped if it was not built. Its pool threads are `worker_threads` running [pool-worker.mjs](../Stello.Rust/stello-wasm/tests/pool-worker.mjs) on the shared memory, as `engine-pool-worker.js` does in the browser: it is the threaded build; with 1 thread it equals the Stello 2.0 signatures node for node; with 4 threads FFO #40–44 are solved exactly, midgame searches reach their depth with a legal move, and Move Now and cancel answer at once.
 - [NewGuiFeaturesTests.cs](../Stello.Net/Stello.Net.Tests/NewGuiFeaturesTests.cs) also checks `ThreadCounts` (the desktop keeps one thread for the app, the browser uses all) and `ThreadsFor` (chapter 15).
 
-No test checks the clock restore on Back and Forward; the worked example above was a separate run. `WebEngineHost` itself has no unit test; it was checked in Chromium ([findings, gate P3](../Plans/making-stello-3-findings.md#gate-p3-release-aot-publish-in-headless-chromium-served-with-coopcoep-and-brotli)), and with threads, the restart between 1 and more threads and the fallbacks ([gate P8](../Plans/making-stello-3-findings.md#gate-p8-local-passed)). The WPF Threads box was built here but needs a check on Windows.
+`WebEngineHost` itself has no unit test; it was checked in Chromium ([findings, gate P3](../Plans/making-stello-3-findings.md#gate-p3-release-aot-publish-in-headless-chromium-served-with-coopcoep-and-brotli)), and with threads, the restart between 1 and more threads and the fallbacks ([gate P8](../Plans/making-stello-3-findings.md#gate-p8-local-passed)). The WPF Threads box was built here but needs a check on Windows.
 
 ## Further reading
 

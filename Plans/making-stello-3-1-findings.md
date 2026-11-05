@@ -86,3 +86,10 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 - **Test:** `TimePerGame_NaturalDelayIsNotChargedToComputerClock` in [MainViewModelTests.cs](../Stello.Net/Stello.Net.Tests/MainViewModelTests.cs) waits for a 1,200 ms natural delay and checks clock charge against the displayed search time. It failed before the fix (1.21 s charged for a 0.6 s search) and passes after.
 - **Baseline:** unchanged. `StelloV3BaselineTests` passes, 105/105.
 - **Windows tests:** `Stello.Net.Tests` passes 86/88, including the new test. The same two existing score-display tests still fail (`+40` vs `+0.4 discs` and `+20` vs `+0.2 discs`); this clock change does not affect them.
+
+### Item 3: clock restore after Back and Forward (fixed 2026-11-05)
+- **What was wrong:** snapshots were recorded only when the computer started a move, so two-human Back had no clock state to restore. After Redo, the computer's clock also kept the pre-move value instead of restoring the time already spent on that move.
+- **The fix:** record both clocks for every ply when `RunAsync` reaches that position, and restore the exact destination-ply snapshot after Back or Forward. Opening a saved game initializes its existing positions with full clocks because the file contains no clock history.
+- **Tests:** `TimePerGame_UndoInTwoHumanGameRestoresBothClocks` verifies that Back restores both clocks in a two-human timed game; `TimePerGame_RedoRestoresTheComputerTimeAfterItsMove` verifies that Redo restores the computer clock after its original search time was charged. Both failed before the fix: the two-human clock remained at 0:58 after Back, and the computer's clock returned to 1:00 instead of 0:59.122 after Redo.
+- **Baseline:** unchanged. `StelloV3BaselineTests` passes, 105/105.
+- **Windows tests:** `Stello.Net.Tests` passes 88/90, including both new tests. The same two existing score-display tests still fail (`+40` vs `+0.4 discs` and `+20` vs `+0.2 discs`).

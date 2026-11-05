@@ -274,4 +274,4 @@ The order puts speed first (it changes no nodes), then the threads, the search, 
 ## Status
 - Plan written on 4 November 2026, with the user's decisions above.
 - **Phase 0: done (2026-11-04).** Branch, plan, findings and the tag `v3.0` on baa44e5 were already in place. The seven 1-thread reference JSONs are in `Plans/benchmark-results/v3.0-ref/`; `StelloV3BaselineTests` pins the 105 signatures independently of frozen Stello 2.0; the match tool accepts repeated `opt=<key>=<value>` search switches.
-- **Phase 1: in progress.** Item 1 (an aborted solve reported as Exact) and item 2 (the natural delay charged to the computer clock) are fixed.
+- **Phase 1: in progress.** Items 1 (an aborted solve reported as Exact), 2 (the natural delay charged to the computer clock) and 3 (clock restore after Back and Forward) are fixed.

@@ -150,7 +150,7 @@ Each player card is structured into 4 clear vertical layers:
 
 ### 3. Quick Action Buttons
 Positioned directly beneath the dual player cards:
-* **`[Undo]`:** Takes back one move with two players; against the computer it goes back to the previous position where the human is to move, taking back the computer's reply as well, and marks the game modified. The clocks go back to the snapshot stored before that computer move (`_timeLeftAtPly`, chapter 14). Disabled at move 0, while the computer is thinking, and after a game lost on time.
+* **`[Undo]`:** Takes back one move with two players; against the computer it goes back to the previous position where the human is to move, taking back the computer's reply as well, and marks the game modified. Both clocks are restored from the snapshot for the destination position (`_timeLeftAtPly`, chapter 14). Disabled at move 0, while the computer is thinking, and after a game lost on time.
 * **`[Redo]`:** Plays the undone moves again, up to the next position where the human is to move (one move with two players). Disabled when nothing was undone, while the computer is thinking, and after a game lost on time.
 * **`[Move Now]`:** Shown when playing against the computer, enabled while it thinks. It stops the search and makes the computer play the best move it has found so far (chapter 09).
 
@@ -360,4 +360,3 @@ The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs t
 ---
 
 Previous: [14 App integration](14-app-integration.md) · Next: [16 The goal and the plan](16-the-goal-and-the-plan.md)
-
