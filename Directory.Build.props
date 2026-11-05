@@ -1,0 +1,15 @@
+<Project>
+  <!--
+    Shared by every .NET project in the repository, including the GameShell submodule (external/GameShell has no
+    Directory.Build.props of its own). Stello.Net/Directory.Build.props imports this file.
+
+    Each operating system gets its own intermediate folder (obj/Windows_NT/ or obj/Unix/). The repository is built
+    from Windows and from a Linux sandbox on the same folder; with one shared obj/, a restore on one machine wrote its
+    NuGet paths into project.assets.json and the other machine's next build failed until it restored again.
+  -->
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)$([System.IO.Path]::DirectorySeparatorChar)obj$([System.IO.Path]::DirectorySeparatorChar)$(OS)$([System.IO.Path]::DirectorySeparatorChar)</BaseIntermediateOutputPath>
+    <!-- Files left in the old shared obj/ (and the other system's folder) must not be compiled. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj/**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

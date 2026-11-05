@@ -1,4 +1,7 @@
 <Project>
+  <!-- The repository-wide settings (one intermediate folder per operating system). -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
   <!-- Shared by every project under Stello.Net. Stello is licensed under GPL-3.0-only (see LICENSE at the repo root). -->
   <PropertyGroup>
     <Authors>Claus Pedersen</Authors>

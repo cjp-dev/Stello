@@ -54,6 +54,19 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 
 ## Phase 1: real bugs
 
+### A separate fix: one `obj/` folder per operating system (2026-11-05)
+- **The problem:** the repository is built both on Windows and in the Linux sandbox, in the same folders. `dotnet restore` writes the machine's NuGet paths into `obj/project.assets.json`, so after a restore on one machine the other machine's build failed (or skipped the tests) until it restored again.
+- **The fix:**
+  - a new [Directory.Build.props](../Directory.Build.props) at the repository root sets `BaseIntermediateOutputPath` to `obj/$(OS)/`, which gives `obj/Windows_NT/` and `obj/Unix/`. It also excludes `obj/**` from the default items, so the files left in the old shared `obj/` are not compiled;
+  - `Stello.Net/Directory.Build.props` imports it;
+  - it also covers the GameShell submodule, which has no `Directory.Build.props` of its own.
+- **Unchanged:** `bin/` stays shared, so the tool paths are the same. The old files in `obj/` can be deleted, but are not used.
+- **Checks (Linux):**
+  - restore and build give 0 warnings, and the assets are in `obj/Unix/`;
+  - Stello.Engine.Tests 488, Egaroucid.Engine.Tests 42 and GameShell.Tests 40 pass;
+  - mid-bench depth 10 is identical to `v3.0-ref`.
+- **On Windows:** the first build restores into `obj/Windows_NT/` by itself.
+
 ### Item 1: an aborted solve was reported as Exact (fixed 2026-11-04)
 - **What was wrong:** `solve_root` ([engine.rs](../Stello.Rust/stello-core/src/search/engine.rs)) wrote each better root move into `best` with the pass's kind. A Move Now or the hard time limit in the middle of a pass then returned a bound as solved:
   - in pass 2 (exact), the best score so far is only a lower bound until every root move is searched, but it came back as `Exact`;
