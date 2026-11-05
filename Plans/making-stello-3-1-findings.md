@@ -65,7 +65,10 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
   - restore and build give 0 warnings, and the assets are in `obj/Unix/`;
   - Stello.Engine.Tests 488, Egaroucid.Engine.Tests 42 and GameShell.Tests 40 pass;
   - mid-bench depth 10 is identical to `v3.0-ref`.
-- **On Windows:** the first build restores into `obj/Windows_NT/` by itself.
+- **On Windows (checked by the agent on the user's machine):**
+  - after deleting all 14 `obj\Windows_NT` folders, `dotnet build Stello.Net.slnx` without a manual restore restored all 14 projects by itself and built with 0 warnings;
+  - `project.assets.json` there points only to `C:\Users\Z6CJP\.nuget\packages\`;
+  - `Stello.Net.Tests` really ran this time (88 of 90; the 2 known score-display tests fail, for phase 3), and `StelloV3BaselineTests` passes 105 of 105.
 
 ### Item 1: an aborted solve was reported as Exact (fixed 2026-11-04)
 - **What was wrong:** `solve_root` ([engine.rs](../Stello.Rust/stello-core/src/search/engine.rs)) wrote each better root move into `best` with the pass's kind. A Move Now or the hard time limit in the middle of a pass then returned a bound as solved:
