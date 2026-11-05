@@ -32,6 +32,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private TimeSpan _blackTimeLeft;
     private TimeSpan _whiteTimeLeft;
     private long _lastTickTimestamp;
+    private bool _isWaitingForNaturalDelay;
     private readonly Timer _clockTimer;
     private readonly SynchronizationContext? _syncContext;
     private bool _hasHumanContinuedOnTime;
@@ -717,10 +718,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
             TimeSpan searchTime = stopwatch.Elapsed;
             Analysis.Update(result, searchTime);
+            _isWaitingForNaturalDelay = true;
             await WaitForNaturalDelayAsync(searchTime, cancel.Token, moveNow.Token);
 
-            TimeSpan elapsed = stopwatch.Elapsed;
-            TimeSpan timeLeft = computerTime > elapsed ? computerTime - elapsed : TimeSpan.Zero;
+            TimeSpan timeLeft = computerTime > searchTime ? computerTime - searchTime : TimeSpan.Zero;
             if (player == Player.Black)
             {
                 _blackTimeLeft = timeLeft;
@@ -738,6 +739,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
             _soundService.Play(SoundType.Move);
             _game.Play(result.Move);
+            _isWaitingForNaturalDelay = false;
             return true;
         }
         catch (OperationCanceledException)
@@ -748,6 +750,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             _cancel = null;
             _moveNow = null;
+            _isWaitingForNaturalDelay = false;
             IsThinking = false;
         }
     }
@@ -895,6 +898,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _game.Ply == 0)
         {
             _lastTickTimestamp = 0;
+            return;
+        }
+
+        if (_isWaitingForNaturalDelay)
+        {
+            _lastTickTimestamp = Stopwatch.GetTimestamp();
             return;
         }
 

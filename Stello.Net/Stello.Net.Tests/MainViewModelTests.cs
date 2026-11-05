@@ -374,6 +374,28 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task TimePerGame_NaturalDelayIsNotChargedToComputerClock()
+    {
+        MainViewModel vm = Create(new GameSettings(TimeControlMode.TimePerGame, 8, 5, 1), engineDelayMs: 0);
+        vm.ComputerDelayMs = 1200;
+        var total = System.Diagnostics.Stopwatch.StartNew();
+
+        Play(vm, "f5");
+        await WaitAsync(vm.Idle);
+        total.Stop();
+
+        TimeSpan charged = TimeSpan.FromMinutes(1) - vm.ComputerTimeLeft;
+        TimeSpan searchTime = TimeSpan.ParseExact(
+            vm.Analysis.Time,
+            @"m\:ss\.f",
+            System.Globalization.CultureInfo.CurrentCulture);
+        Assert.True(total.Elapsed >= TimeSpan.FromMilliseconds(vm.ComputerDelayMs - 150),
+            $"The natural delay did not elapse; the whole move took {total.Elapsed}.");
+        Assert.True(charged <= searchTime + TimeSpan.FromMilliseconds(150),
+            $"The clock charged {charged}, but the search took {searchTime} and the natural delay is not chargeable.");
+    }
+
+    [Fact]
     public async Task HumanTimeout_DecliningToContinueEndsTheGame()
     {
         MainViewModel vm = Create(new GameSettings(TimeControlMode.TimePerGame, 8, 5, 1));
