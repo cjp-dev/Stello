@@ -66,6 +66,11 @@ public class MatchAdapterTests
     [InlineData("depth=5,opt=soft-pct=101")]
     [InlineData("depth=5,opt=ybwc=off,opt=ybwc=on")]
     [InlineData("engine=stello-v2,depth=5,opt=ybwc=off")]
+    [InlineData("depth=5,opt=end-soft=old")]
+    [InlineData("depth=5,opt=end-soft=legacy,opt=end-soft=fixed")]
+    [InlineData("depth=5,end-soft=legacy")]
+    [InlineData("engine=stello-v2,game-s=60,opt=end-soft=legacy")]
+    [InlineData("engine=egaroucid,game-s=60,opt=end-soft=legacy")]
     public void ParseSide_RejectsInvalidSides(string text)
     {
         Assert.Throws<ArgumentException>(() => MatchCommands.ParseSide(text));
@@ -83,6 +88,21 @@ public class MatchAdapterTests
         Assert.False(side.Options.Ybwc);
         Assert.Contains("Multi-ProbCut off", MatchCommands.Describe(side), StringComparison.Ordinal);
         Assert.Contains("YBWC off", MatchCommands.Describe(side), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ParseSide_ChoosesTheEndgameSoftLimit()
+    {
+        MatchSide legacy = MatchCommands.ParseSide("game-s=300,opt=end-soft=legacy");
+        Assert.NotNull(legacy.Options);
+        Assert.True(legacy.Options.LegacyEndgameSoft);
+        Assert.Equal(SearchOptions.Default with { LegacyEndgameSoft = true }, legacy.Options);
+        Assert.Contains("Stello 3.0's endgame soft limit", MatchCommands.Describe(legacy), StringComparison.Ordinal);
+
+        // fixed is the default engine, the same side as without the switch.
+        MatchSide fixedSide = MatchCommands.ParseSide("game-s=300,opt=end-soft=fixed");
+        Assert.Null(fixedSide.Options);
+        Assert.Equal(MatchCommands.Describe(MatchCommands.ParseSide("game-s=300")), MatchCommands.Describe(fixedSide));
     }
 
     [Fact]

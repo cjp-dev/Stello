@@ -53,8 +53,9 @@ pub const STELLO_INTERNAL_ERROR: i32 = 5;
 ///
 /// - 1: the engine, signals and search functions (Stello 3.0 preview);
 /// - 2: [`stello_engine_set_threads`]; the functions of version 1 are unchanged;
-/// - 3: [`stello_engine_set_ybwc`]; the functions of version 2 are unchanged.
-pub const ABI_VERSION: u32 = 3;
+/// - 3: [`stello_engine_set_ybwc`]; the functions of version 2 are unchanged;
+/// - 4: [`stello_engine_set_legacy_endgame_soft`]; the functions of version 3 are unchanged.
+pub const ABI_VERSION: u32 = 4;
 
 /// An engine: C# `SearchEngine`'s state (hash tables, options, evaluation). Opaque to the caller.
 pub struct StelloEngine {
@@ -205,6 +206,7 @@ pub unsafe extern "C" fn stello_engine_create(
             selective: selective != 0,
             probcut_percent: (probcut_percent >= 0).then_some(probcut_percent),
             ybwc: true,
+            legacy_endgame_soft: false,
         };
         engine =
             Box::into_raw(Box::new(StelloEngine { engine: SearchEngine::new(hash_bits as u32, options), threads: 1 }));
@@ -275,6 +277,21 @@ pub unsafe extern "C" fn stello_engine_set_ybwc(engine: *mut StelloEngine, ybwc:
     // SAFETY: the caller passes null or a valid engine used by this thread only.
     let Some(engine) = (unsafe { engine.as_mut() }) else { return STELLO_INVALID_ARGUMENT };
     engine.engine.set_ybwc(ybwc != 0);
+    STELLO_OK
+}
+
+/// Stello 3.0's endgame soft limit with a game clock (`legacy` not 0) or the fix (0, the default), for the engine's
+/// next searches (C#: `SearchOptions.LegacyEndgameSoft`): kept to compare the two in matches
+/// (Plans/making-stello-3-1-plan.md, phase 1 item 4). Returns [`STELLO_OK`], or [`STELLO_INVALID_ARGUMENT`] for a
+/// null engine.
+///
+/// # Safety
+/// `engine` is null or a valid engine that no other thread uses during the call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn stello_engine_set_legacy_endgame_soft(engine: *mut StelloEngine, legacy: i32) -> i32 {
+    // SAFETY: the caller passes null or a valid engine used by this thread only.
+    let Some(engine) = (unsafe { engine.as_mut() }) else { return STELLO_INVALID_ARGUMENT };
+    engine.engine.set_legacy_endgame_soft(legacy != 0);
     STELLO_OK
 }
 
@@ -614,6 +631,12 @@ mod tests {
             assert_eq!(stello_engine_set_threads(engine, 4), STELLO_OK);
             assert_eq!(stello_engine_set_ybwc(std::ptr::null_mut(), 0), STELLO_INVALID_ARGUMENT);
             assert_eq!(stello_engine_set_ybwc(engine, 0), STELLO_OK);
+            assert_eq!(stello_engine_set_legacy_endgame_soft(std::ptr::null_mut(), 1), STELLO_INVALID_ARGUMENT);
+            assert!(!(*engine).engine.options().legacy_endgame_soft);
+            assert_eq!(stello_engine_set_legacy_endgame_soft(engine, 1), STELLO_OK);
+            assert!((*engine).engine.options().legacy_endgame_soft);
+            assert_eq!(stello_engine_set_legacy_endgame_soft(engine, 0), STELLO_OK);
+            assert!(!(*engine).engine.options().legacy_endgame_soft);
             let initial = Board::INITIAL;
             let mut result = StelloSearchResult::default();
             for depth in [6, 8] {

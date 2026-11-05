@@ -25,11 +25,23 @@ pub struct SearchOptions {
     /// off is Lazy SMP alone on all threads, with helpers in the solve (Plans/making-stello-3-plan.md, phase 6), kept
     /// to compare the two in matches. With 1 thread it changes nothing. Not in C# 2.0.
     pub ybwc: bool,
+
+    /// With a game clock, Stello 3.0's endgame soft limit: measured from the solver's start instead of the search's,
+    /// and `soft_time_percent` taken of the whole hard limit (Plans/making-stello-3-1-plan.md, phase 1 item 4). Off
+    /// (the default) is the fix; on is kept to compare the two in matches.
+    pub legacy_endgame_soft: bool,
 }
 
 impl Default for SearchOptions {
     /// C#: `SearchOptions.Default`, the engine as the apps use it.
     fn default() -> SearchOptions {
-        SearchOptions { pattern: None, soft_time_percent: None, selective: true, probcut_percent: None, ybwc: true }
+        SearchOptions {
+            pattern: None,
+            soft_time_percent: None,
+            selective: true,
+            probcut_percent: None,
+            ybwc: true,
+            legacy_endgame_soft: false,
+        }
     }
 }

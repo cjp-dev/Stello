@@ -25,7 +25,7 @@ This plan is in `Plans/making-stello-3-1-plan.md`. Its findings document, `Plans
 
 ## Working rules (as for 3.0)
 - **Matches and long runs:** start only on the user's go, from a numbered list with time estimates ([[feedback-long-matches-on-go]]). Check uptime first, run nothing heavy at the same time, and keep the per-game lines in the log.
-- **A/B switches:** each engine change sits behind a `SearchOptions` switch (Rust `SearchOptions`, C# internal `SearchOptions`, match key `opt=`/named keys), as in 2.0. Kept changes become the default, and their switches are removed at the release.
+- **A/B switches:** each engine change sits behind a `SearchOptions` switch (Rust `SearchOptions`, C# internal `SearchOptions`, match key `opt=`/named keys), as in 2.0. **User decision (2026-11-05):** as soon as a change's match is approved, its switch is removed again: the old code path, the option, the FFI setter (and its ABI bump, as long as no release had it), the C# property and the match key. A kept change stays as the only code. A rejected change is removed the same way, with the old code kept.
 - **Gates:**
   - For a change that alters play: a 500 ms match of 1,180 games against the previous default, not worse (upper bound > 50 %). A gain is confirmed at 2 s.
   - For a change that only alters counting or speed: `mid-bench`/`solve-bench --compare`, with correct results.
@@ -274,4 +274,4 @@ The order puts speed first (it changes no nodes), then the threads, the search, 
 ## Status
 - Plan written on 4 November 2026, with the user's decisions above.
 - **Phase 0: done (2026-11-04).** Branch, plan, findings and the tag `v3.0` on baa44e5 were already in place. The seven 1-thread reference JSONs are in `Plans/benchmark-results/v3.0-ref/`; `StelloV3BaselineTests` pins the 105 signatures independently of frozen Stello 2.0; the match tool accepts repeated `opt=<key>=<value>` search switches.
-- **Phase 1: in progress.** Items 1 (an aborted solve reported as Exact), 2 (the natural delay charged to the computer clock) and 3 (clock restore after Back and Forward) are fixed.
+- **Phase 1: in progress.** Items 1 (an aborted solve reported as Exact), 2 (the natural delay charged to the computer clock), 3 (clock restore after Back and Forward) and 4 (the endgame soft limit) are fixed. Item 4 has an A/B switch (`opt=end-soft=legacy` plays 3.0's soft limit) and is ready for its gated 1,180-game match at 5 min per game.

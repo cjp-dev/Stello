@@ -211,6 +211,7 @@ pub(crate) struct SearchContext<'a> {
     clock: Clock,
     soft_time_percent: Option<i32>,
     ybwc: bool,
+    legacy_endgame_soft: bool,
 }
 
 impl<'a> SearchContext<'a> {
@@ -229,6 +230,7 @@ impl<'a> SearchContext<'a> {
             clock,
             soft_time_percent: options.soft_time_percent,
             ybwc: options.ybwc,
+            legacy_endgame_soft: options.legacy_endgame_soft,
         }
     }
 }
@@ -346,6 +348,11 @@ impl SearchEngine {
     /// [`SearchOptions::ybwc`], for the next searches.
     pub fn set_ybwc(&mut self, ybwc: bool) {
         self.options.ybwc = ybwc;
+    }
+
+    /// [`SearchOptions::legacy_endgame_soft`], for the next searches.
+    pub fn set_legacy_endgame_soft(&mut self, legacy: bool) {
+        self.options.legacy_endgame_soft = legacy;
     }
 
     /// The clock that times the search (default [`system_clock`]).
@@ -495,6 +502,8 @@ pub(crate) struct Searcher<'a> {
     pub(crate) clock: Clock,
     pub(crate) start: Duration,
     soft_time_percent: Option<i32>,
+    /// [`SearchOptions::legacy_endgame_soft`].
+    legacy_endgame_soft: bool,
     /// [`SearchOptions::ybwc`]: whether this search splits its nodes when it has helpers.
     pub(crate) ybwc: bool,
     /// The split point this search was split off at (YBWC), if it was.
@@ -539,6 +548,7 @@ impl<'a> Searcher<'a> {
             clock: context.clock,
             start: (context.clock)(),
             soft_time_percent: context.soft_time_percent,
+            legacy_endgame_soft: context.legacy_endgame_soft,
             ybwc: context.ybwc,
             split: None,
             helpers: None,
@@ -613,7 +623,7 @@ impl<'a> Searcher<'a> {
         best: &mut Best,
     ) -> Result<(), Abort> {
         let empties = board.empty_count() as i32;
-        let mut budget = time::for_midgame(limits, empties).with_soft_percent(self.soft_time_percent);
+        let mut budget = time::for_midgame(limits, empties).with_soft_percent(self.soft_time_percent, 0);
         self.hard_limit_ms = budget.hard_ms;
 
         if limits.mode() != TimeControlMode::Solve {
@@ -634,7 +644,7 @@ impl<'a> Searcher<'a> {
             }
         }
 
-        budget = time::for_endgame(limits, budget, self.elapsed_ms()).with_soft_percent(self.soft_time_percent);
+        budget = time::for_solver(limits, budget, self.elapsed_ms(), self.soft_time_percent, self.legacy_endgame_soft);
         self.hard_limit_ms = budget.hard_ms;
 
         // Win/loss/draw first with a null window around 0; it is much faster than the exact score.

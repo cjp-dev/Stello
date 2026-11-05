@@ -208,6 +208,11 @@ public sealed class SearchEngine
             Check(StelloNative.SetYbwc(engine, 0));
         }
 
+        if (Options.LegacyEndgameSoft)
+        {
+            Check(StelloNative.SetLegacyEndgameSoft(engine, 1));
+        }
+
         engine.AddMemoryPressure((long)HashBytesPerSlot << HashBits);
         _signals = StelloNative.CreateSignals();
         _engine = engine;
