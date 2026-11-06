@@ -54,7 +54,7 @@ A side is a short list of `key=value` settings, separated by commas. It needs ex
 | `mpc=100` | Multi-ProbCut's t × 100: a cut needs the shallow search to be t standard deviations outside the window (default 100, [chapter 06](06-midgame-search.md#selective-search)) | Stello 2.0 |
 | `name=new` | the name in the report and in the file name | all |
 
-Since Stello 3.0, `engine=stello` is the Rust engine and `engine=stello-v2` the frozen Stello 2.0 ([chapter 25](25-phases-0-4-the-engine-in-rust.md)), and `engine=stello` has two more keys: `threads=N` (1–256, default 1) and `ybwc=on|off` (default on); with threads, keep `--workers` × threads within the cores ([chapter 26](26-phases-5-9-threads.md#threads-through-every-layer)). `mid-bench` and `solve-bench` take `--threads N` too.
+Since Stello 3.0, `engine=stello` is the Rust engine and `engine=stello-v2` the frozen Stello 2.0 ([chapter 25](25-phases-0-4-the-engine-in-rust.md)). The Rust engine also accepts `threads=N` (1–256, default 1) and `ybwc=on|off` (default on); with threads, keep `--workers` × threads within the cores ([chapter 26](26-phases-5-9-threads.md#threads-through-every-layer)). `mid-bench` and `solve-bench` take `--threads N` too.
 
 For example `--a time-ms=100,name=old --b time-ms=200,name=new`. Neither side uses the opening book unless it has `book=on`, so the games test the search and the evaluation. A key that does not belong to the side's engine is an error.
 
@@ -94,7 +94,7 @@ By default it solves #40–#44. `--to 49` adds five harder positions. Stello 2.0
 
 [midgame.txt](../Stello.Net/tools/Stello.Benchmark/Data/midgame.txt) holds 100 midgame positions: the engine played itself from the first 20 start positions at depth 6, and a position was taken when 48, 42, 36, 30 and 26 squares were empty. `mid-bench` searches each to a fixed depth (10 by default; Stello 1 needs about 7 s for all 100) with empty hash tables, three interleaved passes, and reports the nodes, the fastest time and the nodes per second, by number of empty squares.
 
-- **`--side <keys>`** gives a Stello 2.0 search the switches of a match side, for example `--side mpc=130`, to count the nodes of a setting at a fixed depth.
+- **`--side <keys>`** gives the Rust Stello search settings of a match side, for example `--side mpc=130`, to count the nodes of a setting at a fixed depth.
 - **`--eval <file>`** searches with another Stello 2.0 evaluation file.
 - **`--mpc` and `--level`** are for Egaroucid only: `--mpc 74` … `--mpc 100` sets the selectivity of its fixed-depth search (100, no selectivity, is the default), and `--level L` searches at an Egaroucid level instead of a depth.
 

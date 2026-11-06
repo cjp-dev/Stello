@@ -1,8 +1,8 @@
 // The WebAssembly engine as the web app's worker uses it (wasm-bindgen --target web), under Node:
 //   node --test Stello.Rust/stello-wasm/tests/engine.test.mjs
 // It loads the package that Stello.Web's build makes (Stello.Net/Stello.Web/wwwroot/engine), or the folder in the
-// environment variable STELLO_WASM_PKG. The searches must equal Stello 2.0's recorded signatures node for node, as
-// the native engine does (stello-core/tests/search.rs).
+// environment variable STELLO_WASM_PKG. The searches must equal the recorded baseline signatures node for node
+// (stello-v3-signatures.txt), as the native engine does (stello-core/tests/search.rs).
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
@@ -43,13 +43,13 @@ function request({ black, white, player }, { mode = 0, depth = 0, timeMs = 0, ha
 const kinds = ['None', 'Heuristic', 'WinLossDraw', 'Exact', 'Book'];
 const squareName = square => square < 0 ? 'pass' : String.fromCharCode(97 + square % 8) + (Math.floor(square / 8) + 1);
 const run = (text, host = { progress() {}, signal: () => 0 }) => JSON.parse(engine.search(text, host));
-const signatures = readFileSync(`${repository}Stello.Net/Stello.Engine.Tests/Data/stello-v2-signatures.txt`, 'utf8')
+const signatures = readFileSync(`${repository}Stello.Net/Stello.Engine.Tests/Data/stello-v3-signatures.txt`, 'utf8')
     .split('\n').filter(line => line !== '' && !line.startsWith('#'));
 
 function checkSignature(line, files) {
     const [file, id, limit] = line.split(' ');
     const limits = limit === 'solve' ? { mode: 3 } : { mode: 0, depth: Number(limit.split('=')[1]) };
-    // StelloV2Tests uses a new engine for each search.
+    // StelloV3BaselineTests uses a new engine for each search.
     engine.init(undefined, 19);
     const result = run(request(files[file].get(id), limits));
     const actual = [file, id, limit, squareName(result.Square), result.Score, kinds[result.Kind], result.Depth, result.Nodes];
@@ -60,14 +60,14 @@ test('the version is 3.x', () => {
     assert.match(engine.version(), /^3\.\d+\.\d+$/);
 });
 
-test('midgame searches equal Stello 2.0 node for node', () => {
+test('midgame searches equal the baseline node for node', () => {
     const files = { 'midgame.txt': positions('midgame.txt') };
     const lines = signatures.filter(line => line.startsWith('midgame.txt ')).filter((_, i) => i % 5 === 0);
     assert.equal(lines.length, 20);
     lines.forEach(line => checkSignature(line, files));
 });
 
-test('solves equal Stello 2.0 node for node (FFO #40 and #41)', () => {
+test('solves equal the baseline node for node (FFO #40 and #41)', () => {
     const files = { 'ffo-40-59.txt': positions('ffo-40-59.txt') };
     for (const line of signatures.filter(line => / (40|41) solve /.test(line))) {
         checkSignature(line, files);
@@ -147,7 +147,7 @@ test('other hash bits make a new engine; requests that are not valid throw', () 
     const position = positions('midgame.txt').get('g01e48');
     const small = run(request(position, { depth: 10, hashBits: 12 }));
     const again = run(request(position, { depth: 10, hashBits: 19 }));
-    assert.equal(again.Nodes, 37483);
+    assert.equal(again.Nodes, 37459);
     assert.ok(small.Nodes > 0);
     assert.throws(() => engine.search('{"Black":1}', { progress() {}, signal: () => 0 }), /no White/);
     assert.throws(() => engine.search(request(position, { depth: 61 }), { progress() {}, signal: () => 0 }), /not valid/);
@@ -158,6 +158,6 @@ test('other hash bits make a new engine; requests that are not valid throw', () 
 test('the evaluation file passed as bytes searches like the built-in one', () => {
     engine.init(readFileSync(`${repository}Stello.Net/Book/stello-eval.bin`), 19);
     const result = run(request(positions('midgame.txt').get('g01e48'), { depth: 10 }));
-    assert.equal(result.Nodes, 37483);
+    assert.equal(result.Nodes, 37459);
     engine.init(undefined, 19);
 });

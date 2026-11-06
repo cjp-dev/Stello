@@ -33,7 +33,7 @@ Usage: stello <command> [options]
                             Search the midgame positions (default Stello.Net/tools/Stello.Benchmark/Data/midgame.txt)
                             to a fixed depth, each with cleared hash tables: nodes, move and score of each search, speed.
                             --out writes the JSON of `Stello.Benchmark mid-bench --out`, so that
-                            `Stello.Benchmark mid-bench --engine stello-v2 --compare <file.json>` checks parity.
+                            `Stello.Benchmark mid-bench --engine stello-v2 --compare <file.json>` compares searches.
                             --cpu portable (both benches) keeps to the portable code that WebAssembly runs, instead of
                             the processor's fast paths (BMI2, AVX2); the results are the same.
                             --threads N (both benches, 1-256) searches with N threads sharing the hash tables; with

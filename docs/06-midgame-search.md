@@ -6,7 +6,7 @@
 
 To choose a move, the engine looks ahead: it tries its moves, the opponent's replies, its answers to those, and so on, and evaluates the positions at the end of each line with the pattern evaluation (chapter 04). The best move is the one that leads to the best position when both sides play their best. This is **minimax**; Stello writes it as **negamax** with **alpha-beta pruning**, which skips lines that cannot change the result. The search runs **iteratively deeper**: first 1 ply, then 2, then 3, until the time is used. Every node searches its first move with the full window and the others with a null window (**principal variation search**). It is helped by the hash table and its **enhanced transposition cutoff** (chapter 07), move ordering (chapter 05), an **extension** at the horizon and a **selective search**, Multi-ProbCut, that cuts off positions a shallow search shows to be clearly outside the interesting range, with an error model fitted on Stello's own searches. When the end of the game is near enough, the endgame solver takes over (chapter 08).
 
-With more than 1 thread, the other threads help: half of them run **Lazy SMP** helpers, which search the root a few plies deeper into the shared hash tables, and the rest take over the later moves of a node once its first move has been searched (**YBWC**). With 1 thread the search is exactly the single-threaded one, node for node that of Stello 2.0 ([Threads](#threads)).
+With more than 1 thread, the other threads help: half of them run **Lazy SMP** helpers, which search the root a few plies deeper into the shared hash tables, and the rest take over the later moves of a node once its first move has been searched (**YBWC**). With 1 thread no pool is used ([Threads](#threads)); the Rust search can differ in nodes from its frozen C# ancestor.
 
 ## Data structures
 
@@ -18,7 +18,7 @@ With more than 1 thread, the other threads help: half of them run **Lazy SMP** h
 | `main` | The calling thread's `ThreadState`: the solver's small table of bounds, `EndgameState::local` (chapter 08), and the move ordering with the response table (chapter 05) |
 | `pool` | The worker threads for searches with more than 1 thread, and the thread count they were started for ([Threads](#the-thread-pool)) |
 | `spawner` | How the pool starts its threads: `std_spawner`, or Web Workers in the threaded web build (`set_spawner`) |
-| `options` | The `SearchOptions`: `pattern`, another evaluation instead of the built-in `EvalWeights::built_in()` (chapter 04), and the switches `selective`, `probcut_percent`, `soft_time_percent` and `ybwc` (on by default; `set_ybwc`) |
+| `options` | The `SearchOptions`: `pattern`, another evaluation instead of the built-in `EvalWeights::built_in()` (chapter 04), and the switches `selective`, `probcut_percent`, `soft_time_percent` and `ybwc` |
 | `probcut_errors` | Multi-ProbCut's margin $t\,\sigma$ in 1/100 disc for each disc count and depth, or `None` when `selective` is off |
 | `clock`, `iteration_done` | The clock (`system_clock`, or the browser's, set with `set_clock`; chapter 09) and the callback after each iteration |
 
@@ -190,7 +190,7 @@ Each thread has a state of its own, a `ThreadState` ([engine.rs](../Stello.Rust/
 
 - **The result** is the main thread's: its move, score and depth. The other threads only make it come sooner.
 - **The counts** are of all threads: a helper adds its nodes to a shared counter at each of its abort checks (`flush_nodes`), and its evaluations when it ends. So the progress reports and the analysis show the nodes per second of all threads.
-- **With 1 thread** no pool is used, and the search is exactly the single-threaded one: node for node the same as Stello 2.0 ([`search`](../Stello.Rust/stello-core/src/search/engine.rs#L381)).
+- **With 1 thread** no pool is used, and the search is the single-threaded Rust search ([`search`](../Stello.Rust/stello-core/src/search/engine.rs#L381)).
 - **More threads are not deterministic.** The threads race for the table, so the nodes, and sometimes the move, differ from run to run. Exact scores from the solver are always the same.
 
 ### The thread pool
@@ -302,7 +302,7 @@ At 16 threads this virtual machine is saturated, and the mix is slower than Lazy
 
 ## Worked example: iterative deepening
 
-The midgame test position after `f5 d6 c3 d3 c4 f4 c5 b3 c2 e6`, Black to move, searched by a new `SearchEngine` (2^19 slots, the default options) with a fixed depth of 10 (Rust release build, 2 November 2026, on the laptop used for all measurements; times depend on the machine). Stello 3.0 visits the same nodes as Stello 2.0, so the moves, scores and counters are those of 2.0 too; only the times are 3.0's:
+The midgame test position after `f5 d6 c3 d3 c4 f4 c5 b3 c2 e6`, Black to move, searched by Stello 3.0's `SearchEngine` (2^19 slots, the default options) with a fixed depth of 10 (Rust release build, 2 November 2026, on the laptop used for all measurements; times depend on the machine). That release visited the same nodes as Stello 2.0; later search fixes can change the counters:
 
 ```text
 --------
@@ -375,16 +375,16 @@ See [Stello porting documentation.md](../Plans/Stello%20porting%20documentation.
 | Egaroucid: [multi_probcut.hpp](../Egaroucid-main/src/engine/multi_probcut.hpp) | The original Multi-ProbCut that `try_probcut` follows |
 | Egaroucid: [ai.hpp](../Egaroucid-main/src/engine/ai.hpp), [ybwc.hpp](../Egaroucid-main/src/engine/ybwc.hpp), [thread_pool.hpp](../Egaroucid-main/src/engine/thread_pool.hpp) | The Lazy SMP helpers, YBWC and the thread pool that Stello's follow |
 | C++: [Minmax.cpp](../Stello%20C++/BRAIN/Minmax.cpp), [Kontrol.cpp](../Stello%20C++/BRAIN/Kontrol.cpp) | `findmax`, `findmax1`, `findmax2`, `zero_findmax`, `getcomputer` |
-| C# 2.0 (frozen): [Stello.Engine.V2/SearchEngine.cs](../Stello.Net/Stello.Engine.V2/SearchEngine.cs) | The C# original of the search, which the Rust code follows node for node ([chapter 25](25-phases-0-4-the-engine-in-rust.md)) |
+| C# 2.0 (frozen): [Stello.Engine.V2/SearchEngine.cs](../Stello.Net/Stello.Engine.V2/SearchEngine.cs) | The C# original and a fixed reference for the Rust search ([chapter 25](25-phases-0-4-the-engine-in-rust.md)) |
 
 ## Tests
 
 - [SearchEngineTests.cs](../Stello.Net/Stello.Engine.Tests/SearchEngineTests.cs), through the C# wrapper: a pass when there is no legal move; a single legal move without search; at depth 9 Multi-ProbCut needs less than half the nodes of the plain search, with a score within 3 discs; the requested depth is reached (1, 4 and 7 plies); the same result twice; progress for every depth, and periodic progress during a long search; time per move and per game are kept; "Move Now" and cancel stop within 100 ms; an already cancelled search throws.
-- [StelloV2Tests.cs](../Stello.Net/Stello.Engine.Tests/StelloV2Tests.cs): the 100 midgame positions at depth 10, searched by the current engine and by the frozen 2.0, give exactly the recorded move, score, depth and nodes ([`Data/stello-v2-signatures.txt`](../Stello.Net/Stello.Engine.Tests/Data/stello-v2-signatures.txt)).
-- [NativeEngineTests.cs](../Stello.Net/Stello.Engine.Tests/NativeEngineTests.cs): the wrapper; the options (`Selective`, `ProbCutPercent`, another evaluation) search as in 2.0, progress and the iteration callback are those of 2.0, exceptions in the callbacks reach the caller, cancel and Move Now from inside the progress, engines on several threads.
+- [StelloV2Tests.cs](../Stello.Net/Stello.Engine.Tests/StelloV2Tests.cs) checks the frozen 2.0 signatures. [StelloV3BaselineTests.cs](../Stello.Net/Stello.Engine.Tests/StelloV3BaselineTests.cs) checks the recorded 3.0 moves and scores with the corrected default cutoff.
+- [NativeEngineTests.cs](../Stello.Net/Stello.Engine.Tests/NativeEngineTests.cs): the wrapper; the default cutoff node count, callbacks against 2.0, exceptions in callbacks, cancel and Move Now from inside the progress, and engines on several threads.
 - [StrengthTests.cs](../Stello.Net/Stello.Engine.Tests/StrengthTests.cs): at depth 4 the engine beats a random player and a greedy player.
 - [EndgameTests.cs](../Stello.Net/Stello.Engine.Tests/EndgameTests.cs): a fixed-depth search near the end switches to the solver and returns the exact score.
-- Rust, [tests/search.rs](../Stello.Rust/stello-core/tests/search.rs): every fifth of the 2.0 midgame signatures; a single legal move and a pass need no search; `only_moves`; a report for every root move, and heartbeats; the soft and the hard time limit with a clock the test sets; cancel and Move Now from another thread; Multi-ProbCut cuts nodes. The unit tests in [search/engine.rs](../Stello.Rust/stello-core/src/search/engine.rs) check the shallow depth's parity, the fitted error model, `move_to_front` and the game-over scores, and that 8 threads solving different positions on one small table get the single-threaded scores.
+- Rust, [tests/search.rs](../Stello.Rust/stello-core/tests/search.rs): every fifth of the 2.0 midgame signatures checks recorded moves and scores without requiring old node-count parity; a single legal move and a pass need no search; `only_moves`; a report for every root move, and heartbeats; the soft and the hard time limit with a clock the test sets; cancel and Move Now from another thread; Multi-ProbCut cuts nodes. The unit tests in [search/engine.rs](../Stello.Rust/stello-core/src/search/engine.rs) also check cutoff boundaries, the fitted error model, `move_to_front`, game-over scores and concurrent solves on one small table.
 - Rust, the threads, [tests/threads.rs](../Stello.Rust/stello-core/tests/threads.rs): FFO #40–44 with 2, 4 and 8 threads give the exact score and a best move; random endings with 4 threads score as with 1; midgame searches with 3 and 6 threads reach the asked depth; the nodes are those of all threads; 1 thread after several searches node for node like a new engine; Move Now and cancel stop 8 threads within 200 ms; a time per move of 150 ms is kept with 8 threads; the hand-over to the solver with 4 threads, Multi-ProbCut on and off, and positions with too few empty squares for a midgame iteration with 8 threads, give the single-threaded result; split solves with 3, 8 and 16 threads on small tables are exact; with YBWC off (Lazy SMP alone) solves are exact too.
 - Rust, the pool, the unit tests in [search/pool.rs](../Stello.Rust/stello-core/src/search/pool.rs): a pool without workers runs nothing; tasks borrow from outside and finish before the scope returns; long tasks stop through a flag they borrow; a polling scope polls while it waits and can stop its tasks; a panic in a task reaches the scope and the pool lives on; a spawner that fails leaves the workers that started. The hammer test of the shared table is in [chapter 07](07-transposition-table.md#tests).
 - The pool and table tests also pass under Miri, and the library and thread tests give no reports under ThreadSanitizer (both with a nightly Rust, only for these checks). The FFI tests in [stello-ffi/src/lib.rs](../Stello.Rust/stello-ffi/src/lib.rs) check `stello_engine_set_threads` and `stello_engine_set_ybwc` (chapter 14).

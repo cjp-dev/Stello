@@ -1,8 +1,9 @@
 //! Stello's Othello engine, ported from Stello 2.0's C# engine (`Stello.Net/Stello.Engine.V2`) and the shared types
 //! of `Stello.Net/Stello.Engine`.
 //!
-//! Part 1 of the 3.0 plan keeps it node-for-node identical to the C# engine: the same moves, scores and node counts
-//! (Plans/making-stello-3-plan.md). Bitboards are `u64` with bit n = square n = row * 8 + column (a1 = 0, h8 = 63).
+//! The 3.0 port was node-for-node identical to the C# engine (Plans/making-stello-3-plan.md); later fixes may change
+//! the search (Plans/making-stello-3-1-plan.md). Bitboards are `u64` with bit n = square n = row * 8 + column
+//! (a1 = 0, h8 = 63).
 //!
 //! - [`square`], [`board`]: C# `Square`, `Move`, `Player`, `Board`;
 //! - [`bits`]: C# `Bitboards` (legal moves, flips, potential mobility);

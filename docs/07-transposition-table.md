@@ -120,7 +120,7 @@ In the node search (chapter 06):
 - A stored move is only used if it is a legal move in the position.
 - If the stored depth is at least the node's `look`, the stored value ends the search when:
   - the bound is `Exact`, or
-  - the bound is `Upper` and the value is below α (the position is too bad for us), or
+  - the bound is `Upper` and the value is at or below α (the position cannot improve our current result), or
   - the bound is `Lower` and the value is at least β (too good; the opponent avoids it).
 - Otherwise the stored move is searched first (chapter 05).
 - **Enhanced transposition cutoff.** From `look` = 4 (`MIDGAME_ETC_MIN_LOOK`), when the children's ply is still within the read height, the position after each move is looked up before the moves are ordered, with the opponent as the tag. If a child has an `Exact` or `Upper` entry with depth ≥ `look` − 1 whose negated value is at least β, that move already refutes the node, and the node returns at once without searching anything.
@@ -184,7 +184,7 @@ sequenceDiagram
 
 **Why a torn read is never taken for a valid entry.** The three words of an entry are written one after the other. Without the check, a reader could combine the discs of one position with the discs or the value of another, and take the mix for the position it looks for. With the check, every write that overlaps the reader's reads changes the sequence between its two reads: the writer makes it odd before its first store and adds 2 after its last. The memory orderings make sure of that: the compare-and-swap is an acquire and is followed by a release fence, the unlock is a release, and the reader's second read of the sequence follows an acquire fence. So if the reader saw any word of a write, it also sees the changed sequence. A missed hit costs only a little search; a false hit could give a wrong score.
 
-**With one thread** the lock is never contended. The table finds and replaces exactly what the C# 2.0 table did, so the search stays node-for-node identical to 2.0.
+**With one thread** the lock is never contended. The table uses the same lookup and replacement rules as the C# 2.0 table, but later search changes can alter which entries are used and the nodes visited.
 
 **`clear`** needs `&mut self`: the table to itself. It runs between searches only, when no other thread uses the table.
 

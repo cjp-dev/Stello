@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Stello.Engine.Benchmark;
 using Stello.Engine.Evaluation;
 using Stello.Engine.Native;
 using Stello.Engine.Search;
@@ -8,7 +9,7 @@ namespace Stello.Engine.Tests;
 
 /// <summary>
 /// The <see cref="SearchEngine"/> wrapper over the Rust engine (stello_engine): the ABI, the options, the callbacks and
-/// the stop signals, compared with Stello 2.0's C# engine (Stello.Engine.V2), which it must equal node for node.
+/// the stop signals. The frozen C# engine is used as a correctness reference for moves and scores.
 /// </summary>
 public class NativeEngineTests
 {
@@ -45,12 +46,24 @@ public class NativeEngineTests
             .Concat(TestPositions.RandomPositions(seed: 32, count: 3, plies: 46)))
         {
             SearchLimits limits = board.EmptyCount <= 18 ? SearchLimits.Solve : SearchLimits.FixedDepth(6);
-            Assert.Equal(Signature(v2.Search(board, player, limits)), Signature(engine.Search(board, player, limits)));
+            SearchResult expected = v2.Search(board, player, limits);
+            SearchResult actual = engine.Search(board, player, limits);
+            Assert.Equal((expected.Move, expected.Score, expected.Kind, expected.Depth), (actual.Move, actual.Score, actual.Kind, actual.Depth));
         }
     }
 
     [Fact]
-    public void ProgressAndIterations_AreThoseOfStelloTwo()
+    public void UpperBoundEqualityCutoff_IsUsedByDefault()
+    {
+        BenchmarkPosition position = BenchmarkPosition.Load(
+            Path.Combine(AppContext.BaseDirectory, "Data", "Benchmark", "midgame.txt")).Single(p => p.Id == "g01e48");
+        SearchLimits limits = SearchLimits.FixedDepth(10);
+        SearchResult result = new SearchEngine().Search(position.Board, position.Player, limits);
+        Assert.Equal(37459, result.Nodes);
+    }
+
+    [Fact]
+    public void ProgressAndIterations_PreserveMovesAndScores()
     {
         var engine = new SearchEngine(16);
         var v2 = new V2.SearchEngine(16);
@@ -66,7 +79,7 @@ public class NativeEngineTests
             v2.IterationDone = (depth, score) => v2Iterations.Add((depth, score));
             v2.Search(board, player, SearchLimits.FixedDepth(7), new SyncProgress<SearchInfo>(info => v2Reports.Add(Report(info))));
 
-            // Fast searches have no heartbeats, so the reports are the same.
+            // Fast searches have no heartbeats; node and evaluation counts may differ after search fixes.
             Assert.Equal(v2Reports, reports);
             Assert.Equal(v2Iterations, iterations);
             Assert.Equal(7, iterations.Count);
@@ -142,9 +155,9 @@ public class NativeEngineTests
         using var moveNow = new CancellationTokenSource();
         moveNow.Cancel();
         // Stopped at the first abort check, as Stello 2.0 stops.
-        Assert.Equal(
-            Signature(new V2.SearchEngine(16).Search(Midgame, Player.Black, SearchLimits.FixedDepth(60), moveNowToken: moveNow.Token)),
-            Signature(engine.Search(Midgame, Player.Black, SearchLimits.FixedDepth(60), moveNowToken: moveNow.Token)));
+        SearchResult expected = new V2.SearchEngine(16).Search(Midgame, Player.Black, SearchLimits.FixedDepth(60), moveNowToken: moveNow.Token);
+        SearchResult actual = engine.Search(Midgame, Player.Black, SearchLimits.FixedDepth(60), moveNowToken: moveNow.Token);
+        Assert.Equal((expected.Move, expected.Score, expected.Kind, expected.Depth), (actual.Move, actual.Score, actual.Kind, actual.Depth));
 
         Assert.Equal(9, engine.Search(Midgame, Player.Black, SearchLimits.FixedDepth(9)).Depth);
     }
@@ -180,7 +193,7 @@ public class NativeEngineTests
     [Fact]
     public void SeveralThreads_SolveExactly_AndOneThreadIsUnchangedAfterwards()
     {
-        // The same engine switches between 4 threads and 1; with 1 it must search as Stello 2.0 again.
+        // The same engine switches between 4 threads and 1; with 1 it must recover its original result.
         var engine = new SearchEngine(16);
         var v2 = new V2.SearchEngine(16);
         foreach ((Board board, Player player) in TestPositions.RandomPositions(seed: 36, count: 6, plies: 42))
@@ -188,6 +201,8 @@ public class NativeEngineTests
             engine.ClearHash();
             v2.ClearHash();
             SearchResult expected = v2.Search(board, player, SearchLimits.Solve);
+            SearchResult singleThreaded = engine.Search(board, player, SearchLimits.Solve);
+            engine.ClearHash();
             SearchResult threaded = engine.Search(board, player, SearchLimits.Solve with { Threads = 4 });
             Assert.Equal((expected.Score, expected.Kind), (threaded.Score, threaded.Kind));
 
@@ -195,7 +210,7 @@ public class NativeEngineTests
             Assert.True(midgame.Move.IsPass ? !board.HasLegalMove(player) : board.IsLegal(player, midgame.Move.Square!.Value));
 
             engine.ClearHash();
-            Assert.Equal(Signature(expected), Signature(engine.Search(board, player, SearchLimits.Solve)));
+            Assert.Equal(Signature(singleThreaded), Signature(engine.Search(board, player, SearchLimits.Solve)));
         }
     }
 
@@ -281,5 +296,5 @@ public class NativeEngineTests
         $"{result.Move} {result.Score} {result.Kind} {result.Depth} {result.Nodes} {result.Evaluations}";
 
     private static string Report(SearchInfo info) =>
-        $"{info.Depth} {info.CurrentMove} {info.BestMove} {info.Score} {info.Kind} {info.Nodes} {info.Evaluations}";
+        $"{info.Depth} {info.CurrentMove} {info.BestMove} {info.Score} {info.Kind}";
 }

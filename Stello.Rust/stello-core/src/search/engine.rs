@@ -200,8 +200,7 @@ pub struct ThreadState {
     pub(crate) ordering: MoveOrdering,
 }
 
-/// What all threads of one search read: the evaluation, the Multi-ProbCut errors, the shared hash tables and the
-/// options of the clock.
+/// What all threads of one search read: the evaluation, Multi-ProbCut errors, shared hash tables, clock and options.
 #[derive(Clone, Copy)]
 pub(crate) struct SearchContext<'a> {
     pattern: &'a EvalWeights,
@@ -921,7 +920,7 @@ impl<'a> Searcher<'a> {
             if entry.depth as i32 >= look
                 && match entry.bound {
                     Bound::Exact => true,
-                    Bound::Upper => value < alpha,
+                    Bound::Upper => value <= alpha,
                     Bound::Lower => value >= beta,
                     Bound::None => false,
                 }
@@ -1365,6 +1364,62 @@ fn move_to_front(moves: &mut [i32], improvements: &[i32]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn search_with_cached_bound(
+        bound: Bound,
+        value: i32,
+        depth: i32,
+        mv: i32,
+        options: SearchOptions,
+    ) -> ((i32, i32), u64) {
+        let mut engine = SearchEngine::new(10, options);
+        let board = Board::INITIAL;
+        let player = Player::Black;
+        let SearchEngine { options, probcut_errors, midgame_table, endgame_table, main, clock, .. } = &mut engine;
+        midgame_table.store(
+            board.discs(player),
+            board.discs(player.opponent()),
+            player.index() as i32,
+            depth,
+            bound,
+            value,
+            mv,
+        );
+        let context = SearchContext::new(options, probcut_errors.as_deref(), midgame_table, endgame_table, *clock);
+        let mut searcher = Searcher::new(context, main, &NoStop);
+        searcher.hash_get_height = 0;
+        searcher.hash_put_height = 0;
+        let result = searcher.search(&board, player, 2, 0, -1, 0, 1).unwrap();
+        (result, searcher.nodes)
+    }
+
+    #[test]
+    fn midgame_upper_bound_at_alpha_cuts_off() {
+        let mv = Board::INITIAL.legal_moves(Player::Black).trailing_zeros() as i32;
+        let options = SearchOptions { selective: false, ..SearchOptions::default() };
+        let (result, nodes) = search_with_cached_bound(Bound::Upper, 0, 2, mv, options);
+        assert_eq!(nodes, 1);
+        assert_eq!(result, (0, mv));
+    }
+
+    #[test]
+    fn midgame_hash_cutoffs_respect_bounds_depth_and_move() {
+        let mv = Board::INITIAL.legal_moves(Player::Black).trailing_zeros() as i32;
+        let options = SearchOptions { selective: false, ..SearchOptions::default() };
+        for (bound, value, depth, stored_move, cuts) in [
+            (Bound::Upper, -1, 2, mv, true),
+            (Bound::Upper, 1, 2, mv, false),
+            (Bound::Upper, 0, 1, mv, false),
+            (Bound::Upper, 0, 2, -1, false),
+            (Bound::Upper, 0, 2, 0, false),
+            (Bound::Lower, 1, 2, mv, true),
+            (Bound::Lower, 0, 2, mv, false),
+            (Bound::Exact, 0, 2, mv, true),
+        ] {
+            let (_, nodes) = search_with_cached_bound(bound, value, depth, stored_move, options.clone());
+            assert_eq!(nodes == 1, cuts, "{bound:?}, value {value}, depth {depth}, move {stored_move}");
+        }
+    }
 
     #[test]
     fn engines_and_signals_can_move_to_other_threads() {

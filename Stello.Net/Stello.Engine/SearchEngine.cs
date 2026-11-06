@@ -9,8 +9,8 @@ namespace Stello.Engine;
 /// <summary>
 /// Stello's search: the midgame search ported from Minmax.cpp and Kontrol.cpp (iterative deepening with a hash
 /// table, response killers and selective search), with the trained pattern evaluation, and the endgame solver
-/// adapted from Egaroucid. Since Stello 3.0 the search runs in Rust (<c>Stello.Rust/stello-core</c>, node for node
-/// the C# engine of Stello 2.0, which <c>Stello.Engine.V2</c> keeps); this class calls it through the C ABI of
+/// adapted from Egaroucid. Since Stello 3.0 the search runs in Rust (<c>Stello.Rust/stello-core</c>), ported from the
+/// C# engine of Stello 2.0 kept in <c>Stello.Engine.V2</c>; this class calls it through the C ABI of
 /// <c>stello_engine</c> (<see cref="StelloNative"/>). An instance runs one search at a time; instances on different
 /// threads are independent. A search with <see cref="SearchLimits.Threads"/> above 1 also runs on worker threads of the
 /// Rust engine, which share its hash tables; they are started at the first such search and kept for the next ones.

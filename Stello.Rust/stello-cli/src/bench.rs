@@ -1,6 +1,6 @@
 //! `solve-bench` and `mid-bench`: C#'s `Stello.Benchmark solve-bench` and `mid-bench`
 //! (tools/Stello.Benchmark/BenchCommands.cs) for the Rust engine, with the same position files and the same JSON
-//! (`BenchRun`), so that the C# tool's `--compare` checks parity.
+//! (`BenchRun`), so that the C# tool's `--compare` can compare searches.
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};

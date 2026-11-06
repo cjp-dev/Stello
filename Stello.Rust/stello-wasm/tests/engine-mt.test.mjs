@@ -3,7 +3,7 @@
 // It loads the package that Stello.Web's build makes with the pinned nightly (Stello.Net/Stello.Web/wwwroot/engine-mt),
 // or the folder in STELLO_WASM_MT_PKG, and skips if there is none. The pool threads are worker_threads running
 // pool-worker.mjs on the shared memory, as engine-pool-worker.js does in the browser. With 1 thread the searches equal
-// Stello 2.0's recorded signatures node for node; with more, solves are exact and moves legal.
+// the baseline signatures node for node; with more, solves are exact and moves legal.
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { test } from 'node:test';
@@ -71,8 +71,8 @@ test('this is the threaded build', options, () => {
     assert.equal(engine.idleThreads(), THREADS - 1);
 });
 
-test('with 1 thread, searches equal Stello 2.0 node for node', options, () => {
-    const signatures = readFileSync(`${repository}Stello.Net/Stello.Engine.Tests/Data/stello-v2-signatures.txt`, 'utf8')
+test('with 1 thread, searches equal the baseline node for node', options, () => {
+    const signatures = readFileSync(`${repository}Stello.Net/Stello.Engine.Tests/Data/stello-v3-signatures.txt`, 'utf8')
         .split('\n').filter(line => line !== '' && !line.startsWith('#'));
     const files = { 'midgame.txt': positions('midgame.txt'), 'ffo-40-59.txt': positions('ffo-40-59.txt') };
     const lines = signatures.filter(line => line.startsWith('midgame.txt ')).filter((_, i) => i % 10 === 0)

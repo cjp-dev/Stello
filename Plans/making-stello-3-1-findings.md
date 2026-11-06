@@ -12,7 +12,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 | **Part 1: Stello 3.1** | | |
 | 0 Set-up and the new baseline | done (2026-11-04) | 3.0 one-thread JSON references, 105-signature baseline test, and Rust-engine `opt=` match switches; Stello tests pass |
 | 1 Real bugs | done (2026-11-06) | Six bugs fixed: an aborted solve reported as Exact, the natural delay charged to the clock, the clock restore after Back/Forward, the endgame soft limit (gate matches at 1 and 5 min per game not worse), web worker robustness (review found a restart loop) and doc errors; items 1 and 2 checked in the apps |
-| 2 The parity quirks | not started | |
+| 2 The parity quirks | in progress | Item 1: equality cutoff passed the 500 ms not-worse match gate; A/B switch removed |
 | 3 The apps | not started | |
 | 4 Tools and verification gaps | not started | |
 | 5 The 3.1 release | not started | |
@@ -172,3 +172,30 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
   - the audit plan's file, block and test counts and its memory figures are brought up to date (31 files and 91 fenced blocks for the linter; 4 MiB–1 GiB of tables, 64 MiB by default; 621 tests).
 - **The audit plan's test gate is now marked as not met.** A full Windows run found 621 tests, of which 4 failed: the 2 known score-display tests (phase 3) and 2 timing-threshold tests.
 - **Checks:** the docs snippet linter passes (31 files, 91 blocks), and the link check finds 0 broken links.
+
+## Phase 2: the parity quirks
+
+| Item | Verdict | Mid-bench nodes | Solve-bench nodes | Elo | Kept |
+|---|---|---:|---:|---:|---|
+| 1. Asymmetric hash cutoffs | Missed a valid equality cutoff; fixed | 3,719,468 → 3,716,389 (−0.083%) | 92,485,229 → 92,485,229 | +1 (−10 to +12) | Yes; 50.2 % (48.6–51.7), not worse |
+
+### Item 1: an upper bound equal to alpha (2026-11-06)
+- **What was wrong:** a stored upper bound equal to alpha still proves the position cannot exceed alpha. The old strict comparison missed that cutoff and searched unnecessarily; it was conservative rather than an incorrect score.
+- **The fix:** an upper bound cuts off when its value is at or below alpha. The old strict comparison and its temporary match/benchmark switches have been removed after the match gate; the native ABI remains version 3. The frozen C# engines remain references, not a reason to retain the quirk.
+- **A/B:** Release, one thread, cleared tables, strict → inclusive:
+  - the default 100 midgame positions at depth 10, three interleaved passes: 3,719,468 → 3,716,389 nodes (−0.083%); best-per-position total 375.5 → 374.6 ms;
+  - the same positions at depth 12, one pass: 10,582,535 → 10,579,515 nodes (−0.029%); 1,151.1 → 1,163.5 ms;
+  - depth 10 with Multi-ProbCut off, one pass: 58,772,944 → 58,742,160 nodes (−0.052%); 5,954.6 → 6,020.3 ms;
+  - FFO #40–44, one pass: 92,485,229 nodes in both, 2,247.9 → 2,269.7 ms; all known scores and moves are correct.
+
+  Every tested move, score, kind and depth matched. The timing differences are small and noisy, not evidence of a speedup. The .NET `--compare` also reproduced all 100 strict midgame signatures and all five solve signatures; the inclusive midgame run differed in nodes at 29 positions.
+- **Match gate:** the 1,180-game, 500 ms/move match against the strict cutoff finished in 21m 16s. Inclusive scored 592/1,180 (50.2 %, 95 % interval 48.6–51.7), with 517 wins, 150 draws and 513 losses; +1 Elo (−10 to +12). Average midgame depth was 18.45 for both, and nodes per second were 9.59M strict versus 9.62M inclusive. This meets the plan's not-worse criterion (upper bound above 50 %), but establishes no playing-strength gain. The [match report](benchmark-results/match_p2i1-upper-cutoff-20261106-094405.md) and [full result data](benchmark-results/match_p2i1-upper-cutoff-20261106-094405.json) contain the results; the local run log records the per-game lines.
+- **Tests:** a direct table-entry regression searched 41 nodes before the fix and one after it. Boundary tests cover values below and above alpha, depth, move legality and other bound types; the native wrapper test pins the default node count.
+- **Checks:** 80 Rust workspace tests, formatting and Clippy with warnings denied; 489 engine tests and 42 Egaroucid/benchmark tests; a web build with threads required and all 15 Node tests on the rebuilt packages. The Windows app tests passed 89 of 91: the two score-display expectation mismatches from item 6 still fail. The docs snippet linter passes, and the changed documents' local file links resolve.
+- **The baseline (review):**
+  - the agent had changed `StelloV3BaselineTests`, the Rust signature test and the Node tests to ignore midgame node counts; that would no longer catch an unintended change in the search;
+  - instead, `stello-v3-signatures.txt` was regenerated: the node counts of the 29 changed midgame positions, with a note in its header. The script checked that no move, score, kind or depth changed;
+  - the C# baseline is strict again (node for node), and the Rust and Node signature tests now read `stello-v3-signatures.txt` with full comparison, not the frozen 2.0 file;
+  - the 2.0 file stays for `StelloV2Tests`, which pins only the frozen C# engine;
+  - after the review: 80 Rust tests, 489 engine tests and 15 Node tests pass.
+- **Verdict:** keep the correctness fix. The match found no significant playing-strength difference, so a 2 s gain confirmation is not warranted. The 500 ms gate is passed; the old code path and A/B switches have been removed.

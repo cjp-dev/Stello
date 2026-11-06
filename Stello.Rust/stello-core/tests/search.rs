@@ -1,5 +1,6 @@
-//! The midgame search: Stello 2.0's recorded signatures (Stello.Net/Stello.Engine.Tests/Data/stello-v2-signatures.txt,
-//! the same file C#'s StelloV2Tests checks), and time control, progress, cancel and Move Now.
+//! The midgame search: the current engine's recorded signatures (Stello.Net/Stello.Engine.Tests/Data/
+//! stello-v3-signatures.txt, the same file C#'s StelloV3BaselineTests checks; it started as Stello 2.0's and is updated
+//! deliberately when a kept fix changes the search), and time control, progress, cancel and Move Now.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -33,12 +34,11 @@ fn position(file: &str, id: &str) -> (Board, Player) {
     (board, player)
 }
 
-/// Every 5th of the 100 `midgame.txt ... depth=10` signatures (all 100 are checked against C# by
-/// `stello mid-bench --out` and `Stello.Benchmark mid-bench --engine stello-v2 --compare`). The `solve` lines are
-/// [`solve_signatures_match_stello_2`].
+/// Every 5th of the 100 `midgame.txt ... depth=10` signatures, node for node (all 100 are checked by C#'s
+/// StelloV3BaselineTests). The `solve` lines are [`solve_signatures_match_the_baseline`].
 #[test]
-fn midgame_signatures_match_stello_2() {
-    let signatures = repository_file("Stello.Net/Stello.Engine.Tests/Data/stello-v2-signatures.txt");
+fn midgame_signatures_match_the_baseline() {
+    let signatures = repository_file("Stello.Net/Stello.Engine.Tests/Data/stello-v3-signatures.txt");
     let positions = benchmark_positions("midgame.txt");
     let mut engine = SearchEngine::new(19, SearchOptions::default());
     let mut checked = 0;
@@ -47,7 +47,7 @@ fn midgame_signatures_match_stello_2() {
         let (_, board, player) = positions.iter().find(|(id, _, _)| id == fields[1]).unwrap();
         let depth: i32 = fields[2].strip_prefix("depth=").unwrap().parse().unwrap();
 
-        // C#'s StelloV2Tests uses a new engine for each search; a cleared one is the same.
+        // C#'s StelloV3BaselineTests uses a new engine for each search; a cleared one is the same.
         engine.clear_hash();
         let result = engine.search_simple(board, *player, &SearchLimits::fixed_depth(depth));
         let actual = format!(
@@ -63,8 +63,8 @@ fn midgame_signatures_match_stello_2() {
 
 /// The 5 `ffo-40-59.txt ... solve` signatures (FFO #40–44, 92 M nodes; about 3 s in release, 15 s in debug).
 #[test]
-fn solve_signatures_match_stello_2() {
-    let signatures = repository_file("Stello.Net/Stello.Engine.Tests/Data/stello-v2-signatures.txt");
+fn solve_signatures_match_the_baseline() {
+    let signatures = repository_file("Stello.Net/Stello.Engine.Tests/Data/stello-v3-signatures.txt");
     let positions = benchmark_positions("ffo-40-59.txt");
     let mut engine = SearchEngine::new(19, SearchOptions::default());
     let lines: Vec<&str> = signatures.lines().filter(|l| l.starts_with("ffo-40-59.txt ")).collect();

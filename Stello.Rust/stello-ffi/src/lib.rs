@@ -204,7 +204,7 @@ pub unsafe extern "C" fn stello_engine_create(
             soft_time_percent: (soft_time_percent >= 0).then_some(soft_time_percent),
             selective: selective != 0,
             probcut_percent: (probcut_percent >= 0).then_some(probcut_percent),
-            ybwc: true,
+            ..SearchOptions::default()
         };
         engine =
             Box::into_raw(Box::new(StelloEngine { engine: SearchEngine::new(hash_bits as u32, options), threads: 1 }));
