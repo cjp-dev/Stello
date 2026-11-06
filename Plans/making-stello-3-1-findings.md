@@ -96,6 +96,18 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
   - A stopped solve stores the same depth (all empty squares) as a finished one, so the book cannot tell them apart. The risk grows with the empty squares: 933 have 26 or more.
   - They are marked for the phase 11 recalculation in the plan. The 1,091 exact values without a time limit are not affected.
 
+- **Checked in the web app (2026-11-06, gate P1):**
+  - **The setup:** a Release AOT publish of the branch and the live 3.0 site as the control; headless Chromium, 1 thread, 60 s per move, no book; games opened from a file, with Move Now pressed at a chosen moment.
+  - **The results:**
+
+    | Case | Live 3.0 | 3.1 |
+    |---|---|---|
+    | Move Now in the exact pass (26 empty squares, a win; interim "+2 discs") | "to the end (26 empty), +2 discs": reported as proven | "to the end (26 empty), Win": the completed win/loss/draw pass |
+    | Move Now right after a draw is found in the win/loss/draw pass (28 empty squares) | "to the end (28 empty), 0 discs": reported as a proven draw | "20 plies, 0.0 discs": the draw move as an estimate |
+
+  - **Unchanged:** the computer moved 0.03 s after Move Now in all four runs, and there were no page errors.
+  - The script is `scratchpad/item1/item1.py`.
+
 ### Item 2: natural delay charged to the computer clock (fixed 2026-11-05)
 - **What was wrong:** `ComputerMoveAsync` measured `elapsed` after `WaitForNaturalDelayAsync`, so the 250 ms UX delay (or its remainder) was deducted from the computer's game clock. Clock ticks during the delay could also time out a nearly exhausted computer clock.
 - **The fix:** set the remaining clock from `searchTime`, captured immediately after the engine returns and before the natural delay; pause clock ticks during that delay. Chapters 09 and 14 already specify that the natural delay is not chargeable.
