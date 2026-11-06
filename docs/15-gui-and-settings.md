@@ -74,7 +74,7 @@ The web app's header has four menus (`Home.razor`):
 * **Save (`Ctrl+S`):** Saves the current game record to the active file path.
 * **Save As...:** Exports the current match, complete with move history, to a `.stello` or `.txt` game file.
 * *(Separator)*
-* **Add Game to Book...:** Adds the game's moves to the user's opening book in the browser's local storage (chapter 11). It needs at least two moves and a confirmation; for an unfinished game it asks "Did Black win the game?".
+* **Add Game to Book...:** Adds the game's moves to the user's opening book in the browser's local storage (chapter 11). It needs at least two moves and a confirmation; for an unfinished game it asks "Who won the game?" and offers Black won, White won, or Cancel.
 
 ### 2. Game Menu
 * **vs Computer (Black):** Configures human vs computer play with the human playing Black (first move). Prompts confirmation if switching modes during an active match.

@@ -281,7 +281,7 @@ The speed pass also left ideas that keep the nodes ([findings](../Plans/making-s
 ## Further reading
 
 - [making-stello-3-plan.md](../Plans/making-stello-3-plan.md): the plan, with its Status section.
-- [making-stello-3-findings.md](../Plans/making-stello-3-findings.md): every measurement of phases 0–3.
+- [making-stello-3-findings.md](../Plans/making-stello-3-findings.md): every measurement of phases 0–9.
 - [cpp-vs-csharp-speed.md](../Plans/cpp-vs-csharp-speed.md): C++ against C#, natively and in WebAssembly.
 - [References](28-references.md#25-phases-04-the-engine-in-rust): Rust, the Rustonomicon on FFI, wasm-bindgen, BMI2.
 

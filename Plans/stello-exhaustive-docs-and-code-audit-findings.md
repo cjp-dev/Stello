@@ -59,7 +59,7 @@ The audit covered:
 - **Documentation Update:**
   - Enhanced [`docs/03-rules-and-move-generation.md`](../docs/03-rules-and-move-generation.md) to explicitly document the Edax broadword shift lineage.
   - Updated [`docs/17-references.md`](../docs/stello-1/17-references.md) under Chapter 02/03 to cite Richard Delorme's `board.c`.
-- **Perft Validation:** Re-verified perft node counts against Aart Bik's standard test suite: Depth 1 = 4, Depth 2 = 12, Depth 3 = 56, Depth 4 = 244, Depth 5 = 1,396, Depth 6 = 8,200, Depth 7 = 55,010, Depth 8 = 390,216.
+- **Perft Validation:** Re-verified perft node counts against Aart Bik's standard test suite: Depth 1 = 4, Depth 2 = 12, Depth 3 = 56, Depth 4 = 244, Depth 5 = 1,396, Depth 6 = 8,200, Depth 7 = 55,092, Depth 8 = 390,216.
 
 ---
 
@@ -241,4 +241,3 @@ The audit covered:
 - [x] **Opening Book Integrity:** `Stello.BookTool verify` and `stats` complete successfully with 11,200 canonical positions and 22,878 moves.
 - [x] **In-App Docs Synchronization:** All updated chapters synchronized into `Stello.Web/wwwroot/content/brain/` and verified to render cleanly with KaTeX math and Mermaid diagrams.
 - [x] **User Control of Commits:** No git commits or pushes executed by the assistant; all staged/unstaged changes ready for user inspection and commit.
-

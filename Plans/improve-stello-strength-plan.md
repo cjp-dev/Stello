@@ -33,7 +33,7 @@ All three must be able to play matches against each other.
 
 ## Facts that shape the plan
 - **Current Stello search** (`Stello.Engine/SearchEngine.cs`, 834 lines, 1 thread):
-  - fail-hard alpha-beta and a fixed-margin selective search (:267);
+  - fail-soft alpha-beta (ordinary recursive nodes return their best score; selective-search cutoffs return the window bound) and a fixed-margin selective search;
   - the solver starts after midgame depth empties−8 and runs a win/loss/draw pass, then the exact search (:147–167);
   - `Solve` (:423) uses PVS, an endgame transposition table, enhanced transposition cutoff from 10 empties, evaluation ordering from 18 empties, then `SolveShallow`/`SolveLast2`/`SolveLast`;
   - `CheckAbort` runs every 1024 nodes and sends a progress heartbeat every 100 ms. The **web app's Stop and Move Now only work through those reports** (`Stello.Web/Worker/EngineWorker.cs:90`), so any new search must keep calling `Report`.

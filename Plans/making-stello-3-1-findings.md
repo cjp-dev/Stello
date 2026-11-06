@@ -11,7 +11,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 |---|---|---|
 | **Part 1: Stello 3.1** | | |
 | 0 Set-up and the new baseline | done (2026-11-04) | 3.0 one-thread JSON references, 105-signature baseline test, and Rust-engine `opt=` match switches; Stello tests pass |
-| 1 Real bugs | in progress | Items 1–5 are fixed; item 4's 1-minute gate and 5-minute confirmation found no significant difference; item 5's review found and fixed a restart loop when a pool worker fails |
+| 1 Real bugs | items done; gate open | Items 1–6 are fixed; item 4's 1-minute gate and 5-minute confirmation found no significant difference; item 5's review found and fixed a restart loop when a pool worker fails |
 | 2 The parity quirks | not started | |
 | 3 The apps | not started | |
 | 4 Tools and verification gaps | not started | |
@@ -147,3 +147,14 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 - **Tests:**
   - `Play_LateProgressDoesNotOverwriteFinalAnalysis` (Stello.Net.Tests, Windows) sends a report after the result while the move is still pending, and checks that the analysis is unchanged. The agent reports all 50 `MainViewModelTests` passing;
   - the worker changes have no automated test (the Node tests use their own pool worker). They were checked by the browser runs above.
+
+
+### Item 6: wrong statements in the docs (fixed 2026-11-06)
+- **Corrected:**
+  - perft(7) is 55,092, not 55,010 (audit findings);
+  - Stello 1's search is fail-soft: ordinary nodes return their best score, and only the selective-search cutoffs return the window bound (`Stello.Engine.V1/SearchEngine.cs:278, 287`, checked in review). The 2.0 plan said "fail-hard";
+  - chapter 15 now gives the web's real wording for Add Game to Book ("Who won the game?": Black won, White won, Cancel);
+  - chapter 25 now says the 3.0 findings cover phases 0–9;
+  - the audit plan's file, block and test counts and its memory figures are brought up to date (31 files and 91 fenced blocks for the linter; 4 MiB–1 GiB of tables, 64 MiB by default; 621 tests).
+- **The audit plan's test gate is now marked as not met.** A full Windows run found 621 tests, of which 4 failed: the 2 known score-display tests (phase 3) and 2 timing-threshold tests.
+- **Checks:** the docs snippet linter passes (31 files, 91 blocks), and the link check finds 0 broken links.
