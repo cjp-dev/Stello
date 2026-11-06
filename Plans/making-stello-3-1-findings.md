@@ -179,6 +179,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 |---|---|---:|---:|---:|---|
 | 1. Asymmetric hash cutoffs | Missed a valid equality cutoff; fixed | 3,719,468 → 3,716,389 (−0.083%) | 92,485,229 → 92,485,229 | +1 (−10 to +12) | Yes; 50.2 % (48.6–51.7), not worse |
 | 2. Upper-bound hash moves as response killers | Harmless ordering heuristic; unchanged | depth 10: 3,716,389 → 3,716,538 (+0.004%); depth 12: 10,579,515 → 10,578,457 (−0.010%) | Not applicable (endgame ordering is separate) | — | No |
+| 3. Transposition table never ages | Old-root entries crowd the current search; aging (3a) kept, tighter-bound retention (3b) dropped | Kept 3a: 3,716,389 → 3,716,389 | Kept 3a: 92,485,229 → 92,485,229 | Confirmation at 2 s: +11 (−2 to +24) | 3a yes: match 5 was not worse; 3b no: no demonstrated gain |
 
 ### Item 1: an upper bound equal to alpha (2026-11-06)
 - **What was wrong:** a stored upper bound equal to alpha still proves the position cannot exceed alpha. The old strict comparison missed that cutoff and searched unnecessarily; it was conservative rather than an incorrect score.
@@ -211,3 +212,34 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
   All moves and scores matched at both depths. The node differences are tiny and reverse direction between depths; the short timing samples are noisy and show no reliable gain. The solver is unaffected, so a solve benchmark and playing-strength match are not warranted.
 - **Decision:** leave the heuristic unchanged. The temporary A/B switch was removed, the ABI remains version 3, and the strict 3.0 node signatures remain unchanged because the default search did not change.
 - **Checks:** 80 Rust workspace tests, 489 engine tests, and 42 Egaroucid/benchmark tests pass; the 100-position node/move/score comparisons were deterministic across three passes.
+
+### Item 3: aging transposition-table entries (2026-11-06; 3a kept, 3b dropped)
+- **What was wrong:** entries for positions with more empty squares than the current root cannot occur in the current search, but their deep results stayed live during a game and could crowd out useful entries.
+- **Kept fix (3a):** aging is unconditional in both midgame and endgame tables. Every search records the root's empty-square count and passes it to every thread. Probes ignore entries from earlier positions; replacement overwrites a stale first entry in place, leaving a live second entry alone. All other replacement rules remain Stello 3.0's: the deepest result takes the first place, a shallower result for that position is dropped, and the second place is otherwise always replaced. A probe returns one entry, not two. See [chapter 07](../docs/07-transposition-table.md#aging-across-moves).
+- **Dropped strategy (3b):** keeping a tighter, shallower bound in the second place changed the replacement strategy rather than fixing aging. It showed no statistically supported gain in either match. Its replacement logic, two-bound probes and tests have been removed completely.
+- **First combined version (historical, not the five split matches):** aging plus tighter-bound retention scored 579/1,180 (49.1%, 95% interval 47.2–50.9), −6 Elo (−19 to +6), at 500 ms/move. The implementation then changed, including a branch that could discard another live colliding position. Review required splitting the fix from the strategy and matching the actual proposed code. The [old report](benchmark-results/match_p2i3-tt-replacement.md) and [JSON](benchmark-results/match_p2i3-tt-replacement.json) remain as historical evidence, not measurements of the final code.
+- **A/B before cleanup (Release, one thread, cleared tables between positions):**
+
+  | Variant | Mid-bench depth 10, 3 passes | FFO #40–44 |
+  |---|---:|---:|
+  | 3.0 (current) | 3,716,389 | 92,485,229 |
+  | 3a | 3,716,389 (identical) | 92,485,229 (identical) |
+  | 3a+3b | 3,644,279 (−1.94%) | 92,485,227 |
+
+  3a changes nothing in the benches: they clear the tables for each position, and no entry becomes stale inside one search. The removed 3b variant used fewer nodes in 94 midgame positions and more in 6; its only score change was `g18e30` (3,650 → 4,125, move `f1` unchanged). None of these 3b differences belongs in the kept baseline.
+- **Matches (candidate was side B throughout; 12 games at a time, hash bits 19, one thread per engine, colours swapped per opening):**
+
+  | # | Comparison | Games | Candidate score (95% interval) | Elo (95% interval) | Result |
+  |---|---|---:|---:|---:|---|
+  | 1 | 3a vs 3.0, 500 ms/move, starts 1–590 | 1,180 | 50.6% (49.0–52.2) | +4 (−7 to +15) | No significant difference; not worse under the fix rule |
+  | 2 | 3a vs 3.0, 2 s/move, starts 1–300 | 600 | 47.5% (45.6–49.4) | −17 (−31 to −4) | Initial loss; independent confirmation requested |
+  | 3 | 3a+3b vs 3a, 500 ms/move, starts 1–590 | 1,180 | 50.3% (48.6–52.0) | +2 (−9 to +14) | No significant gain |
+  | 4 | 3a+3b vs 3a, 2 s/move, starts 1–300 | 600 | 51.3% (49.1–53.6) | +9 (−6 to +25) | No significant gain |
+  | 5 | 3a vs 3.0, 2 s/move, starts 301–590 | 580 | 51.6% (49.7–53.4) | +11 (−2 to +24) | No significant difference; passes the agreed confirmation rule |
+
+  Reports and full game data: [match 1](benchmark-results/match_p2i3a-500ms.md) ([JSON](benchmark-results/match_p2i3a-500ms.json)); [match 2](benchmark-results/match_p2i3a-2s.md) ([JSON](benchmark-results/match_p2i3a-2s.json)); [match 3](benchmark-results/match_p2i3b-500ms.md) ([JSON](benchmark-results/match_p2i3b-500ms.json)); [match 4](benchmark-results/match_p2i3b-2s.md) ([JSON](benchmark-results/match_p2i3b-2s.json)); [match 5](benchmark-results/match_p2i3a-2s-301-590.md) ([JSON](benchmark-results/match_p2i3a-2s-301-590.json)). Match 5 used the source opening-list header plus data positions 301–590, disjoint from match 2, and finished in 39m 43s with 256 wins, 86 draws and 238 losses.
+- **Follow-up review:** persistent depth-12 searches over 34 game positions reproduced committed nodes exactly with aging off. The reviewer measured little difference while the table had room and about 9% fewer nodes with aging when the small table filled. This confirmed that aging was exercised, and motivated match 5 rather than immediately rejecting the correct fix.
+- **Decision:** keep 3a and drop 3b. The agreed confirmation rule was to keep aging if match 5's upper confidence bound exceeded 50%; otherwise drop it if it lost again. Match 5 passes that rule. The earlier conclusion that neither qualified is superseded, and the initial 2 s loss is treated as a false alarm for this decision. This is not a statistically proven strength gain or proof of non-inferiority: the score interval still includes 50%. For context, the three aging-only matches total 1,181/2,360 points (50.04%, about +0.3 Elo from the pooled raw score), not +2 to +4 Elo; pooling different time controls is only descriptive.
+- **Final cleanup:** aging is the only behaviour; the Rust/C#/match policy switches and native setter are gone, and the ABI is back to 3. The item-3-only `solve-bench --side` option is removed. `stello-v3-signatures.txt` is byte-for-byte identical to commit `bbe2a60`; strict move, score, kind, depth and node checks remain unchanged.
+- **Regression:** `persistent_engine_ages_a_full_table_across_game_positions` keeps a default engine's 4,096-slot tables over 34 deterministic game positions at depth 12, pinning 2,156,127 nodes. Temporarily disabling replacement aging makes it fail at 2,274,056 nodes: aging saves 5.19% on this game. Aging was restored before final validation. The table unit test also checks that a stale first entry is replaced while a live second entry survives.
+- **Final checks:** 82 Rust workspace tests, formatting and Clippy with warnings denied; all 489 engine tests (including the strict cleared-table baseline), all 42 Egaroucid/benchmark tests, and all 15 Node tests on rebuilt single-threaded and threaded WASM packages pass. The web build with threads required has no warnings or errors. The docs snippet linter passes (31 files, 91 blocks); all 77 local file links in the three changed documents resolve. All five split-match reports and JSON files, plus the historical first report, are retained for the reviewer's commit; no commit was made during cleanup.

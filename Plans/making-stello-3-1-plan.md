@@ -84,7 +84,8 @@ Each item: read the code and decide whether it is a bug or a harmless quirk. If 
    - deep entries from earlier positions can never be replaced, so slot 0 slowly becomes useless during a game;
    - a store for the same position at a lower depth is dropped even when its bound is tighter (`search/table.rs:228-241`).
 
-   Fix: treat entries with more empty squares than the root as empty, and keep the tighter bound. The benchmarks clear the tables, so this needs a game-level test: a match, and a test that searches the moves of a game one after another.
+   Completed: 3a (aging) is kept unconditionally; entries with more empty squares than the root count as empty on probe and replace. 3b (tighter-bound retention) is dropped for lack of a demonstrated gain. After the first four matches, independent-opening match 5 scored 51.6% (49.7–53.4) at 2 s and passed the agreed not-worse confirmation rule, superseding the initial rejection of 3a.
+   The temporary switches and 3b code are removed, the ABI is back to 3, and the strict cleared-table baseline is unchanged from `bbe2a60`. A persistent 4,096-slot, 34-position depth-12 regression checks aging under real slot competition. See the item 3 findings for all five matches and the decision.
 4. **The stored move in `end_deep`** (`endgame/search.rs:342-355, 377, 407-408`):
    - after an ETC fail-low the stored best move can be −1, or a move that was not the best;
    - the hash move does not count as searched, so the node splits one move later.

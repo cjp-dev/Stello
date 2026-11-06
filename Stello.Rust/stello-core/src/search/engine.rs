@@ -210,6 +210,7 @@ pub(crate) struct SearchContext<'a> {
     clock: Clock,
     soft_time_percent: Option<i32>,
     ybwc: bool,
+    pub(crate) root_empties: u32,
 }
 
 impl<'a> SearchContext<'a> {
@@ -219,6 +220,7 @@ impl<'a> SearchContext<'a> {
         midgame_table: &'a TranspositionTable,
         endgame_table: &'a TranspositionTable,
         clock: Clock,
+        root_empties: u32,
     ) -> SearchContext<'a> {
         SearchContext {
             pattern: options.pattern.as_deref().unwrap_or_else(|| EvalWeights::built_in()),
@@ -228,6 +230,7 @@ impl<'a> SearchContext<'a> {
             clock,
             soft_time_percent: options.soft_time_percent,
             ybwc: options.ybwc,
+            root_empties,
         }
     }
 }
@@ -390,10 +393,11 @@ impl SearchEngine {
             return Err(SearchError::Cancelled);
         }
 
+        let root_empties = board.empty_count();
         let progress = progress.map(|p| p as &mut dyn FnMut(&SearchInfo));
         let threads = if THREADS_AVAILABLE { limits.threads() } else { 1 };
         if threads == 1 {
-            return self.searcher(progress, stop).run(board, player, limits, only_moves);
+            return self.searcher(progress, stop, root_empties).run(board, player, limits, only_moves);
         }
 
         if self.pool.as_ref().is_none_or(|(size, _)| *size != threads) {
@@ -413,7 +417,8 @@ impl SearchEngine {
             iteration_done,
             ..
         } = self;
-        let context = SearchContext::new(options, probcut_errors.as_deref(), midgame_table, endgame_table, *clock);
+        let context =
+            SearchContext::new(options, probcut_errors.as_deref(), midgame_table, endgame_table, *clock, root_empties);
         let pool = &pool.as_ref().expect("the pool was started above").1;
         // The response killers of the helpers come from other positions; each search starts them afresh, as the
         // main thread's.
@@ -440,10 +445,12 @@ impl SearchEngine {
         &'a mut self,
         progress: Option<&'a mut dyn FnMut(&SearchInfo)>,
         stop: &'a dyn StopSignal,
+        root_empties: u32,
     ) -> Searcher<'a> {
         let SearchEngine { options, probcut_errors, midgame_table, endgame_table, main, clock, iteration_done, .. } =
             self;
-        let context = SearchContext::new(options, probcut_errors.as_deref(), midgame_table, endgame_table, *clock);
+        let context =
+            SearchContext::new(options, probcut_errors.as_deref(), midgame_table, endgame_table, *clock, root_empties);
         let mut searcher = Searcher::new(context, main, stop);
         searcher.progress = progress;
         searcher.iteration_done = iteration_done.as_deref_mut();
@@ -496,6 +503,7 @@ pub(crate) struct Searcher<'a> {
     soft_time_percent: Option<i32>,
     /// [`SearchOptions::ybwc`]: whether this search splits its nodes when it has helpers.
     pub(crate) ybwc: bool,
+    pub(crate) root_empties: u32,
     /// The split point this search was split off at (YBWC), if it was.
     pub(crate) split: Option<&'a SplitPoint<'a>>,
     /// The main thread's helpers in a search with more than 1 thread (Lazy SMP); `None` with 1 thread and in the
@@ -539,6 +547,7 @@ impl<'a> Searcher<'a> {
             start: (context.clock)(),
             soft_time_percent: context.soft_time_percent,
             ybwc: context.ybwc,
+            root_empties: context.root_empties,
             split: None,
             helpers: None,
             node_sink: None,
@@ -912,7 +921,7 @@ impl<'a> Searcher<'a> {
         }
 
         if hash_get
-            && let Some(entry) = self.midgame_table.get(own, other, tag)
+            && let Some(entry) = self.midgame_table.get_at_root(own, other, tag, self.root_empties)
             && entry.mv >= 0
             && moves & (1u64 << entry.mv) != 0
         {
@@ -957,9 +966,12 @@ impl<'a> Searcher<'a> {
         if look >= MIDGAME_ETC_MIN_LOOK && ply < self.hash_get_height {
             for &mv in list.iter() {
                 let child = board.play_unchecked(player, mv as u32);
-                if let Some(entry) =
-                    self.midgame_table.get(child.discs(opponent), child.discs(player), opponent.index() as i32)
-                    && entry.depth as i32 >= look - 1
+                if let Some(entry) = self.midgame_table.get_at_root(
+                    child.discs(opponent),
+                    child.discs(player),
+                    opponent.index() as i32,
+                    self.root_empties,
+                ) && entry.depth as i32 >= look - 1
                     && entry.bound != Bound::Lower
                     && -(entry.value as i32) >= beta
                 {
@@ -1042,7 +1054,7 @@ impl<'a> Searcher<'a> {
         }
 
         if hash_put {
-            self.midgame_table.store(own, other, tag, stored_look, bound, best, best_move);
+            self.midgame_table.store_at_root(own, other, tag, stored_look, bound, best, best_move, self.root_empties);
         }
 
         Ok((best, best_move))
@@ -1385,7 +1397,7 @@ mod tests {
             value,
             mv,
         );
-        let context = SearchContext::new(options, probcut_errors.as_deref(), midgame_table, endgame_table, *clock);
+        let context = SearchContext::new(options, probcut_errors.as_deref(), midgame_table, endgame_table, *clock, 64);
         let mut searcher = Searcher::new(context, main, &NoStop);
         searcher.hash_get_height = 0;
         searcher.hash_put_height = 0;
@@ -1419,6 +1431,31 @@ mod tests {
             let (_, nodes) = search_with_cached_bound(bound, value, depth, stored_move, options.clone());
             assert_eq!(nodes == 1, cuts, "{bound:?}, value {value}, depth {depth}, move {stored_move}");
         }
+    }
+
+    #[test]
+    fn persistent_engine_ages_a_full_table_across_game_positions() {
+        let mut engine = SearchEngine::new(12, SearchOptions::default());
+        let (mut board, mut player) = (Board::INITIAL, Player::Black);
+        let mut nodes = 0;
+        // Unlike the cleared-table signatures, this keeps old positions competing for the same 4,096 slots.
+        for ply in 0..34 {
+            let mut moves = board.legal_moves(player);
+            if moves == 0 {
+                player = player.opponent();
+                moves = board.legal_moves(player);
+            }
+            assert_ne!(moves, 0);
+            let result = engine.search_simple(&board, player, &SearchLimits::fixed_depth(12));
+            assert_eq!(result.depth, 12);
+            nodes += result.nodes;
+            for _ in 0..(ply * 7) % moves.count_ones() {
+                moves &= moves - 1;
+            }
+            board = board.play_unchecked(player, moves.trailing_zeros());
+            player = player.opponent();
+        }
+        assert_eq!(nodes, 2_156_127);
     }
 
     #[test]
@@ -1476,7 +1513,7 @@ mod tests {
         let mut engine = SearchEngine::new(10, SearchOptions::default());
         let pool = ThreadPool::new(THREADS - 1, std_spawner, ThreadState::default);
         let SearchEngine { options, probcut_errors, midgame_table, endgame_table, main, clock, .. } = &mut engine;
-        let context = SearchContext::new(options, probcut_errors.as_deref(), midgame_table, endgame_table, *clock);
+        let context = SearchContext::new(options, probcut_errors.as_deref(), midgame_table, endgame_table, *clock, 64);
         let solve = |thread: usize, state: &mut ThreadState| -> Vec<(usize, i32)> {
             let mut scores = Vec::new();
             for _ in 0..2 {

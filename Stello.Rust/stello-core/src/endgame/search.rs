@@ -160,7 +160,7 @@ impl Searcher<'_> {
         }
 
         let mut hash_move = -1;
-        if let Some(entry) = self.endgame_table.get(own, opponent, 0) {
+        if let Some(entry) = self.endgame_table.get_at_root(own, opponent, 0, self.root_empties) {
             let value = entry.value as i32;
             match entry.bound {
                 Bound::Exact => return Ok(value),
@@ -186,7 +186,7 @@ impl Searcher<'_> {
             // A child whose stored upper bound already gives a cutoff makes the search unnecessary.
             for mv in moves.iter() {
                 let (child_own, child_opponent) = child(own, opponent, mv);
-                if let Some(entry) = self.endgame_table.get(child_own, child_opponent, 0)
+                if let Some(entry) = self.endgame_table.get_at_root(child_own, child_opponent, 0, self.root_empties)
                     && entry.bound != Bound::Lower
                     && -(entry.value as i32) >= beta
                 {
@@ -260,7 +260,7 @@ impl Searcher<'_> {
         } else {
             Bound::Upper
         };
-        self.endgame_table.store(own, opponent, 0, empties, bound, best, best_move);
+        self.endgame_table.store_at_root(own, opponent, 0, empties, bound, best, best_move, self.root_empties);
         Ok(best)
     }
 
@@ -299,7 +299,7 @@ impl Searcher<'_> {
         }
 
         let mut hash_move = -1;
-        if let Some(entry) = self.endgame_table.get(own, opponent, 0) {
+        if let Some(entry) = self.endgame_table.get_at_root(own, opponent, 0, self.root_empties) {
             let value = entry.value as i32;
             if entry.bound != Bound::Upper && value > alpha {
                 return Ok(value);
@@ -326,7 +326,10 @@ impl Searcher<'_> {
             // Enhanced transposition cutoff: the children's stored bounds may already decide this node.
             for mv in moves.iter() {
                 let (child_own, child_opponent) = child(own, opponent, mv);
-                let Some(entry) = self.endgame_table.get(child_own, child_opponent, 0) else { continue };
+                let Some(entry) = self.endgame_table.get_at_root(child_own, child_opponent, 0, self.root_empties)
+                else {
+                    continue;
+                };
                 let value = -(entry.value as i32);
                 if entry.bound != Bound::Lower && value > alpha {
                     return Ok(value);
@@ -405,7 +408,7 @@ impl Searcher<'_> {
         }
 
         let bound = if best > alpha { Bound::Lower } else { Bound::Upper };
-        self.endgame_table.store(own, opponent, 0, empties, bound, best, best_move);
+        self.endgame_table.store_at_root(own, opponent, 0, empties, bound, best, best_move, self.root_empties);
         Ok(best)
     }
 
@@ -1026,7 +1029,7 @@ mod tests {
     #[test]
     fn shallow_solver_finds_the_exact_score_and_correct_bounds() {
         let mut engine = SearchEngine::new(10, SearchOptions::default());
-        let mut searcher = engine.searcher(None, &NoStop);
+        let mut searcher = engine.searcher(None, &NoStop, 64);
         let mut seed = 0x2545_F491_4F6C_DD1Du64;
         let mut checked = 0;
         for _ in 0..300 {

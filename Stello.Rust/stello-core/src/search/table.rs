@@ -3,8 +3,7 @@
 //! The table is shared by all threads of a search (Plans/making-stello-3-plan.md, phase 5), so it is read and
 //! written through `&self`. Each slot is guarded by a sequence lock: a writer takes the slot's lock, and a reader
 //! checks that the slot's sequence did not change while it read the entry. A read that overlaps a write is a miss,
-//! so a torn entry is never taken for a valid one. With one thread the lock is never contended, and the table
-//! behaves exactly as C#'s: the same hits, the same replacements.
+//! so a torn entry is never taken for a valid one. With one thread the lock is never contended.
 
 use std::sync::atomic::{AtomicU64, Ordering, fence};
 
@@ -93,6 +92,11 @@ impl Entry {
     fn matches(&self, own: u64, opponent: u64, tag: i32, generation: u16) -> bool {
         self.is_live(generation) && self.own == own && self.opponent == opponent && self.tag as i32 == tag
     }
+
+    #[inline]
+    fn empty_count(&self) -> u32 {
+        64 - (self.own | self.opponent).count_ones()
+    }
 }
 
 /// The sequence's lowest bit: a writer holds the slot.
@@ -165,6 +169,8 @@ impl Slot {
 /// [`TranspositionTable::clear`] does not touch the entries: it starts a new generation, and entries of older ones
 /// count as empty. Only every 65,535th clear writes the whole table.
 ///
+/// Entries of positions with more empty squares than the current root count as empty on probe and replacement.
+///
 /// Any number of threads may [`get`](TranspositionTable::get) and [`store`](TranspositionTable::store) at the same
 /// time (see the module documentation); `clear` needs the table to itself.
 pub struct TranspositionTable {
@@ -184,6 +190,12 @@ impl TranspositionTable {
     /// move. C#: `TryGet`.
     #[inline]
     pub fn get(&self, own: u64, opponent: u64, tag: i32) -> Option<Entry> {
+        self.get_at_root(own, opponent, tag, 64)
+    }
+
+    /// The entry of a position, if it is stored and has no more empty squares than the current root.
+    #[inline]
+    pub fn get_at_root(&self, own: u64, opponent: u64, tag: i32, root_empties: u32) -> Option<Entry> {
         let slot = &self.slots[self.slot(own, opponent, tag)];
         let sequence = slot.sequence.load(Ordering::Acquire);
         if sequence & LOCKED != 0 {
@@ -191,27 +203,37 @@ impl TranspositionTable {
             return None;
         }
 
-        let first = slot.load(0);
-        let found = if first.matches(own, opponent, tag, self.generation) {
-            first
-        } else {
-            let second = slot.load(1);
-            if !second.matches(own, opponent, tag, self.generation) {
-                // A miss read during a write is a miss either way.
-                return None;
-            }
-            second
+        let hit = |entry: Entry| {
+            (entry.matches(own, opponent, tag, self.generation) && entry.empty_count() <= root_empties).then_some(entry)
         };
+        let found = hit(slot.load(0)).or_else(|| hit(slot.load(1)));
 
         // A hit counts only if no writer changed the slot while it was read (the words may come from two writes).
         fence(Ordering::Acquire);
-        (slot.sequence.load(Ordering::Relaxed) == sequence).then_some(found)
+        if slot.sequence.load(Ordering::Relaxed) == sequence { found } else { None }
     }
 
     /// C#: `Store` (the value, depth and move are narrowed as C#'s casts do).
     #[inline]
     #[allow(clippy::too_many_arguments)]
     pub fn store(&self, own: u64, opponent: u64, tag: i32, depth: i32, bound: Bound, value: i32, mv: i32) {
+        self.store_at_root(own, opponent, tag, depth, bound, value, mv, 64);
+    }
+
+    /// Stores under the current root's empty-square count, treating entries from earlier positions as empty.
+    #[inline]
+    #[allow(clippy::too_many_arguments)]
+    pub fn store_at_root(
+        &self,
+        own: u64,
+        opponent: u64,
+        tag: i32,
+        depth: i32,
+        bound: Bound,
+        value: i32,
+        mv: i32,
+        root_empties: u32,
+    ) {
         let slot = &self.slots[self.slot(own, opponent, tag)];
         let generation = self.generation;
         let entry = Entry {
@@ -227,11 +249,15 @@ impl TranspositionTable {
 
         let sequence = slot.lock();
         let deep = slot.load(0);
-        if deep.matches(own, opponent, tag, generation) {
+        let deep_live = deep.is_live(generation) && deep.empty_count() <= root_empties;
+        if deep_live && deep.matches(own, opponent, tag, generation) {
             if depth >= deep.depth as i32 {
                 slot.put(0, &entry);
             }
-        } else if !deep.is_live(generation) || depth >= deep.depth as i32 {
+        } else if !deep_live && deep.is_live(generation) {
+            // A stale first entry is overwritten; moving it to the second place would only empty that place.
+            slot.put(0, &entry);
+        } else if !deep_live || depth >= deep.depth as i32 {
             // An empty first entry moves to the second place as C#'s does: it is still empty there.
             slot.put(1, &deep);
             slot.put(0, &entry);
@@ -327,6 +353,37 @@ mod tests {
             table.store(1, 2, 0, 3, Bound::Lower, 50, 8);
         }
         assert!(table.get(1, 2, 0).is_some());
+    }
+
+    /// `count` positions (opponent 0, tag 0, at least 4 discs) in the same slot as `(own, opponent, tag)`.
+    fn collisions(table: &TranspositionTable, own: u64, opponent: u64, tag: i32, count: usize) -> Vec<u64> {
+        let slot = table.slot(own, opponent, tag);
+        let found: Vec<u64> = (1u64..)
+            .map(|seed| seed.wrapping_mul(0x9E37_79B9_7F4A_7C15))
+            .take(1_000_000)
+            .filter(|candidate| candidate.count_ones() >= 4 && table.slot(*candidate, 0, 0) == slot)
+            .take(count)
+            .collect();
+        assert_eq!(found.len(), count, "collisions in 1,000,000 candidates");
+        found
+    }
+
+    #[test]
+    fn entries_from_an_older_root_are_ignored_and_replaced() {
+        let table = TranspositionTable::new(10);
+        // 62 empty squares: stale under a root with 60.
+        let old = (1, 2, 0);
+        let others = collisions(&table, old.0, old.1, old.2, 2);
+        table.store_at_root(old.0, old.1, old.2, 9, Bound::Exact, 100, 7, 64);
+        table.store_at_root(others[0], 0, 0, 2, Bound::Lower, 40, 6, 64);
+        assert!(table.get_at_root(old.0, old.1, old.2, 64).is_some());
+        assert_eq!(table.get_at_root(old.0, old.1, old.2, 60), None);
+
+        // The stale first entry is replaced by a shallower one; the live second entry stays.
+        table.store_at_root(others[1], 0, 0, 1, Bound::Lower, 50, 8, 60);
+        assert_eq!(table.get_at_root(others[1], 0, 0, 60).map(|entry| entry.depth), Some(1));
+        assert_eq!(table.get_at_root(others[0], 0, 0, 60).map(|entry| entry.depth), Some(2));
+        assert_eq!(table.get_at_root(old.0, old.1, old.2, 64), None);
     }
 
     #[test]

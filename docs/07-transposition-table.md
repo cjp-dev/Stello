@@ -30,7 +30,7 @@ An `Entry` is a `Copy` struct of 24 bytes:
 
 ### The slot
 
-The entries are not stored as `Entry` structs. Each slot is a `Slot` of eight 64-bit words, aligned to 64 bytes so that it fills exactly one cache line ([table.rs](../Stello.Rust/stello-core/src/search/table.rs#L101-L110)):
+The entries are not stored as `Entry` structs. Each slot is a `Slot` of eight 64-bit words, aligned to 64 bytes so that it fills exactly one cache line ([table.rs](../Stello.Rust/stello-core/src/search/table.rs#L108)):
 
 | Word | Contents |
 |---|---|
@@ -93,15 +93,17 @@ $$
 
 ### Looking up: `get`
 
-`get(own, opponent, tag)` checks the two entries of the slot and returns the entry it finds, if any. An entry is a hit only if `own`, `opponent` and `tag` are all equal and the entry is in use: its bound is not `None` and its generation is the table's. Because the whole position is stored, there are **no false hits**: an entry can never belong to a different position that happens to have the same hash. With several threads, `get` also checks that no other thread wrote the slot while it read it ([Sharing the table between threads](#sharing-the-table-between-threads)).
+The searches use `get_at_root(own, opponent, tag, root_empties)`: it checks the first entry, then the second if needed, and returns one matching entry, if any. An entry is a hit only if `own`, `opponent` and `tag` are all equal, its bound is not `None`, its generation is the table's, and its position has no more empty squares than the current root ([Aging](#aging-across-moves)). Because the whole position is stored, there are **no false hits**: an entry can never belong to a different position that happens to have the same hash. With several threads, the probe also checks that no other thread wrote the slot while it read it ([Sharing the table between threads](#sharing-the-table-between-threads)). The convenience `get(own, opponent, tag)` uses a root limit of 64, so it only applies the generation check.
 
 ### Storing: `store`
 
-`store(own, opponent, tag, depth, bound, value, mv)` holds the slot's lock while it decides and writes. It keeps the deepest result in the first entry and uses the second entry for everything else:
+The searches use `store_at_root(own, opponent, tag, depth, bound, value, mv, root_empties)`, which holds the slot's lock while it decides and writes. A stale first entry is overwritten without disturbing the second entry. Otherwise it keeps the deepest result in the first entry and uses the second entry for everything else. The convenience `store(...)` uses a root limit of 64.
 
 ```mermaid
 flowchart TD
-    S["store(position, depth, ...)"] --> Same{"First entry holds<br/>the same position?"}
+    S["store(position, depth, ...)"] --> Stale{"First entry is live in this generation<br/>but has more empties than the root?"}
+    Stale -- "yes" --> Reclaim["Overwrite the first entry;<br/>leave the second entry alone"]
+    Stale -- "no" --> Same{"First entry holds<br/>the same live position?"}
     Same -- "yes" --> Deeper{"depth ≥ its depth?"}
     Deeper -- "yes" --> Replace["Replace the first entry"]
     Deeper -- "no" --> Keep["Keep the first entry;<br/>the new result is dropped"]
@@ -110,7 +112,15 @@ flowchart TD
     Empty -- "no" --> Second["Store the new one in the second entry"]
 ```
 
-The first entry is "depth-preferred": it survives until a result at least as deep arrives. The second entry is "always replaced": it keeps the most recent shallow result. This is the *two-tier* scheme described on the Chess Programming Wiki. C++ had one entry per slot, so a deep result could be overwritten by many shallow ones.
+The first entry is "depth-preferred": it survives until a result at least as deep arrives, or its position becomes stale. The second entry is "always replaced": it keeps the most recent shallow result. This is the *two-tier* scheme described on the Chess Programming Wiki. C++ had one entry per slot, so a deep result could be overwritten by many shallow ones. A shallower result for the same position is still dropped even if its bound is tighter; retaining a second bound was tried and not kept.
+
+### Aging across moves
+
+At the start of each search, the engine records the root's empty-square count and passes it to every thread. For a stored position the empty count is `64 - (own | opponent).count_ones()`. If it exceeds the root's count, the position cannot occur below that root: a move fills one square and a pass leaves the count unchanged. Such an entry counts as empty on probe and replacement.
+
+This matters when tables persist across moves, as in apps and matches. Without aging, deep entries from earlier positions could block the first place in a slot for the rest of the game. With aging, even a shallower current entry can reclaim that place; a useful second entry is kept rather than overwritten with the stale one. Empty or old-generation entries still follow the original replacement rules.
+
+The benchmarks clear their tables between positions, so aging changes none of their strict node signatures. A persistent small-table regression exercises the competition that those benchmarks cannot. The [3.1 findings](../Plans/making-stello-3-1-findings.md#item-3-aging-transposition-table-entries-2026-11-06-3a-kept-3b-dropped) record the five matches and the decision to keep aging only.
 
 ### Use in the midgame search
 
@@ -156,13 +166,13 @@ Midgame values (heuristic scores in 1/100 disc, depending on the search depth, o
 
 A search with more than one thread ([chapter 06](06-midgame-search.md#threads)) runs on several threads that all read and write the same two tables. They do so through `&self`: there is no lock on the whole table. Instead each slot has its own **sequence lock** (seqlock), the `sequence` word at the start of its cache line.
 
-**A store** ([`store`](../Stello.Rust/stello-core/src/search/table.rs#L211-L242), [`Slot::lock`](../Stello.Rust/stello-core/src/search/table.rs#L133-L158)):
+**A store** ([`store_at_root`](../Stello.Rust/stello-core/src/search/table.rs#L226), [`Slot::lock`](../Stello.Rust/stello-core/src/search/table.rs#L140)):
 
 1. The writer reads the sequence. If it is even, the writer makes it odd with a compare-and-swap: it now holds the slot. If another writer holds it, it waits in a short spin loop; a write is only a few stores.
 2. It applies the replacement rules above and writes the words of the entries it changes.
 3. It stores the sequence + 2: even again, and larger than before.
 
-**A probe** ([`get`](../Stello.Rust/stello-core/src/search/table.rs#L183-L209)):
+**A probe** ([`get_at_root`](../Stello.Rust/stello-core/src/search/table.rs#L198)):
 
 1. The reader reads the sequence. If it is odd, a writer holds the slot, and the probe returns a miss at once. A reader never waits.
 2. It reads the words of the two entries and looks for its position. If neither entry matches, it is a miss; a miss read during a write is a miss either way.
@@ -184,7 +194,7 @@ sequenceDiagram
 
 **Why a torn read is never taken for a valid entry.** The three words of an entry are written one after the other. Without the check, a reader could combine the discs of one position with the discs or the value of another, and take the mix for the position it looks for. With the check, every write that overlaps the reader's reads changes the sequence between its two reads: the writer makes it odd before its first store and adds 2 after its last. The memory orderings make sure of that: the compare-and-swap is an acquire and is followed by a release fence, the unlock is a release, and the reader's second read of the sequence follows an acquire fence. So if the reader saw any word of a write, it also sees the changed sequence. A missed hit costs only a little search; a false hit could give a wrong score.
 
-**With one thread** the lock is never contended. The table uses the same lookup and replacement rules as the C# 2.0 table, but later search changes can alter which entries are used and the nodes visited.
+**With one thread** the lock is never contended. Apart from aging, lookup and replacement follow the C# 2.0 table's rules; later search changes can alter which entries are used and the nodes visited.
 
 **`clear`** needs `&mut self`: the table to itself. It runs between searches only, when no other thread uses the table.
 
@@ -230,7 +240,7 @@ When the search has stored this position once, the second path finds it in the t
 
 ### Replacement in one slot
 
-Four positions A, B, C and D with the same slot, stored in this order in a table with `bits` = 1 (two slots), with the found entries after each step:
+Four positions A, B, C and D with the same slot, all live under the current root, stored in this order in a table with `bits` = 1 (two slots), with the found entries after each step:
 
 | Step | Store | Found afterwards |
 |---|---|---|
@@ -256,19 +266,20 @@ The deep result A survived two shallow stores (steps 2 and 3); only a deeper res
 
 | File | Main members |
 |---|---|
-| [search/table.rs](../Stello.Rust/stello-core/src/search/table.rs) | `Bound`, `Entry` (`pack`, `unpack`, `is_live`, `matches`), `Slot` (`load`, `put`, `lock`, `unlock`), `TranspositionTable` (`new`, `get`, `store`, `prefetch`, `clear`, `slot`), `zeroed_slots` |
+| [search/table.rs](../Stello.Rust/stello-core/src/search/table.rs) | `Bound`, `Entry` (`pack`, `unpack`, `is_live`, `matches`, `empty_count`), `Slot` (`load`, `put`, `lock`, `unlock`), `TranspositionTable` (`new`, `get_at_root`, `store_at_root`, `get`, `store`, `prefetch`, `clear`, `slot`), `zeroed_slots` |
 | [search/engine.rs](../Stello.Rust/stello-core/src/search/engine.rs) | `midgame_table` and `endgame_table`, the midgame use in `Searcher::search` (with `MIDGAME_ETC_MIN_LOOK` and the prefetch), `SearchEngine::clear_hash` |
 | [endgame/search.rs](../Stello.Rust/stello-core/src/endgame/search.rs) | The endgame use in `end_window` and `end_deep`, `END_ETC_MIN_EMPTIES` |
 | [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs) | The C# `ClearHash` and `HashBits`, passed on to the Rust engine (chapter 14); `HashBytesPerSlot` (2 × 64), the memory it reports to the garbage collector |
 | C++: [Minmax.cpp](../Stello%20C++/BRAIN/Minmax.cpp), [HASH.H](../Stello%20C++/BRAIN/HASH.H) | `f_hash_put`, the C++ hash table |
-| C# 2.0 (frozen): [Stello.Engine.V2/Search/TranspositionTable.cs](../Stello.Net/Stello.Engine.V2/Search/TranspositionTable.cs) | The C# original, the same table without the generation (its `Clear` writes every entry) and without the lock, in 48-byte slots |
+| C# 2.0 (frozen): [Stello.Engine.V2/Search/TranspositionTable.cs](../Stello.Net/Stello.Engine.V2/Search/TranspositionTable.cs) | The C# original, without aging, the generation (its `Clear` writes every entry), or the lock, in 48-byte slots |
 
 ## Tests
 
 - Rust, the unit tests in [search/table.rs](../Stello.Rust/stello-core/src/search/table.rs): store and find; another tag is not found; a shallower result for the same position does not replace the deeper one; after a clear an old entry is not found and counts as empty when storing; over 70,000 clears the generation wraps and the table still works; packing and unpacking keep every field, and an empty entry packs to zero. A compile-time check makes sure that a slot is 64 bytes.
-- **The hammer test** ([`many_threads_never_read_a_torn_entry`](../Stello.Rust/stello-core/src/search/table.rs#L355-L394)): 8 threads store and probe 2,048 positions in a table of 1,024 slots, a million times each. Every field of a hit is made from its position, so a torn entry would show. With the sequence check disabled it failed 2 runs in 3; with it, it passes. It and the pool tests also pass under Miri, and ThreadSanitizer finds no reports ([chapter 26](26-phases-5-9-threads.md)).
+- Aging: a stale first entry is ignored on probe and replaced by a shallower current entry without evicting a live second entry. The persistent-engine test in [search/engine.rs](../Stello.Rust/stello-core/src/search/engine.rs) keeps a 4,096-slot table across 34 game positions at depth 12, pinning the node count; disabling replacement aging makes it fail.
+- **The hammer test** ([`many_threads_never_read_a_torn_entry`](../Stello.Rust/stello-core/src/search/table.rs#L413)): 8 threads store and probe 2,048 positions in a table of 1,024 slots, a million times each. Every field of a hit is made from its position, so a torn entry would show. With the sequence check disabled it failed 2 runs in 3; with it, it passes. It and the pool tests also pass under Miri, and ThreadSanitizer finds no reports ([chapter 26](26-phases-5-9-threads.md)).
 - [TranspositionTableTests.cs](../Stello.Net/Stello.Engine.Tests/TranspositionTableTests.cs), on the frozen C# 2.0 table: store and find; another position or tag is not found; the deeper result for the same position is kept; a deep entry survives many shallow entries in the same slot; clear removes everything.
-- The search and endgame tests (chapters 06 and 08) check that the table gives the same nodes and scores as in 2.0 in real searches.
+- The search and endgame tests (chapters 06 and 08) check strict current-engine signatures, including node counts, against `stello-v3-signatures.txt`. Aging leaves the cleared-table signatures unchanged.
 
 ## Further reading
 
