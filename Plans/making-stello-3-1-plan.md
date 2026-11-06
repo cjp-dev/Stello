@@ -73,7 +73,7 @@ This plan is in `Plans/making-stello-3-1-plan.md`. Its findings document, `Plans
    - doc 25:284 says the findings cover "phases 0–3", but they cover 0–9;
    - the audit plan has inconsistent numbers.
 
-**Gate P1:** the new tests pass, nothing regresses in the existing tests, and items 1 and 2 are verified in the app. Item 4 needs a 1,180-game match at 5 min per game against 3.0 that is not worse, on the user's go.
+**Gate P1:** the new tests pass, nothing regresses in the existing tests, and items 1 and 2 are verified in the app. For item 4, run the 1-minute 1,180-game gate first, then the 5-minute 600-game confirmation (300 start positions, two games each); the fix must not be worse than 3.0.
 
 ## Phase 2: the parity quirks, investigated one by one
 Each item: read the code and decide whether it is a bug or a harmless quirk. If it is worth fixing: a switch, `mid-bench`/`solve-bench` nodes and time, then a 500 ms match against 3.0 for anything that changes play. The findings get a table of item, verdict, nodes, Elo and kept or not.
@@ -274,4 +274,4 @@ The order puts speed first (it changes no nodes), then the threads, the search, 
 ## Status
 - Plan written on 4 November 2026, with the user's decisions above.
 - **Phase 0: done (2026-11-04).** Branch, plan, findings and the tag `v3.0` on baa44e5 were already in place. The seven 1-thread reference JSONs are in `Plans/benchmark-results/v3.0-ref/`; `StelloV3BaselineTests` pins the 105 signatures independently of frozen Stello 2.0; the match tool accepts repeated `opt=<key>=<value>` search switches.
-- **Phase 1: in progress.** Items 1 (an aborted solve reported as Exact), 2 (the natural delay charged to the computer clock), 3 (clock restore after Back and Forward) and 4 (the endgame soft limit) are fixed. Item 4 has an A/B switch (`opt=end-soft=legacy` plays 3.0's soft limit) and is ready for its gated 1,180-game match at 5 min per game.
+- **Phase 1: in progress.** Items 1 (an aborted solve reported as Exact), 2 (the natural delay charged to the computer clock), 3 (clock restore after Back and Forward) and 4 (the endgame soft limit) are fixed. Item 4 has an A/B switch (`opt=end-soft=legacy` plays 3.0's soft limit). Both the 1-minute gate and the 5-minute 600-game confirmation found no significant difference; small strength changes cannot be ruled out.

@@ -11,7 +11,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 |---|---|---|
 | **Part 1: Stello 3.1** | | |
 | 0 Set-up and the new baseline | done (2026-11-04) | 3.0 one-thread JSON references, 105-signature baseline test, and Rust-engine `opt=` match switches; Stello tests pass |
-| 1 Real bugs | in progress | Items 1–3 are fixed; item 4's endgame soft limit now includes elapsed search time, has an A/B switch (`opt=end-soft=legacy`) and is ready for its gated match |
+| 1 Real bugs | in progress | Items 1–4 are fixed; item 4's 1-minute gate and 5-minute confirmation found no significant difference |
 | 2 The parity quirks | not started | |
 | 3 The apps | not started | |
 | 4 Tools and verification gaps | not started | |
@@ -110,11 +110,14 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 - **Baseline:** unchanged. `StelloV3BaselineTests` passes, 105/105.
 - **Windows tests:** `Stello.Net.Tests` passes 88/90, including both new tests. The same two existing score-display tests still fail (`+40` vs `+0.4 discs` and `+20` vs `+0.2 discs`).
 
-### Item 4: endgame soft limit ignores elapsed search time (fixed 2026-11-05; match pending)
+### Item 4: endgame soft limit ignores elapsed search time (fixed 2026-11-05; both matches complete)
 - **What was wrong:** the endgame soft limit was calculated as a duration from when the solver started, but the search compares it with elapsed time from the start of the whole search. If the solver started after 1,000 ms, with 10,000 ms left, the hard deadline was 5,500 ms while the soft deadline was incorrectly 3,000 ms instead of 4,000 ms. Pass 2 could therefore get a shortened window or never start. `with_soft_percent` also applied a custom percentage to the absolute hard deadline instead of the endgame window.
 - **The fix:** offset the default and custom endgame soft limits by the time already used. Time-per-move percentages remain relative to the start of the search. Chapter 09 now documents both the offset and custom-percentage behavior.
 - **Tests:** `endgame_soft_limit_includes_time_already_used` failed before the fix (3,000 ms rather than 4,000 ms); `endgame_soft_percent_applies_to_the_remaining_budget` checks that a 50% setting gives a 3,250 ms soft deadline for the same window. The time-control unit tests pass 4/4. The full Rust core suite passes in release (69 tests); in debug, its 8-thread time-per-move timing test exceeded its 190 ms ceiling, while that test passes in release.
 - **Baseline:** unchanged. `StelloV3BaselineTests` passes, 105/105.
 - **Windows tests:** `Stello.Net.Tests` passes 88/90. The same two existing score-display tests fail (`+40` vs `+0.4 discs` and `+20` vs `+0.2 discs`); this Rust time-budget change does not affect the app clock tests.
 - **A/B switch (added after review):** the fix alters play, so one build must play both sides. `SearchOptions::legacy_endgame_soft` (Rust, default false) brings back 3.0's calculation with a game clock, through `time::for_solver`. It is set with the native `stello_engine_set_legacy_endgame_soft` (ABI version 4), C#'s internal `SearchOptions.LegacyEndgameSoft`, and the match tool's `opt=end-soft=legacy|fixed`. Tests: `solver_budget_is_fixed_by_default_and_legacy_keeps_stello_3_0` (legacy gives 3,000 ms and 2,750 ms at 50 %; fixed gives 4,000 and 3,250; per move and solve are unchanged either way); the FFI setter test; and `ParseSide_ChoosesTheEndgameSoftLimit` plus five invalid sides in `ParseSide_RejectsInvalidSides`. Rust core 70/70 and FFI 5/5 in release, with fmt and clippy clean; `NativeEngineTests` plus the baseline 123/123; `Stello.Net.Tests` still 88/90.
-- **Match:** not run. Ready on the user's go: 1,180 games at 5 minutes per game, `game-s=300,name=fixed` against `game-s=300,name=legacy,opt=end-soft=legacy`.
+- **1-minute gate match:** [report](./benchmark-results/match_p1-item4-endgame-soft-60s-2026-11-05.md). 1,180 games, fixed 591 points vs legacy 589 (49.9%; 95% interval 48.6%–51.3%), Elo -1 (-10 to +9); no significant difference.
+- **5-minute confirmation:** [report](./benchmark-results/match_p1-item4-endgame-soft-300s-300starts-2026-11-05.md). 600 games (300 starts, two games each), fixed 298 points vs legacy 302 (50.3%; 95% interval 48.9%–51.8%), Elo +2 (-8 to +12) for legacy; no significant difference. Wall time 7h 28m.
+- **Gate: passed.** The gate is "not worse than 3.0": the fix's upper bound must be above 50 %. Its score was 50.1 % (48.7–51.4) at 1 minute and 49.7 % (48.2–51.1) at 5 minutes, so both upper bounds are above 50 %. The fix is kept for correctness: it makes the time control do what chapter 09 describes. As the identical depths and first solves show, it changes little in play.
+- **Interpretation:** neither match found a significant difference; this does not establish equivalence or rule out a small regression. The 300 starts in the 5-minute match were also used in the 1-minute match, so the matches do not use independent sets of openings.
