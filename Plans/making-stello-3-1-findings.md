@@ -178,6 +178,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 | Item | Verdict | Mid-bench nodes | Solve-bench nodes | Elo | Kept |
 |---|---|---:|---:|---:|---|
 | 1. Asymmetric hash cutoffs | Missed a valid equality cutoff; fixed | 3,719,468 → 3,716,389 (−0.083%) | 92,485,229 → 92,485,229 | +1 (−10 to +12) | Yes; 50.2 % (48.6–51.7), not worse |
+| 2. Upper-bound hash moves as response killers | Harmless ordering heuristic; unchanged | depth 10: 3,716,389 → 3,716,538 (+0.004%); depth 12: 10,579,515 → 10,578,457 (−0.010%) | Not applicable (endgame ordering is separate) | — | No |
 
 ### Item 1: an upper bound equal to alpha (2026-11-06)
 - **What was wrong:** a stored upper bound equal to alpha still proves the position cannot exceed alpha. The old strict comparison missed that cutoff and searched unnecessarily; it was conservative rather than an incorrect score.
@@ -199,3 +200,14 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
   - the 2.0 file stays for `StelloV2Tests`, which pins only the frozen C# engine;
   - after the review: 80 Rust tests, 489 engine tests and 15 Node tests pass.
 - **Verdict:** keep the correctness fix. The match found no significant playing-strength difference, so a 2 s gain confirmation is not warranted. The 500 ms gate is passed; the old code path and A/B switches have been removed.
+
+### Item 2: upper-bound hash cutoffs and response killers (investigated 2026-11-06)
+- **What happens:** a transposition-table upper bound can cut off a child search and return its stored move. The parent records that reply in the response table (`record_response`): +4 if the parent's move was refuted (its score at or below alpha), else +1. A child's upper-bound cutoff means the child failed low, so the parent's score is at or above beta: the stored move is recorded with +1, as a candidate reply. It was the best move found in an earlier all-node, but was not searched in this visit. (The +4 weight goes to replies from a lower-bound cutoff in the child, which are proven refutations.) *Corrected in review: the agent's first text said +4.*
+- **Verdict:** harmless ordering heuristic, not a result-correctness bug. Response killers affect only the shallow midgame move ordering; deeper nodes use evaluation ordering, and the endgame solver has its own ordering.
+- **A/B measurement:** disabling this response update on the 100 standard midgame positions, one thread, default Multi-ProbCut and cleared hash tables:
+  - depth 10, three passes: 3,716,389 → 3,716,538 nodes (+149, +0.004%); best-per-position total 0.386 → 0.395 s (−2.3%);
+  - depth 12, three passes: 10,579,515 → 10,578,457 nodes (−1,058, −0.010%); 1.148 → 1.123 s (+2.2%).
+
+  All moves and scores matched at both depths. The node differences are tiny and reverse direction between depths; the short timing samples are noisy and show no reliable gain. The solver is unaffected, so a solve benchmark and playing-strength match are not warranted.
+- **Decision:** leave the heuristic unchanged. The temporary A/B switch was removed, the ABI remains version 3, and the strict 3.0 node signatures remain unchanged because the default search did not change.
+- **Checks:** 80 Rust workspace tests, 489 engine tests, and 42 Egaroucid/benchmark tests pass; the 100-position node/move/score comparisons were deterministic across three passes.

@@ -79,7 +79,7 @@ This plan is in `Plans/making-stello-3-1-plan.md`. Its findings document, `Plans
 Each item: read the code and decide whether it is a bug or a harmless quirk. If it is worth fixing: a switch, `mid-bench`/`solve-bench` nodes and time, then a 500 ms match against 3.0 for anything that changes play. The findings get a table of item, verdict, nodes, Elo and kept or not.
 
 1. **Asymmetric hash cutoffs** (`engine.rs:921-926`): an upper bound cuts only if strictly below alpha.
-2. **Hash cutoffs on an upper bound feed the response killers** (`engine.rs:929`).
+2. **Hash cutoffs on an upper bound feed the response killers** (`engine.rs:923, 1014, 1024`). Investigated: harmless ordering heuristic; left unchanged (see findings).
 3. **The transposition table never ages:**
    - deep entries from earlier positions can never be replaced, so slot 0 slowly becomes useless during a game;
    - a store for the same position at a lower depth is dropped even when its bound is tighter (`search/table.rs:228-241`).
