@@ -57,23 +57,15 @@ pub fn for_endgame(limits: &SearchLimits, midgame: TimeBudget, elapsed_ms: i64) 
     TimeBudget { soft_ms: elapsed_ms + move_time * 10 / 15, hard_ms: elapsed_ms + move_time }
 }
 
-/// The solver's budget with `SoftTimePercent`. With `legacy` (`SearchOptions::legacy_endgame_soft`), Stello 3.0's
-/// soft limit with a game clock: not offset by `elapsed_ms`, and the percentage taken of the whole hard limit.
+/// The solver's budget with `SoftTimePercent` applied to the remaining window for a game clock.
 pub fn for_solver(
     limits: &SearchLimits,
     midgame: TimeBudget,
     elapsed_ms: i64,
     soft_percent: Option<i32>,
-    legacy: bool,
 ) -> TimeBudget {
-    let mut budget = for_endgame(limits, midgame, elapsed_ms);
-    let game_clock = limits.mode() == TimeControlMode::TimePerGame;
-    if game_clock && legacy {
-        budget.soft_ms -= elapsed_ms;
-    }
-
-    let offset_ms = if game_clock && !legacy { elapsed_ms } else { 0 };
-    budget.with_soft_percent(soft_percent, offset_ms)
+    let offset_ms = if limits.mode() == TimeControlMode::TimePerGame { elapsed_ms } else { 0 };
+    for_endgame(limits, midgame, elapsed_ms).with_soft_percent(soft_percent, offset_ms)
 }
 
 // C++: calc_time. Early moves get about 1/4 of the average time per move, the last moves about all of it.
@@ -122,35 +114,32 @@ mod tests {
     #[test]
     fn endgame_soft_limit_includes_time_already_used() {
         assert_eq!(
-            for_endgame(&SearchLimits::time_per_game_ms(10_000), TimeBudget::UNLIMITED, 1_000),
+            for_solver(&SearchLimits::time_per_game_ms(10_000), TimeBudget::UNLIMITED, 1_000, None),
             TimeBudget { soft_ms: 4_000, hard_ms: 5_500 }
         );
     }
 
     #[test]
     fn endgame_soft_percent_applies_to_the_remaining_budget() {
-        let budget = for_endgame(&SearchLimits::time_per_game_ms(10_000), TimeBudget::UNLIMITED, 1_000);
-        assert_eq!(budget.with_soft_percent(Some(50), 1_000), TimeBudget { soft_ms: 3_250, hard_ms: 5_500 });
+        let limits = SearchLimits::time_per_game_ms(10_000);
+        for (percent, soft_ms) in [(1, 1_045), (50, 3_250), (100, 5_500)] {
+            assert_eq!(
+                for_solver(&limits, TimeBudget::UNLIMITED, 1_000, Some(percent)),
+                TimeBudget { soft_ms, hard_ms: 5_500 }
+            );
+        }
     }
 
     #[test]
-    fn solver_budget_is_fixed_by_default_and_legacy_keeps_stello_3_0() {
-        let game = SearchLimits::time_per_game_ms(10_000);
-        let midgame = TimeBudget { soft_ms: 1, hard_ms: 2 };
-        assert_eq!(for_solver(&game, midgame, 1_000, None, false), TimeBudget { soft_ms: 4_000, hard_ms: 5_500 });
-        assert_eq!(for_solver(&game, midgame, 1_000, Some(50), false), TimeBudget { soft_ms: 3_250, hard_ms: 5_500 });
-        assert_eq!(for_solver(&game, midgame, 1_000, None, true), TimeBudget { soft_ms: 3_000, hard_ms: 5_500 });
-        assert_eq!(for_solver(&game, midgame, 1_000, Some(50), true), TimeBudget { soft_ms: 2_750, hard_ms: 5_500 });
-
-        // Without a game clock the switch changes nothing: the midgame budget, its percentage from the search's start.
+    fn solver_budget_preserves_other_time_control_modes() {
         let per_move = SearchLimits::time_per_move_ms(900);
         let budget = for_midgame(&per_move, 40);
-        for legacy in [false, true] {
-            assert_eq!(for_solver(&per_move, budget, 300, Some(50), legacy), TimeBudget { soft_ms: 450, hard_ms: 900 });
-            assert_eq!(
-                for_solver(&SearchLimits::SOLVE, TimeBudget::UNLIMITED, 300, None, legacy),
-                TimeBudget::UNLIMITED
-            );
-        }
+        assert_eq!(for_solver(&per_move, budget, 300, None), budget);
+        assert_eq!(for_solver(&per_move, budget, 300, Some(50)), TimeBudget { soft_ms: 450, hard_ms: 900 });
+        assert_eq!(
+            for_solver(&SearchLimits::fixed_depth(5), TimeBudget::UNLIMITED, 300, Some(50)),
+            TimeBudget::UNLIMITED
+        );
+        assert_eq!(for_solver(&SearchLimits::SOLVE, TimeBudget::UNLIMITED, 300, Some(50)), TimeBudget::UNLIMITED);
     }
 }

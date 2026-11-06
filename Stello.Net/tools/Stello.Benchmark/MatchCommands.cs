@@ -138,7 +138,6 @@ internal static class MatchCommands
         int threads = 1;
         bool selective = true;
         bool ybwc = true;
-        bool legacyEndgameSoft = false;
         var keys = new HashSet<string>();
         var searchOptionKeys = new HashSet<string>();
         foreach (string part in text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
@@ -287,8 +286,7 @@ internal static class MatchCommands
             {
                 EngineKind.StelloV1 => new MatchSide(name ?? text, limits, bits, CreatePlayer: () => new V1MatchPlayer(bits, book), Description: $"Stello 1, {description}"),
                 EngineKind.StelloV2 => new MatchSide(name ?? text, limits, bits, CreatePlayer: () => new Stello.Engine.V2.V2MatchPlayer(bits, book), Description: $"Stello 2.0 (C#), {description}"),
-                _ => StelloSide(name ?? text, limits, bits, book, description, evalFile, softTimePercent, probCutPercent, selective, ybwc,
-                    legacyEndgameSoft),
+                _ => StelloSide(name ?? text, limits, bits, book, description, evalFile, softTimePercent, probCutPercent, selective, ybwc),
             };
         }
 
@@ -346,14 +344,6 @@ internal static class MatchCommands
                 case "ybwc":
                     ybwc = OnOff(key, value, text);
                     break;
-                case "end-soft":
-                    legacyEndgameSoft = value switch
-                    {
-                        "legacy" => true,
-                        "fixed" => false,
-                        _ => throw new ArgumentException($"end-soft must be legacy or fixed in the side \"{text}\"."),
-                    };
-                    break;
                 default:
                     throw new ArgumentException($"Unknown Stello search option in the side \"{text}\": {key}");
             }
@@ -369,7 +359,7 @@ internal static class MatchCommands
 
     /// <summary>A Stello side with its evaluation file and search switches.</summary>
     private static MatchSide StelloSide(string name, SearchLimits limits, int bits, OpeningBook? book, string description,
-        string? evalFile, int? softTimePercent, int? probCutPercent, bool selective, bool ybwc, bool legacyEndgameSoft)
+        string? evalFile, int? softTimePercent, int? probCutPercent, bool selective, bool ybwc)
     {
         SearchOptions options = (evalFile is null or "default" ? SearchOptions.Default : PatternOptions(evalFile)) with
         {
@@ -377,7 +367,6 @@ internal static class MatchCommands
             ProbCutPercent = probCutPercent,
             Selective = selective,
             Ybwc = ybwc,
-            LegacyEndgameSoft = legacyEndgameSoft,
         };
         if (options == SearchOptions.Default)
         {
@@ -388,8 +377,7 @@ internal static class MatchCommands
             + (softTimePercent is null ? "" : $", soft limit {softTimePercent} %")
             + (probCutPercent is null ? "" : $", Multi-ProbCut t = {probCutPercent / 100.0:0.00}")
             + (selective ? "" : ", Multi-ProbCut off")
-            + (ybwc ? "" : ", YBWC off (Lazy SMP alone)")
-            + (legacyEndgameSoft ? ", Stello 3.0's endgame soft limit" : "");
+            + (ybwc ? "" : ", YBWC off (Lazy SMP alone)");
         return new MatchSide(name, limits, bits, book, CreatePlayer: () => new StelloMatchPlayer(bits, book, options),
             Description: $"Stello, {description}{extra}", Options: options);
     }

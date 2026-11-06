@@ -34,11 +34,4 @@ internal sealed record SearchOptions
     /// all threads (Plans/making-stello-3-plan.md, phase 6). Kept as a switch to compare the two in matches.
     /// </summary>
     public bool Ybwc { get; init; } = true;
-
-    /// <summary>
-    /// With a game clock, Stello 3.0's endgame soft limit: measured from the solver's start instead of the search's, and
-    /// <see cref="SoftTimePercent"/> taken of the whole hard limit (Plans/making-stello-3-1-plan.md, phase 1 item 4).
-    /// Off (the default) is the fix; on is kept to compare the two in matches.
-    /// </summary>
-    public bool LegacyEndgameSoft { get; init; }
 }

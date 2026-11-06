@@ -15,8 +15,7 @@ internal static class Program
                                     or "engine=egaroucid,time-ms=100,book=on": engine (stello, stello-v2 = Stello 2.0 in C#, stello-v1 = Stello 1 or egaroucid), time-ms
                                     (per move), game-s (per game), depth (Stello) or level (Egaroucid), eval (Stello: another pattern evaluation file),
                                     soft-pct (1-100), mpc (Multi-ProbCut t × 100), and opt (repeatable Stello search switches, e.g.
-                                    opt=selective=off, opt=soft-pct=80, opt=mpc=150, opt=ybwc=off, opt=end-soft=legacy|fixed
-                                    = Stello 3.0's endgame soft limit or the fix, fixed),
+                                    opt=selective=off, opt=soft-pct=80, opt=mpc=150, opt=ybwc=off),
                                     threads (Stello: 1-256 threads sharing the hash tables, 1), ybwc (Stello: on/off, on; off = Lazy SMP alone), hash-bits
                                     (Stello 19; Egaroucid 21, the same memory), book (on/off, off), book-file (Stello: another text book, turns the book on), book-acc (Egaroucid, 0),
                                     seed (Egaroucid's book choice, 1), name.

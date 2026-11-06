@@ -88,7 +88,7 @@ When the search switches to the solver, `time::for_endgame` gives it more time, 
 
 $$m = \lfloor R / 2 \rfloor, \qquad \text{hard} = \text{elapsed} + m, \qquad \text{soft} = \text{elapsed} + \left\lfloor \frac{10\,m}{15} \right\rfloor$$
 
-Both limits are measured from the start of the search, so the soft limit includes the time already spent before the solver. A custom `SoftTimePercent` applies to the endgame window after that elapsed time. Stello 3.0 left out that offset; the switch `SearchOptions.LegacyEndgameSoft` (the match tool's `opt=end-soft=legacy`) brings that behaviour back, only to compare the two in matches. The soft limit decides whether pass 2 (the exact score) is started after pass 1 (chapter 08). With a time per move, the midgame budget is kept.
+Both limits are measured from the start of the search, so the soft limit includes the time already spent before the solver. A custom `SoftTimePercent` applies to the endgame window after that elapsed time. The soft limit decides whether pass 2 (the exact score) is started after pass 1 (chapter 08). With a time per move, the midgame budget is kept.
 
 ### How the search uses the limits
 
@@ -162,7 +162,7 @@ See [Stello porting documentation.md](../Plans/Stello%20porting%20documentation.
 
 | File | Main members |
 |---|---|
-| [search/time.rs](../Stello.Rust/stello-core/src/search/time.rs) | `TimeBudget` (`UNLIMITED`, `with_soft_percent`), `for_midgame`, `for_endgame`, `for_solver` (with `SoftTimePercent` and the legacy switch), `for_game`, `FAST_ENDGAME_EMPTIES` |
+| [search/time.rs](../Stello.Rust/stello-core/src/search/time.rs) | `TimeBudget` (`UNLIMITED`, `with_soft_percent`), `for_midgame`, `for_endgame`, `for_solver` (with `SoftTimePercent`), `for_game`, `FAST_ENDGAME_EMPTIES` |
 | [search/engine.rs](../Stello.Rust/stello-core/src/search/engine.rs) | `StopSignal`, `SearchSignals`, `NoStop`, `Clock`, `system_clock`, `SearchEngine::set_clock`, `Searcher::stop_iterating`, `check_abort`, `report`, `result`, `Abort`, `SearchError` |
 | [endgame/search.rs](../Stello.Rust/stello-core/src/endgame/search.rs) | `count_end_node`, the solver's node count and abort check |
 | [search/limits.rs](../Stello.Rust/stello-core/src/search/limits.rs) | `TimeControlMode`, `SearchLimits`, `ScoreKind`, `SearchInfo`, `SearchResult` |

@@ -18,6 +18,7 @@ public class NativeEngineTests
     public void Library_HasTheVersionAndLayoutOfThisWrapper()
     {
         Assert.Equal(30000u, StelloNative.Version());
+        Assert.Equal(3u, StelloNative.AbiVersion);
         Assert.Equal(StelloNative.AbiVersion, StelloNative.LibraryAbiVersion());
         Assert.Equal(48, Unsafe.SizeOf<NativeSearchInfo>());
         Assert.Equal(40, Unsafe.SizeOf<NativeSearchResult>());
