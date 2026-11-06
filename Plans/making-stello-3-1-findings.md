@@ -11,7 +11,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 |---|---|---|
 | **Part 1: Stello 3.1** | | |
 | 0 Set-up and the new baseline | done (2026-11-04) | 3.0 one-thread JSON references, 105-signature baseline test, and Rust-engine `opt=` match switches; Stello tests pass |
-| 1 Real bugs | in progress | Items 1–4 are fixed; item 4's 1-minute gate and 5-minute confirmation found no significant difference |
+| 1 Real bugs | in progress | Items 1–5 are fixed; item 4's 1-minute gate and 5-minute confirmation found no significant difference; item 5's review found and fixed a restart loop when a pool worker fails |
 | 2 The parity quirks | not started | |
 | 3 The apps | not started | |
 | 4 Tools and verification gaps | not started | |
@@ -122,3 +122,28 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 - **5-minute confirmation:** [report](./benchmark-results/match_p1-item4-endgame-soft-300s-300starts-2026-11-05.md). 600 games (300 starts, two games each), fixed 298 points vs legacy 302 (50.3%; 95% interval 48.9%–51.8%), Elo +2 (-8 to +12) for legacy; no significant difference. Wall time 7h 28m.
 - **Gate: passed.** The gate is "not worse than 3.0": the fix's upper bound must be above 50 %. Its score was 50.1 % (48.7–51.4) at 1 minute and 49.7 % (48.2–51.1) at 5 minutes, so both upper bounds are above 50 %. The fix is kept for correctness: it makes the time control do what chapter 09 describes. As the identical depths and first solves show, it changes little in play.
 - **Interpretation:** neither match found a significant difference; this does not establish equivalence or rule out a small regression. The 300 starts in the 5-minute match were also used in the 1-minute match, so the matches do not use independent sets of openings.
+
+
+### Item 5: web worker robustness and late progress reports (fixed 2026-11-06)
+- **What was wrong:**
+  - a pool worker that failed to start was never retried, and `info()` reported `navigator.hardwareConcurrency` threads whatever had started;
+  - a late `Progress<T>` report could be handled after the final result and overwrite the analysis (without a `SynchronizationContext`, or one posted just before the result).
+- **The fix (the agent on Windows):**
+  - `engine-worker.js` starts each pool worker in `startPoolWorker`, retries a failed start once, and stops trying after a second failure (`poolWorkerLimit`);
+  - `info()` reports the threads that really started (`poolWorkers.length + 1`), updated through an `info` message when that changes;
+  - searches are capped at the threads available;
+  - `init` now waits until the pool workers are ready;
+  - in `MainViewModel`, a per-search gate (`searchCompleted`, under a lock) closes the progress callback when the result arrives, so a late report is dropped in both apps.
+- **Found in review and fixed: a restart loop when a pool worker fails.**
+  - **The cause:** the worker's `error` event was not cancelled, so the error also reached the engine worker's global scope and the page. `engine-client.js` treats an error from the engine worker as a failed engine: it rejected the pending `init`, and the page started the engine again, which failed again.
+  - **What was seen:** in headless Chromium, with a test copy whose pool workers fail to start, the engine never became ready and the computer never moved. The same happened when half of the starts failed.
+  - **The fix:** `e.preventDefault()` in `startPoolWorker`'s error handler.
+  - **After the fix:**
+    - with every pool worker failing, the engine runs single-threaded in the threaded package, `info()` says 1 thread and the computer plays (3.9 M nodes/s);
+    - with half of the starts failing, it plays on the threads that started (1–2), and reports them.
+- **Measured in review** (Release AOT publish, headless Chromium, COOP/COEP, Automatic = 24 threads):
+  - **The engine is ready about 150 ms later at page load** (960–1,020 ms against 780–920 ms before), because `init` now waits for the pool workers, which start one after another;
+  - **the first computer move after the click** takes as long as before (850–1,360 ms in both).
+- **Tests:**
+  - `Play_LateProgressDoesNotOverwriteFinalAnalysis` (Stello.Net.Tests, Windows) sends a report after the result while the move is still pending, and checks that the analysis is unchanged. The agent reports all 50 `MainViewModelTests` passing;
+  - the worker changes have no automated test (the Node tests use their own pool worker). They were checked by the browser runs above.

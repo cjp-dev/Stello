@@ -704,11 +704,16 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         SearchLimits limits = Settings.ToLimits(computerTime, Settings.ThreadsFor(_engine.Threads));
 
         int searchId = ++_searchId;
+        var progressLock = new object();
+        bool searchCompleted = false;
         var progress = new Progress<SearchInfo>(info =>
         {
-            if (searchId == _searchId && IsThinking)
+            lock (progressLock)
             {
-                Analysis.Update(info);
+                if (!searchCompleted && searchId == _searchId && IsThinking)
+                {
+                    Analysis.Update(info);
+                }
             }
         });
 
@@ -718,7 +723,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             SearchResult result = await _engine.ChooseMoveAsync(board, player, limits, progress, cancel.Token, moveNow.Token);
 
             TimeSpan searchTime = stopwatch.Elapsed;
-            Analysis.Update(result, searchTime);
+            lock (progressLock)
+            {
+                searchCompleted = true;
+                Analysis.Update(result, searchTime);
+            }
             _isWaitingForNaturalDelay = true;
             await WaitForNaturalDelayAsync(searchTime, cancel.Token, moveNow.Token);
 
@@ -749,6 +758,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         finally
         {
+            lock (progressLock)
+            {
+                searchCompleted = true;
+            }
             _cancel = null;
             _moveNow = null;
             _isWaitingForNaturalDelay = false;

@@ -19,6 +19,7 @@ let mode = null;
 // The threaded build's compiled module and memory, which the pool workers share.
 let shared = null;
 const poolWorkers = [];
+let reportedThreadCount = 0;
 
 const host = {
     progress: json => self.postMessage({ type: 'progress', json }),
@@ -26,6 +27,11 @@ const host = {
 };
 
 const hardwareThreads = Math.max(1, navigator.hardwareConcurrency || 1);
+let poolWorkerLimit = Infinity;
+
+function currentInfo() {
+    return { version: engine.version(), mode, threads: mode === 'threaded' ? poolWorkers.length + 1 : 1 };
+}
 
 // Loads the threaded build if `threads` > 1 and memory can be shared, else (or if that fails) the single-threaded one.
 async function load(threads) {
@@ -54,28 +60,69 @@ async function load(threads) {
     mode = 'single';
 }
 
-// Starts pool workers until there are `count`, and waits until the new ones wait for the engine's threads.
+function startPoolWorker() {
+    let worker;
+    return new Promise((resolve, reject) => {
+        worker = new Worker(new URL('./engine-pool-worker.js', import.meta.url), { type: 'module' });
+        const cleanup = () => {
+            worker.removeEventListener('message', onMessage);
+            worker.removeEventListener('error', onError);
+            worker.removeEventListener('messageerror', onMessageError);
+        };
+        const onMessage = e => {
+            if (e.data === 'ready') {
+                cleanup();
+                resolve(worker);
+            }
+        };
+        const onError = e => {
+            // Handled here: without this the error also reaches this worker's global scope and the page, which then
+            // treats the whole engine as failed and restarts it, again and again.
+            e.preventDefault();
+            cleanup();
+            reject(new Error(`A thread of the engine could not start: ${e.message}`));
+        };
+        const onMessageError = () => {
+            cleanup();
+            reject(new Error('A thread of the engine could not start: its ready message could not be read.'));
+        };
+        worker.addEventListener('message', onMessage);
+        worker.addEventListener('error', onError, { once: true });
+        worker.addEventListener('messageerror', onMessageError, { once: true });
+        worker.postMessage(shared);
+    }).catch(error => {
+        worker?.terminate();
+        throw error;
+    });
+}
+
+// Starts pool workers until there are `count`, retrying each failed startup once.
 async function ensurePoolWorkers(count) {
     const idleBefore = engine.idleThreads();
-    const started = [];
-    while (poolWorkers.length < count) {
-        const worker = new Worker(new URL('./engine-pool-worker.js', import.meta.url), { type: 'module' });
-        started.push(new Promise((resolve, reject) => {
-            worker.addEventListener('message', () => resolve(), { once: true });
-            worker.addEventListener('error', e => reject(new Error(`A thread of the engine could not start: ${e.message}`)), { once: true });
-        }));
-        worker.postMessage(shared);
+    const workersBefore = poolWorkers.length;
+    while (poolWorkers.length < count && poolWorkers.length < poolWorkerLimit) {
+        let worker = null;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+            try {
+                worker = await startPoolWorker();
+                break;
+            } catch (error) {
+                console.warn(`Engine pool worker startup attempt ${attempt} failed.`, error);
+                if (attempt === 2) {
+                    poolWorkerLimit = poolWorkers.length;
+                }
+            }
+        }
+        if (!worker) {
+            break;
+        }
         poolWorkers.push(worker);
     }
-    // A worker that cannot start leaves the search with fewer threads (the engine uses the ones that wait).
-    const results = await Promise.allSettled(started);
-    for (const failed of results.filter(r => r.status === 'rejected')) {
-        console.warn(failed.reason);
-    }
+    const started = poolWorkers.length - workersBefore;
     // 'ready' comes just before a worker starts to wait in the engine; until then it does not count as idle.
-    const target = idleBefore + results.filter(r => r.status === 'fulfilled').length;
+    const target = idleBefore + started;
     const deadline = performance.now() + 2000;
-    while (started.length > 0 && engine.idleThreads() < target && performance.now() < deadline) {
+    while (started > 0 && engine.idleThreads() < target && performance.now() < deadline) {
         await new Promise(resolve => setTimeout(resolve, 1));
     }
 }
@@ -86,10 +133,16 @@ const poolWorkersFor = threads => Math.max(1, Math.min(threads, hardwareThreads)
 // The request with its threads capped at what this build and this device can run, and the pool workers they need.
 async function prepare(json) {
     const asked = Number(/"Threads":(\d+)/.exec(json)?.[1] ?? 1);
-    const threads = mode === 'threaded' ? Math.max(1, Math.min(asked, hardwareThreads)) : 1;
-    if (threads > 1) {
-        await preparePoolWorkers(threads - 1);
+    const desired = mode === 'threaded' ? Math.max(1, Math.min(asked, hardwareThreads)) : 1;
+    if (desired > 1) {
+        await preparePoolWorkers(desired - 1);
     }
+    const availableThreads = poolWorkers.length + 1;
+    if (mode === 'threaded' && availableThreads !== reportedThreadCount) {
+        reportedThreadCount = availableThreads;
+        self.postMessage({ type: 'info', info: currentInfo() });
+    }
+    const threads = mode === 'threaded' ? Math.min(desired, poolWorkers.length + 1) : 1;
     return threads === asked ? json : json.replace(/"Threads":\d+/, `"Threads":${threads}`);
 }
 
@@ -99,7 +152,10 @@ let loaded = null;
 // ready.
 let preparing = Promise.resolve();
 function preparePoolWorkers(count) {
-    preparing = preparing.catch(() => {}).then(() => ensurePoolWorkers(count));
+    preparing = preparing.then(
+        () => ensurePoolWorkers(count),
+        () => ensurePoolWorkers(count),
+    );
     return preparing;
 }
 
@@ -117,9 +173,10 @@ self.addEventListener('message', async e => {
                 await loaded;
                 engine.init(undefined, args[0]);
                 if (mode === 'threaded') {
-                    preparePoolWorkers(poolWorkersFor(args[1] ?? 1)).catch(error => console.warn(error));
+                    await preparePoolWorkers(poolWorkersFor(args[1] ?? 1));
                 }
-                result = { version: engine.version(), mode, threads: mode === 'threaded' ? hardwareThreads : 1 };
+                result = currentInfo();
+                reportedThreadCount = result.threads;
                 break;
             // args: the JSON of a MoveRequest; returns the JSON of a MoveResponse (EngineProtocol).
             case 'search':

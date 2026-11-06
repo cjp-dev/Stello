@@ -61,6 +61,32 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task Play_LateProgressDoesNotOverwriteFinalAnalysis()
+    {
+        var engine = new LateProgressEngineHost(new LocalEngineHost(
+            new ComputerPlayer(new SearchEngine(hashBits: 12), _book, new Random(0)),
+            _book,
+            _bookStore));
+        MainViewModel vm = Create(engine: engine);
+        vm.ComputerDelayMs = 1000;
+
+        Play(vm, "f5");
+        await WaitUntilAsync(() =>
+            engine.Result is { } result
+            && vm.IsThinking
+            && vm.Analysis.BestMove == result.Move.ToString());
+
+        string bestMove = vm.Analysis.BestMove;
+        string depth = vm.Analysis.Depth;
+        engine.ReportLateProgress();
+        await Task.Delay(100);
+
+        Assert.Equal(bestMove, vm.Analysis.BestMove);
+        Assert.Equal(depth, vm.Analysis.Depth);
+        await vm.Idle.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public async Task Play_InstantReply_WaitsForTheDelay()
     {
         MainViewModel vm = Create(engineDelayMs: 0);
@@ -732,13 +758,27 @@ public sealed class MainViewModelTests
 
     private static Board TestBoard(string moves) => GameRecordFormat.Parse(moves).Board;
 
-    private MainViewModel Create(GameSettings? settings = null, string? notice = null, FakeSettingsStore? store = null, int? engineDelayMs = null) =>
+    private MainViewModel Create(
+        GameSettings? settings = null,
+        string? notice = null,
+        FakeSettingsStore? store = null,
+        int? engineDelayMs = null,
+        IEngineHost? engine = null) =>
         new(
-            WithDelay(new LocalEngineHost(new ComputerPlayer(new SearchEngine(hashBits: 12), _book, new Random(0)), _book, _bookStore), engineDelayMs),
+            WithDelay(engine ?? new LocalEngineHost(new ComputerPlayer(new SearchEngine(hashBits: 12), _book, new Random(0)), _book, _bookStore), engineDelayMs),
             _dialogs,
             _files,
             store ?? new FakeSettingsStore(new AppSettings(settings ?? QuickSettings, ShowAnalysis: true, Window: null)),
             notice);
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        while (!condition())
+        {
+            await Task.Delay(10, timeout.Token);
+        }
+    }
 
     private void OpenFile(string text)
     {
@@ -748,6 +788,45 @@ public sealed class MainViewModelTests
 
     private static void Play(MainViewModel vm, string square) =>
         vm.PlayCommand.Execute(vm.Squares.Single(s => s.Name == square));
+
+    private sealed class LateProgressEngineHost(IEngineHost inner) : IEngineHost
+    {
+        private IProgress<SearchInfo>? _progress;
+
+        public SearchResult? Result { get; private set; }
+
+        public bool SupportsLearning => inner.SupportsLearning;
+
+        public ThreadCounts Threads => inner.Threads;
+
+        public async Task<SearchResult> ChooseMoveAsync(
+            Board board,
+            Player player,
+            SearchLimits limits,
+            IProgress<SearchInfo>? progress,
+            CancellationToken cancellationToken,
+            CancellationToken moveNowToken)
+        {
+            _progress = progress;
+            Result = await inner.ChooseMoveAsync(board, player, limits, null, cancellationToken, moveNowToken);
+            return Result;
+        }
+
+        public void ReportLateProgress() =>
+            _progress!.Report(new SearchInfo(99, Square.Parse("h8"), Square.Parse("h8"), 999, ScoreKind.Exact, 999, 999, TimeSpan.FromSeconds(99)));
+
+        public void ResetBookTracker() => inner.ResetBookTracker();
+
+        public Task<BookUpdate> AddGameToBookAsync(IReadOnlyList<Move> moves, GameResult result) =>
+            inner.AddGameToBookAsync(moves, result);
+
+        public Task<BookLearningSummary> LearnAsync(
+            BookLearningKind kind,
+            SearchLimits limits,
+            IProgress<BookLearningProgress>? progress,
+            CancellationToken cancellationToken) =>
+            inner.LearnAsync(kind, limits, progress, cancellationToken);
+    }
 
     private static async Task WaitAsync(Task task)
     {

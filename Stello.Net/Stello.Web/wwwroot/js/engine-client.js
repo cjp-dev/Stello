@@ -48,6 +48,10 @@ export function start(progressTarget, hashBits, threads = 1) {
             progressTarget.invokeMethodAsync('OnProgress', message.json);
             return;
         }
+        if (message.type === 'info') {
+            engineInfo = message.info;
+            return;
+        }
         const request = pending.get(message.id);
         if (request) {
             pending.delete(message.id);
