@@ -1,6 +1,6 @@
 # Handoff: Stello 3.1 development (snapshot 2026-11-07)
 
-For the next session. Repository: `C:\Udvikling\Privat\Spil\Stello` on the user's Windows machine (GitHub `cjp-dev/Stello`). Branch **`feature/stello-3.1`**, phase 2 items 5 and 6 committed; the user pushes (section 6, Git).
+For the next session. Repository: `C:\Udvikling\Privat\Spil\Stello` on the user's Windows machine (GitHub `cjp-dev/Stello`). Branch **`feature/stello-3.1`**, phase 2 items 5–7 committed; the user pushes (section 6, Git).
 
 ## 1. The objective
 Stello is an Othello program: a Rust engine with C# apps, WPF on the desktop and Blazor WebAssembly on the web. 3.0 was released on 2026-11-04 (main `baa44e5`, git tag `v3.0`).
@@ -30,7 +30,7 @@ The plan is **[Plans/making-stello-3-1-plan.md](../making-stello-3-1-plan.md)**,
   6. doc errors (`0d8d5eb`).
 
   The gate: item 1 was checked in the web app against live 3.0, and item 2 by the user in WPF.
-- **Phase 2, items 1–6:**
+- **Phase 2, items 1–7:**
 
   | Item | Commit | Result |
   |---|---|---|
@@ -41,10 +41,10 @@ The plan is **[Plans/making-stello-3-1-plan.md](../making-stello-3-1-plan.md)**,
   | 4. `end_deep` keeps the move of its best ETC fail-low | `0eb00cc` | kept; 500 ms 50.3 %; FFO #43/#44 node counts changed |
   | 5. Moves decided by the local table leave the sort (`undone_first`) | `db01cf2` | kept; 500 ms 49.6 % (48.0–51.1); FFO #40–44 node counts changed; speed unchanged |
   | 6. Response ordering: the hash move is swapped to the front, and the loop stops one move early | — | harmless, no fix: the swap only changes ties; a rotate searched +0.02–0.05 % more midgame nodes; a single last move needs no sort |
+  | 7. A full window for every root move up to depth 3 | — | intended, no fix: at depths 1–3 it is plain alpha-beta; PVS at every depth changed midgame nodes −0.4 % to +0.43 %, with no consistent gain |
 
-## 3. In progress: phase 2, items 7–9, then gate P2
+## 3. In progress: phase 2, items 8 and 9, then gate P2
 The item texts are in the plan, under "Phase 2". Its file:line references may be stale, so search for the code.
-- **7:** in `search_root` (`engine.rs`), every root move gets a full window up to depth 3 (`i == 0 || look <= 2`).
 - **8:** the Multi-ProbCut shallow search reads and writes the hash table at the same ply (hash heights).
 - **9:** the counting quirks, which only affect statistics:
   - two abort-check schemes share one node counter;
@@ -156,8 +156,8 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
 - **Old plan files** (`Plans/stello-exhaustive-docs-and-code-audit-plan.md` and others) have pre-existing broken links, fixed in phase 4.
 
 ## 8. Next steps
-1. **Wait for the user** to report phase 2 item 7 from the Windows agent. Review it as for items 1–6: the diff, the cargo/.NET/Node tests, the strict baseline, a speed spot check if nodes change, the findings. Clean up (switch removed, ABI 3), then commit, and end with the review and the bash push command for the user (section 6, Git).
-2. **Items 8 and 9 the same way.** Item 9 changes only counting: no match is needed, but the node counts change, so the baseline is regenerated with a note.
+1. **Wait for the user** to report phase 2 item 8 from the Windows agent. Review it as for items 1–7: the diff, the cargo/.NET/Node tests, the strict baseline, a speed spot check if nodes change, the findings. Clean up (switch removed, ABI 3), then commit, and end with the review and the bash push command for the user (section 6, Git).
+2. **Item 9 the same way.** Item 9 changes only counting: no match is needed, but the node counts change, so the baseline is regenerated with a note.
 3. **Gate P2:** agree with the user how to compare all kept fixes against `v3.0`. Then give a numbered match list (500 ms ×1,180 and 2 s ×600, about 22 and 45 min) and run it on the user's go. Record the results, and mark phase 2 done in the plan and findings.
 4. **Phase 3, the apps:**
    - full WPF alignment (template: `Connect-4/Connect4.Net/Connect4.WPF/MainWindow.xaml`);

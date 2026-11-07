@@ -12,7 +12,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 | **Part 1: Stello 3.1** | | |
 | 0 Set-up and the new baseline | done (2026-11-04) | 3.0 one-thread JSON references, 105-signature baseline test, and Rust-engine `opt=` match switches; Stello tests pass |
 | 1 Real bugs | done (2026-11-06) | Six bugs fixed: an aborted solve reported as Exact, the natural delay charged to the clock, the clock restore after Back/Forward, the endgame soft limit (gate matches at 1 and 5 min per game not worse), web worker robustness (review found a restart loop) and doc errors; items 1 and 2 checked in the apps |
-| 2 The parity quirks | in progress | Items 1 and 3a–5 are kept; item 6 reviewed with no fix needed: hash-move swapping and the final-singleton guard are harmless ordering details |
+| 2 The parity quirks | in progress | Items 1 and 3a–5 are kept; items 6–7 reviewed with no fix needed: harmless response-ordering details and the intentional shallow-root full-window policy |
 | 3 The apps | not started | |
 | 4 Tools and verification gaps | not started | |
 | 5 The 3.1 release | not started | |
@@ -275,3 +275,16 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
   - FFO #40–44: identical at 92,556,457, all correct.
 
   The swap only breaks ties differently, and keeping it costs nothing. The experiment was reverted.
+
+### Item 7: full windows for shallow root moves
+- **What was questioned:** `search_root` uses a full window for every root move while `look <= 2` (search depths 1–3); principal-variation null-window searches with full-window re-search begin only at greater depths.
+- **Trace:** C# 2.0 has the same `i == 0 || look <= 2` condition. In the C++ driver, `zero_findmax` is called only when `varlook > 2` and there is more than one root move; shallower searches use `findmax`/`findmax1` instead.
+- **Verdict:** intentional shallow-search policy, not a bug. No change, A/B switch, benchmark, match or signature update was warranted.
+- **Review note:** at depths 1–3 every root move is searched with the current `(alpha, beta)` window, where alpha rises as moves improve. This is plain alpha-beta, so the root scores are correct either way, and only the speed can differ.
+- **Review spot check:** the reviewer temporarily used null-window PVS at every depth (`if i == 0`) and compared it with the current code, using the Rust CLI on one thread with cleared tables. The results go both ways:
+  - 100 midgame positions at depth 4: 61,263 → 61,003 (−0.4%);
+  - at depth 10: 3,716,389 → 3,712,087 (−0.12%);
+  - at depth 12: 10,579,515 → 10,625,421 (+0.43%);
+  - FFO #40–44: 92,556,457 → 92,556,466 (+9), all correct.
+
+  There is no consistent gain, and a strength-only change must show one, so the policy stays. The experiment was reverted.
