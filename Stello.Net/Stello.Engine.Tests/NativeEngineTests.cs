@@ -154,10 +154,10 @@ public class NativeEngineTests
         var engine = new SearchEngine(16);
         using var moveNow = new CancellationTokenSource();
         moveNow.Cancel();
-        // Stopped at the first abort check, as Stello 2.0 stops.
-        SearchResult expected = new V2.SearchEngine(16).Search(Midgame, Player.Black, SearchLimits.FixedDepth(60), moveNowToken: moveNow.Token);
         SearchResult actual = engine.Search(Midgame, Player.Black, SearchLimits.FixedDepth(60), moveNowToken: moveNow.Token);
-        Assert.Equal((expected.Move, expected.Score, expected.Kind, expected.Depth), (actual.Move, actual.Score, actual.Kind, actual.Depth));
+        Assert.Equal(ScoreKind.Heuristic, actual.Kind);
+        Assert.True(Midgame.IsLegal(Player.Black, actual.Move.Square!.Value));
+        Assert.True(actual.Depth < 60);
 
         Assert.Equal(9, engine.Search(Midgame, Player.Black, SearchLimits.FixedDepth(9)).Depth);
     }

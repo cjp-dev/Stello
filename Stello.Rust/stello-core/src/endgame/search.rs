@@ -138,7 +138,7 @@ impl Searcher<'_> {
             return self.solve_shallow(own, opponent, alpha, beta, empties, passed);
         }
 
-        self.count_end_node()?;
+        self.count_node()?;
         let legal = legal_moves(own, opponent);
         if legal == 0 {
             if passed {
@@ -211,7 +211,7 @@ impl Searcher<'_> {
                 let child_empty = empty & !(1u64 << mv.square);
                 mv.value = (ORDER_OFFSET - weighted_moves(mv.replies)) * ORDER_MOBILITY
                     + (ORDER_OFFSET - potential_mobility(child_opponent, child_empty)) * ORDER_POTENTIAL_MOBILITY
-                    + (64 - self.ordering_value(child_own, child_opponent, depth, order_alpha, order_beta))
+                    + (64 - self.ordering_value(child_own, child_opponent, depth, order_alpha, order_beta)?)
                         * (ORDER_VALUE + depth * ORDER_VALUE_DEEP);
             }
         }
@@ -280,7 +280,7 @@ impl Searcher<'_> {
             return self.end_local(own, opponent, alpha, passed, legal, empties);
         }
 
-        self.count_end_node()?;
+        self.count_node()?;
         if legal == LEGAL_UNDEFINED {
             legal = legal_moves(own, opponent);
         }
@@ -376,7 +376,7 @@ impl Searcher<'_> {
                     let (child_own, child_opponent) = child(own, opponent, mv);
                     mv.replies = legal_moves(child_own, child_opponent);
                     mv.value = (ORDER_OFFSET - weighted_moves(mv.replies)) * ORDER_NULL_MOBILITY
-                        + (64 - self.ordering_value(child_own, child_opponent, depth, order_alpha, order_beta))
+                        + (64 - self.ordering_value(child_own, child_opponent, depth, order_alpha, order_beta)?)
                             * (ORDER_NULL_VALUE + depth * ORDER_NULL_VALUE_DEEP);
                 }
             }
@@ -420,19 +420,20 @@ impl Searcher<'_> {
 
     /// The value of a position for ordering, in discs: the pattern evaluation after a small alpha-beta search.
     /// C#: `OrderingValue`.
-    fn ordering_value(&mut self, own: u64, opponent: u64, depth: i32, mut alpha: i32, beta: i32) -> i32 {
+    fn ordering_value(&mut self, own: u64, opponent: u64, depth: i32, mut alpha: i32, beta: i32) -> Result<i32, Abort> {
+        self.count_node()?;
         if depth == 0 {
             self.evaluations += 1;
-            return eval::disc_score(self.pattern, own, opponent);
+            return Ok(eval::disc_score(self.pattern, own, opponent));
         }
 
-        self.nodes += 1;
         let mut legal = legal_moves(own, opponent);
         if legal == 0 {
             return if legal_moves(opponent, own) == 0 {
-                final_score(own, opponent)
+                self.evaluations += 1;
+                Ok(final_score(own, opponent))
             } else {
-                -self.ordering_value(opponent, own, depth, -beta, -alpha)
+                Ok(-self.ordering_value(opponent, own, depth, -beta, -alpha)?)
             };
         }
 
@@ -442,7 +443,7 @@ impl Searcher<'_> {
             legal &= legal - 1;
             let flipped = flips(own, opponent, square);
             let score =
-                -self.ordering_value(opponent ^ flipped, own ^ flipped ^ (1u64 << square), depth - 1, -beta, -alpha);
+                -self.ordering_value(opponent ^ flipped, own ^ flipped ^ (1u64 << square), depth - 1, -beta, -alpha)?;
             if score > best {
                 best = score;
                 if best > alpha {
@@ -454,7 +455,7 @@ impl Searcher<'_> {
             }
         }
 
-        best
+        Ok(best)
     }
 
     // ---- Null window at 11 to 13 empty squares, with the local table ----
@@ -473,7 +474,7 @@ impl Searcher<'_> {
             return self.end_simple(own, opponent, alpha, passed, legal, empties);
         }
 
-        self.count_end_node()?;
+        self.count_node()?;
         if !passed && let Some(cut) = stability_cut(own, opponent, alpha, empties) {
             return Ok(cut);
         }
@@ -484,6 +485,7 @@ impl Searcher<'_> {
 
         if legal == 0 {
             return if passed {
+                self.evaluations += 1;
                 Ok(final_score(own, opponent))
             } else {
                 Ok(-self.end_local(opponent, own, -alpha - 1, true, LEGAL_UNDEFINED, empties)?)
@@ -579,7 +581,7 @@ impl Searcher<'_> {
             return self.end_fast(own, opponent, alpha, passed, empties);
         }
 
-        self.count_end_node()?;
+        self.count_node()?;
         if !passed && let Some(cut) = stability_cut(own, opponent, alpha, empties) {
             return Ok(cut);
         }
@@ -590,6 +592,7 @@ impl Searcher<'_> {
 
         if legal == 0 {
             return if passed {
+                self.evaluations += 1;
                 Ok(final_score(own, opponent))
             } else {
                 Ok(-self.end_simple(opponent, own, -alpha - 1, true, LEGAL_UNDEFINED, empties)?)
@@ -672,7 +675,7 @@ impl Searcher<'_> {
 
     /// C#: `EndFast`.
     fn end_fast(&mut self, own: u64, opponent: u64, alpha: i32, passed: bool, empties: i32) -> Result<i32, Abort> {
-        self.count_end_node()?;
+        self.count_node()?;
         if !passed && let Some(cut) = stability_cut(own, opponent, alpha, empties) {
             return Ok(cut);
         }
@@ -680,6 +683,7 @@ impl Searcher<'_> {
         let mut legal = legal_moves(own, opponent);
         if legal == 0 {
             return if passed {
+                self.evaluations += 1;
                 Ok(final_score(own, opponent))
             } else {
                 Ok(-self.end_fast(opponent, own, -alpha - 1, true, empties)?)
@@ -702,7 +706,7 @@ impl Searcher<'_> {
                 let child_own = opponent ^ flipped;
                 let child_opponent = own ^ flipped ^ (1u64 << square);
                 let score = if empties == 5 {
-                    self.last4(child_own, child_opponent, alpha)
+                    self.last4(child_own, child_opponent, alpha)?
                 } else {
                     -self.end_fast(child_own, child_opponent, -alpha - 1, false, empties - 1)?
                 };
@@ -719,19 +723,6 @@ impl Searcher<'_> {
         Ok(best)
     }
 
-    /// Counts a node of the solver and checks for a stop every 1024 nodes from the last check (C#: `CountEndNode`;
-    /// the midgame and `solve_shallow` check when `nodes % 1024 == 0` instead).
-    #[inline]
-    pub(crate) fn count_end_node(&mut self) -> Result<(), Abort> {
-        self.nodes += 1;
-        if self.nodes >= self.next_abort_check {
-            self.next_abort_check = self.nodes + 1024;
-            self.check_abort()?;
-        }
-
-        Ok(())
-    }
-
     /// Near the end: no move list, no hash table; empty squares in odd regions first (parity). C#: `SolveShallow`
     /// (SearchEngine.cs), which `EndNull` calls at 4 empty squares or fewer and `EndWindow` at 6 or fewer.
     pub(crate) fn solve_shallow(
@@ -743,10 +734,7 @@ impl Searcher<'_> {
         empties: i32,
         passed: bool,
     ) -> Result<i32, Abort> {
-        self.nodes += 1;
-        if self.nodes & 1023 == 0 {
-            self.check_abort()?;
-        }
+        self.count_node()?;
 
         let empty = !(own | opponent);
         if empties == 1 {
@@ -823,7 +811,7 @@ impl Searcher<'_> {
 
         let flips = bits::flips(own, opponent, first);
         if flips != 0 {
-            self.nodes += 1;
+            self.count_node()?;
             best = -self.solve_last(opponent & !flips, own | flips | (1u64 << first), 1u64 << second);
             if best >= beta {
                 return Ok(best);
@@ -832,7 +820,7 @@ impl Searcher<'_> {
 
         let flips = bits::flips(own, opponent, second);
         if flips != 0 {
-            self.nodes += 1;
+            self.count_node()?;
             best = best.max(-self.solve_last(opponent & !flips, own | flips | (1u64 << second), 1u64 << first));
         }
 
@@ -845,10 +833,7 @@ impl Searcher<'_> {
             return Ok(final_score(own, opponent));
         }
 
-        self.nodes += 1;
-        if self.nodes & 1023 == 0 {
-            self.check_abort()?;
-        }
+        self.count_node()?;
 
         Ok(-self.solve_last2(opponent, own, -beta, -alpha, empty, true)?)
     }
@@ -1022,9 +1007,9 @@ mod tests {
     use super::{DEEP_MOVES, END_INFINITY, EndMove, fill_end_moves, swap_next_best, undone_first};
     use crate::bits;
     use crate::board::{Board, Player};
-    use crate::search::engine::final_score;
+    use crate::search::engine::{Abort, final_score};
     use crate::search::table::Bound;
-    use crate::search::{NoStop, SearchEngine, SearchOptions};
+    use crate::search::{NoStop, SearchEngine, SearchOptions, SearchSignals};
 
     // Plain minimax to the end, the empty squares going to the winner.
     fn exact(own: u64, opponent: u64, passed: bool) -> i32 {
@@ -1087,6 +1072,33 @@ mod tests {
 
         assert!(checked > 200);
         assert!(searcher.nodes > 0 && searcher.evaluations > 0);
+    }
+
+    #[test]
+    fn ordering_value_counts_terminal_evaluations_and_shallow_paths_check_abort() {
+        let mut engine = SearchEngine::new(10, SearchOptions::default());
+        {
+            let mut searcher = engine.searcher(None, &NoStop, 64);
+            searcher.ordering_value(0, u64::MAX, 0, -64, 64).unwrap();
+            assert_eq!((searcher.nodes, searcher.evaluations), (1, 1));
+            assert_eq!(searcher.ordering_value(0, u64::MAX, 1, -64, 64), Ok(final_score(0, u64::MAX)));
+            assert_eq!((searcher.nodes, searcher.evaluations), (2, 2));
+        }
+
+        let stop = SearchSignals::new();
+        stop.cancel();
+        let mut searcher = engine.searcher(None, &stop, 4);
+        searcher.nodes = 1023;
+        searcher.next_abort_check = 1024;
+        assert!(matches!(searcher.ordering_value(0, 0, 0, -64, 64), Err(Abort::Cancelled)));
+
+        searcher.nodes = 1023;
+        searcher.next_abort_check = 1024;
+        assert!(matches!(searcher.solve_shallow(0, !0b1111u64, -64, 64, 4, false), Err(Abort::Cancelled)));
+
+        searcher.nodes = 1023;
+        searcher.next_abort_check = 1024;
+        assert!(matches!(searcher.solve_last2(0, !0b11u64, -64, 64, 0b11, false), Err(Abort::Cancelled)));
     }
 
     #[test]

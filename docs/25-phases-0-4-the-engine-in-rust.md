@@ -254,7 +254,7 @@ The speed pass also left ideas that keep the nodes ([findings](../Plans/making-s
 - **The boundary is narrow.** A position, the limits and the stop signals go in; progress and a result come out. Everything else (the book, the game record, `ComputerPlayer`, the apps, the tools) did not change, so the C# tests of those parts still hold.
 - **The same engine in both apps.** The desktop app and the browser run the same Rust code; only the boundary differs (a C ABI, or wasm-bindgen), and WebAssembly takes the portable paths.
 - **Nothing binary is committed.** The native library and the WebAssembly module are built by Cargo during the .NET build, on each machine, into a target folder per OS.
-- **Kept quirks.** The node-counting quirks and the sorting detail above are kept, so that 3.0 stays comparable with 2.0 node for node. Part 2 keeps that for one thread: its phase 5 gate is that 1 thread stays identical.
+- **Kept quirks.** The original 3.0 port kept the node-counting quirks and sorting detail above, so its one-thread searches stayed comparable with 2.0 node for node. Phase 2 item 9 of the 3.1 work later unified node and evaluation accounting; the current endgame node counts therefore differ from 2.0, while exact moves and scores remain checked against it.
 
 ## Where in the code
 

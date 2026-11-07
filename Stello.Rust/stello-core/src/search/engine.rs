@@ -517,7 +517,7 @@ pub(crate) struct Searcher<'a> {
 
     pub(crate) nodes: u64,
     pub(crate) evaluations: u64,
-    /// The endgame's abort check (C#: `_nextAbortCheck`); the midgame checks when `nodes % 1024 == 0`.
+    /// The next shared node count at which the abort check runs.
     pub(crate) next_abort_check: u64,
     pub(crate) hard_limit_ms: i64,
     pub(crate) hash_get_height: i32,
@@ -841,7 +841,7 @@ impl<'a> Searcher<'a> {
             let score;
 
             if look == 0 {
-                score = -self.evaluate_leaf(&child, opponent);
+                score = -self.evaluate_leaf(&child, opponent)?;
             } else {
                 let child_look = look - 1;
                 let reply;
@@ -892,10 +892,7 @@ impl<'a> Searcher<'a> {
         mut alpha: i32,
         beta: i32,
     ) -> Result<(i32, i32), Abort> {
-        self.nodes += 1;
-        if self.nodes & 1023 == 0 {
-            self.check_abort()?;
-        }
+        self.count_node()?;
 
         let opponent = player.opponent();
         let own = board.discs(player);
@@ -981,7 +978,7 @@ impl<'a> Searcher<'a> {
         }
 
         if look >= EVALUATION_ORDER_MIN_LOOK {
-            self.order_by_evaluation(list, hash_move, board, player);
+            self.order_by_evaluation(list, hash_move, board, player)?;
         } else {
             self.ordering.order(list, hash_move, previous_move, player, board);
         }
@@ -1019,7 +1016,7 @@ impl<'a> Searcher<'a> {
             let score;
 
             if look == 0 {
-                score = -self.evaluate_leaf(&child, opponent);
+                score = -self.evaluate_leaf(&child, opponent)?;
             } else if best == -INFINITY || beta - alpha == 1 {
                 let (value, reply) = self.search(&child, opponent, look - 1, ply + 1, mv, -beta, -alpha)?;
                 score = -value;
@@ -1063,7 +1060,13 @@ impl<'a> Searcher<'a> {
     // Egaroucid's midgame ordering (move_ordering.hpp, depth 0): the hash move, then fewer replies, less potential
     // mobility for the opponent and a better evaluation first. The response killers are not used here: with them
     // first the search was weaker.
-    fn order_by_evaluation(&mut self, list: &mut [i32], hash_move: i32, board: &Board, player: Player) {
+    fn order_by_evaluation(
+        &mut self,
+        list: &mut [i32],
+        hash_move: i32,
+        board: &Board,
+        player: Player,
+    ) -> Result<(), Abort> {
         let opponent = player.opponent();
         let empty = !(board.discs(player) | board.discs(opponent));
         let mut keys = [0i32; MAX_MOVES];
@@ -1078,13 +1081,14 @@ impl<'a> Searcher<'a> {
             let child_other = child.discs(player);
             let replies = endgame::bits::weighted_moves(bits::legal_moves(child_own, child_other));
             let potential = endgame::bits::potential_mobility(child_other, empty & !(1u64 << mv));
-            let value = self.evaluate_leaf(&child, opponent);
+            let value = self.evaluate_leaf(&child, opponent)?;
             *key = (ORDER_OFFSET - replies) * ORDER_MOBILITY + (ORDER_OFFSET - potential) * ORDER_POTENTIAL_MOBILITY
                 - value * ORDER_VALUE / PATTERN_UNITS_PER_DISC;
         }
 
         let count = list.len();
         ordering::sort_descending(list, &mut keys[..count]);
+        Ok(())
     }
 
     /// The cut score if Multi-ProbCut cuts this node. C#: `TryProbCut`.
@@ -1104,7 +1108,7 @@ impl<'a> Searcher<'a> {
         let errors = self.probcut_errors.expect("Multi-ProbCut is on");
         let error = errors[64 - board.empty_count() as usize][depth as usize];
         let error0 = PATTERN_UNITS_PER_DISC.max(error - PROBCUT_PRE_CHECK_OFFSET);
-        let static0 = self.evaluate_leaf(board, player);
+        let static0 = self.evaluate_leaf(board, player)?;
 
         // C#'s finally: the flag is cleared even when the search stops.
         self.in_probcut = true;
@@ -1215,10 +1219,10 @@ impl<'a> Searcher<'a> {
 
     /// The evaluation of a leaf, counted as a node and an evaluation. C#: `EvaluateLeaf`.
     #[inline]
-    pub(crate) fn evaluate_leaf(&mut self, board: &Board, player: Player) -> i32 {
-        self.nodes += 1;
+    pub(crate) fn evaluate_leaf(&mut self, board: &Board, player: Player) -> Result<i32, Abort> {
+        self.count_node()?;
         self.evaluations += 1;
-        eval::pattern_score(self.pattern, board.discs(player), board.discs(player.opponent()))
+        Ok(eval::pattern_score(self.pattern, board.discs(player), board.discs(player.opponent())))
     }
 
     fn stop_iterating(&self, limits: &SearchLimits, budget: TimeBudget, next_look: i32) -> bool {
@@ -1227,6 +1231,18 @@ impl<'a> Searcher<'a> {
             TimeControlMode::Solve => false,
             _ => self.elapsed_ms() > budget.soft_ms,
         }
+    }
+
+    /// Counts one node and checks the heartbeat, stop signals and hard time limit every 1024 nodes.
+    #[inline]
+    pub(crate) fn count_node(&mut self) -> Result<(), Abort> {
+        self.nodes += 1;
+        if self.nodes >= self.next_abort_check {
+            self.next_abort_check = self.nodes + 1024;
+            self.check_abort()?;
+        }
+
+        Ok(())
     }
 
     /// The heartbeat, then the stop signals and the hard time limit. C#: `CheckAbort`.

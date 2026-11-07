@@ -3,16 +3,15 @@
 //! and `LastFlipCount` in Endgame/SearchEngine.Endgame.cs.
 //!
 //! `last4` and `last2` return the score for the side that moved into their position; `last3` and `last1` for the
-//! side to move. The pass at each level flips the sign through `pol`. They count nodes but do not check for a stop
-//! (C# neither); `end_fast` above them does.
+//! side to move. The pass at each level flips the sign through `pol`. Each node and pass uses the shared abort check.
 
 use super::bits::{FLIP_NEIGHBOURS, flips, is_lone_empty, lone_empties, score_with_empties, score_with_odd_empties};
 use super::search::END_INFINITY;
-use crate::search::engine::Searcher;
+use crate::search::engine::{Abort, Searcher};
 
 impl Searcher<'_> {
     /// C#: `Last4`.
-    pub(crate) fn last4(&mut self, own: u64, opponent: u64, mut alpha: i32) -> i32 {
+    pub(crate) fn last4(&mut self, own: u64, opponent: u64, mut alpha: i32) -> Result<i32, Abort> {
         let empties = !(own | opponent);
         let mut lone = lone_empties(own, opponent);
         if lone == 0 {
@@ -40,13 +39,13 @@ impl Searcher<'_> {
         let mut v = END_INFINITY;
         let mut pol = 1;
         loop {
-            self.nodes += 1;
+            self.count_node()?;
             if FLIP_NEIGHBOURS[p0 as usize] & o != 0 {
                 let f = flips(p, o, p0);
                 if f != 0 {
-                    v = self.last3(o ^ f, p ^ f ^ (1u64 << p0), alpha, p1, p2, p3, empties);
+                    v = self.last3(o ^ f, p ^ f ^ (1u64 << p0), alpha, p1, p2, p3, empties)?;
                     if alpha >= v {
-                        return v * pol;
+                        return Ok(v * pol);
                     }
                 }
             }
@@ -54,9 +53,9 @@ impl Searcher<'_> {
             if FLIP_NEIGHBOURS[p1 as usize] & o != 0 {
                 let f = flips(p, o, p1);
                 if f != 0 {
-                    let g = self.last3(o ^ f, p ^ f ^ (1u64 << p1), alpha, p0, p2, p3, empties);
+                    let g = self.last3(o ^ f, p ^ f ^ (1u64 << p1), alpha, p0, p2, p3, empties)?;
                     if alpha >= g {
-                        return g * pol;
+                        return Ok(g * pol);
                     }
 
                     v = v.min(g);
@@ -66,9 +65,9 @@ impl Searcher<'_> {
             if FLIP_NEIGHBOURS[p2 as usize] & o != 0 {
                 let f = flips(p, o, p2);
                 if f != 0 {
-                    let g = self.last3(o ^ f, p ^ f ^ (1u64 << p2), alpha, p0, p1, p3, empties);
+                    let g = self.last3(o ^ f, p ^ f ^ (1u64 << p2), alpha, p0, p1, p3, empties)?;
                     if alpha >= g {
-                        return g * pol;
+                        return Ok(g * pol);
                     }
 
                     v = v.min(g);
@@ -78,13 +77,13 @@ impl Searcher<'_> {
             if FLIP_NEIGHBOURS[p3 as usize] & o != 0 {
                 let f = flips(p, o, p3);
                 if f != 0 {
-                    let g = self.last3(o ^ f, p ^ f ^ (1u64 << p3), alpha, p0, p1, p2, empties);
-                    return v.min(g) * pol;
+                    let g = self.last3(o ^ f, p ^ f ^ (1u64 << p3), alpha, p0, p1, p2, empties)?;
+                    return Ok(v.min(g) * pol);
                 }
             }
 
             if v < END_INFINITY {
-                return v * pol;
+                return Ok(v * pol);
             }
 
             (p, o) = (o, p);
@@ -95,7 +94,8 @@ impl Searcher<'_> {
             }
         }
 
-        -score_with_empties(own, 4)
+        self.evaluations += 1;
+        Ok(-score_with_empties(own, 4))
     }
 
     /// C#: `Last3`.
@@ -109,7 +109,7 @@ impl Searcher<'_> {
         mut p1: u32,
         mut p2: u32,
         empties4: u64,
-    ) -> i32 {
+    ) -> Result<i32, Abort> {
         // A square alone in its region first (the parity is read on the position with 4 empty squares, as in
         // Egaroucid).
         if is_lone_empty(p2, empties4) {
@@ -122,13 +122,13 @@ impl Searcher<'_> {
         let mut v = -END_INFINITY;
         let mut pol = 1;
         loop {
-            self.nodes += 1;
+            self.count_node()?;
             if FLIP_NEIGHBOURS[p0 as usize] & o != 0 {
                 let f = flips(p, o, p0);
                 if f != 0 {
-                    v = self.last2(o ^ f, p ^ f ^ (1u64 << p0), alpha, p1, p2);
+                    v = self.last2(o ^ f, p ^ f ^ (1u64 << p0), alpha, p1, p2)?;
                     if alpha < v {
-                        return v * pol;
+                        return Ok(v * pol);
                     }
                 }
             }
@@ -136,9 +136,9 @@ impl Searcher<'_> {
             if FLIP_NEIGHBOURS[p1 as usize] & o != 0 {
                 let f = flips(p, o, p1);
                 if f != 0 {
-                    let g = self.last2(o ^ f, p ^ f ^ (1u64 << p1), alpha, p2, p0);
+                    let g = self.last2(o ^ f, p ^ f ^ (1u64 << p1), alpha, p2, p0)?;
                     if alpha < g {
-                        return g * pol;
+                        return Ok(g * pol);
                     }
 
                     v = v.max(g);
@@ -148,13 +148,13 @@ impl Searcher<'_> {
             if FLIP_NEIGHBOURS[p2 as usize] & o != 0 {
                 let f = flips(p, o, p2);
                 if f != 0 {
-                    let g = self.last2(o ^ f, p ^ f ^ (1u64 << p2), alpha, p1, p0);
-                    return v.max(g) * pol;
+                    let g = self.last2(o ^ f, p ^ f ^ (1u64 << p2), alpha, p1, p0)?;
+                    return Ok(v.max(g) * pol);
                 }
             }
 
             if v > -END_INFINITY {
-                return v * pol;
+                return Ok(v * pol);
             }
 
             (p, o) = (o, p);
@@ -165,60 +165,66 @@ impl Searcher<'_> {
             }
         }
 
-        score_with_odd_empties(own, 3)
+        self.evaluations += 1;
+        Ok(score_with_odd_empties(own, 3))
     }
 
     /// C#: `Last2`.
-    fn last2(&mut self, own: u64, opponent: u64, mut alpha: i32, p0: u32, p1: u32) -> i32 {
-        self.nodes += 1;
+    fn last2(&mut self, own: u64, opponent: u64, mut alpha: i32, p0: u32, p1: u32) -> Result<i32, Abort> {
+        self.count_node()?;
         let mut v;
         let f0 = if FLIP_NEIGHBOURS[p0 as usize] & opponent != 0 { flips(own, opponent, p0) } else { 0 };
         if f0 != 0 {
-            v = self.last1(opponent ^ f0, alpha, p1);
+            v = self.last1(opponent ^ f0, alpha, p1)?;
             if v > alpha && FLIP_NEIGHBOURS[p1 as usize] & opponent != 0 {
                 let f1 = flips(own, opponent, p1);
                 if f1 != 0 {
-                    v = v.min(self.last1(opponent ^ f1, alpha, p0));
+                    v = v.min(self.last1(opponent ^ f1, alpha, p0)?);
                 }
             }
         } else {
             let f1 = if FLIP_NEIGHBOURS[p1 as usize] & opponent != 0 { flips(own, opponent, p1) } else { 0 };
             if f1 != 0 {
-                v = self.last1(opponent ^ f1, alpha, p0);
+                v = self.last1(opponent ^ f1, alpha, p0)?;
             } else {
                 // The side to move passes; the other side plays.
-                self.nodes += 1;
+                self.count_node()?;
                 alpha = -alpha - 1;
                 let g0 = flips(opponent, own, p0);
                 if g0 != 0 {
-                    v = self.last1(own ^ g0, alpha, p1);
+                    v = self.last1(own ^ g0, alpha, p1)?;
                     if v > alpha {
                         let g1 = flips(opponent, own, p1);
                         if g1 != 0 {
-                            v = v.min(self.last1(own ^ g1, alpha, p0));
+                            v = v.min(self.last1(own ^ g1, alpha, p0)?);
                         }
                     }
                 } else {
                     let g1 = flips(opponent, own, p1);
-                    v = if g1 != 0 { self.last1(own ^ g1, alpha, p0) } else { score_with_empties(own, 2) };
+                    v = if g1 != 0 {
+                        self.last1(own ^ g1, alpha, p0)?
+                    } else {
+                        self.evaluations += 1;
+                        score_with_empties(own, 2)
+                    };
                 }
 
                 v = -v;
             }
         }
 
-        v
+        Ok(v)
     }
 
     /// `own` is the side to move; every square but the empty one that is not own's is the opponent's. C#: `Last1`.
     #[inline]
-    fn last1(&mut self, own: u64, alpha: i32, square: u32) -> i32 {
-        self.nodes += 1;
+    fn last1(&mut self, own: u64, alpha: i32, square: u32) -> Result<i32, Abort> {
+        self.count_node()?;
         let mut flipped = last_flip_count(own, square);
         let mut score = 2 * (own.count_ones() as i32 + flipped + 1) - 64;
         if flipped == 0 {
             // own cannot play there: the opponent may, or the square stays empty.
-            self.nodes += 1;
+            self.count_node()?;
             let pass_score = score - 2;
             if score <= 0 {
                 score = pass_score;
@@ -232,7 +238,8 @@ impl Searcher<'_> {
             }
         }
 
-        score
+        self.evaluations += 1;
+        Ok(score)
     }
 }
 
@@ -340,6 +347,7 @@ const fn last_flip_counts() -> [[u8; 256]; 8] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::search::{SearchEngine, SearchOptions, SearchSignals};
 
     #[test]
     fn last_flip_counts_equal_the_flips() {
@@ -363,5 +371,26 @@ mod tests {
                 assert_eq!(last_flip_count(own, square), expected, "{own:#x} {square}");
             }
         }
+    }
+
+    #[test]
+    fn last_square_pass_paths_reach_the_shared_abort_check() {
+        let mut engine = SearchEngine::new(10, SearchOptions::default());
+        let stop = SearchSignals::new();
+        stop.cancel();
+        let mut searcher = engine.searcher(None, &stop, 4);
+
+        searcher.nodes = 1022;
+        searcher.next_abort_check = 1024;
+        assert!(matches!(searcher.last4(0, !0b1111u64, 0), Err(Abort::Cancelled)));
+        searcher.nodes = 1022;
+        searcher.next_abort_check = 1024;
+        assert!(matches!(searcher.last3(0, !0b111u64, 0, 0, 1, 2, 0b111), Err(Abort::Cancelled)));
+        searcher.nodes = 1022;
+        searcher.next_abort_check = 1024;
+        assert!(matches!(searcher.last2(0, !0b11u64, 0, 0, 1), Err(Abort::Cancelled)));
+        searcher.nodes = 1022;
+        searcher.next_abort_check = 1024;
+        assert!(matches!(searcher.last1(0, 0, 0), Err(Abort::Cancelled)));
     }
 }

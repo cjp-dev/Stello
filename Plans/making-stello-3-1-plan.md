@@ -105,6 +105,8 @@ Each item: read the code and decide whether it is a bug or a harmless quirk. If 
    - `solve_shallow`/`solve_last2` can skip abort checks.
 
    Make the counting consistent, and every abort check reachable. The nodes per second change, so the findings note the new counting.
+
+   **Completed (2026-11-07):** recursive nodes and explicit passes now use one 1,024-node abort-check path; ordering, shallow-solve and last-square paths can no longer skip cancellation checks; terminal evaluations are counted consistently. The 100 depth-10 midgame searches kept their 3,716,389 nodes. FFO #40–44 kept every move and score while nodes changed from 92,556,457 to 93,697,164 (+1.23%). The strict baseline was updated for those five solve signatures only; see the findings.
 10. **Left as they are, and documented:** Stello 1's corner-stability bug (V1 is frozen), and the C++-identical quirks in the Egaroucid port (`last3` reads the wrong board, `bit_around` and so on). The port must stay identical to C++.
 
 **Gate P2:** every item has a verdict in the findings, and kept fixes pass the gates above. To finish, all kept fixes together play 3.0 in a 1,180-game match at 500 ms and a 600-game match at 2 s, with the lower bound above 50 % or not worse. The baseline signatures are updated with a note.
