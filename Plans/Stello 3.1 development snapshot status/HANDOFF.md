@@ -41,6 +41,8 @@ The plan is **[Plans/making-stello-3-1-plan.md](../making-stello-3-1-plan.md)**,
   | 4. `end_deep` keeps the move of its best ETC fail-low | `0eb00cc` | kept; 500 ms 50.3 %; FFO #43/#44 node counts changed |
 
 ## 3. In progress: phase 2, items 5–9, then gate P2
+**As of this snapshot, item 5 is under way on the Windows agent.** Its uncommitted changes are in the working tree: a temporary switch in Rust, FFI, C# and the match tool, and the untracked `Plans/benchmark-results/match_p2-item5-local-table-500ms.{md,json}`. They are not part of any commit yet; review them when the user reports item 5.
+
 The item texts are in the plan, under "Phase 2". Its file:line references may be stale, so search for the code.
 - **5:** in `endgame/search.rs` (`end_local`/`end_simple`), moves already decided by the local table stay in the sort and can reorder the rest.
 - **6:** in `search/ordering.rs` `order()`, the hash move is swapped to the front (the old first move loses its place), and the loop stops one move early.
