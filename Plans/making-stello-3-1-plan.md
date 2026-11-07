@@ -89,6 +89,8 @@ Each item: read the code and decide whether it is a bug or a harmless quirk. If 
 4. **The stored move in `end_deep`** (`endgame/search.rs:342-355, 377, 407-408`):
    - after an ETC fail-low the stored best move can be −1, or a move that was not the best;
    - the hash move does not count as searched, so the node splits one move later.
+
+   Completed: both are fixed unconditionally. An ETC fail-low keeps its move with its value, and a searched hash move counts for splitting. The 1,180-game 500 ms match scored 50.3% (48.6–52.0), so it is not worse and is kept. The switch is removed, and the ABI stays at 3. The baseline is regenerated for FFO #43 and #44 (nodes only), and the tests stay strict. See the item 4 findings.
 5. **Moves decided by the local table stay in the sort** (`endgame/search.rs:535-540, 642-647`).
 6. **Response ordering** (`search/ordering.rs:68-72, 87`): the hash move is swapped to the front, and the loop stops one move early.
 7. **A full window for every root move up to depth 3** (`engine.rs:842`).
@@ -188,7 +190,7 @@ The order puts speed first (it changes no nodes), then the threads, the search, 
 1. **Root splitting** in `search_root` and `solve_root`. With 8 threads FFO is 3.29× faster today, against Egaroucid's 4.15×.
 2. **Interrupting the splitting thread's own brother** when a task fails high: the local search observes the current split point, and a cut is not reported as an abort.
 3. **Progress heartbeats while a thread waits at a split,** from the polling callback of `scope_polling`.
-4. **The `searched` flag in `end_deep`,** if phase 2 did not settle it.
+4. **The `searched` flag in `end_deep`,** if phase 2 did not settle it. (Settled in phase 2 item 4.)
 5. **Tuning on two machines:**
    - the midgame YBWC split depth (today tasks average 415 nodes) and the helper/YBWC split at 16 threads;
    - Lazy SMP helpers in the solve once more;

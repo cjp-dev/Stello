@@ -322,6 +322,7 @@ impl Searcher<'_> {
         let mut best = -END_INFINITY;
         let mut best_move = -1;
         let mut done = 0u64;
+        let mut hash_move_searched = false;
         if empties >= END_ETC_MIN_EMPTIES {
             // Enhanced transposition cutoff: the children's stored bounds may already decide this node.
             for mv in moves.iter() {
@@ -336,7 +337,10 @@ impl Searcher<'_> {
                 }
 
                 if entry.bound != Bound::Upper && value <= alpha {
-                    best = best.max(value);
+                    if value > best {
+                        best = value;
+                        best_move = mv.square as i32;
+                    }
                     done |= 1u64 << mv.square;
                 }
             }
@@ -348,6 +352,7 @@ impl Searcher<'_> {
                 let (child_own, child_opponent) = child(own, opponent, mv);
                 let score =
                     -self.end_deep(child_own, child_opponent, -alpha - 1, empties - 1, false, LEGAL_UNDEFINED)?;
+                hash_move_searched = true;
                 if score > best {
                     best = score;
                     best_move = hash_move;
@@ -376,8 +381,9 @@ impl Searcher<'_> {
                 }
             }
 
-            // Whether a child was searched here (the stored best move), so that the others may be split off.
-            let mut searched = best_move >= 0;
+            // Whether a child was searched here (the stored best move), so that the others may be split off. Children
+            // decided by the ETC were not searched, so `best_move` cannot tell.
+            let mut searched = hash_move_searched;
             for i in 0..count {
                 if searched && empties > YBWC_END_MIN_EMPTIES && self.may_split() {
                     // YBWC: the younger brothers in parallel, in their order.
@@ -1003,9 +1009,11 @@ fn swap_next_best(moves: &mut [EndMove], start: usize) {
 
 #[cfg(test)]
 mod tests {
+    use super::{DEEP_MOVES, END_INFINITY, EndMove, fill_end_moves};
     use crate::bits;
     use crate::board::{Board, Player};
     use crate::search::engine::final_score;
+    use crate::search::table::Bound;
     use crate::search::{NoStop, SearchEngine, SearchOptions};
 
     // Plain minimax to the end, the empty squares going to the winner.
@@ -1069,5 +1077,87 @@ mod tests {
 
         assert!(checked > 200);
         assert!(searcher.nodes > 0 && searcher.evaluations > 0);
+    }
+
+    #[test]
+    fn end_deep_stores_the_move_with_the_best_etc_fail_low_value() {
+        let mut seed = 0x2545_F491_4F6C_DD1Du64;
+        let (board, player, legal) = loop {
+            let (mut board, mut player) = (Board::INITIAL, Player::Black);
+            while board.empty_count() > 14 {
+                let mut moves = board.legal_moves(player);
+                if moves == 0 {
+                    player = player.opponent();
+                    moves = board.legal_moves(player);
+                }
+                if moves == 0 {
+                    break;
+                }
+                seed ^= seed << 13;
+                seed ^= seed >> 7;
+                seed ^= seed << 17;
+                for _ in 0..seed % moves.count_ones() as u64 {
+                    moves &= moves - 1;
+                }
+                board = board.play_unchecked(player, moves.trailing_zeros());
+                player = player.opponent();
+            }
+
+            if board.empty_count() != 14 {
+                continue;
+            }
+            let mut legal = board.legal_moves(player);
+            if legal == 0 {
+                player = player.opponent();
+                legal = board.legal_moves(player);
+            }
+            if legal == 0 {
+                continue;
+            }
+            let count = legal.count_ones() as usize;
+            let mut moves = [EndMove::default(); DEEP_MOVES];
+            if !fill_end_moves(board.discs(player), board.discs(player.opponent()), legal, &mut moves[..count]) {
+                break (board, player, legal);
+            }
+        };
+
+        let mut engine = SearchEngine::new(12, SearchOptions::default());
+        let root_empties = board.empty_count();
+        let own = board.discs(player);
+        let opponent = board.discs(player.opponent());
+        let mut searcher = engine.searcher(None, &NoStop, root_empties);
+        let mut best_move = -1;
+        let mut best_value = -END_INFINITY;
+        let mut index = 0;
+        let mut remaining = legal;
+        while remaining != 0 {
+            let square = remaining.trailing_zeros();
+            remaining &= remaining - 1;
+            let flips = bits::flips(own, opponent, square);
+            let child_own = opponent ^ flips;
+            let child_opponent = own ^ flips ^ (1u64 << square);
+            let value = 10 + index;
+            if value > best_value {
+                best_value = value;
+                best_move = square as i32;
+            }
+            searcher.endgame_table.store_at_root(
+                child_own,
+                child_opponent,
+                0,
+                root_empties as i32 - 1,
+                Bound::Exact,
+                -value,
+                -1,
+                root_empties,
+            );
+            index += 1;
+        }
+
+        assert_eq!(searcher.end_deep(own, opponent, 63, 14, true, legal), Ok(best_value));
+        assert_eq!(
+            searcher.endgame_table.get_at_root(own, opponent, 0, root_empties).map(|entry| entry.mv as i32),
+            Some(best_move)
+        );
     }
 }
