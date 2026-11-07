@@ -94,7 +94,7 @@ Each item: read the code and decide whether it is a bug or a harmless quirk. If 
 5. **Moves decided by the local table stay in the sort** (`endgame/search.rs:535-540, 642-647`).
 
    Completed: `end_local` and `end_simple` sort only the moves still to search; decided moves no longer change their order. The 1,180-game 500 ms match scored 49.6% (48.0–51.1), so it is not worse and is kept. The switch is removed, and the ABI stays at 3. The baseline is regenerated for FFO #40–44 (nodes only), and the tests stay strict. See the item 5 findings.
-6. **Response ordering** (`search/ordering.rs:68-72, 87`): the hash move is swapped to the front, and the loop stops one move early.
+6. **Response ordering** (`search/ordering.rs:68-72, 87`): reviewed; no fix. Swapping the hash move to the front is the same move-to-front operation used by C++ and C# 2.0; it can change only tie order among the remaining moves. The response-score loop leaves a final singleton, which needs no further ordering. No defect found; see the findings.
 7. **A full window for every root move up to depth 3** (`engine.rs:842`).
 8. **The Multi-ProbCut shallow search** reads and writes the hash table at the same ply (findings 3.0:167).
 9. **Counting** (statistics only):

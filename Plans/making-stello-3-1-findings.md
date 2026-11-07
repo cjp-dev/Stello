@@ -12,7 +12,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 | **Part 1: Stello 3.1** | | |
 | 0 Set-up and the new baseline | done (2026-11-04) | 3.0 one-thread JSON references, 105-signature baseline test, and Rust-engine `opt=` match switches; Stello tests pass |
 | 1 Real bugs | done (2026-11-06) | Six bugs fixed: an aborted solve reported as Exact, the natural delay charged to the clock, the clock restore after Back/Forward, the endgame soft limit (gate matches at 1 and 5 min per game not worse), web worker robustness (review found a restart loop) and doc errors; items 1 and 2 checked in the apps |
-| 2 The parity quirks | in progress | Item 1 passed the 500 ms not-worse gate; item 3a is kept; item 4 passed it (50.3%, 48.6–52.0) and is kept; item 5 passed it (49.6%, 48.0–51.1) and is kept |
+| 2 The parity quirks | in progress | Items 1 and 3a–5 are kept; item 6 reviewed with no fix needed: hash-move swapping and the final-singleton guard are harmless ordering details |
 | 3 The apps | not started | |
 | 4 Tools and verification gaps | not started | |
 | 5 The 3.1 release | not started | |
@@ -264,3 +264,14 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 - **Review speed check:** FFO #40–49 on one pinned core (Windows, alternating, 2 rounds): 27.3 s before and 27.3–27.4 s after; 1,098,937,112 against 1,098,913,729 nodes (−0.002%), all scores and moves correct. No speed difference.
 - **Checks after the cleanup:** formatting and Clippy with warnings denied (native and `wasm32-unknown-unknown`); 84 Rust workspace tests; all 489 engine tests, including the strict baseline; all 42 Egaroucid/benchmark tests; and all 15 Node tests on the rebuilt Stello.Web packages, with and without threads. `Stello.Net.Tests` has only the 2 known score-display failures (phase 3).
 - **Report and full game data:** [match report](benchmark-results/match_p2-item5-local-table-500ms.md) and [JSON](benchmark-results/match_p2-item5-local-table-500ms.json).
+
+### Item 6: response ordering
+- **What was questioned:** `MoveOrdering::order` swaps a legal hash move to the front, then promotes the prefix with nonzero response scores before sorting the rest by square value. Its `moves.len() - start >= 2` condition stops before consuming the final move.
+- **Assessment:** no fix is needed. The swap is the same move-to-front operation used in the C++ `sortlist` and frozen C# 2.0 implementation; it can affect tie order among non-hash moves, but that is an ordering heuristic rather than a correctness issue. After the stable response-score sort, the loop skips entries with nonzero response scores so the square-value sort cannot disturb them. If only one move remains, leaving it untouched is equivalent: a singleton cannot be reordered. The Rust key array stays aligned with its sorted move slice.
+- **Verdict:** harmless ordering details; no A/B switch, benchmark, match or signature change.
+- **Review spot check:** the reviewer temporarily replaced the swap with a rotation that keeps the other moves in their original order (`moves[..=index].rotate_right(1)`) and compared it with the current code, using the Rust CLI on one thread with cleared tables. The rotation searched slightly more nodes in the midgame and the same in the solves:
+  - 100 midgame positions at depth 10: 3,716,389 → 3,717,242 (+0.02%);
+  - at depth 12: 10,579,515 → 10,584,497 (+0.05%);
+  - FFO #40–44: identical at 92,556,457, all correct.
+
+  The swap only breaks ties differently, and keeping it costs nothing. The experiment was reverted.
