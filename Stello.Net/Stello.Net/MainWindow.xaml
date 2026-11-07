@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:Stello.Net.Views"
+        xmlns:models="clr-namespace:Stello.App.Models;assembly=Stello.App"
         xmlns:vm="clr-namespace:Stello.App.ViewModels;assembly=Stello.App"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
@@ -43,6 +44,8 @@
                 <MenuItem Header="E_xit" Click="OnExit" />
             </MenuItem>
             <MenuItem Header="_Game">
+                <MenuItem Header="vs Computer (both sides)" IsChecked="{Binding IsComputerVsComputer, Mode=OneWay}"
+                          Command="{Binding SetGameModeCommand}" CommandParameter="{x:Static models:GameMode.ComputerVsComputer}" />
                 <MenuItem Header="_Switch Sides" Command="{Binding SwitchSidesCommand}" />
                 <MenuItem Header="_Move Now" InputGestureText="Ctrl+M" Command="{Binding MoveNowCommand}" />
                 <Separator />

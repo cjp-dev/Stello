@@ -13,7 +13,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 | 0 Set-up and the new baseline | done (2026-11-04) | 3.0 one-thread JSON references, 105-signature baseline test, and Rust-engine `opt=` match switches; Stello tests pass |
 | 1 Real bugs | done (2026-11-06) | Six bugs fixed: an aborted solve reported as Exact, the natural delay charged to the clock, the clock restore after Back/Forward, the endgame soft limit (gate matches at 1 and 5 min per game not worse), web worker robustness (review found a restart loop) and doc errors; items 1 and 2 checked in the apps |
 | 2 The parity quirks | done (2026-11-07) | Items 1 and 3a–5 are kept; items 6–8 reviewed with no fix needed; item 9's counting is unified and its strict baseline regenerated. The combined fixes passed Gate P2 at 500 ms and 2 s without evidence of a loss |
-| 3 The apps | in progress | Steps 1–2 done: corrected score-display expectations; shared state/history, settings choices and appearance/sound persistence. Release build clean; .NET tests 489/489, 42/42, 94/94; Node tests 15/15 |
+| 3 The apps | in progress | Steps 1–3 done: shared app foundation and CvC in both apps. Release build clean; .NET tests 489/489, 42/42, 104/104; Node tests 15/15 |
 | 4 Tools and verification gaps | not started | |
 | 5 The 3.1 release | not started | |
 | **Part 2: Stello 3.2** | | |
@@ -351,9 +351,21 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 - **View-model state:** `MainViewModel` now raises `PropertyChanged` for the computed turn, game-over, undo/redo, clock-visibility and settings-badge properties. It also exposes `IsBlackActive`/`IsWhiteActive` and paired move-history rows with the latest row marked. `Home.razor` consumes those values instead of calculating them.
 - **Shared settings and appearance:** `SettingsViewModel.TranspositionTableChoices` is the single list used by the WPF and web settings dialogs. `Appearance` and `BoardStyle` now live in `Stello.App`; the web keeps using its existing appearance local-storage key, while WPF stores the same appearance model in `settings.json`. `Sound` is saved in `AppSettings` by both settings stores. Older settings files with no sound field normalize to sound on.
 - **Tests:** added coverage for active-player flags, paired/latest history rows, computed-property notifications, the shared table-choice list, and appearance/sound settings persistence and legacy defaults. Docs 14 and 15 now describe the shared model and persistence.
-- **Checks:** Release solution build with 0 warnings/errors; Stello.Engine.Tests 489/489, Egaroucid.Engine.Tests 42/42, Stello.Net.Tests 94/94, and all 15 WASM Node tests pass.
+- **Checks:** Release solution build with 0 warnings/errors; Stello.Engine.Tests 489/489, Egaroucid.Engine.Tests 42/42, Stello.Net.Tests 98/98, and all 15 WASM Node tests pass.
 - **Review fixes:**
   - The WPF slider's members (`TranspositionTablePower`, its minimum and maximum, `TranspositionTableEntriesText`) were used only by an old test after the slider became a combo box. They are removed, and the test checks the shared choices instead.
   - A saved capacity outside the five choices, for example 131,072 (an odd power of two, which `GameSettings.Normalize` keeps), would have left the selection empty in both dialogs. The old slider snapped such values instead. `SettingsViewModel` now shows the nearest smaller choice, and a theory test checks it.
   - After the fixes, Stello.Net.Tests passes 98/98, and the other suites are unchanged.
 - **Review note for step 5:** in the web app the view model's `Appearance` stays at its default, because `Home.razor` reads and writes `AppearanceStore`. The browser's `AppSettings` therefore carries a default appearance that nothing reads. That is harmless now. Step 5, when WPF draws the board styles from `MainViewModel.Appearance`, should either keep the web's view model in step with `AppearanceStore`, or leave `Appearance` out of the web's saved settings.
+
+### Step 3: Computer vs Computer (2026-11-07)
+- **Mode and game loop:** CvC is selectable from the Game menu in both apps. The game loop treats neither side as human and continues searching after each move; both player labels show Computer, and the active side's clock and timeout are used. The existing 250 ms natural delay applies between moves, and Move Now advances the game immediately.
+- **Controls:** New Game cancels and restarts the CvC loop; Switch Sides cancels it and changes to vs Computer (White), giving the human White; Undo cancels the current search and undoes one move. Save serializes the played moves as a valid game record. CvC timeouts end without a human continue prompt.
+- **Tests:** verified both sides move, both clocks run only for the side to move, Switch Sides/New Game/Undo stop safely, timeouts do not prompt, and a saved CvC game round-trips through the game-record parser.
+- **Checks:** Release solution build with 0 warnings/errors; Stello.Engine.Tests 489/489, Egaroucid.Engine.Tests 42/42, Stello.Net.Tests 104/104, and all 15 WASM Node tests pass.
+- **Review:**
+  - **Menu check fixed:** the WPF item had `IsCheckable="True"` with a one-way `IsChecked` binding. A click set the check mark locally, which replaces the binding, so a cancelled "Abandon current match?" question left it ticked and later mode changes no longer updated it. `IsCheckable` is removed; a WPF menu item still shows the tick when `IsChecked` is true.
+  - **Switch Sides is consistent:** starting CvC makes Black the game's human player, and Switch Sides flips it to White as the mode becomes vs Computer (White).
+  - **Live check:** the Release WPF app was driven through UI Automation, with the user's `settings.json` backed up and restored. The Game menu's "vs Computer (both sides)" is enabled; invoking it shows "Computer vs Computer", the clock runs, and the discs went from 2–2 to 10–14 in 16 s.
+  - **The pause between moves** is the existing 250 ms natural delay. That is short for watching fast settings (a low fixed depth); step 4 or the user's check may want a longer one.
+  - **Undo** takes back one move, and the computer then plays on from there at once. **Redo** is not available while CvC runs, because the computer is always thinking.

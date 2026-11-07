@@ -69,7 +69,7 @@ The interface supports customization of board materials and piece rendering dire
 The web app's header has four menus (`Home.razor`):
 
 ### 1. File Menu
-* **New Game (`Ctrl+N`):** Starts a new game in the current game mode. While a game is under way it asks "Abandon current match and start a new game?" first. Resets the clocks and the undo/redo history; Black moves first (the computer, in vs Computer (White)).
+* **New Game (`Ctrl+N`):** Starts a new game in the current game mode. While a game is under way it asks "Abandon current match and start a new game?" first. Resets the clocks and the undo/redo history; Black moves first (the computer, in vs Computer (White) and CvC).
 * **Open... (`Ctrl+O`):** Loads saved `.stello` or `.txt` game record files into the active session.
 * **Save (`Ctrl+S`):** Saves the current game record to the active file path.
 * **Save As...:** Exports the current match, complete with move history, to a `.stello` or `.txt` game file.
@@ -80,8 +80,9 @@ The web app's header has four menus (`Home.razor`):
 * **vs Computer (Black):** Configures human vs computer play with the human playing Black (first move). Prompts confirmation if switching modes during an active match.
 * **vs Computer (White):** Configures computer vs human play with the computer playing Black (makes opening move) and human playing White.
 * **vs Human (Two players):** Hot-seat multiplayer mode where both Black and White are controlled locally.
+* **vs Computer (both sides):** Starts a watchable CvC game; the two computer players use the current settings and alternate moves automatically.
 * *(Separator)*
-* **Switch sides:** Gives the human the other colour without resetting or rotating the board, and switches between vs Computer (Black) and vs Computer (White). Enabled only against the computer, on the human's turn, while the game is not over. It marks the game modified (`IsStatusModified` becomes true), and the computer moves at once.
+* **Switch sides:** Gives the human the other colour without resetting or rotating the board, and switches between vs Computer (Black) and vs Computer (White). It is enabled on the human's turn in those modes and during CvC. In CvC it stops the loop and switches to vs Computer (White); the computer plays the current Black turn if that is next, then the human takes White. It marks the game modified (`IsStatusModified` becomes true), and the computer moves at once when needed.
 * *(Separator)*
 * **Settings... (`F2`):** Opens the modal Game Settings dialog to configure engine thinking limits, opening book usage, transposition table capacity and the number of threads.
 
@@ -308,22 +309,22 @@ In the web app the letter shortcuts are Ctrl+letter (or Cmd+letter on a Mac); Ga
 
 ## The desktop app
 
-The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs the same view model with the engine on a background task (chapter 14). It always plays the human against the computer; Switch Sides changes the colours.
+The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs the same view model with the engine on a background task (chapter 14). Its Game menu includes CvC; Switch Sides stops CvC and gives the human White against the computer.
 
 | Menu | Items |
 |---|---|
 | File | New Game (`Ctrl+N`), Open... (`Ctrl+O`), Save (`Ctrl+S`), Save As..., Exit |
-| Game | Switch Sides, Move Now (`Ctrl+M`), Settings... |
+| Game | vs Computer (both sides), Switch Sides, Move Now (`Ctrl+M`), Settings... |
 | Moves | Back (`Ctrl+Z`), Forward (`Ctrl+Y`) |
 | View | Analysis (`Ctrl+A`) |
 | Book | Add Game to Book..., Evaluate Book..., Self-play..., Stop Learning (chapter 11) |
 | Help | About Stello... (the same text as the web app, `AboutInfo`) |
 
 - **The board** (`BoardView`) is green (`#1E7A3C`), with a dark dot on each legal move and a red dot (`#E03030`) on the last move; it is sized to the window and centred together with the panels.
-- **Status** shows the status text (with the notices of chapter 14), the disc count (`Black 5 – White 5`), the human's colour (`You play Black`), and in `TimePerGame` mode the computer's clock (`Computer time left: 4:40`).
+- **Status** shows the status text (with the notices of chapter 14), the disc count (`Black 5 – White 5`), the human's colour in human-vs-computer modes (`You play Black`), and in `TimePerGame` mode the computer's clock (the side-to-move clock in CvC).
 - **Analysis** has seven fields: Move, Depth, Score, Best move, Nodes, Speed and Time, bound to the `AnalysisViewModel` properties of the same names. They show the same text as in the web app.
 - **Settings** ([SettingsWindow.xaml](../Stello.Net/Stello.Net/Views/SettingsWindow.xaml)) has the groups "Thinking Limits" (the three modes with sliders) and "Stello Opening Book & Transposition Table" (the checkbox "Enable Stello Opening Book (11,200 canonical positions)" and a "Table Capacity" combo box using the same five choices as the web app), and "Threads" ("Search with:", a list with "Automatic (N threads)" and 1 up to the computer's threads, and "of N on this computer").
-- There are no game modes, board styles, sound, quick action buttons, move history or Help pages. The window position and size are saved with the settings (chapter 14).
+- There are no other game-mode choices, board styles, sound, quick action buttons, move history or Help pages yet. The window position and size are saved with the settings (chapter 14).
 
 ---
 

@@ -77,6 +77,7 @@
                 new("vs Computer (Black)", new AsyncRelayCommand(() => Vm.SetGameMode(GameMode.HumanVsComputer)), IsChecked: () => Vm.IsHumanVsComputer, Radio: true),
                 new("vs Computer (White)", new AsyncRelayCommand(() => Vm.SetGameMode(GameMode.ComputerVsHuman)), IsChecked: () => Vm.IsComputerVsHuman, Radio: true),
                 new("vs Human (Two players)", new AsyncRelayCommand(() => Vm.SetGameMode(GameMode.HumanVsHuman)), IsChecked: () => Vm.IsHumanVsHuman, Radio: true),
+                new("vs Computer (both sides)", new AsyncRelayCommand(() => Vm.SetGameMode(GameMode.ComputerVsComputer)), IsChecked: () => Vm.IsComputerVsComputer, Radio: true),
                 new("Switch sides", Vm.SwitchSidesCommand, SeparatorBefore: true),
                 new("Settings...", Vm.EditSettingsCommand, "F2", SeparatorBefore: true),
             ]),

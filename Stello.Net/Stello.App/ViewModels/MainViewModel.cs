@@ -135,6 +135,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public bool IsHumanVsComputer => GameMode == GameMode.HumanVsComputer;
     public bool IsComputerVsHuman => GameMode == GameMode.ComputerVsHuman;
     public bool IsHumanVsHuman => GameMode == GameMode.HumanVsHuman;
+    public bool IsComputerVsComputer => GameMode == GameMode.ComputerVsComputer;
     public bool IsVsComputer => GameMode is GameMode.HumanVsComputer or GameMode.ComputerVsHuman or GameMode.ComputerVsComputer;
 
     public bool IsStatusModified => IsVsComputer && IsGameModified;
@@ -148,13 +149,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public string BlackPlayerLabel => GameMode switch
     {
         GameMode.HumanVsComputer => "Human",
-        GameMode.ComputerVsHuman => "Computer",
+        GameMode.ComputerVsHuman or GameMode.ComputerVsComputer => "Computer",
         _ => "Player 1"
     };
 
     public string WhitePlayerLabel => GameMode switch
     {
-        GameMode.HumanVsComputer => "Computer",
+        GameMode.HumanVsComputer or GameMode.ComputerVsComputer => "Computer",
         GameMode.ComputerVsHuman => "Human",
         _ => "Player 2"
     };
@@ -174,17 +175,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         GameMode.HumanVsComputer => _whiteTimeLeft,
         GameMode.ComputerVsHuman => _blackTimeLeft,
+        GameMode.ComputerVsComputer => _game.ToMove == Player.Black ? _blackTimeLeft : _whiteTimeLeft,
         _ => TimeSpan.Zero
     };
 
     public bool CanSwitchSides =>
         IsVsComputer &&
-        !IsThinking &&
         !IsLearning &&
         !IsGameOver &&
-        IsHumanTurn();
+        (GameMode == GameMode.ComputerVsComputer || (!IsThinking && IsHumanTurn()));
 
-    public bool CanUndo => _game.CanUndo && !IsLearning && !IsThinking && _lostOnTime is null;
+    public bool CanUndo => _game.CanUndo && !IsLearning && (!IsThinking || GameMode == GameMode.ComputerVsComputer) && _lostOnTime is null;
     public bool CanRedo => _game.CanRedo && !IsLearning && !IsThinking && _lostOnTime is null;
     public Player ToMove => _game.ToMove;
     public bool IsGameOver => _game.IsGameOver || _lostOnTime is not null;
@@ -227,6 +228,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsHumanVsComputer));
         OnPropertyChanged(nameof(IsComputerVsHuman));
         OnPropertyChanged(nameof(IsHumanVsHuman));
+        OnPropertyChanged(nameof(IsComputerVsComputer));
         OnPropertyChanged(nameof(IsVsComputer));
         OnPropertyChanged(nameof(IsStatusModified));
         OnPropertyChanged(nameof(IsGameSettingVisible));
@@ -256,6 +258,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IsSoundOn = !IsSoundOn;
     }
 
+    [RelayCommand]
     public async Task SetGameMode(GameMode mode)
     {
         if (GameMode == mode)
@@ -315,7 +318,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     private bool IsHumanTurn() =>
-        GameMode == GameMode.HumanVsHuman || _game.IsHumanToMove;
+        GameMode switch
+        {
+            GameMode.HumanVsHuman => true,
+            GameMode.ComputerVsComputer => false,
+            _ => _game.IsHumanToMove,
+        };
 
     [RelayCommand]
     private void Play(SquareViewModel square)
@@ -416,9 +424,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
 
         await StopAsync();
-        GameMode = GameMode == GameMode.HumanVsComputer
-            ? GameMode.ComputerVsHuman
-            : GameMode.HumanVsComputer;
+        GameMode = GameMode switch
+        {
+            GameMode.HumanVsComputer => GameMode.ComputerVsHuman,
+            GameMode.ComputerVsHuman => GameMode.HumanVsComputer,
+            GameMode.ComputerVsComputer => GameMode.ComputerVsHuman,
+            _ => GameMode.HumanVsComputer,
+        };
 
         _game.SwitchSides();
         IsGameModified = true;
@@ -434,11 +446,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         await StopAsync();
         if (IsVsComputer)
         {
-            do
+            if (GameMode == GameMode.ComputerVsComputer)
             {
                 _game.Undo();
             }
-            while (_game.CanUndo && !IsHumanTurn());
+            else
+            {
+                do
+                {
+                    _game.Undo();
+                }
+                while (_game.CanUndo && !IsHumanTurn());
+            }
+
             IsGameModified = true;
         }
         else
@@ -692,6 +712,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private void PlayGameOverSound()
     {
+        if (GameMode == GameMode.ComputerVsComputer)
+        {
+            return;
+        }
+
         if (IsVsComputer)
         {
             if (_game.Winner == _game.Human)
@@ -833,7 +858,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         BlackMobility = BitOperations.PopCount(board.LegalMoves(Player.Black));
         WhiteMobility = BitOperations.PopCount(board.LegalMoves(Player.White));
 
-        SidesText = $"You play {_game.Human}";
+        SidesText = GameMode == GameMode.ComputerVsComputer ? "Computer vs Computer" : $"You play {_game.Human}";
         TimeSpan left = ComputerTimeLeft > TimeSpan.Zero ? ComputerTimeLeft : TimeSpan.Zero;
         ClockText = Settings.Mode == TimeControlMode.TimePerGame
             ? $"Computer time left: {(int)left.TotalMinutes}:{left.Seconds:00}"
@@ -891,6 +916,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return _game.Winner switch
         {
             null => $"Game over, a draw: {score}.",
+            Player winner when GameMode == GameMode.ComputerVsComputer => $"Game over, {winner} wins: {score}.",
             Player winner when !IsVsComputer => $"Game over, {winner} wins: {score}.",
             Player winner when winner == _game.Human => $"Game over, you win: {score}.",
             _ => $"Game over, the computer wins: {score}.",
@@ -1063,7 +1089,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // Ending the game here stops the clock ticks from firing the timeout again.
         _lostOnTime = timedOut;
         await StopAsync();
-        _soundService.Play(isHumanTimedOut ? SoundType.Loss : SoundType.Win);
+        if (GameMode != GameMode.ComputerVsComputer)
+        {
+            _soundService.Play(isHumanTimedOut ? SoundType.Loss : SoundType.Win);
+        }
         Start();
     }
 

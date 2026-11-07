@@ -109,6 +109,135 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task ComputerVsComputer_PlaysBothSidesAndSavesAValidGame()
+    {
+        MainViewModel vm = Create(engineDelayMs: 0);
+        vm.ComputerDelayMs = 10_000;
+
+        await vm.SetGameModeCommand.ExecuteAsync(GameMode.ComputerVsComputer);
+        Assert.True(vm.IsComputerVsComputer);
+        Assert.Equal("Computer", vm.BlackPlayerLabel);
+        Assert.Equal("Computer", vm.WhitePlayerLabel);
+        Assert.Equal("Computer vs Computer", vm.SidesText);
+
+        await WaitUntilAsync(() => vm.IsThinking);
+        vm.MoveNowCommand.Execute(null);
+        await WaitUntilAsync(() => vm.Game.Ply == 1 && vm.IsThinking);
+        vm.MoveNowCommand.Execute(null);
+        await WaitUntilAsync(() => vm.Game.Ply == 2 && vm.IsThinking);
+
+        Assert.Equal(Player.Black, vm.ToMove);
+        _files.SaveName = GameName;
+        await vm.SaveCommand.ExecuteAsync(null);
+        Game saved = GameRecordFormat.Parse(_files.Files[GameName].Trim());
+        Assert.Equal(vm.Game.PlayedMoves.ToArray(), saved.PlayedMoves.ToArray());
+
+        vm.Stop();
+        await WaitAsync(vm.Idle);
+    }
+
+    [Fact]
+    public async Task ComputerVsComputer_ClocksRunForTheSideToMove()
+    {
+        MainViewModel vm = Create(
+            new GameSettings(TimeControlMode.TimePerGame, 8, 5, 1),
+            engineDelayMs: 2_000);
+        vm.ComputerDelayMs = 0;
+
+        await vm.SetGameMode(GameMode.ComputerVsComputer);
+        await WaitUntilAsync(() => vm.Game.Ply == 1 && vm.IsThinking);
+
+        string blackTime = vm.BlackClockText;
+        Assert.NotEqual("1:00", blackTime);
+        Assert.Equal("1:00", vm.WhiteClockText);
+        await WaitUntilAsync(() => vm.WhiteClockText != "1:00");
+
+        Assert.Equal(blackTime, vm.BlackClockText);
+        Assert.True(vm.ComputerTimeLeft < TimeSpan.FromMinutes(1));
+
+        vm.Stop();
+        await WaitAsync(vm.Idle);
+    }
+
+    [Fact]
+    public async Task ComputerVsComputer_SwitchSidesStopsAndStartsHumanAsWhite()
+    {
+        MainViewModel vm = Create(engineDelayMs: 0);
+        vm.ComputerDelayMs = 10_000;
+        await vm.SetGameMode(GameMode.ComputerVsComputer);
+        await WaitUntilAsync(() => vm.IsThinking);
+
+        Assert.True(vm.SwitchSidesCommand.CanExecute(null));
+        await vm.SwitchSidesCommand.ExecuteAsync(null);
+        Assert.Equal(GameMode.ComputerVsHuman, vm.GameMode);
+        Assert.Equal(Player.White, vm.Game.Human);
+
+        vm.MoveNowCommand.Execute(null);
+        await WaitUntilAsync(() => vm.Game.Ply == 1 && !vm.IsThinking);
+        Assert.Equal(Player.White, vm.ToMove);
+        Assert.Equal("You play White", vm.SidesText);
+    }
+
+    [Fact]
+    public async Task ComputerVsComputer_UndoStopsTheCurrentSearch()
+    {
+        MainViewModel vm = Create(engineDelayMs: 0);
+        vm.ComputerDelayMs = 10_000;
+        await vm.SetGameMode(GameMode.ComputerVsComputer);
+        await WaitUntilAsync(() => vm.IsThinking);
+        vm.MoveNowCommand.Execute(null);
+        await WaitUntilAsync(() => vm.Game.Ply == 1 && vm.IsThinking);
+
+        Assert.True(vm.UndoCommand.CanExecute(null));
+        await vm.UndoCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, vm.Game.Ply);
+        Assert.True(vm.IsGameModified);
+        Assert.True(vm.IsStatusModified);
+        Assert.True(vm.IsThinking);
+        vm.Stop();
+        await WaitAsync(vm.Idle);
+    }
+
+    [Fact]
+    public async Task ComputerVsComputer_NewGameStopsAndRestartsTheMode()
+    {
+        MainViewModel vm = Create(engineDelayMs: 0);
+        vm.ComputerDelayMs = 10_000;
+        await vm.SetGameMode(GameMode.ComputerVsComputer);
+        await WaitUntilAsync(() => vm.IsThinking);
+        vm.MoveNowCommand.Execute(null);
+        await WaitUntilAsync(() => vm.Game.Ply == 1 && vm.IsThinking);
+
+        Assert.True(vm.NewGameCommand.CanExecute(null));
+        await vm.NewGameCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, vm.Game.Ply);
+        Assert.True(vm.IsComputerVsComputer);
+        Assert.True(vm.IsThinking);
+        vm.Stop();
+        await WaitAsync(vm.Idle);
+    }
+
+    [Fact]
+    public async Task ComputerVsComputer_TimeoutEndsWithoutAskingToContinue()
+    {
+        MainViewModel vm = Create(
+            new GameSettings(TimeControlMode.TimePerGame, 8, 5, 1),
+            engineDelayMs: 5_000);
+        await vm.SetGameMode(GameMode.ComputerVsComputer);
+        await WaitUntilAsync(() => vm.IsThinking);
+        int confirmations = _dialogs.Confirmations;
+
+        await vm.HandleTimeoutAsync(Player.Black);
+        await WaitAsync(vm.Idle);
+
+        Assert.True(vm.IsGameOver);
+        Assert.Equal("Black ran out of time. Game over, White won on time.", vm.StatusText);
+        Assert.Equal(confirmations, _dialogs.Confirmations);
+    }
+
+    [Fact]
     public void Start_ShowsNotice()
     {
         MainViewModel vm = Create(notice: "The opening book could not be loaded.");

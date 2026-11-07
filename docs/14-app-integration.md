@@ -4,7 +4,7 @@
 
 ## In short
 
-The engine is a plain library: it knows nothing about windows, threads, clocks or files. Both apps, the WPF desktop app and the web app, drive it from one class, `MainViewModel` in `Stello.App`. It runs a **game loop** that plays passes and computer moves until the human is to move. It runs every search and every book-learning job through an **engine host**: on a background task in the desktop app, in a Web Worker in the browser, so the window stays responsive. The search itself is Stello's Rust engine in both apps: a **native library** that the desktop app calls through a C ABI, and a **WebAssembly module** in the browser's worker. The search may use **several threads** (the Threads setting, chapter 15): on the desktop the native library starts them itself; in the browser a second, threaded WebAssembly package runs them as extra Web Workers on a shared memory. It **stops the computer** before any command that changes the game. It turns the user's **settings** into `SearchLimits` and keeps the **computer's clock**. It also decides where the **opening book** is loaded from and saved to; the trained **evaluation** is built into the Rust engine itself. This chapter explains these parts; the layout of the windows and pages is in chapter 15.
+The engine is a plain library: it knows nothing about windows, threads, clocks or files. Both apps, the WPF desktop app and the web app, drive it from one class, `MainViewModel` in `Stello.App`. It runs a **game loop** that plays passes and computer moves until a human is to move or the game ends; in Computer vs Computer (CvC) it keeps playing until the game ends or the loop is stopped. It runs every search and every book-learning job through an **engine host**: on a background task in the desktop app, in a Web Worker in the browser, so the window stays responsive. The search itself is Stello's Rust engine in both apps: a **native library** that the desktop app calls through a C ABI, and a **WebAssembly module** in the browser's worker. The search may use **several threads** (the Threads setting, chapter 15): on the desktop the native library starts them itself; in the browser a second, threaded WebAssembly package runs them as extra Web Workers on a shared memory. It **stops the computer** before any command that changes the game. It turns the user's **settings** into `SearchLimits` and keeps each side's **clock**. It also decides where the **opening book** is loaded from and saved to; the trained **evaluation** is built into the Rust engine itself. This chapter explains these parts; the layout of the windows and pages is in chapter 15.
 
 ## Data structures
 
@@ -14,15 +14,17 @@ The state that matters for the engine:
 
 | Member | Contents |
 |---|---|
-| `_game` | The `Game` (chapter 13), including which colour the human plays (`Human`) |
-| `GameMode` | `HumanVsComputer` (the default, the human plays Black), `ComputerVsHuman` or `HumanVsHuman` (two players); chosen in the web app's Game menu (`SetGameMode`). The enum also has `ComputerVsComputer`, which no menu offers |
+| `_game` | The `Game` (chapter 13), including which colour the human plays (`Human`) in human-vs-computer modes |
+| `GameMode` | `HumanVsComputer` (the default, the human plays Black), `ComputerVsHuman`, `HumanVsHuman` (two players), or `ComputerVsComputer`; the web Game menu offers all four, while WPF switches between the first two and offers CvC in its menu |
+| `IsHumanTurn()` | True for two-player games and the human's turn in human-vs-computer modes; always false in CvC |
 | `_engine` | The `IEngineHost` that runs the searches and owns the opening book. In the desktop app it is `LocalEngineHost`, with the game's `ComputerPlayer` (its `SearchEngine`, the book and the `BookTracker`, chapter 10); in the browser it is `WebEngineHost`, which keeps the book and a `ComputerPlayer` for the book moves on the page and sends only the searches to the worker. Its `Threads` (a `ThreadCounts`) says how many threads the device offers and what Automatic means there ([below](#search-threads)) |
 | `IsThinking`, `IsLearning` | True while a search or a learning job runs; they enable and disable commands |
-| `Idle` | The task of the running game loop; it completes when the human is to move or the game is over |
+| `Idle` | The task of the running game loop; it completes when a human is to move, the game is over, or a command stops the loop |
 | `Learning` | The task of the running learning job |
 | `_cancel`, `_moveNow`, `_learningCancel` | The cancellation sources of the current search (two tokens, chapter 09) and of learning |
 | `_searchId` | A number that goes up with each computer move, to recognise old progress reports |
 | `Settings` | The `GameSettings`: mode, depth, seconds per move, minutes per game, opening book toggle, transposition table capacity, threads |
+| `ComputerTimeLeft` | The computer's clock in human-vs-computer modes; in CvC, the clock of the side to move |
 | `Appearance`, `IsSoundOn` | The desktop stores both preferences in `AppSettings`; the web keeps appearance in its separate `AppearanceStore` entry and saves sound with `AppSettings` |
 | `ToMove`, `IsGameOver`, `CanUndo`, `CanRedo`, `IsClockVisible`, `SettingsBadgeText` | Computed state with `PropertyChanged` notifications for both front ends |
 | `IsBlackActive`, `IsWhiteActive`, `MoveHistoryRows` | The active-player flags and paired Black/White history rows, including which row is latest |
@@ -129,7 +131,7 @@ stateDiagram-v2
 ```
 
 - **Pass** is never a command: when the side to move has no legal move, the loop passes for it and says so in the status panel; the notice stays until the human's next turn ("You had no legal move and passed.", "The computer had no legal move and passed.", or "Black had no legal move and passed." with two players).
-- **Thinking** is `ComputerMoveAsync`: it asks the engine host for a move (`ChooseMoveAsync`, which runs `ComputerPlayer.ChooseMove` in the background) and plays the result. A move that took less than 250 ms (`ComputerDelayMs`, for example a book move) is played 250 ms after the search started, so it does not appear the instant the human has moved; Move Now skips the wait. If the search is cancelled, it plays nothing and the loop ends with "Stopped."; the command that cancelled it then starts a new loop.
+- **Thinking** is `ComputerMoveAsync`: it asks the engine host for a move (`ChooseMoveAsync`, which runs `ComputerPlayer.ChooseMove` in the background) and plays the result. In CvC, the loop immediately searches for the next side after each move. A move that took less than 250 ms (`ComputerDelayMs`, for example a book move) is played 250 ms after the search started, so instant CvC games can be watched; Move Now skips the wait. If the search is cancelled, it plays nothing and the loop ends with "Stopped."; the command that cancelled it then starts a new loop.
 - Every command that changes the game (New Game, Open, Back, Forward, Switch Sides, a new game mode, Add Game to Book, Evaluate Book, Self-play) first calls `StopAsync`, which cancels the search and waits for `Idle`. Then it changes the game and calls `Start()` again. So there is never more than one loop, and the game is never changed while the engine reads it.
 - Against the computer, Back goes back to the previous position where the human is to move, skipping the computer's moves and passes, and Forward goes to the next such position or to the end; with two players they move one ply. Switch Sides gives the human the other colour, so the computer moves at once. After Open the human plays the side to move (except with two players). New Game and a new game mode ask "Abandon current match and start a new game?" while a game is under way.
 
@@ -139,8 +141,8 @@ stateDiagram-v2
 |---|---|---|---|---|
 | Click on a square | Plays it if legal, otherwise beeps | Beeps | Beeps | Beeps |
 | New Game, Open | Yes | Yes, stops the search first | Yes | No |
-| Switch Sides | Yes, against the computer | No | No | No |
-| Back / Forward | If there is a move to go back / forward to | No | The same as for the human, except after a loss on time (disabled) | No |
+| Switch Sides | Yes, against the computer | Yes in CvC; cancels the search and switches to human-vs-computer | No | No |
+| Back / Forward | If there is a move to go back / forward to | Back in CvC cancels the search and undoes one move; Forward is disabled | The same as for the human, except after a loss on time (disabled) | No |
 | Move Now | No | Yes | No | No |
 | Settings | Yes | Yes; the new settings count from the next computer move | Yes | No |
 | Game mode (web Game menu) | Yes | Yes, stops the search first | Yes | – (no learning in the web app) |
@@ -150,7 +152,7 @@ stateDiagram-v2
 | Stop Learning | No | No | No | Yes |
 | Analysis, About, Exit | Yes | Yes | Yes | Yes |
 
-An asynchronous command is also disabled while it runs, for example while New Game waits for the search to stop (the MVVM Toolkit default). Exit cancels the search and learning without waiting (`Stop`). Back and Forward are not enabled while the computer thinks (`CanUndo` and `CanRedo` check `IsThinking`, and `IsThinking` re-evaluates both commands when it changes); take the move back after it is played, or use Move Now first.
+An asynchronous command is also disabled while it runs, for example while New Game waits for the search to stop (the MVVM Toolkit default). Exit cancels the search and learning without waiting (`Stop`). Outside CvC, Back and Forward are not enabled while the computer thinks; in CvC, Back cancels the current search and undoes one move. Move Now still plays the current best move and continues the CvC loop.
 
 ### Threading
 
@@ -435,7 +437,8 @@ After Back, the computer gets back the time of the moves that were taken back, w
   - the settings change the clock, cancelling keeps them, the clock runs down in `TimePerGame` mode, the computer's thinking time is charged once, and the natural delay is not charged;
   - Back and Forward restore both clocks to the destination ply, including Redo of a computer move and Undo in a two-human timed game;
   - a timeout: declining to continue ends the game, continuing keeps it going, the computer's timeout ends it without asking, and New Game after a timeout starts without confirmation;
-  - the pass notice in the status line, the two-player game-over text that names the winner, and the move count ("N moves");
+  - the pass notice in the status line, the two-player and CvC game-over text, and the move count ("N moves");
+  - CvC plays both sides, the active side's clock runs and times out without a human prompt, Switch Sides and New Game stop safely, Undo cancels the search, and Save writes a valid game record;
   - settings, the analysis panel and the window position are saved, and a save failure is shown;
   - the book commands (chapter 11).
 - [SettingsAndBookTests.cs](../Stello.Net/Stello.Net.Tests/SettingsAndBookTests.cs): `JsonSettingsStore` (defaults, round trip, damaged file, values kept in range, write failure) and `BookLoader` (missing files skipped, fallback from a damaged user book, no book).
