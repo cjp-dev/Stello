@@ -12,7 +12,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 | **Part 1: Stello 3.1** | | |
 | 0 Set-up and the new baseline | done (2026-11-04) | 3.0 one-thread JSON references, 105-signature baseline test, and Rust-engine `opt=` match switches; Stello tests pass |
 | 1 Real bugs | done (2026-11-06) | Six bugs fixed: an aborted solve reported as Exact, the natural delay charged to the clock, the clock restore after Back/Forward, the endgame soft limit (gate matches at 1 and 5 min per game not worse), web worker robustness (review found a restart loop) and doc errors; items 1 and 2 checked in the apps |
-| 2 The parity quirks | in progress | Items 1 and 3a–5 are kept; items 6–7 reviewed with no fix needed: harmless response-ordering details and the intentional shallow-root full-window policy |
+| 2 The parity quirks | in progress | Items 1 and 3a–5 are kept; items 6–8 reviewed with no fix needed: harmless response ordering, intentional shallow-root windows, and depth-qualified TT use in Multi-ProbCut |
 | 3 The apps | not started | |
 | 4 Tools and verification gaps | not started | |
 | 5 The 3.1 release | not started | |
@@ -288,3 +288,17 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
   - FFO #40–44: 92,556,457 → 92,556,466 (+9), all correct.
 
   There is no consistent gain, and a strength-only change must show one, so the policy stays. The experiment was reverted.
+
+### Item 8: Multi-ProbCut and the transposition table
+- **What was questioned:** the Multi-ProbCut probe searches the same board, side and ply as the main search, but at a shallower depth. That nested search can use the normal transposition-table get and put paths.
+- **Trace:** a transposition-table cutoff requires sufficient depth and a bound compatible with the search window. A store protects a deeper same-position entry when it occupies slot 0; if it is in slot 1 behind a deeper unrelated entry, a shallower store can replace it. The older C++ `SELEXT` path also calls its shallow search on the same board and depth before the normal hash lookup.
+- **Experiment:** disabling only stores at the Multi-ProbCut root, while keeping its reads, on the 100 midgame benchmark positions at depth 10 (three passes, hash bits 19) changed total nodes from 3,716,389 to 3,890,985 (+4.7%) and fastest total time from 0.371 s to 0.390 s (−4.8% speed). Disabling both reads and stores was also tested, but it conflated the suspected replacement effect with losing useful table hits, so it was not used for the decision.
+- **Review spot check:** the reviewer rebuilt the same store-only experiment: no store at the ply where the Multi-ProbCut search starts while `in_probcut` is set. Using the Rust CLI on one thread with cleared tables, it reproduced the depth-10 total exactly (3,890,985). At depth 12 the total went from 10,579,515 to 11,239,221 (+6.2%). FFO #40–44 stayed identical at 92,556,457, all correct.
+
+  The moves and scores were not all identical, contrary to the agent's report:
+  - depth 10: every move is the same, but one score differs (g07e26, c1 −1287 → −1962);
+  - depth 12: two moves differ (g01e36 b4 → b6, g07e42 d7 → f5), and one more score (g09e30, f7 +100 → −100).
+
+  This is expected from a selective search whose cuts depend on the table's contents. It does not change the verdict.
+- **Timing test:** the agent's run had one failure, `several_threads_keep_a_time_per_move` (467 ms against 190 ms). It is the known load-sensitive test (handoff, section 7). On review it passed three times out of three, and the full Rust workspace passed (84 tests).
+- **Verdict:** the slot-1 replacement case exists, but suppressing the shallow stores made the fixed-depth search slower and gave no benefit (a few selective results differ either way). Keep the existing shared-table behavior; no code change or match was warranted, and the cleared-table signatures remain unchanged.

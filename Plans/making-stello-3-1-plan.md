@@ -96,7 +96,7 @@ Each item: read the code and decide whether it is a bug or a harmless quirk. If 
    Completed: `end_local` and `end_simple` sort only the moves still to search; decided moves no longer change their order. The 1,180-game 500 ms match scored 49.6% (48.0–51.1), so it is not worse and is kept. The switch is removed, and the ABI stays at 3. The baseline is regenerated for FFO #40–44 (nodes only), and the tests stay strict. See the item 5 findings.
 6. **Response ordering** (`search/ordering.rs:68-72, 87`): reviewed; no fix. Swapping the hash move to the front is the same move-to-front operation used by C++ and C# 2.0; it can change only tie order among the remaining moves. The response-score loop leaves a final singleton, which needs no further ordering. No defect found; see the findings.
 7. **A full window for every root move up to depth 3** (`search/engine.rs:850`): reviewed; no fix. C++ selects `zero_findmax` only for `varlook > 2` with multiple root moves, and C# 2.0 uses the same full-window condition for shallow roots. This is the intended shallow-search policy; see the findings.
-8. **The Multi-ProbCut shallow search** reads and writes the hash table at the same ply (findings 3.0:167).
+8. **The Multi-ProbCut shallow search** reads and writes the hash table at the same ply (findings 3.0:167): reviewed; no fix. Turning off the stores alone used 4.7% more nodes (6.2% at depth 12) and was 4.8% slower, with no benefit, so the existing table access stays. See the findings.
 9. **Counting** (statistics only):
    - two abort-check schemes share one node counter;
    - evaluations are counted at final scores in some layers and not in others;
