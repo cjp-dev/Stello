@@ -137,7 +137,10 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
   git -c user.name=cjp-dev -c user.email=cjp230364@gmail.com commit -F <message file or ->
   git fsck --full --no-dangling
   ```
-  The local git identity is a different one (work), so always pass `-c user.name/-c user.email`. End commit messages with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. **Don't push:** the user pushes, with `git push origin feature/stello-3.1`.
+  The local git identity is a different one (work), so always pass `-c user.name/-c user.email`. End commit messages with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. **Don't push:** the user always pushes from a bash terminal in the sandbox, where the repository is mounted at `/c/Udvikling/Privat/Spil/Stello`. So give the push command in bash form:
+  ```
+  cd /c/Udvikling/Privat/Spil/Stello && env -u GH_TOKEN git push origin feature/stello-3.1
+  ```
 
 ## 7. Known problems and gotchas
 - **Line endings:** `core.autocrlf=true` and `core.filemode=false`. The "LF will be replaced by CRLF" warnings are harmless (`.gitattributes` normalizes), and the sandbox's mode-755 problem doesn't occur here.
@@ -151,7 +154,7 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
 - **Old plan files** (`Plans/stello-exhaustive-docs-and-code-audit-plan.md` and others) have pre-existing broken links, fixed in phase 4.
 
 ## 8. Next steps
-1. **Wait for the user** to report phase 2 item 6 from the Windows agent. Review it as for items 1–5: the diff, the cargo/.NET/Node tests, the strict baseline, a speed spot check if nodes change, the findings. Clean up (switch removed, ABI 3), then commit, and end with the review and the push command for the user.
+1. **Wait for the user** to report phase 2 item 6 from the Windows agent. Review it as for items 1–5: the diff, the cargo/.NET/Node tests, the strict baseline, a speed spot check if nodes change, the findings. Clean up (switch removed, ABI 3), then commit, and end with the review and the bash push command for the user (section 6, Git).
 2. **Items 7–9 the same way.** Item 9 changes only counting: no match is needed, but the node counts change, so the baseline is regenerated with a note.
 3. **Gate P2:** agree with the user how to compare all kept fixes against `v3.0`. Then give a numbered match list (500 ms ×1,180 and 2 s ×600, about 22 and 45 min) and run it on the user's go. Record the results, and mark phase 2 done in the plan and findings.
 4. **Phase 3, the apps:**
