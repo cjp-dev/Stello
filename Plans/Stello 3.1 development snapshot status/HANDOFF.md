@@ -137,9 +137,11 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
   git -c user.name=cjp-dev -c user.email=cjp230364@gmail.com commit -F <message file or ->
   git fsck --full --no-dangling
   ```
-  The local git identity is a different one (work), so always pass `-c user.name/-c user.email`. End commit messages with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. **Don't push:** the user always pushes from a bash terminal in the sandbox, where the repository is mounted at `/c/Udvikling/Privat/Spil/Stello`. So give the push command in bash form:
+  The local git identity is a different one (work), so always pass `-c user.name/-c user.email`. End commit messages with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. **Don't push:** the user always pushes from a bash terminal in the sandbox, where the repository is mounted at `/c/Udvikling/Privat/Spil/stello` (lowercase `stello`). There, `GH_TOKEN` must be unset first so that git uses the `gh` login (cjp-dev). Give the push command in this form:
   ```
-  cd /c/Udvikling/Privat/Spil/Stello && env -u GH_TOKEN git push origin feature/stello-3.1
+  cd /c/Udvikling/Privat/Spil/stello
+  unset GH_TOKEN
+  git push origin feature/stello-3.1
   ```
 
 ## 7. Known problems and gotchas
