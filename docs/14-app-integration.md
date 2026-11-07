@@ -23,6 +23,9 @@ The state that matters for the engine:
 | `_cancel`, `_moveNow`, `_learningCancel` | The cancellation sources of the current search (two tokens, chapter 09) and of learning |
 | `_searchId` | A number that goes up with each computer move, to recognise old progress reports |
 | `Settings` | The `GameSettings`: mode, depth, seconds per move, minutes per game, opening book toggle, transposition table capacity, threads |
+| `Appearance`, `IsSoundOn` | The desktop stores both preferences in `AppSettings`; the web keeps appearance in its separate `AppearanceStore` entry and saves sound with `AppSettings` |
+| `ToMove`, `IsGameOver`, `CanUndo`, `CanRedo`, `IsClockVisible`, `SettingsBadgeText` | Computed state with `PropertyChanged` notifications for both front ends |
+| `IsBlackActive`, `IsWhiteActive`, `MoveHistoryRows` | The active-player flags and paired Black/White history rows, including which row is latest |
 | `_blackTimeLeft`, `_whiteTimeLeft`, `_timeLeftAtPly` | The player clocks, and their snapshot pairs for every ply so Undo and Redo restore the destination position's clocks |
 | `IsGameModified`, `IsStatusModified` | `IsGameModified` is set by Back against the computer, Switch Sides, a settings change after the first move and continuing after a timeout, and cleared by New Game, Open and a new game mode; `IsStatusModified` is `IsGameModified` in a game against the computer (chapter 15) |
 | `Analysis` | The `AnalysisViewModel` that shows `SearchInfo` and `SearchResult` (chapter 09) |
@@ -37,18 +40,18 @@ The view model reaches the engine, files and dialogs only through small interfac
 |---|---|---|---|
 | `IEngineHost` | `LocalEngineHost` | `WebEngineHost` | Runs the searches and book learning; owns the book |
 | `IBookStore` | `FileBookStore` | `LocalStorageBookStore` | Saves the learned book; appends to the self-play log |
-| `ISettingsStore` | `JsonSettingsStore` | `LocalStorageSettingsStore` | Loads and saves `AppSettings` (game settings, analysis panel, window position) as JSON |
+| `ISettingsStore` | `JsonSettingsStore` | `LocalStorageSettingsStore` | Loads and saves `AppSettings` as JSON (game settings, sound, analysis panel and desktop window placement) |
 | `IDialogService` | `DialogService` | `BrowserDialogService` | Message boxes, file dialogs, the settings dialog, "Did Black win the game?" |
 | `IGameFileService` | `GameFileService` | `BrowserGameFileService` | Opens and saves game files (`.stello`, `.txt`) |
 | `ISoundService` | `NullSoundService` (no sound) | `BrowserSoundService` | Sounds synthesized by `SoundWaves` for a move, a pass, a win and a loss (chapter 15) |
 
-In the desktop app, `BookLoader` (static) picks the book file at start-up, and `AppPaths` (static) holds all file locations. The web app keeps the settings and the learned book in the browser's local storage instead.
+In the desktop app, `BookLoader` (static) picks the book file at start-up, and `AppPaths` (static) holds all file locations. The web app keeps the settings and the learned book in the browser's local storage instead. The web appearance service keeps its `Appearance` in a separate local-storage entry; the desktop stores the same model in `settings.json`.
 
 ### Files
 
 | File (`AppPaths`) | Location | Written |
 |---|---|---|
-| `SettingsFile` | `%AppData%\Stello\settings.json` | When a setting, the analysis panel or the window position changes |
+| `SettingsFile` | `%AppData%\Stello\settings.json` | When a game, appearance or sound setting, the analysis panel or the window position changes |
 | `UserBookFile` | `%AppData%\Stello\OPENING` | After book learning and after Add Game to Book |
 | `SelfPlayLogFile` | `%AppData%\Stello\SELFPLAY` | One line per self-play game |
 | `DefaultBookFile` | `Data\OPENING` next to the program | Never; it is the shipped master book |
@@ -410,6 +413,7 @@ After Back, the computer gets back the time of the moves that were taken back, w
 | [Stello.Net.csproj](../Stello.Net/Stello.Net/Stello.Net.csproj), [Stello.Web.csproj](../Stello.Net/Stello.Web/Stello.Web.csproj) | The linked book `Data\OPENING`; the targets `BuildStelloWasm`, `BuildStelloWasmThreads`, `IncludeStelloWasm`, `RemoveStelloNativeEngine`, `CopyOpeningBook`, `CopyDocs`, `CopyAboutPicture`, the properties `StelloWasmEngine`, `StelloWasmThreads`, `StelloWasmNightly` |
 | [.cargo/config.toml](../Stello.Rust/.cargo/config.toml), [azure-static-web-apps.yml](../.github/workflows/azure-static-web-apps.yml) | The Windows linkers (MinGW for the check build, `+crt-static` for MSVC); the deploy workflow's Rust, nightly and wasm-bindgen steps |
 | [AppSettings.cs](../Stello.Net/Stello.App/Models/AppSettings.cs) | `AppSettings`, `WindowPlacement` |
+| [Appearance.cs](../Stello.Net/Stello.App/Models/Appearance.cs) | `Appearance`, `BoardStyle`, shared by the WPF settings file and the web appearance store |
 | [SoundWaves.cs](../Stello.Net/Stello.App/Services/SoundWaves.cs) | `Create`: the sounds as 16-bit PCM WAV bytes |
 | [BookLoader.cs](../Stello.Net/Stello.Net/Services/BookLoader.cs) | `Load` |
 | [AppPaths.cs](../Stello.Net/Stello.Net/Services/AppPaths.cs) | `DataDirectory`, `SettingsFile`, `UserBookFile`, `SelfPlayLogFile`, `DefaultBookFile`, `BookFiles` |

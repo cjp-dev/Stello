@@ -177,20 +177,41 @@ public sealed class NewGuiFeaturesTests
 
         Assert.True(vm.UseOpeningBook);
         Assert.Equal(GameSettings.DefaultTranspositionTableEntries, vm.TranspositionTableEntries);
-        Assert.Equal(20, vm.TranspositionTablePower);
-        Assert.Equal("1,048,576 (64 MB) - Default", vm.TranspositionTableEntriesText);
+        Assert.Equal(
+            [65_536, 262_144, 1_048_576, 4_194_304, 16_777_216],
+            vm.TranspositionTableChoices.Select(choice => choice.Value));
+        Assert.Equal(
+            [
+                "65,536 entries (4 MB)",
+                "262,144 entries (16 MB)",
+                "1,048,576 entries (64 MB) - Default",
+                "4,194,304 entries (256 MB)",
+                "16,777,216 entries (1,024 MB)",
+            ],
+            vm.TranspositionTableChoices.Select(choice => choice.Text));
 
         vm.UseOpeningBook = false;
         vm.TranspositionTableEntries = 262_144;
 
         Assert.False(vm.UseOpeningBook);
-        Assert.Equal(18, vm.TranspositionTablePower);
-        Assert.Equal("262,144 (16 MB)", vm.TranspositionTableEntriesText);
 
         GameSettings saved = vm.ToSettings();
         Assert.False(saved.UseOpeningBook);
         Assert.Equal(262_144, saved.TranspositionTableEntries);
         Assert.Equal(17, saved.HashBits);
+    }
+
+    [Theory]
+    [InlineData(131_072, 65_536)]
+    [InlineData(2_097_152, 1_048_576)]
+    [InlineData(16_777_216, 16_777_216)]
+    [InlineData(1_000, 65_536)]
+    public void SettingsViewModel_TableCapacityOutsideTheChoicesSnapsToOne(int saved, int shown)
+    {
+        var vm = new SettingsViewModel(GameSettings.Default with { TranspositionTableEntries = saved });
+
+        Assert.Equal(shown, vm.TranspositionTableEntries);
+        Assert.Contains(vm.TranspositionTableChoices, choice => choice.Value == vm.TranspositionTableEntries);
     }
 
     [Fact]
@@ -252,4 +273,3 @@ public sealed class NewGuiFeaturesTests
         Assert.NotEqual(ScoreKind.Book, searchResult.Kind);
     }
 }
-

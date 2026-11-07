@@ -46,14 +46,16 @@
     // Black moves first, so its card comes first.
     private PlayerInfo BlackPlayer => new(
         "Black", "black-dot", Vm.BlackPlayerLabel, Vm.BlackCount.ToString(), Vm.BlackMobilityText,
-        Vm.IsClockVisible ? Vm.BlackClockText : null, Vm.ToMove == Player.Black && !Vm.IsGameOver);
+        Vm.IsClockVisible ? Vm.BlackClockText : null, Vm.IsBlackActive);
 
     private PlayerInfo WhitePlayer => new(
         "White", "white-dot", Vm.WhitePlayerLabel, Vm.WhiteCount.ToString(), Vm.WhiteMobilityText,
-        Vm.IsClockVisible ? Vm.WhiteClockText : null, Vm.ToMove == Player.White && !Vm.IsGameOver);
+        Vm.IsClockVisible ? Vm.WhiteClockText : null, Vm.IsWhiteActive);
 
     private IReadOnlyList<MoveHistoryRow> HistoryRows =>
-        MoveHistoryRow.Pair([.. Vm.MoveHistoryList.Select(move => move.Notation)]);
+        Vm.MoveHistoryRows
+            .Select(row => new MoveHistoryRow(row.Number, row.Black, row.White))
+            .ToArray();
 
     protected override void OnInitialized()
     {

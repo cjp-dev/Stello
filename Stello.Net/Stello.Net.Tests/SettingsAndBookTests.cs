@@ -32,7 +32,11 @@ public sealed class JsonSettingsStoreTests : IDisposable
         var settings = new AppSettings(
             new GameSettings(TimeControlMode.TimePerMove, 12, 30, 15),
             ShowAnalysis: false,
-            new WindowPlacement(100, 50, 900, 700, Maximized: true));
+            new WindowPlacement(100, 50, 900, 700, Maximized: true))
+        {
+            Appearance = new Appearance(BoardStyle.ReddishWood, Pieces3D: false, AnimateFlips: true),
+            Sound = false,
+        };
 
         Assert.True(store.Save(settings));
 
@@ -76,6 +80,8 @@ public sealed class JsonSettingsStoreTests : IDisposable
 
         Assert.Equal(new GameSettings(TimeControlMode.TimePerGame, 20, 1, 1), settings.Game);
         Assert.Null(settings.Window);
+        Assert.Equal(Appearance.Default, settings.Appearance);
+        Assert.Equal(true, settings.Sound);
     }
 
     [Fact]
@@ -88,6 +94,8 @@ public sealed class JsonSettingsStoreTests : IDisposable
 
         Assert.Equal(GameSettings.Default, settings.Game);
         Assert.False(settings.ShowAnalysis);
+        Assert.Equal(Appearance.Default, settings.Appearance);
+        Assert.Equal(true, settings.Sound);
     }
 
     [Fact]

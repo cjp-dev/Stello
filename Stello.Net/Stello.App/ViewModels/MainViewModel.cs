@@ -11,6 +11,8 @@ namespace Stello.App.ViewModels;
 
 public sealed record MoveHistoryItem(int Ply, string Notation);
 
+public sealed record PairedMoveHistoryRow(int Number, string Black, string? White, bool IsLatest);
+
 /// <summary>
 /// The game window: coordinates game modes, AI search, clocks, board state, move history and sounds.
 /// </summary>
@@ -87,6 +89,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [NotifyCanExecuteChangedFor(nameof(SwitchSidesCommand))]
     [NotifyCanExecuteChangedFor(nameof(UndoCommand))]
     [NotifyCanExecuteChangedFor(nameof(RedoCommand))]
+    [NotifyPropertyChangedFor(nameof(CanUndo), nameof(CanRedo))]
     private bool _isThinking;
 
     [ObservableProperty]
@@ -94,15 +97,22 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         nameof(NewGameCommand), nameof(OpenCommand), nameof(SwitchSidesCommand), nameof(UndoCommand), nameof(RedoCommand),
         nameof(EditSettingsCommand), nameof(AddGameToBookCommand), nameof(EvaluateBookCommand), nameof(SelfPlayCommand),
         nameof(StopLearningCommand))]
+    [NotifyPropertyChangedFor(nameof(CanUndo), nameof(CanRedo))]
     private bool _isLearning;
 
     [ObservableProperty]
     private bool _isAnalysisVisible = true;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsClockVisible), nameof(SettingsBadgeText))]
     private GameSettings _settings = GameSettings.Default;
 
+    [ObservableProperty]
+    private Appearance _appearance = Appearance.Default;
+
     public ObservableCollection<MoveHistoryItem> MoveHistoryList { get; } = [];
+
+    public IReadOnlyList<PairedMoveHistoryRow> MoveHistoryRows { get; private set; } = [];
 
     public IReadOnlyList<SquareViewModel> Squares { get; }
 
@@ -152,6 +162,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public string BlackMobilityText => $"Moves: {BlackMobility}";
     public string WhiteMobilityText => $"Moves: {WhiteMobility}";
 
+    public bool IsBlackActive => ToMove == Player.Black && !IsGameOver;
+    public bool IsWhiteActive => ToMove == Player.White && !IsGameOver;
+
     public string BlackClockText => FormatClock(_blackTimeLeft);
     public string WhiteClockText => FormatClock(_whiteTimeLeft);
 
@@ -192,6 +205,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         AppSettings saved = settingsStore.Load();
         Settings = saved.Game;
+        Appearance = saved.Appearance;
+        IsSoundOn = saved.Sound ?? true;
+        _soundService.IsEnabled = IsSoundOn;
         IsAnalysisVisible = saved.ShowAnalysis;
         WindowPlacement = saved.Window;
         _settingsLoaded = true;
@@ -226,9 +242,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     partial void OnIsAnalysisVisibleChanged(bool value) => SaveSettings();
 
+    partial void OnAppearanceChanged(Appearance value) => SaveSettings();
+
     partial void OnIsSoundOnChanged(bool value)
     {
         _soundService.IsEnabled = value;
+        SaveSettings();
     }
 
     [RelayCommand]
@@ -285,7 +304,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private void SaveSettings()
     {
-        if (_settingsLoaded && !_settingsStore.Save(new AppSettings(Settings, IsAnalysisVisible, WindowPlacement)))
+        if (_settingsLoaded && !_settingsStore.Save(new AppSettings(Settings, IsAnalysisVisible, WindowPlacement)
+            {
+                Appearance = Appearance,
+                Sound = IsSoundOn,
+            }))
         {
             Status = $"The settings could not be saved. {Status}";
         }
@@ -820,6 +843,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         RebuildMoveHistory();
 
+        OnPropertyChanged(nameof(ToMove));
+        OnPropertyChanged(nameof(IsGameOver));
+        OnPropertyChanged(nameof(CanUndo));
+        OnPropertyChanged(nameof(CanRedo));
+        OnPropertyChanged(nameof(IsBlackActive));
+        OnPropertyChanged(nameof(IsWhiteActive));
+
         UndoCommand.NotifyCanExecuteChanged();
         RedoCommand.NotifyCanExecuteChanged();
         SwitchSidesCommand.NotifyCanExecuteChanged();
@@ -840,6 +870,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             string notation = move.Square is { } sq ? sq.ToString() : "pass";
             MoveHistoryList.Add(new MoveHistoryItem(ply++, notation));
         }
+
+        var rows = new List<PairedMoveHistoryRow>((MoveHistoryList.Count + 1) / 2);
+        for (int i = 0; i < MoveHistoryList.Count; i += 2)
+        {
+            rows.Add(new PairedMoveHistoryRow(
+                i / 2 + 1,
+                MoveHistoryList[i].Notation,
+                i + 1 < MoveHistoryList.Count ? MoveHistoryList[i + 1].Notation : null,
+                i + 2 >= MoveHistoryList.Count));
+        }
+
+        MoveHistoryRows = rows;
+        OnPropertyChanged(nameof(MoveHistoryRows));
     }
 
     private string GameOverText()

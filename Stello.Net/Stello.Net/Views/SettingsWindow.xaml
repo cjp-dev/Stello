@@ -55,14 +55,12 @@
                 <Grid Margin="0,4,0,4">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="180" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" Text="Table Capacity:" VerticalAlignment="Center" Margin="0,0,12,0" Foreground="#475569" />
-                    <Slider Grid.Column="1" Minimum="{Binding MinTranspositionTablePower}" Maximum="{Binding MaxTranspositionTablePower}"
-                            IsSnapToTickEnabled="True" TickFrequency="2" Value="{Binding TranspositionTablePower}" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="2" Text="{Binding TranspositionTableEntriesText}" Margin="8,0,0,0"
-                               VerticalAlignment="Center" FontWeight="SemiBold" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding TranspositionTableChoices}" DisplayMemberPath="Text" SelectedValuePath="Value"
+                              SelectedValue="{Binding TranspositionTableEntries}" VerticalAlignment="Center"
+                              AutomationProperties.Name="Table Capacity" />
                 </Grid>
             </StackPanel>
         </GroupBox>

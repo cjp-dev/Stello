@@ -1,24 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.JSInterop;
+using Stello.App.Models;
 
 namespace Stello.Web.Services;
-
-public enum BoardStyle
-{
-    Green,
-    GoldenOak,
-    ReddishWood,
-}
-
-/// <summary>How the board and pieces look in the browser; the desktop app keeps its own look.</summary>
-public sealed record Appearance(BoardStyle Board, bool Pieces3D, bool AnimateFlips)
-{
-    public static Appearance Default { get; } = new(BoardStyle.GoldenOak, Pieces3D: true, AnimateFlips: true);
-
-    /// <summary>The look before these options existed.</summary>
-    public static Appearance Classic { get; } = new(BoardStyle.Green, Pieces3D: false, AnimateFlips: false);
-}
 
 /// <summary>The appearance as JSON in local storage, apart from the settings shared with the desktop app.</summary>
 public sealed class AppearanceStore(IJSInProcessRuntime js)

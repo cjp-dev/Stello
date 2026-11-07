@@ -6,7 +6,7 @@
 
 Stello has two front ends on one view model (`MainViewModel`, chapter 14): the **web app** (Blazor WebAssembly) and the **desktop app** (WPF). The web app follows the tournament game GUI blueprint ([general-game-gui-specification.md](https://github.com/cjp-dev/GameShell/blob/main/docs/general-game-gui-specification.md), v1.1, kept in the shared GameShell library): a wooden board, a 4-layer dual-card player scoreboard, fixed board orientation, quick action buttons, the analysis panel, a move history and synthesized sounds. The desktop app has a plainer window with a board, the status and the analysis, plus the book-learning commands ([below](#the-desktop-app)).
 
-This chapter documents the visual layout, the menus, the settings dialog, the status that marks a modified game, the opening book, transposition table and threads settings, the analysis panel, and the keyboard shortcuts. Everything up to the desktop section describes the web app; the settings dialog and the analysis are shared.
+This chapter documents the visual layout, the menus, the settings dialog, the status that marks a modified game, the opening book, transposition table and threads settings, the analysis panel, and the keyboard shortcuts. Everything up to the desktop section describes the web app; the settings model, the shared transposition-table choices and the analysis are used by both apps.
 
 ---
 
@@ -190,7 +190,7 @@ graph TD
 
 ### 2. Stello Opening Book & Transposition Table
 * **Stello Opening Book (11,200 canonical positions):** Checkbox controlling whether the engine queries the canonical opening book database before launching tree search. When checked, known book positions are played instantly. When unchecked, book lookups are bypassed and the engine searches every move from scratch.
-* **Transposition Table Capacity:** Selects the number of entries in each of the two tables (the midgame heuristic table and the exact endgame solver table); the memory shown covers both:
+* **Transposition Table Capacity:** Selects the number of entries in each of the two tables (the midgame heuristic table and the exact endgame solver table); the memory shown covers both. Both dialogs use the same five choices from `SettingsViewModel.TranspositionTableChoices`:
 
 | Entries Option | Hash Bits | Entries / Table | Combined Memory | Description |
 |---|---|---|---|---|
@@ -277,7 +277,7 @@ Each row is one round: the round number, Black's move and White's move (a pass i
 
 ## Procedural Sound System
 
-The web app plays sounds through the Web Audio API (`BrowserSoundService`); **Options → Sound** turns them off (`IsSoundOn`). The desktop app has no sound (`NullSoundService`, chapter 14). `SoundWaves.Create` synthesizes each sound as a 16-bit PCM WAV byte array at run time, so no `.mp3` or `.wav` files are downloaded; the bytes are registered with the page once, on the first sound:
+The web app plays sounds through the Web Audio API (`BrowserSoundService`); **Options → Sound** turns them off (`IsSoundOn`). The shared setting is saved in `AppSettings` by both settings stores (browser local storage and the desktop `settings.json`). The desktop app currently uses `NullSoundService` and remains silent; its WPF sound service is part of phase 3, step 5 (chapter 14). `SoundWaves.Create` synthesizes each sound as a 16-bit PCM WAV byte array at run time, so no `.mp3` or `.wav` files are downloaded; the bytes are registered with the page once, on the first sound:
 
 * **Move:** a short click, for every move of the human and of the computer.
 * **Pass:** a double clack, when the game loop passes for a player.
@@ -322,7 +322,7 @@ The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs t
 - **The board** (`BoardView`) is green (`#1E7A3C`), with a dark dot on each legal move and a red dot (`#E03030`) on the last move; it is sized to the window and centred together with the panels.
 - **Status** shows the status text (with the notices of chapter 14), the disc count (`Black 5 – White 5`), the human's colour (`You play Black`), and in `TimePerGame` mode the computer's clock (`Computer time left: 4:40`).
 - **Analysis** has seven fields: Move, Depth, Score, Best move, Nodes, Speed and Time, bound to the `AnalysisViewModel` properties of the same names. They show the same text as in the web app.
-- **Settings** ([SettingsWindow.xaml](../Stello.Net/Stello.Net/Views/SettingsWindow.xaml)) has the groups "Thinking Limits" (the three modes with sliders) and "Stello Opening Book & Transposition Table" (the checkbox "Enable Stello Opening Book (11,200 canonical positions)" and a "Table Capacity" slider over the same five sizes as the web app's list, labelled "65,536 (4 MB)" to "16,777,216 (1,024 MB)"), and "Threads" ("Search with:", a list with "Automatic (N threads)" and 1 up to the computer's threads, and "of N on this computer").
+- **Settings** ([SettingsWindow.xaml](../Stello.Net/Stello.Net/Views/SettingsWindow.xaml)) has the groups "Thinking Limits" (the three modes with sliders) and "Stello Opening Book & Transposition Table" (the checkbox "Enable Stello Opening Book (11,200 canonical positions)" and a "Table Capacity" combo box using the same five choices as the web app), and "Threads" ("Search with:", a list with "Automatic (N threads)" and 1 up to the computer's threads, and "of N on this computer").
 - There are no game modes, board styles, sound, quick action buttons, move history or Help pages. The window position and size are saved with the settings (chapter 14).
 
 ---
@@ -336,8 +336,9 @@ The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs t
 | [`SettingsForm.razor`](../Stello.Net/Stello.Web/Components/SettingsForm.razor) | `SettingsForm` | The Settings form, shown in the dialog host, with the Threads list |
 | [`AnalysisAdapter.cs`](../Stello.Net/Stello.Web/Services/AnalysisAdapter.cs) | `AnalysisAdapter` | Shows the `AnalysisViewModel` in GameShell's 7-field analysis panel |
 | [`MainViewModel.cs`](../Stello.Net/Stello.App/ViewModels/MainViewModel.cs) | `MainViewModel` | Central orchestrator managing game flow, competitive integrity (`IsStatusModified`), clocks, and undo/redo |
-| [`SettingsViewModel.cs`](../Stello.Net/Stello.App/ViewModels/SettingsViewModel.cs) | `SettingsViewModel` | Data backing for thinking limits, opening book toggle, transposition table capacity (`TranspositionTableEntriesText`), and threads (`Threads`, `ThreadChoices`, `ThreadsText`, `DeviceThreads`) |
+| [`SettingsViewModel.cs`](../Stello.Net/Stello.App/ViewModels/SettingsViewModel.cs) | `SettingsViewModel` | Data backing for thinking limits, opening book toggle, the shared transposition-table choices (`TranspositionTableChoices`), and threads (`Threads`, `ThreadChoices`, `ThreadsText`, `DeviceThreads`) |
 | [`GameSettings.cs`](../Stello.Net/Stello.App/Models/GameSettings.cs), [`ThreadCounts.cs`](../Stello.Net/Stello.App/Models/ThreadCounts.cs) | `GameSettings`, `ThreadCounts` | The stored settings (`Threads`, `AutomaticThreads`, `ThreadsFor`); the device's thread counts on the desktop (`ForThisProcess`) and in the browser (`ForBrowser`) |
+| [`AppSettings.cs`](../Stello.Net/Stello.App/Models/AppSettings.cs), [`Appearance.cs`](../Stello.Net/Stello.App/Models/Appearance.cs) | `AppSettings`, `Appearance`, `BoardStyle` | Shared settings model (including sound); the desktop stores appearance in `AppSettings`, while the web keeps it in its existing `AppearanceStore` entry |
 | [`AnalysisViewModel.cs`](../Stello.Net/Stello.App/ViewModels/AnalysisViewModel.cs) | `AnalysisViewModel` | Observable ViewModel formatting depth, evaluation score, node counts, and elapsed search time |
 | [`WebEngineHost.cs`](../Stello.Net/Stello.Web/Services/WebEngineHost.cs) | `WebEngineHost` | The book move on the page, the Web Worker's lifecycle (a new worker between 1 and more threads), the message serializer, and the cancellation controller |
 | [`engine-worker.js`](../Stello.Net/Stello.Web/wwwroot/js/engine-worker.js), [`stello-wasm/src/lib.rs`](../Stello.Rust/stello-wasm/src/lib.rs) | `init`, `search` | The Web Worker and the Rust engine in WebAssembly, which makes a new engine when the hash bits change |
@@ -347,7 +348,7 @@ The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs t
 | [`AboutInfo.cs`](../Stello.Net/Stello.App/Models/AboutInfo.cs) | `AboutInfo` | The title, version, picture caption and paragraphs of the About box, shared by both apps |
 | [`MainWindow.xaml`](../Stello.Net/Stello.Net/MainWindow.xaml) | `MainWindow` | WPF desktop application window, menus and key bindings |
 | [`BoardView.xaml`](../Stello.Net/Stello.Net/Views/BoardView.xaml), [`AboutWindow.xaml`](../Stello.Net/Stello.Net/Views/AboutWindow.xaml) | `BoardView`, `AboutWindow` | The WPF board and About box |
-| [`SettingsWindow.xaml`](../Stello.Net/Stello.Net/Views/SettingsWindow.xaml) | `SettingsWindow` | WPF desktop modal settings dialog with sliders, capacity labels and the Threads box |
+| [`SettingsWindow.xaml`](../Stello.Net/Stello.Net/Views/SettingsWindow.xaml) | `SettingsWindow` | WPF desktop modal settings dialog with thinking-limit sliders, the shared transposition-table choices and the Threads box |
 
 ---
 

@@ -29,11 +29,10 @@
     <div style="margin-top: 0.75rem;">
         <label style="margin-top: 0; display: block; margin-bottom: 0.25rem;">Transposition Table Capacity:</label>
         <select class="dialog-text" style="margin: 0.25rem 0;" @bind="Settings.TranspositionTableEntries">
-            <option value="65536">65,536 entries (4 MB)</option>
-            <option value="262144">262,144 entries (16 MB)</option>
-            <option value="1048576">1,048,576 entries (64 MB) - Default</option>
-            <option value="4194304">4,194,304 entries (256 MB)</option>
-            <option value="16777216">16,777,216 entries (1,024 MB)</option>
+            @foreach (TranspositionTableChoice choice in Settings.TranspositionTableChoices)
+            {
+                <option value="@choice.Value">@choice.Text</option>
+            }
         </select>
     </div>
 </fieldset>

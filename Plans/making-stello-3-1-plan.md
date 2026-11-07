@@ -142,7 +142,9 @@ Each item: read the code and decide whether it is a bug or a harmless quirk. If 
 
 **Gate P3:** the Windows build and Stello.Net.Tests pass (new tests for the CvC mode, clocks, history rows and settings lists), the user checks WPF on Windows, and a headless Chromium check of the web app passes. Docs 14 and 15 describe both apps.
 
-**Progress:** step 1 done (2026-11-07): the two score-display tests now expect the app's `+0.4 discs`/`+0.2 discs` format; Stello.Net.Tests passes 91/91. See the findings.
+**Progress:**
+- **Step 1 done (2026-11-07):** the two score-display tests now expect the app's `+0.4 discs`/`+0.2 discs` format.
+- **Step 2 done (2026-11-07):** shared game-state notifications, active-player flags and paired history rows; one transposition-table choice list in `SettingsViewModel` used by both UIs; shared appearance models and persisted appearance/sound preferences. Stello.Net.Tests passes 94/94; see the findings.
 
 ## Phase 4: tools and verification gaps
 1. **Matches save and resume** (`tools/Stello.Benchmark/MatchCommands.cs`): each finished game is appended to `<name>.games.jsonl`. The same command with `--resume` checks that the settings and start positions are the same and plays only the missing games. The `.md`/`.json` are written at the end as now.
@@ -285,3 +287,4 @@ The order puts speed first (it changes no nodes), then the threads, the search, 
 - **Phase 0: done (2026-11-04).** Branch, plan, findings and the tag `v3.0` on baa44e5 were already in place. The seven 1-thread reference JSONs are in `Plans/benchmark-results/v3.0-ref/`; `StelloV3BaselineTests` pins the 105 signatures independently of frozen Stello 2.0; the match tool accepts repeated `opt=<key>=<value>` search switches.
 - **Phase 1: done (2026-11-06).** Items 1–6 fixed: an aborted solve reported as Exact, the natural delay charged to the computer clock, the clock restore after Back and Forward, the endgame soft limit (both gate matches not worse; its A/B switch removed after approval), web worker startup retry and thread reporting plus late progress reports (review fixed a restart loop on a failed pool worker), and the doc errors. Gate P1: item 1 checked in the web app against live 3.0, item 2 checked by the user in WPF.
 - **Phase 2: done (2026-11-07).** Items 1 and 3a–5 are kept; 2 and 6–8 needed no fix; item 9 unified counting. The combined kept search fixes passed Gate P2 at 500 ms and 2 s without evidence of a loss. The temporary comparison switch is removed again (ABI 3).
+- **Phase 3: in progress (2026-11-07).** Steps 1 and 2 are done; shared state, settings choices and appearance/sound persistence are in place. Step 2 passes the Release build, all .NET test projects and the 15 WASM Node tests.

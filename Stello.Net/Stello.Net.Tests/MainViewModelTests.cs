@@ -37,6 +37,78 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task GameState_ExposesActivePlayersAndPairedHistoryRows()
+    {
+        MainViewModel vm = Create();
+        await vm.SetGameMode(GameMode.HumanVsHuman);
+        await vm.Idle;
+
+        Assert.True(vm.IsBlackActive);
+        Assert.False(vm.IsWhiteActive);
+        Assert.Empty(vm.MoveHistoryRows);
+
+        Play(vm, "d3");
+        await vm.Idle;
+
+        Assert.False(vm.IsBlackActive);
+        Assert.True(vm.IsWhiteActive);
+        Assert.Equal([new PairedMoveHistoryRow(1, "d3", null, IsLatest: true)], vm.MoveHistoryRows);
+
+        Play(vm, "c3");
+        await vm.Idle;
+
+        Assert.True(vm.IsBlackActive);
+        Assert.False(vm.IsWhiteActive);
+        Assert.Equal([new PairedMoveHistoryRow(1, "d3", "c3", IsLatest: true)], vm.MoveHistoryRows);
+
+        Play(vm, "b3");
+        await vm.Idle;
+
+        Assert.False(vm.IsBlackActive);
+        Assert.True(vm.IsWhiteActive);
+        Assert.Equal(
+            [
+                new PairedMoveHistoryRow(1, "d3", "c3", IsLatest: false),
+                new PairedMoveHistoryRow(2, "b3", null, IsLatest: true),
+            ],
+            vm.MoveHistoryRows);
+    }
+
+    [Fact]
+    public async Task MainViewModel_NotifiesComputedGameAndSettingsProperties()
+    {
+        MainViewModel vm = Create();
+        var changed = new HashSet<string?>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        await vm.SetGameMode(GameMode.HumanVsHuman);
+        changed.Clear();
+        Play(vm, "d3");
+        await vm.Idle;
+
+        foreach (string property in new[]
+        {
+            nameof(vm.ToMove),
+            nameof(vm.IsGameOver),
+            nameof(vm.CanUndo),
+            nameof(vm.CanRedo),
+            nameof(vm.IsBlackActive),
+            nameof(vm.IsWhiteActive),
+            nameof(vm.MoveHistoryRows),
+        })
+        {
+            Assert.Contains(property, changed);
+        }
+
+        changed.Clear();
+        vm.Settings = vm.Settings with { Mode = TimeControlMode.TimePerGame, MinutesPerGame = 3 };
+
+        Assert.Contains(nameof(vm.IsClockVisible), changed);
+        Assert.Contains(nameof(vm.SettingsBadgeText), changed);
+        Assert.True(vm.IsClockVisible);
+    }
+
+    [Fact]
     public void Start_ShowsNotice()
     {
         MainViewModel vm = Create(notice: "The opening book could not be loaded.");
@@ -624,6 +696,28 @@ public sealed class MainViewModelTests
         vm.ToggleAnalysisCommand.Execute(null);
 
         Assert.False(store.Settings.ShowAnalysis);
+    }
+
+    [Fact]
+    public void AppearanceAndSound_LoadAndSaveWithTheSettings()
+    {
+        var appearance = new Appearance(BoardStyle.ReddishWood, Pieces3D: false, AnimateFlips: false);
+        var store = new FakeSettingsStore(new AppSettings(QuickSettings, true, null)
+        {
+            Appearance = appearance,
+            Sound = false,
+        });
+        MainViewModel vm = Create(store: store);
+
+        Assert.Equal(appearance, vm.Appearance);
+        Assert.False(vm.IsSoundOn);
+
+        Appearance changedAppearance = appearance with { Pieces3D = true };
+        vm.Appearance = changedAppearance;
+        vm.ToggleSoundCommand.Execute(null);
+
+        Assert.Equal(changedAppearance, store.Settings.Appearance);
+        Assert.Equal(true, store.Settings.Sound);
     }
 
     [Fact]
