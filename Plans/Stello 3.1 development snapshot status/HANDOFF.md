@@ -1,6 +1,6 @@
 # Handoff: Stello 3.1 development (snapshot 2026-11-07)
 
-For the next session. Repository: `C:\Udvikling\Privat\Spil\Stello` on the user's Windows machine (GitHub `cjp-dev/Stello`). Branch **`feature/stello-3.1`**, phase 2 items 5–9 committed; the user pushes (section 6, Git).
+For the next session. Repository: `C:\Udvikling\Privat\Spil\Stello` on the user's Windows machine (GitHub `cjp-dev/Stello`). Branch **`feature/stello-3.1`**, phase 2 done (items and gate P2) and committed; the user pushes (section 6, Git).
 
 ## 1. The objective
 Stello is an Othello program: a Rust engine with C# apps, WPF on the desktop and Blazor WebAssembly on the web. 3.0 was released on 2026-11-04 (main `baa44e5`, git tag `v3.0`).
@@ -45,9 +45,10 @@ The plan is **[Plans/making-stello-3-1-plan.md](../making-stello-3-1-plan.md)**,
   | 8. The Multi-ProbCut shallow search uses the hash table at the same ply | — | harmless, no fix: entries keep their real depth; turning the shallow stores off cost +4.7 % nodes (depth 10) and +6.2 % (depth 12) |
   | 9. Counting: one `count_node` path with the abort check every 1,024 nodes; terminal scores count as evaluations | `bbeea17` | kept, no match (statistics and reachable abort checks); FFO #40–44 counted nodes +1.23 % (93,697,164), midgame unchanged; solver about 1.4 % slower, midgame unchanged |
 
-## 3. In progress: gate P2
-Every phase 2 item has a verdict (plan and findings).
-- **Gate P2:** all kept fixes together play `v3.0` in a 1,180-game match at 500 ms and a 600-game match at 2 s, not worse. Comparing with 3.0 needs either a frozen 3.0 build or the switches; the plan expects the latter, but they are removed after each item. Decide with the user how to run it, for example a second native library built from tag `v3.0`, or reverse switches.
+## 3. Complete: gate P2
+- All kept phase 2 fixes (items 1, 3a, 4 and 5) were tested together against 3.0 using the temporary `v30_search` switch.
+- At 500 ms, 3.1 scored 51.1% (95% interval 49.5–52.8, +8 Elo) over 1,180 games; at 2 s it scored 49.8% (47.9–51.7, −1 Elo) over 600 games. Neither result was significant; both pass the agreed not-worse criterion. See the [findings](../making-stello-3-1-findings.md#gate-p2-all-kept-fixes-against-30-2026-11-07) and the [500 ms](../benchmark-results/match_p2-gate-500ms.md) / [2 s](../benchmark-results/match_p2-gate-2s.md) reports.
+- The temporary comparison switch was reviewed and removed after the matches; the ABI is back to 3.
 
 ## 4. How we work (user decisions)
 - **Who does what:** an agent on the user's Windows machine implements each item. This session reviews it: the diff, the tests, the baseline, the findings, plus its own spot checks. It fixes review issues and **commits**. The user is the one that does the Git **push**. The session is not allowed to do a Git **Push**. If its needed it have to ask the user. The user reports back after each item. When a item is reviewed and comitted, finish with your rewiew and a commandline showing the commando for the final push.
@@ -59,7 +60,7 @@ Every phase 2 item has a verdict (plan and findings).
 
   At 8 threads use 2 workers (500 ms: about 2 h). Check the load first (section 6), and run nothing heavy during a match. The match tool **cannot resume**: a power cut means restarting.
 - **Fixes are kept unless they play worse** (upper bound above 50 % at 500 ms; confirm at 2 s if it matters). A new strategy, not a fix, must show a gain. If a significant loss shows no mechanism in the statistics, confirm it on the disjoint start positions 301–590 before dropping a fix.
-- **A/B switches:** each change is temporarily a `SearchOptions` switch through Rust → FFI (`stello_engine_set_*`, an ABI bump) → C# internal `SearchOptions` → match key `opt=…`. It is **removed as soon as the match is approved**, and the ABI goes back to 3 (it is 3 now).
+- **A/B switches:** each change is temporarily a `SearchOptions` switch through Rust → FFI (`stello_engine_set_*`, an ABI bump) → C# internal `SearchOptions` → match key `opt=…`. It is **removed as soon as the match is approved**, and the ABI goes back to 3 (it is 3 now). For gate P2 a combined `v30_search` switch played 3.0; it is removed too.
 - **The baseline stays strict, node for node** (C# `StelloV3BaselineTests`, Rust `tests/search.rs`, Node `engine.test.mjs`/`engine-mt.test.mjs`, all reading `stello-v3-signatures.txt`). If a kept fix changes nodes, **regenerate that file with a header note**; never loosen the tests. `stello-v2-signatures.txt` pins only the frozen C# 2.0 (`StelloV2Tests`).
 - **Releases:** 3.1 after Part 1, 3.2 after Part 2. Fast-forward main **only with the user's OK**; a push to main deploys the web app (Azure Static Web Apps, `docs/**` included).
 
@@ -151,9 +152,8 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
 - **Old plan files** (`Plans/stello-exhaustive-docs-and-code-audit-plan.md` and others) have pre-existing broken links, fixed in phase 4.
 
 ## 8. Next steps
-1. **Gate P2:** agree with the user how to compare all kept fixes against `v3.0`. Then give a numbered match list (500 ms ×1,180 and 2 s ×600, about 22 and 45 min) and run it on the user's go. Record the results, and mark phase 2 done in the plan and findings.
-2. **Phase 3, the apps:**
+1. **Phase 3, the apps:**
    - full WPF alignment (template: `Connect-4/Connect4.Net/Connect4.WPF/MainWindow.xaml`);
    - Computer vs Computer in both apps;
    - the two score-display tests.
-3. **Then phases 4 and 5:** the 3.1 release, asking the user before fast-forwarding main.
+2. **Then phases 4 and 5:** the 3.1 release, asking the user before fast-forwarding main. Phase 4 can also look at side A's longer longest move in the match tool (gate P2 findings).

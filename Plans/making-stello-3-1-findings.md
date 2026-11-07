@@ -12,7 +12,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 | **Part 1: Stello 3.1** | | |
 | 0 Set-up and the new baseline | done (2026-11-04) | 3.0 one-thread JSON references, 105-signature baseline test, and Rust-engine `opt=` match switches; Stello tests pass |
 | 1 Real bugs | done (2026-11-06) | Six bugs fixed: an aborted solve reported as Exact, the natural delay charged to the clock, the clock restore after Back/Forward, the endgame soft limit (gate matches at 1 and 5 min per game not worse), web worker robustness (review found a restart loop) and doc errors; items 1 and 2 checked in the apps |
-| 2 The parity quirks | in progress | Items 1 and 3a–5 are kept; items 6–8 reviewed with no fix needed; item 9's counting is unified and its strict baseline regenerated. Gate P2 remains |
+| 2 The parity quirks | done (2026-11-07) | Items 1 and 3a–5 are kept; items 6–8 reviewed with no fix needed; item 9's counting is unified and its strict baseline regenerated. The combined fixes passed Gate P2 at 500 ms and 2 s without evidence of a loss |
 | 3 The apps | not started | |
 | 4 Tools and verification gaps | not started | |
 | 5 The 3.1 release | not started | |
@@ -317,3 +317,25 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
   The agent's larger midgame difference (370 → 381 ms) was noise between runs. About 1 % in the solver can't change the play measurably; phase 6 (speed) may win it back, for example by counting the last-square nodes in a batch.
 - **Review checks:** formatting, and Clippy with warnings denied (native and wasm); all 86 Rust workspace tests, including `several_threads_keep_a_time_per_move`, which passed here; the .NET build with no warnings; all 489 engine tests (strict baseline); all 42 Egaroucid/benchmark tests; and all 15 Node tests. `Stello.Net.Tests` has only the 2 known score-display failures. `solve-bench` reproduces the new FFO #40–44 signatures (93,697,164 nodes, all correct), and no node increment remains outside `count_node`.
 - **Verdict:** keep the consistent accounting and reachable abort checks. The change fixes statistics and cancellation responsiveness without changing any benchmark move or score.
+
+### Gate P2: all kept fixes against 3.0 (2026-11-07)
+- **Setup:** the candidate was 3.1 with kept phase 2 fixes 1, 3a, 4 and 5, plus item 9's count-only change; the opponent used the temporary `v30_search` switch. Both ran with 12 workers, one thread per engine, hash bits 19, and colors swapped within each opening.
+- **Results:**
+
+  | Time | Games | 3.1 points / score | 3.1 W–D–L | 3.1 score 95% interval | Elo (95% interval) | Duration |
+  |---|---:|---:|---:|---:|---:|---:|
+  | 500 ms/move | 1,180 (590 starts × 2 colors) | 603.5 / 51.1% | 527–153–500 | 49.5–52.8% | +8 (−3 to +19) | 21m 20s |
+  | 2 s/move | 600 (300 starts × 2 colors) | 299 / 49.8% | 245–108–247 | 47.9–51.7% | −1 (−14 to +12) | 40m 36s |
+
+  In the first match, 3.0 scored 576.5/1,180 (48.9%); in the second, it scored 301/600 (50.2%). The search controls were closely matched: average midgame depth was 18.21 vs. 18.20 and first solve 22.7 empties for both at 500 ms; at 2 s, depth was 20.59 for both and first solve 24.4 empties for both. Throughput was 8.46M vs. 8.48M nodes/s at 500 ms and 8.55M vs. 8.58M at 2 s (3.1 vs. 3.0).
+- **Assessment:** neither result is statistically significant; both 3.1 intervals include 50%. Both pass the agreed not-worse gate (the upper confidence bound is above 50%), so the combined fixes are kept. This is not evidence of a playing-strength gain or a formal proof of non-inferiority.
+- **Decision:** Gate P2 is complete. Keep items 1, 3a, 4 and 5.
+- **Review:** the reviewer checked that the switch restored 3.0 exactly before the matches:
+  - item 1's strict `value < alpha`;
+  - 3a through a root of 64 empty squares, which reduces the table's probe and replacement to 3.0's (`root_empties` is used only there);
+  - the old code of items 4 and 5, line for line.
+
+  With the switch on, the 100 midgame signatures equalled the 3.0 baseline (`e0a6cf7`) node for node, 3,719,468 in total, also through the match tool. FFO #40–44 kept 3.0's moves and scores. The persistent 34-position game gave 2,260,501 nodes, the same as `17a27ff` (the commit before item 1). The brief's target of 2,274,056 was aging alone with item 1 kept, and the switch gives that too when only its table part is on. The match tool was rebuilt from the reviewed code before the matches.
+- **Longest move:** in both reports 3.1 (side A) has the longer longest move (625 against 502 ms, 2,124 against 2,002 ms). This isn't 3.1: side A has the longer longest move in every phase 2 match (541–642 ms against 506–509 ms at 500 ms), also when A was 3.0. It looks like a start-up cost on side A in the match tool; phase 4 (tools) can look at it.
+- **Cleanup:** the `v30_search` switch, its FFI setter (the ABI is back to 3), the C# property, the match key `opt=v30-search=`, `solve-bench --side`, the temporary tests and the chapter 14 ABI change are removed. The code is byte for byte that of `f3fdb8c`.
+- **Reports and full game data:** [500 ms report](benchmark-results/match_p2-gate-500ms.md) ([JSON](benchmark-results/match_p2-gate-500ms.json)); [2 s report](benchmark-results/match_p2-gate-2s.md) ([JSON](benchmark-results/match_p2-gate-2s.json)).
