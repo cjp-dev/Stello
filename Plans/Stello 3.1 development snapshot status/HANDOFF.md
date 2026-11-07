@@ -45,7 +45,19 @@ The plan is **[Plans/making-stello-3-1-plan.md](../making-stello-3-1-plan.md)**,
   | 8. The Multi-ProbCut shallow search uses the hash table at the same ply | — | harmless, no fix: entries keep their real depth; turning the shallow stores off cost +4.7 % nodes (depth 10) and +6.2 % (depth 12) |
   | 9. Counting: one `count_node` path with the abort check every 1,024 nodes; terminal scores count as evaluations | `bbeea17` | kept, no match (statistics and reachable abort checks); FFO #40–44 counted nodes +1.23 % (93,697,164), midgame unchanged; solver about 1.4 % slower, midgame unchanged |
 
-## 3. Complete: gate P2
+## 3. In progress: phase 3, the apps (gate P2 done)
+Phase 3 runs in seven steps. The Windows agent does one step at a time and stops; this session reviews and commits each step, and the user starts the next step.
+1. The two score-display tests: done (Stello.Net.Tests 91/91).
+2. The shared foundation in Stello.App: MainViewModel notifications, active-player flags and paired history rows (moved from `Home.razor`), one transposition-table choice list, and Appearance/BoardStyle moved from `Stello.Web/Services/AppearanceStore.cs`.
+3. Computer vs Computer in both apps.
+4. WPF alignment A: menus, buttons and shortcuts, the status panel and player cards, move history, analysis, and settings wording.
+5. WPF alignment B: board styles and textures, 3D discs and the flip animation, sound (`ISoundService` on SoundWaves), and help links.
+6. The docs viewer for `docs/stello-1/`: options only; the user decides.
+7. Mobile landscape check with Playwright.
+
+Then Gate P3: the user checks WPF on Windows, a headless Chromium check passes, and docs 14/15 describe both apps.
+
+Gate P2 (done):
 - All kept phase 2 fixes (items 1, 3a, 4 and 5) were tested together against 3.0 using the temporary `v30_search` switch.
 - At 500 ms, 3.1 scored 51.1% (95% interval 49.5–52.8, +8 Elo) over 1,180 games; at 2 s it scored 49.8% (47.9–51.7, −1 Elo) over 600 games. Neither result was significant; both pass the agreed not-worse criterion. See the [findings](../making-stello-3-1-findings.md#gate-p2-all-kept-fixes-against-30-2026-11-07) and the [500 ms](../benchmark-results/match_p2-gate-500ms.md) / [2 s](../benchmark-results/match_p2-gate-2s.md) reports.
 - The temporary comparison switch was reviewed and removed after the matches; the ABI is back to 3.
@@ -143,7 +155,7 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
 ## 7. Known problems and gotchas
 - **Line endings:** `core.autocrlf=true` and `core.filemode=false`. The "LF will be replaced by CRLF" warnings are harmless (`.gitattributes` normalizes), and the sandbox's mode-755 problem doesn't occur here.
 - **Windows-only test failures:**
-  - 2 known `Stello.Net.Tests` score-display tests (`AnalysisViewModelTests.Update_ShowsTheSearchProgress`, `NewGuiFeaturesTests.AnalysisViewModel_SpeedAndUpdatedEvent`) expect `+40` where the app shows `+0.4 discs`; phase 3 fixes them.
+  - The 2 former `Stello.Net.Tests` score-display failures are fixed (phase 3 step 1): the tests now expect `+0.4 discs`/`+0.2 discs`, and the project passes 91/91.
   - 2 Egaroucid-port wall-clock tests and the Rust 8-thread time-per-move test fail when the machine is loaded or throttled. Check the processor performance (section 6); after a reboot they pass.
 - **Toolchain:** the Rust `wasm32-unknown-unknown` target and `wasm-bindgen 0.2.130` are installed (checked 2026-11-07). The full build no longer needs `-p:StelloWasmEngine=false`. Python Playwright is not installed.
 - **Never commit:** training data, `Egaroucid-main`, Egaroucid resources, or binaries (`target/`, `wwwroot/engine*/`, `.so/.dll/.wasm`); `*.log` is git-ignored.
@@ -152,8 +164,5 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
 - **Old plan files** (`Plans/stello-exhaustive-docs-and-code-audit-plan.md` and others) have pre-existing broken links, fixed in phase 4.
 
 ## 8. Next steps
-1. **Phase 3, the apps:**
-   - full WPF alignment (template: `Connect-4/Connect4.Net/Connect4.WPF/MainWindow.xaml`);
-   - Computer vs Computer in both apps;
-   - the two score-display tests.
+1. **Phase 3, step 2** (section 3), when the user reports it from the Windows agent; then steps 3–7 and Gate P3. The template for the WPF alignment is `Connect-4/Connect4.Net/Connect4.WPF/MainWindow.xaml`, a separate repository next to Stello that is only read.
 2. **Then phases 4 and 5:** the 3.1 release, asking the user before fast-forwarding main. Phase 4 can also look at side A's longer longest move in the match tool (gate P2 findings).

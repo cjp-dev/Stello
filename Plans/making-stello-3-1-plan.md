@@ -142,6 +142,8 @@ Each item: read the code and decide whether it is a bug or a harmless quirk. If 
 
 **Gate P3:** the Windows build and Stello.Net.Tests pass (new tests for the CvC mode, clocks, history rows and settings lists), the user checks WPF on Windows, and a headless Chromium check of the web app passes. Docs 14 and 15 describe both apps.
 
+**Progress:** step 1 done (2026-11-07): the two score-display tests now expect the app's `+0.4 discs`/`+0.2 discs` format; Stello.Net.Tests passes 91/91. See the findings.
+
 ## Phase 4: tools and verification gaps
 1. **Matches save and resume** (`tools/Stello.Benchmark/MatchCommands.cs`): each finished game is appended to `<name>.games.jsonl`. The same command with `--resume` checks that the settings and start positions are the same and plays only the missing games. The `.md`/`.json` are written at the end as now.
 2. **Matches with threads:** the default `--workers` becomes max(1, cores / max threads of the two sides), so workers × threads ≤ cores without setting it by hand.

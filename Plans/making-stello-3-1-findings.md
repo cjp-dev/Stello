@@ -13,7 +13,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 | 0 Set-up and the new baseline | done (2026-11-04) | 3.0 one-thread JSON references, 105-signature baseline test, and Rust-engine `opt=` match switches; Stello tests pass |
 | 1 Real bugs | done (2026-11-06) | Six bugs fixed: an aborted solve reported as Exact, the natural delay charged to the clock, the clock restore after Back/Forward, the endgame soft limit (gate matches at 1 and 5 min per game not worse), web worker robustness (review found a restart loop) and doc errors; items 1 and 2 checked in the apps |
 | 2 The parity quirks | done (2026-11-07) | Items 1 and 3a–5 are kept; items 6–8 reviewed with no fix needed; item 9's counting is unified and its strict baseline regenerated. The combined fixes passed Gate P2 at 500 ms and 2 s without evidence of a loss |
-| 3 The apps | not started | |
+| 3 The apps | in progress | Step 1: the two score-display tests now expect the app's disc format; Stello.Net.Tests 91/91 |
 | 4 Tools and verification gaps | not started | |
 | 5 The 3.1 release | not started | |
 | **Part 2: Stello 3.2** | | |
@@ -339,3 +339,10 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 - **Longest move:** in both reports 3.1 (side A) has the longer longest move (625 against 502 ms, 2,124 against 2,002 ms). This isn't 3.1: side A has the longer longest move in every phase 2 match (541–642 ms against 506–509 ms at 500 ms), also when A was 3.0. It looks like a start-up cost on side A in the match tool; phase 4 (tools) can look at it.
 - **Cleanup:** the `v30_search` switch, its FFI setter (the ABI is back to 3), the C# property, the match key `opt=v30-search=`, `solve-bench --side`, the temporary tests and the chapter 14 ABI change are removed. The code is byte for byte that of `f3fdb8c`.
 - **Reports and full game data:** [500 ms report](benchmark-results/match_p2-gate-500ms.md) ([JSON](benchmark-results/match_p2-gate-500ms.json)); [2 s report](benchmark-results/match_p2-gate-2s.md) ([JSON](benchmark-results/match_p2-gate-2s.json)).
+
+## Phase 3: the apps
+
+### Step 1: the two score-display tests (2026-11-07)
+- **What was wrong:** `AnalysisViewModelTests.Update_ShowsTheSearchProgress` and `NewGuiFeaturesTests.AnalysisViewModel_SpeedAndUpdatedEvent` expected `+40` and `+20` for heuristic scores of 40 and 20. The app shows `+0.4 discs` and `+0.2 discs`, the intended format that the `FormatScore` theory pins (`+1.2 discs` for 123). The tests were stale, not the app.
+- **The fix:** the two expected values are now `+0.4 discs` and `+0.2 discs`. No app code changed.
+- **Checks:** the .NET Release build with 0 warnings; Stello.Engine.Tests 489/489, Egaroucid.Engine.Tests 42/42, and Stello.Net.Tests 91/91, the first full pass on Windows in 3.1.

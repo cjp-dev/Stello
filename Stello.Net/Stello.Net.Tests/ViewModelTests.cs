@@ -33,7 +33,7 @@ public class AnalysisViewModelTests
 
         Assert.Equal("f5", analysis.Move);
         Assert.Equal("5 plies", analysis.Depth);
-        Assert.Equal("+40", analysis.Score);
+        Assert.Equal("+0.4 discs", analysis.Score);
         Assert.Equal("d6", analysis.BestMove);
         Assert.Equal("0:01.5", analysis.Time);
     }
