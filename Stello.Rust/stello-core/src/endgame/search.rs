@@ -541,13 +541,11 @@ impl Searcher<'_> {
             }
         }
 
-        for i in 0..count {
+        let undone = undone_first(moves, done);
+        let moves = &mut moves[..undone];
+        for i in 0..moves.len() {
             swap_next_best(moves, i);
             let mv = moves[i];
-            if done & (1u64 << mv.square) != 0 {
-                continue;
-            }
-
             let (child_own, child_opponent) = child(own, opponent, &mv);
             let slot = self.endgame.local.slot(child_own, child_opponent, empties - 1);
             let score = -self.end_local(child_own, child_opponent, -alpha - 1, false, mv.replies, empties - 1)?;
@@ -648,13 +646,11 @@ impl Searcher<'_> {
             }
         }
 
-        for i in 0..count {
+        let undone = undone_first(moves, done);
+        let moves = &mut moves[..undone];
+        for i in 0..moves.len() {
             swap_next_best(moves, i);
             let mv = moves[i];
-            if done & (1u64 << mv.square) != 0 {
-                continue;
-            }
-
             let (child_own, child_opponent) = child(own, opponent, &mv);
             let slot = self.endgame.local.slot(child_own, child_opponent, empties - 1);
             let score = -self.end_simple(child_own, child_opponent, -alpha - 1, false, mv.replies, empties - 1)?;
@@ -1007,9 +1003,23 @@ fn swap_next_best(moves: &mut [EndMove], start: usize) {
     }
 }
 
+/// Moves the moves not in `done` (those the local table did not decide) to the front, in their order, and returns
+/// how many there are, so that decided moves cannot change the order of the rest.
+fn undone_first(moves: &mut [EndMove], done: u64) -> usize {
+    let mut remaining = 0;
+    for i in 0..moves.len() {
+        if done & (1u64 << moves[i].square) == 0 {
+            moves.swap(remaining, i);
+            remaining += 1;
+        }
+    }
+
+    remaining
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{DEEP_MOVES, END_INFINITY, EndMove, fill_end_moves};
+    use super::{DEEP_MOVES, END_INFINITY, EndMove, fill_end_moves, swap_next_best, undone_first};
     use crate::bits;
     use crate::board::{Board, Player};
     use crate::search::engine::final_score;
@@ -1077,6 +1087,24 @@ mod tests {
 
         assert!(checked > 200);
         assert!(searcher.nodes > 0 && searcher.evaluations > 0);
+    }
+
+    #[test]
+    fn undone_first_keeps_decided_moves_out_of_the_sort() {
+        let mut moves = [
+            EndMove { square: 1, value: -5, ..EndMove::default() },
+            EndMove { square: 2, value: 100, ..EndMove::default() },
+            EndMove { square: 3, value: 5, ..EndMove::default() },
+            EndMove { square: 4, value: 200, ..EndMove::default() },
+        ];
+        let order_count = undone_first(&mut moves, (1 << 2) | (1 << 4));
+
+        assert_eq!(order_count, 2);
+        assert_eq!([moves[0].square, moves[1].square], [1, 3]);
+        for i in 0..order_count {
+            swap_next_best(&mut moves[..order_count], i);
+        }
+        assert_eq!([moves[0].square, moves[1].square], [3, 1]);
     }
 
     #[test]

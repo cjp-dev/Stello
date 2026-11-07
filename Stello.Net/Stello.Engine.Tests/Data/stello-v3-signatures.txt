@@ -3,6 +3,7 @@
 # update them only deliberately, with a note in Plans/making-stello-3-1-findings.md.
 # Updated 2026-11-06 (Plans/making-stello-3-1-findings.md, phase 2 item 1): an upper bound equal to alpha cuts off; the node counts of 29 midgame positions changed; no move, score, kind or depth did.
 # Updated 2026-11-07 (Plans/making-stello-3-1-findings.md, phase 2 item 4): end_deep keeps the move of the best ETC fail-low and counts a searched hash move for splitting; the node counts of FFO #43 and #44 changed; no move, score, kind or depth did, and the midgame lines are unchanged.
+# Updated 2026-11-07 (Plans/making-stello-3-1-findings.md, phase 2 item 5): in end_local and end_simple, moves decided by the local table no longer take part in the sort; the node counts of FFO #40-44 changed; no move, score, kind or depth did, and the midgame lines are unchanged.
 midgame.txt g01e48 depth=10 c4 275 Heuristic 10 37459
 midgame.txt g01e42 depth=10 d2 862 Heuristic 10 47096
 midgame.txt g01e36 depth=10 b6 1775 Heuristic 10 64655
@@ -103,8 +104,8 @@ midgame.txt g20e42 depth=10 c2 -575 Heuristic 10 20881
 midgame.txt g20e36 depth=10 f8 -1037 Heuristic 10 13841
 midgame.txt g20e30 depth=10 f6 -2287 Heuristic 10 12779
 midgame.txt g20e26 depth=10 b2 -2612 Heuristic 10 7565
-ffo-40-59.txt 40 solve a2 38 Exact 20 12595701
-ffo-40-59.txt 41 solve h4 0 Exact 22 12520296
-ffo-40-59.txt 42 solve g2 6 Exact 22 22473373
-ffo-40-59.txt 43 solve c7 -12 Exact 23 33446615
-ffo-40-59.txt 44 solve d2 -14 Exact 23 11515148
+ffo-40-59.txt 40 solve a2 38 Exact 20 12596115
+ffo-40-59.txt 41 solve h4 0 Exact 22 12518625
+ffo-40-59.txt 42 solve g2 6 Exact 22 22476928
+ffo-40-59.txt 43 solve c7 -12 Exact 23 33449331
+ffo-40-59.txt 44 solve d2 -14 Exact 23 11515458
