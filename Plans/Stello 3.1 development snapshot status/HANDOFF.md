@@ -1,6 +1,6 @@
 # Handoff: Stello 3.1 development (snapshot 2026-11-07)
 
-For the next Claude Code session. Repository: `/c/Udvikling/Privat/Spil/Stello` (GitHub `cjp-dev/Stello`). Branch **`feature/stello-3.1`**, HEAD **`0eb00cc`**, pushed and clean.
+For the next session. Repository: `C:\Udvikling\Privat\Spil\Stello` on the user's Windows machine (GitHub `cjp-dev/Stello`). Branch **`feature/stello-3.1`**, HEAD **`db01cf2`** (phase 2 item 5) committed; the user pushes.
 
 ## 1. The objective
 Stello is an Othello program: a Rust engine with C# apps, WPF on the desktop and Blazor WebAssembly on the web. 3.0 was released on 2026-11-04 (main `baa44e5`, git tag `v3.0`).
@@ -30,7 +30,7 @@ The plan is **[Plans/making-stello-3-1-plan.md](../making-stello-3-1-plan.md)**,
   6. doc errors (`0d8d5eb`).
 
   The gate: item 1 was checked in the web app against live 3.0, and item 2 by the user in WPF.
-- **Phase 2, items 1–4:**
+- **Phase 2, items 1–5:**
 
   | Item | Commit | Result |
   |---|---|---|
@@ -39,12 +39,10 @@ The plan is **[Plans/making-stello-3-1-plan.md](../making-stello-3-1-plan.md)**,
   | 3a. TT aging (entries with more empties than the root count as empty) | `7a96a59` | kept; 500 ms 50.6 %, 2 s 47.5 % (starts 1–300), confirmation 2 s 51.6 % (starts 301–590) |
   | 3b. Keeping tighter bounds | — | dropped: no gain |
   | 4. `end_deep` keeps the move of its best ETC fail-low | `0eb00cc` | kept; 500 ms 50.3 %; FFO #43/#44 node counts changed |
+  | 5. Moves decided by the local table leave the sort (`undone_first`) | `db01cf2` | kept; 500 ms 49.6 % (48.0–51.1); FFO #40–44 node counts changed; speed unchanged |
 
-## 3. In progress: phase 2, items 5–9, then gate P2
-**As of this snapshot, item 5 is under way on the Windows agent.** Its uncommitted changes are in the working tree: a temporary switch in Rust, FFI, C# and the match tool, and the untracked `Plans/benchmark-results/match_p2-item5-local-table-500ms.{md,json}`. They are not part of any commit yet; review them when the user reports item 5.
-
+## 3. In progress: phase 2, items 6–9, then gate P2
 The item texts are in the plan, under "Phase 2". Its file:line references may be stale, so search for the code.
-- **5:** in `endgame/search.rs` (`end_local`/`end_simple`), moves already decided by the local table stay in the sort and can reorder the rest.
 - **6:** in `search/ordering.rs` `order()`, the hash move is swapped to the front (the old first move loses its place), and the loop stops one move early.
 - **7:** in `search_root` (`engine.rs`), every root move gets a full window up to depth 3 (`i == 0 || look <= 2`).
 - **8:** the Multi-ProbCut shallow search reads and writes the hash table at the same ply (hash heights).
@@ -57,14 +55,14 @@ The item texts are in the plan, under "Phase 2". Its file:line references may be
 - **Gate P2:** every item has a verdict. Then all kept fixes together play `v3.0` in a 1,180-game match at 500 ms and a 600-game match at 2 s, not worse. Comparing with 3.0 needs either a frozen 3.0 build or the switches; the plan expects the latter, but they are removed after each item. Decide with the user how to run it, for example a second native library built from tag `v3.0`, or reverse switches.
 
 ## 4. How we work (user decisions)
-- **Who does what:** an agent on the user's Windows machine implements each item. This (sandbox) session reviews it: the diff, the tests, the baseline, the findings, plus its own spot checks. It fixes review issues and **commits and pushes**. The user reports back after each item.
+- **Who does what:** an agent on the user's Windows machine implements each item. This session reviews it: the diff, the tests, the baseline, the findings, plus its own spot checks. It fixes review issues and **commits**. The user is the one that does the Git **push**. The session is not allowed to do a Git **Push**. If its needed it have to ask the user. The user reports back after each item. When a item is reviewed and comitted, finish with your rewiew and a commandline showing the commando for the final push.
 - **Matches only on the user's go:** give a numbered list with time estimates (see memory `feedback-long-matches-on-go`). At 12 workers on 1 thread:
   - 500 ms, 1,180 games: about 22 min;
   - 2 s, 600 games: about 40–45 min;
   - 1 min per game: about 3 h;
   - 5 min per game, 600 games: about 7.5 h.
 
-  At 8 threads use 2 workers (500 ms: about 2 h). Check `uptime` first, and run nothing heavy during a match. The match tool **cannot resume**: a power cut means restarting.
+  At 8 threads use 2 workers (500 ms: about 2 h). Check the load first (section 6), and run nothing heavy during a match. The match tool **cannot resume**: a power cut means restarting.
 - **Fixes are kept unless they play worse** (upper bound above 50 % at 500 ms; confirm at 2 s if it matters). A new strategy, not a fix, must show a gain. If a significant loss shows no mechanism in the statistics, confirm it on the disjoint start positions 301–590 before dropping a fix.
 - **A/B switches:** each change is temporarily a `SearchOptions` switch through Rust → FFI (`stello_engine_set_*`, an ABI bump) → C# internal `SearchOptions` → match key `opt=…`. It is **removed as soon as the match is approved**, and the ABI goes back to 3 (it is 3 now).
 - **The baseline stays strict, node for node** (C# `StelloV3BaselineTests`, Rust `tests/search.rs`, Node `engine.test.mjs`/`engine-mt.test.mjs`, all reading `stello-v3-signatures.txt`). If a kept fix changes nodes, **regenerate that file with a header note**; never loosen the tests. `stello-v2-signatures.txt` pins only the frozen C# 2.0 (`StelloV2Tests`).
@@ -84,26 +82,45 @@ The item texts are in the plan, under "Phase 2". Its file:line references may be
 - **Tests:** `Stello.Engine.Tests` (489), `Stello.Net.Tests` (Windows-only, 91), `Egaroucid.Engine.Tests` (42), the Rust tests (83), the Node tests (15).
 - **Docs:** `docs/` chapters 01–28 (07 table, 08 solver, 09 time, 14 apps, 15 GUI, 26 threads).
 
-## 6. Commands (sandbox)
+## 6. Commands (Windows, PowerShell 5.1)
+PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … }`. Cargo and dotnet write progress to stderr, which PowerShell reports as a `NativeCommandError` and turns `$?` false. Wrap them as `cmd /c "… 2>&1"` and check `$LASTEXITCODE`. The machine is an i7-12850HX (16 cores, 24 threads).
 - **Rust:**
   ```
-  cd Stello.Rust; source ~/.cargo/env; export CARGO_INCREMENTAL=0 CARGO_TARGET_DIR=target/linux
-  cargo fmt --check; cargo clippy --all-targets --release -- -D warnings
-  cargo clippy -p stello-core -p stello-wasm --target wasm32-unknown-unknown -- -D warnings
-  cargo test --release
+  cd Stello.Rust; $env:CARGO_INCREMENTAL='0'; $env:CARGO_TARGET_DIR='target/windows'
+  cargo fmt --check
+  cmd /c "cargo clippy --all-targets --release -- -D warnings 2>&1"
+  cmd /c "cargo clippy -p stello-core -p stello-wasm --target wasm32-unknown-unknown -- -D warnings 2>&1"
+  cmd /c "cargo test --release 2>&1" | Select-String 'test result|FAILED|panicked'
   ```
-- **.NET:** run `bash -l -c "…"` from `Stello.Net`:
+  `solve_signatures_match_the_baseline` stops at the first wrong line. To get all five FFO lines, use the CLI: `cmd /c "cargo build --release -p stello-cli 2>&1"`, then `.\target\windows\release\stello.exe solve-bench` (FFO #40–44).
+- **.NET** (from `Stello.Net`). The build also compiles the native library and both wasm packages (`Stello.Web/wwwroot/engine` and `engine-mt`), about 1 min:
   ```
-  dotnet build Stello.Net.slnx -c Release -p:EnableWindowsTargeting=true
+  cmd /c "dotnet build Stello.Net.slnx -c Release 2>&1" | Select-Object -Last 5
   dotnet test Stello.Engine.Tests -c Release --no-build
   dotnet test Egaroucid.Engine.Tests -c Release --no-build
+  dotnet test Stello.Net.Tests -c Release --no-build
   ```
-- **Node** (from the repo root): `node --test Stello.Rust/stello-wasm/tests/engine.test.mjs Stello.Rust/stello-wasm/tests/engine-mt.test.mjs`.
-- **Benchmarks:** from `Stello.Net`:
+  `Stello.Net.Tests` has 2 known failures (section 7).
+- **Node** (from the repo root, after the .NET build): `node --test Stello.Rust/stello-wasm/tests/engine.test.mjs Stello.Rust/stello-wasm/tests/engine-mt.test.mjs`. `npx` (a `.ps1`) is blocked by the execution policy; use `npx.cmd` if needed.
+- **Benchmarks** (from `Stello.Net`):
   ```
   dotnet tools/Stello.Benchmark/bin/Release/net10.0/Stello.Benchmark.dll mid-bench --depth 10 --passes 1 --compare ../Plans/benchmark-results/v3.0-ref/<file>.json
   ```
-  Use `solve-bench --from 40 --to 49` the same way. For timing, use `taskset -c 2` and the CLI `Stello.Rust/target/linux/release/stello solve-bench`.
+  Use `solve-bench --from 40 --to 49` the same way.
+- **Timing before/after** (the Windows version of `taskset -c 2`). Build the old commit in a scratch worktree and time both CLIs, alternating, pinned to core 2:
+  ```
+  $wt="<session folder>\files\wt-head"; git worktree add --detach $wt HEAD
+  cd "$wt\Stello.Rust"; $env:CARGO_TARGET_DIR="$wt\target-rs"; cmd /c "cargo build --release -p stello-cli 2>&1"
+  cmd /c "start `"`" /affinity 4 /wait /b `"$wt\target-rs\release\stello.exe`" solve-bench --from 40 --to 49 2>&1"
+  git worktree remove --force $wt
+  ```
+- **Load and throttling** (instead of `uptime` and `/proc/cpuinfo`):
+  ```
+  (Get-CimInstance Win32_Processor).LoadPercentage
+  (Get-Counter '\Processor Information(_Total)\% Processor Performance').CounterSamples.CookedValue
+  (Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+  ```
+  The second line is the CPU speed as a percentage of base clock (above 100 = turbo). `Win32_Processor.CurrentClockSpeed` always shows the 2,100 MHz base clock, so it can't detect throttling.
 - **Matches:**
   ```
   … match --a time-ms=500,name=A --b time-ms=500,name=B,opt=<key>=on --workers 12 --name <name>
@@ -113,29 +130,30 @@ The item texts are in the plan, under "Phase 2". Its file:line references may be
   ```
   dotnet publish Stello.Web/Stello.Web.csproj -c Release -o <dir> -p:StelloNativeEngine=false
   ```
-  Serve it with COOP/COEP (scratchpad `p8/serve.py`) and run Playwright from `~/.venvs/pw/bin/python -I`.
-- **Links:** `python3 -I <scratchpad>/linkcheck.py docs README.md Plans/making-stello-3-1-findings.md`.
+  It needs a server with the COOP/COEP headers, plus Playwright. Neither is set up yet: the user allows `pip install playwright` (then `python -m playwright install chromium`) and small helper scripts in the session folder.
+- **Links:** `python -I <session folder>\files\linkcheck.py docs README.md Plans/making-stello-3-1-findings.md Plans/making-stello-3-1-plan.md`. It checks local files and `#anchors`. Session folders don't carry over, so a new session must recreate it.
 - **Git:**
   ```
-  git -c user.name=cjp-dev -c user.email=cjp230364@gmail.com commit
+  git -c user.name=cjp-dev -c user.email=cjp230364@gmail.com commit -F <message file or ->
   git fsck --full --no-dangling
-  env -u GH_TOKEN git push origin feature/stello-3.1
   ```
-  End commit messages with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+  The local git identity is a different one (work), so always pass `-c user.name/-c user.email`. End commit messages with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. **Don't push:** the user pushes, with `git push origin feature/stello-3.1`.
 
 ## 7. Known problems and gotchas
-- **Files from Windows show up as mode 755:** run `chmod 644` on new files before `git add` (it happened once, in GameShell). CRLF warnings on commit are harmless (`.gitattributes` normalizes).
-- **Windows-only test failures:** 2 known `Stello.Net.Tests` score-display tests expect `+40` where the app shows `+0.4 discs`; phase 3 fixes them. 2 Egaroucid-port wall-clock tests and the Rust 8-thread time-per-move test fail when the machine is loaded or throttled. Check the CPU MHz in `/proc/cpuinfo`; after a reboot they pass.
-- **The Windows machine** has no Rust `wasm32-unknown-unknown` target and no `wasm-bindgen-cli 0.2.130`. Its agent builds with `-p:StelloWasmEngine=false`, and installing them is the user's call.
+- **Line endings:** `core.autocrlf=true` and `core.filemode=false`. The "LF will be replaced by CRLF" warnings are harmless (`.gitattributes` normalizes), and the sandbox's mode-755 problem doesn't occur here.
+- **Windows-only test failures:**
+  - 2 known `Stello.Net.Tests` score-display tests (`AnalysisViewModelTests.Update_ShowsTheSearchProgress`, `NewGuiFeaturesTests.AnalysisViewModel_SpeedAndUpdatedEvent`) expect `+40` where the app shows `+0.4 discs`; phase 3 fixes them.
+  - 2 Egaroucid-port wall-clock tests and the Rust 8-thread time-per-move test fail when the machine is loaded or throttled. Check the processor performance (section 6); after a reboot they pass.
+- **Toolchain:** the Rust `wasm32-unknown-unknown` target and `wasm-bindgen 0.2.130` are installed (checked 2026-11-07). The full build no longer needs `-p:StelloWasmEngine=false`. Python Playwright is not installed.
 - **Never commit:** training data, `Egaroucid-main`, Egaroucid resources, or binaries (`target/`, `wwwroot/engine*/`, `.so/.dll/.wasm`); `*.log` is git-ignored.
-- **On the mount:** avoid `git stash`; use `git worktree add <scratch>` for before/after builds, then `git worktree remove --force`.
-- **The opening book** holds 2,988 exact values found with a 60 s limit that may be bounds from stopped solves (phase 1 item 1). They are marked for the phase 11 recalculation.
+- **Before/after builds:** use `git worktree add` in the session folder rather than `git stash` (the working tree may hold work in progress), then `git worktree remove --force`.
+- **The opening book** holds 2,988 exact values found with a 60 s limit. Some may be bounds from stopped solves (phase 1 item 1). They are marked for the phase 11 recalculation.
 - **Old plan files** (`Plans/stello-exhaustive-docs-and-code-audit-plan.md` and others) have pre-existing broken links, fixed in phase 4.
 
 ## 8. Next steps
-1. **Wait for the user** to report phase 2 item 5 from the Windows agent. Review it as for items 1–4: the diff, cargo/.NET/Node tests, the strict baseline, a speed spot check if nodes change, the findings. Then commit and push.
-2. **Items 6–9 the same way.** Item 9 changes only counting: no match is needed, but the baseline gets regenerated with a note (the node counts change).
-3. **Gate P2:** agree with the user how to compare all kept fixes against `v3.0`. Then give a numbered match list (500 ms ×1,180 and 2 s ×600, about 22 and 45 min) and run it on the user's go. Record it, and mark phase 2 done in the plan and findings.
+1. **Wait for the user** to report phase 2 item 6 from the Windows agent. Review it as for items 1–5: the diff, the cargo/.NET/Node tests, the strict baseline, a speed spot check if nodes change, the findings. Clean up (switch removed, ABI 3), then commit, and end with the review and the push command for the user.
+2. **Items 7–9 the same way.** Item 9 changes only counting: no match is needed, but the node counts change, so the baseline is regenerated with a note.
+3. **Gate P2:** agree with the user how to compare all kept fixes against `v3.0`. Then give a numbered match list (500 ms ×1,180 and 2 s ×600, about 22 and 45 min) and run it on the user's go. Record the results, and mark phase 2 done in the plan and findings.
 4. **Phase 3, the apps:**
    - full WPF alignment (template: `Connect-4/Connect4.Net/Connect4.WPF/MainWindow.xaml`);
    - Computer vs Computer in both apps;
