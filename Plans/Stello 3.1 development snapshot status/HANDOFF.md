@@ -52,7 +52,7 @@ Phase 3 runs in seven steps. The Windows agent does one step at a time and stops
 3. Done: Computer vs Computer in both apps; clocks, timeouts, Move Now, stopping, Undo and Save are covered.
 4. Done: WPF alignment A: menus, buttons and shortcuts, the status panel and player cards, move history, analysis, and settings wording.
 5. Done: WPF alignment B: shared board styles and web textures, 3D discs/flip animation, sound (`ISoundService` on SoundWaves), and F1/Shift+F1 Help links. The web's view-model appearance now stays synchronized with AppearanceStore and AppSettings.
-6. The docs viewer for `docs/stello-1/`: options only; the user decides.
+6. Done: keep the frozen `docs/stello-1/` archive on GitHub, not in the GameShell viewer. All 24 links (14 distinct targets) retain anchors and safe new-tab attributes; all nine distinct GitHub URLs return HTTP 200. No code or GameShell changes.
 7. Mobile landscape check with Playwright.
 
 Then Gate P3: the user checks WPF on Windows, a headless Chromium check passes, and docs 14/15 describe both apps.
@@ -167,5 +167,5 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
 - **Old plan files** (`Plans/stello-exhaustive-docs-and-code-audit-plan.md` and others) have pre-existing broken links, fixed in phase 4.
 
 ## 8. Next steps
-1. **Phase 3, step 6, after step 5 review:** report docs-viewer/archive options only; then step 7 and Gate P3. Steps 2–5 are recorded in the [findings](../making-stello-3-1-findings.md#phase-3-the-apps). The template for the WPF alignment is `Connect-4/Connect4.Net/Connect4.WPF/MainWindow.xaml`, a separate repository next to Stello that is only read.
+1. **Phase 3, step 7, after step 6 review:** check mobile landscape with Playwright, then Gate P3. Steps 2–6 are recorded in the [findings](../making-stello-3-1-findings.md#phase-3-the-apps). The template for the WPF alignment is `Connect-4/Connect4.Net/Connect4.WPF/MainWindow.xaml`, a separate repository next to Stello that is only read.
 2. **Then phases 4 and 5:** the 3.1 release, asking the user before fast-forwarding main. Phase 4 can also look at side A's longer longest move in the match tool (gate P2 findings).

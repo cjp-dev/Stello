@@ -100,6 +100,7 @@ The web app's header has four menus (`Home.razor`):
 ### 4. Help Menu
 * **User guide (`F1`):** Opens this chapter in a new browser tab, shown by the app's Docs pages (`/docs/15-gui-and-settings`).
 * **Rules & Documentation (`Shift+F1`):** Opens the index of this documentation in a new tab (the Docs pages at `/docs`; the build copies `docs` into the app, chapter 14).
+  Markdown in docs subfolders, including the frozen Stello 1 archive, opens on GitHub rather than in the viewer.
 * *(Separator)*
 * **About Stello...:** Shows "Stello Version 3.0", the picture of the author with the caption "Claus Pedersen – wrote Stello in C++ in 1992 and ported it to C# in 2026", and four paragraphs (`AboutInfo`, shared by both apps): what Stello is; its brain (alpha-beta search, a hash table and iterative deepening; since version 2.0 an evaluation by patterns of squares, trained on 500 million positions from the games of Egaroucid, the Othello program by Takuto Yamana, and an endgame solver adapted from Egaroucid's; more than 11,000 opening positions; perfect play near the end); the port of the 1992 C++ original to C# and .NET 10, and since version 3.0 the brain in Rust, two to three times faster, the same brain in the Windows program and, compiled to WebAssembly, in the browser; and the licence (GPL-3.0-only) with the address of the source code, https://github.com/cjp-dev/Stello.
 

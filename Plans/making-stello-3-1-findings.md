@@ -13,7 +13,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 | 0 Set-up and the new baseline | done (2026-11-04) | 3.0 one-thread JSON references, 105-signature baseline test, and Rust-engine `opt=` match switches; Stello tests pass |
 | 1 Real bugs | done (2026-11-06) | Six bugs fixed: an aborted solve reported as Exact, the natural delay charged to the clock, the clock restore after Back/Forward, the endgame soft limit (gate matches at 1 and 5 min per game not worse), web worker robustness (review found a restart loop) and doc errors; items 1 and 2 checked in the apps |
 | 2 The parity quirks | done (2026-11-07) | Items 1 and 3a–5 are kept; items 6–8 reviewed with no fix needed; item 9's counting is unified and its strict baseline regenerated. The combined fixes passed Gate P2 at 500 ms and 2 s without evidence of a loss |
-| 3 The apps | in progress | Steps 1–5 done: shared foundation, CvC, WPF layout, board styles/animation, sound and Help. Release build clean; .NET tests 489/489, 42/42, 115/115; Node tests 15/15; browser appearance persistence checked |
+| 3 The apps | in progress | Steps 1–6 done: shared foundation, CvC, WPF alignment and the archive decision. Release build clean; .NET tests 489/489, 42/42, 115/115; Node tests 15/15; browser appearance persistence checked; archive links verified |
 | 4 Tools and verification gaps | not started | |
 | 5 The 3.1 release | not started | |
 | **Part 2: Stello 3.2** | | |
@@ -404,3 +404,28 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
   - **Screenshots of the Release app** (UI Automation, settings backed up and restored): the Green and Reddish Wood boards with the web's textures, coordinates and green hint dots; the 3D discs with shading and shadow, and flat discs after Options → 3D Pieces; Options → Analysis hides and shows the card. The saved file then held `{"Board": "ReddishWood", "Pieces3D": false, "AnimateFlips": true}`.
   - **The Help links** point at the live site's `/docs/15-gui-and-settings` and `/docs/`, the same chapters as the web's F1 and Shift+F1. The address is the one in `README.md`; if the site moves, `MainWindow.UserGuideUri` must change with it.
   - **The flip animation and the sounds** can't be judged from screenshots; they are for the user's check.
+
+### Step 6: the Stello 1 archive (2026-11-08)
+- **Decision:** keep linking `docs/stello-1/` to GitHub; do not render it in the GameShell viewer. The archive is a frozen record, and GitHub renders its formulas, Mermaid diagrams and images.
+- **Reason:** rendering the archive in the viewer would mean a GameShell change shared with Connect-4, Checkers and Gomoku for consistency of look only. The existing GitHub links already serve the archive; no Stello code or GameShell change is needed.
+- **Existing behavior:** GameShell `b1cd813` already handles Markdown links into docs subfolders in `BrainDocs.RewriteUrl` (since `10525ab`). Stello registers `https://github.com/cjp-dev/Stello/blob/main/docs/` as `RepositoryFolder`, so the archive opens from `main`, preserving anchors, with `target="_blank"` and `rel="noopener"`. The plan's former "Today it is raw markdown" statement was out of date.
+- **Verification:** a throwaway console check used the existing GameShell assembly and `BrainDocs.GetPageAsync` to render the actual top-level docs. All **24 link occurrences in 13 files**, covering **14 distinct targets**, had the expected GitHub URL, retained anchor and safe new-tab attributes. HTTP HEAD requests to the **nine distinct URLs without anchors** all returned **200**. The temporary check was removed; no app build or existing test suites were needed for these docs-only changes.
+
+| Distinct target | HTTP status (without anchor) |
+|---|---|
+| [stello-1/01-overview.md](https://github.com/cjp-dev/Stello/blob/main/docs/stello-1/01-overview.md) | 200 |
+| [stello-1/04-evaluation.md](https://github.com/cjp-dev/Stello/blob/main/docs/stello-1/04-evaluation.md) | 200 |
+| [stello-1/04-evaluation.md#dangerous-corner-moves](https://github.com/cjp-dev/Stello/blob/main/docs/stello-1/04-evaluation.md#dangerous-corner-moves) | 200 |
+| [stello-1/04-evaluation.md#the-edge-tables](https://github.com/cjp-dev/Stello/blob/main/docs/stello-1/04-evaluation.md#the-edge-tables) | 200 |
+| [stello-1/06-midgame-search.md](https://github.com/cjp-dev/Stello/blob/main/docs/stello-1/06-midgame-search.md) | 200 |
+| [stello-1/06-midgame-search.md#selective-search](https://github.com/cjp-dev/Stello/blob/main/docs/stello-1/06-midgame-search.md#selective-search) | 200 |
+| [stello-1/07-transposition-table.md](https://github.com/cjp-dev/Stello/blob/main/docs/stello-1/07-transposition-table.md) | 200 |
+| [stello-1/08-endgame-solver.md](https://github.com/cjp-dev/Stello/blob/main/docs/stello-1/08-endgame-solver.md) | 200 |
+| [stello-1/08-endgame-solver.md#worked-example-the-ffo-positions](https://github.com/cjp-dev/Stello/blob/main/docs/stello-1/08-endgame-solver.md#worked-example-the-ffo-positions) | 200 |
+| [stello-1/10-opening-book.md](https://github.com/cjp-dev/Stello/blob/main/docs/stello-1/10-opening-book.md) | 200 |
+| [stello-1/12-book-tool.md](https://github.com/cjp-dev/Stello/blob/main/docs/stello-1/12-book-tool.md) | 200 |
+| [stello-1/12-book-tool.md#recalculating-the-master-book](https://github.com/cjp-dev/Stello/blob/main/docs/stello-1/12-book-tool.md#recalculating-the-master-book) | 200 |
+| [stello-1/16-glossary.md](https://github.com/cjp-dev/Stello/blob/main/docs/stello-1/16-glossary.md) | 200 |
+| [stello-1/README.md](https://github.com/cjp-dev/Stello/blob/main/docs/stello-1/README.md) | 200 |
+
+- **Next:** step 7, mobile landscape, then Gate P3. No commit or push in this step.
