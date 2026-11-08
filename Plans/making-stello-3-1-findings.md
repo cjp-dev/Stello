@@ -14,7 +14,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 | 1 Real bugs | done (2026-11-06) | Six bugs fixed: an aborted solve reported as Exact, the natural delay charged to the clock, the clock restore after Back/Forward, the endgame soft limit (gate matches at 1 and 5 min per game not worse), web worker robustness (review found a restart loop) and doc errors; items 1 and 2 checked in the apps |
 | 2 The parity quirks | done (2026-11-07) | Items 1 and 3a–5 are kept; items 6–8 reviewed with no fix needed; item 9's counting is unified and its strict baseline regenerated. The combined fixes passed Gate P2 at 500 ms and 2 s without evidence of a loss |
 | 3 The apps | done (2026-11-08) | Shared view-model foundation, Computer vs Computer in both apps, full WPF alignment (layout, board styles, 3D discs and flips, sound, Help), the Stello 1 archive stays on GitHub, mobile landscape checked; Gate P3 passed with the user's WPF check |
-| 4 Tools and verification gaps | in progress | Step 1: old plan links repaired and GUI specification replaced by a GameShell pointer. Step 2: match workers default to physical cores divided by the larger side's thread count |
+| 4 Tools and verification gaps | done (2026-11-08) | Old plan links repaired, physical-core match workers, match save/resume, strict port timing, all ten FFO #50–59 correct, both match sides warmed up, Windows checks recorded; Gate P4 passed. The Firefox/Safari checklist follows the phase 5 deploy |
 | 5 The 3.1 release | not started | |
 | **Part 2: Stello 3.2** | | |
 | 6 Speed | not started | |
@@ -535,3 +535,26 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
   - The Egaroucid adapter now respects `UseOpeningBook`. Match sides set it from the same `book=` value that loads Egaroucid's book, so `book=on` still plays from the book.
   - In the 20-game check, side A was the frozen C# Stello 2.0, which is compiled on first use (JIT): a good test of a cold start. A's longest move was 508 ms against B's 501 ms. In the phase 2 matches side A's was 541–642 ms against 506–509 ms. The report is kept as step 6's evidence.
   - Stello.Engine.Tests 497/497 (the strict baseline included), Egaroucid.Engine.Tests 78/78 and Stello.Net.Tests 115/115 pass on review; the build has 0 warnings.
+
+### Step 7: platform checks (2026-11-08)
+- **Already verified on Windows; no new runs:**
+  - **Stello.Net.Tests 115/115:** [phase 3, step 5's Analysis follow-up](#step-5-wpf-board-sound-and-help-2026-11-08), confirmed in [Gate P3](#gate-p3-2026-11-08). The first full Windows pass in [phase 3, step 1](#step-1-the-two-score-display-tests-2026-11-07) was **91/91**, not 115/115; the suite grew during phase 3.
+  - **Rust/MSVC:** `cargo test --release` passed in [phase 4, step 5](#step-5-ffo-range-and-sample-2026-11-08), using the Windows MSVC build output in `target/windows` (see [handoff section 6](Stello%203.1%20development%20snapshot%20status/HANDOFF.md#6-commands-windows-powershell-51)). [Phase 0](#phase-0-set-up-and-the-new-baseline-done-2026-11-04) also records the MSVC/Linux node-for-node reference agreement.
+  - **Threaded web build (`wwwroot/engine-mt`):** the web build and all **15/15** single- and multi-threaded WASM Node tests passed in [phase 2, item 9](#item-9-consistent-node-and-evaluation-counts); Node **15/15** was confirmed in [phase 3, step 5](#step-5-wpf-board-sound-and-help-2026-11-08). The two package paths are documented in [handoff section 6](Stello%203.1%20development%20snapshot%20status/HANDOFF.md#6-commands-windows-powershell-51).
+  - **Release web publish:** [phase 3, step 7](#step-7-mobile-landscape-2026-11-08) verified headless Chromium at **844×390**, with COOP/COEP, `crossOriginIsolated` true, no browser errors or horizontal overflow, and scrollable analysis/history.
+- **Manual browser checklist:** the user checks Firefox and Safari (WebKit, on a Mac or iPhone if available) by hand, with no browser automation or installations. Use [the live site](https://polite-sky-0e9899910.3.azurestaticapps.net) **once phase 5 deploys 3.1**, or an existing local Release publish served with `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`. Repeat in each available browser:
+  - [ ] The page loads and a new game starts.
+  - [ ] Set **Threads > 1** and confirm the computer moves. Optionally check `crossOriginIsolated` is `true` in the console; threads require it.
+  - [ ] During a long search, **Move Now** responds quickly and plays a move; in another long search, **Stop** responds quickly and stops searching.
+  - [ ] **Computer vs Computer** plays successive moves and can be stopped.
+  - [ ] Try all board styles, **3D Pieces** and **Animate Flips**; play moves to see the effects, then reload and confirm the choices remain.
+  - [ ] **Sound** plays after interaction; muting disables it.
+  - [ ] **Help** opens the docs; open a chapter with formulas and diagrams and confirm both render.
+  - [ ] On an available phone in landscape, the board and controls are usable and analysis/history remain reachable by scrolling.
+- **Firefox result (date, OS/device, browser version, pass/issues):**
+- **Safari/WebKit result (date, OS/device, browser version, pass/issues; unavailable if no device):**
+- **Status:** the documentation-only step is done; browser results are intentionally empty for the user, not claimed as passes. No builds, tests, matches or browser automation were run, and nothing was installed.
+- **Review:** the Windows evidence is cited correctly, including the agent's correction that phase 3 step 1 passed 91/91 (115/115 came in step 5). The checklist covers threads, Move Now and Stop, Computer vs Computer, appearance, sound, Help and phone landscape. The user runs it on the live site after the phase 5 deploy.
+
+### Gate P4 (2026-11-08)
+- **Passed.** An interrupted match resumes with the same result format (step 3); the port keeps its time at 100 ms (step 4: test, and the longest move 108 ms against 212 ms without strict timing); FFO #50–59 are all correct (step 5); the link check finds 0 broken links in Plans and docs (step 1, 200 files). The browser checks are not a gate condition and stay open until the phase 5 deploy. Phase 4 is done.
