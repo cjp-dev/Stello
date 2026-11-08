@@ -494,12 +494,29 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 
 ### Step 5: FFO range and sample (2026-11-08)
 - **Selection:** the C# benchmark tool and Rust CLI both load the 40–59 data and accept an inclusive numeric ID range. Factored the range selection into helpers and added tests that select exactly #50–#59 without running their searches. The CLI help and [chapter 17](../docs/17-measuring-the-engine.md) now show `--from 50 --to 59`.
-- **#50 sample only:** both implementations returned the expected **+10, d8**, with **822,416,133 nodes**. C# took **25.8 s** (31.93M nodes/s); Rust took **25.3 s** (32.57M nodes/s). No positions #51–59 were solved.
-- **Estimate for the full range (not a reliable upper bound; extrapolated from #50 only):**
+- **Initial #50 sample:** both implementations returned the expected **+10, d8**, with **822,416,133 nodes**. C# took **25.8 s** (31.93M nodes/s); Rust took **25.3 s** (32.57M nodes/s).
+- **Pre-run estimate for the full range (extrapolated from #50 only):**
   1. C# `solve-bench --from 50 --to 59`: about **4–5 minutes**.
   2. Rust `solve-bench --from 50 --to 59 --passes 1`: about **4–5 minutes**.
-  Running both sequentially is about **8–10 minutes**. Position difficulty varies, so the #50 sample cannot guarantee the total.
+  The combined pre-run estimate was **8–10 minutes**. Position difficulty varies, so the #50 sample could not guarantee the total.
+- **Full Rust run (2026-11-08, user's go):** `cargo run --release -p stello-cli -- solve-bench --from 50 --to 59 --passes 1`, with `--out` to a session JSON. One thread, hash bits 19; the hash tables were cleared for each position. Before the run, CPU samples were 2.5–3.0% and 15,530 MB of memory was free. The run was alone; no full C# run was made. Every result was exact and every score and move matched the fixture.
+
+  | # | Empty | Score | Move | Nodes | Time |
+  |---|---:|---:|---|---:|---:|
+  | 50 | 26 | +10 | d8 | 822,416,133 | 24.5 s |
+  | 51 | 27 | +6 | a3 | 257,966,579 | 6.603 s |
+  | 52 | 27 | 0 | a3 | 234,022,321 | 5.664 s |
+  | 53 | 28 | -2 | d8 | 2,184,484,654 | 55.7 s |
+  | 54 | 28 | -2 | c7 | 3,167,389,217 | 73.9 s |
+  | 55 | 29 | 0 | e2 | 12,191,914,965 | 332.6 s |
+  | 56 | 29 | +2 | h5 | 875,677,936 | 25.4 s |
+  | 57 | 30 | -10 | a6 | 3,783,235,859 | 112.5 s |
+  | 58 | 30 | +4 | g1 | 1,190,257,681 | 34.0 s |
+  | 59 | 34 | +64 | h4 | 712,103,332 | 19.4 s |
+  | **Total** | | | | **25,419,468,677** | **690.4 s** |
+
+  The pass took **690.42 s** (about 11 minutes 30 seconds), well above the initial estimate; #55 alone took 332.6 s.
 - **C++ comparison:** no cited Egaroucid C++ timings for #50–59 were found in the checked project references; none are included.
-- **Validation:** the new C# and Rust range tests pass; the Release solution build has 0 warnings/errors. Stello.Engine.Tests **489/489**, Egaroucid.Engine.Tests **77/77**, Stello.Net.Tests **115/115**, and `cargo test --release` pass. `cargo fmt --check` passes.
-- **Next:** wait for the user's go before running #50–59 in either CLI; then record all ten results. Gate P4 remains open.
+- **Validation before the full run:** the new C# and Rust range tests pass; the Release solution build has 0 warnings/errors. Stello.Engine.Tests **489/489**, Egaroucid.Engine.Tests **77/77**, Stello.Net.Tests **115/115**, and `cargo test --release` pass. `cargo fmt --check` passes.
+- **Next:** step 6 when the user directs, after review; its verification match also needs the user's go. Gate P4 remains open.
 - **Review:** the selection already worked before; it is now one tested helper in each tool, with the default still #40–44. Rust formatting, Clippy with warnings denied and the CLI test pass; the .NET build has 0 warnings and Egaroucid.Engine.Tests passes 77/77. The C# tool's default engine is the same Rust engine through the FFI, which is why #50 gave the same 822,416,133 nodes in both. **One full run is enough**, for example the Rust CLI. The estimate of 4–5 minutes is an extrapolation from #50 alone, and the other positions may take longer.
