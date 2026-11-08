@@ -147,7 +147,7 @@ internal static class QualityCommands
             throw new ArgumentException($"{path} holds no positions with move scores (make them with make-exact).");
         }
 
-        MatchSide[] sides = sideTexts.Select(text => MatchCommands.ParseSide(text + ",time-ms=1")).ToArray();
+        MatchSide[] sides = sideTexts.Select(text => MatchCommands.ParseSide(text + ",time-ms=1", allowLibrary: false)).ToArray();
         string[] engines = sides.Select(side => side.Name).ToArray();
         if (engines.Distinct().Count() != engines.Length)
         {

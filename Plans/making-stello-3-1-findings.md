@@ -15,7 +15,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 | 2 The parity quirks | done (2026-11-07) | Items 1 and 3a–5 are kept; items 6–8 reviewed with no fix needed; item 9's counting is unified and its strict baseline regenerated. The combined fixes passed Gate P2 at 500 ms and 2 s without evidence of a loss |
 | 3 The apps | done (2026-11-08) | Shared view-model foundation, Computer vs Computer in both apps, full WPF alignment (layout, board styles, 3D discs and flips, sound, Help), the Stello 1 archive stays on GitHub, mobile landscape checked; Gate P3 passed with the user's WPF check |
 | 4 Tools and verification gaps | done (2026-11-08) | Old plan links repaired, physical-core match workers, match save/resume, strict port timing, all ten FFO #50–59 correct, both match sides warmed up, Windows checks recorded; Gate P4 passed. The Firefox/Safari checklist follows the phase 5 deploy |
-| 5 The 3.1 release | not started | |
+| 5 The 3.1 release | in progress | Stello scored 74.4% at 100 ms and 67.4% at 500 ms against the Egaroucid port with strict timing; the 3.0 matches await the user's decision and go |
 | **Part 2: Stello 3.2** | | |
 | 6 Speed | not started | |
 | 7 Threads | not started | |
@@ -558,3 +558,33 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 
 ### Gate P4 (2026-11-08)
 - **Passed.** An interrupted match resumes with the same result format (step 3); the port keeps its time at 100 ms (step 4: test, and the longest move 108 ms against 212 ms without strict timing); FFO #50–59 are all correct (step 5); the link check finds 0 broken links in Plans and docs (step 1, 200 files). The browser checks are not a gate condition and stay open until the phase 5 deploy. Phase 4 is done.
+
+## Phase 5: the 3.1 release
+
+### Final match 5: Egaroucid strict time at 100 ms (2026-11-08)
+- **Setup:** Stello as A against the Egaroucid port as B; 100 ms/move, hash bits 19/21, no books, `time-strict=on`, 590 starts × 2 colors, 12 workers, one thread per engine.
+- **Result:** Stello scored **878/1,180 points (74.4%)**, with 819 wins, 118 draws and 243 losses. The Egaroucid port scored **302/1,180 (25.6%)**, 243 wins, 118 draws and 819 losses. The port's score interval is **23.5–27.7%**, Elo **−185** (95% interval **−205 to −167**); mean disc margin was **−4.4 ± 0.4** for Egaroucid. Average/longest searched move times were 58/107 ms for Stello and 65/124 ms for Egaroucid. Wall time was **4m 57s**.
+- **Reports:** [Markdown](benchmark-results/match_p5-time-strict-100ms.md) and [JSON](benchmark-results/match_p5-time-strict-100ms.json). The git-ignored `.games.jsonl` contains the completed games for resume.
+- **Assessment:** Stello was stronger in this comparison. Egaroucid's longest move was within the step 4 adapter test's 175 ms ceiling; this match does not replace that targeted timing test.
+- **Next at the time:** final match 6, 500 ms against Egaroucid with strict time, only on the user's go. It is now recorded below.
+
+### Final match 6: Egaroucid strict time at 500 ms (2026-11-08)
+- **Setup:** Stello as A against the Egaroucid port as B; 500 ms/move, hash bits 19/21, no books, `time-strict=on`, 590 starts × 2 colors, 12 workers, one thread per engine.
+- **Result:** Stello scored **795.5/1,180 points (67.4%)**, with 719 wins, 153 draws and 308 losses. The Egaroucid port scored **384.5/1,180 (32.6%)**, with 308 wins, 153 draws and 719 losses. The port's score interval is **30.4–34.8%**, Elo **−126** (95% interval **−144 to −109**); mean disc margin was **−2.4 ± 0.3** for Egaroucid. Average/longest searched move times were 274/503 ms for Stello and 298/553 ms for Egaroucid. Wall time was **22m 47s**.
+- **Reports:** [Markdown](benchmark-results/match_p5-time-strict-500ms.md) and [JSON](benchmark-results/match_p5-time-strict-500ms.json). The git-ignored `.games.jsonl` contains the completed games for resume.
+- **Verification:** the JSON report agrees with all 1,180 saved games: 590 color-swapped pairs, Egaroucid's wins/draws/losses and points, and both longest-move times.
+- **Assessment:** Stello was stronger in this comparison. Egaroucid's longest measured move exceeded the nominal 500 ms limit by 53 ms.
+- **Next:** matches 1–4 against the separate 3.0 build below, after review and only on the user's go for each match.
+
+### The 3.0 comparison: separate native build (2026-11-08)
+- **Choice and build:** the user chose a second build rather than recreating `v30_search`. Tag `v3.0` resolves to commit `baa44e5a6212e8dfdb38013af180892ef6f0053b`. A detached worktree and Cargo target directory in the session folder produced the MSVC Release `stello-ffi` library with `cargo build --offline --locked --release -p stello-ffi`; it reports version **30000** and ABI **3**.
+- **Reference:** the uniquely named copy is `%USERPROFILE%\.copilot\session-state\8be3df44-900f-4cf9-92d6-f5232e93df67\files\v3.0-target\release\stello_engine_v30.dll`, SHA-256 `DC8BF6668DFC4FF4A695D71315F6F11B0646ACDA0B72DD89B89C61C39B583192`. It is temporary and outside the repository; do not commit it. The current development engine still reports version 30000 until the version bump in phase 5 step 2.
+- **Match side:** `engine=stello-lib` loads the separate ABI 3 library by absolute `lib` path and `sha256`, with its built-in evaluation and default search settings. It accepts `threads` and `hash-bits`, but no book or search switches. The hash and ABI are checked before play and when each worker loads the file; the report records the library version and hash. Resume requires the same side text and library bytes. This side is for `match` only; the benchmarks reject it rather than silently using another engine.
+- **Verification:** the tagged library reproduced the move, score, kind, depth and node count of all 100 positions in the [3.0 depth-10 reference](benchmark-results/v3.0-ref/midgame-depth10.json) and FFO #40–44 in the [3.0 solve reference](benchmark-results/v3.0-ref/ffo-40-49.json), while the current engine remained distinct in the same process. Checks also covered concurrent current/3.0 searches on one and eight threads, 12 one-thread and 2 eight-thread reference workers, timed search, cancellation and reuse on eight threads, hash reset, changed-path and changed-bytes resume rejection, and native-handle cleanup. All four CLI side configurations were checked with an intentionally invalid start count, stopping before a game log or game was created. The targeted Release tests passed **69/69** with `STELLO_V30_LIBRARY` set; without it, **61 passed and 8 tagged-build checks skipped**. Match-journal-only tests passed **5/5**, and the unchanged current-engine strict baseline passed **105/105**, using the same native binary as the benchmark.
+- **Status:** ready for review. The handoff has the match commands and estimates; no 3.0 match has been started. Each match still requires the user's go, a load check first, and no heavy work during play. Search code and baseline signatures were not changed.
+- **Review:**
+  - **Same call path on both sides.** The 3.1 side runs `StelloMatchPlayer` → `ComputerPlayer` → `SearchEngine`. Without a book, `ComputerPlayer` passes straight through, and `SearchEngine` creates the engine with `(hash bits, selective 1, -1, -1, no evaluation file)` and searches with no move restriction. `StelloLibraryMatchPlayer` makes the same native calls on the 3.0 library. Both sides get the step 6 warm-up, and `NewGame` clears both tables.
+  - **The library is checked before use:** its SHA-256, a file name different from the current engine's, and ABI 3. Its node-for-node agreement with the saved 3.0 references is the real proof that it is 3.0.
+  - **This is a better comparison than Gate P2's switch:** it plays the actual tag, against everything in 3.1, including item 9's counting.
+  - **Location:** the agent's session folder is deleted with the session, which has happened during this work. The reviewer copied the DLL, with the same SHA-256, to `Stello.Rust\target\v3.0-reference\stello_engine_v30.dll`, which is git-ignored, and the handoff's `$reference` now points there.
+  - **The port matches (5 and 6) are done:** Stello scored 74.4 % at 100 ms and 67.4 % at 500 ms against the port with `time-strict=on`. The port's longest move was 124 ms and 553 ms.

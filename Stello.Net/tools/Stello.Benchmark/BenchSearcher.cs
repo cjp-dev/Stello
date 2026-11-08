@@ -54,7 +54,7 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                 // --side: the search switches of a match side, e.g. "order=4,killers=off".
                 if (options.Text("side") is { } sideText)
                 {
-                    MatchSide side = MatchCommands.ParseSide($"depth=1,{sideText}");
+                    MatchSide side = MatchCommands.ParseSide($"depth=1,{sideText}", allowLibrary: false);
                     searchOptions = (side.Options ?? SearchOptions.Default) with { Pattern = searchOptions.Pattern ?? side.Options?.Pattern };
                     limitText += $", {sideText}";
                 }

@@ -39,23 +39,27 @@ A side is a short list of `key=value` settings, separated by commas. It needs ex
 
 | Key | Meaning | Engines |
 |---|---|---|
-| `engine=stello-v1` | the engine: `stello` (Stello 2.0, the default), `stello-v1` (Stello 1) or `egaroucid` ([below](#comparing-engines)) | all |
+| `engine=stello-v1` | the engine: `stello` (the current Rust engine), `stello-v2` (Stello 2.0), `stello-v1` (Stello 1), `stello-lib` (a separate native library) or `egaroucid` ([below](#comparing-engines)) | all |
 | `time-ms=100` | 100 ms per move (`TimePerMove`) | all |
 | `game-s=60` | 60 s for the whole game (`TimePerGame`); the side's clock runs down during the game, as in the app | all |
-| `depth=8` | 8 plies per move (`FixedDepth`) | Stello 2.0, Stello 1 |
+| `depth=8` | 8 plies per move (`FixedDepth`) | all Stello engines |
 | `level=21` | an Egaroucid level from 1 to 60 instead of a depth ([chapter 18](18-the-egaroucid-port.md#levels)) | Egaroucid |
 | `hash-bits=19` | the size of each hash table: 2<sup>19</sup> slots (the app's default, 10–26). Egaroucid's table has 2<sup>21</sup> slots by default, the same memory, and at most 2<sup>25</sup> | all |
-| `book=on` | use the opening book (off by default): Stello 2.0's [opening-book.txt](../Stello.Net/Book/opening-book.txt) ([chapter 10](10-opening-book.md)), Stello 1's [opening-book-stello1.txt](../Stello.Net/Book/opening-book-stello1.txt) or Egaroucid's `book.egbk3` | all |
-| `book-file=<file>` | another text book; turns the book on | Stello 2.0, Stello 1 |
+| `book=on` | use the opening book (off by default): Stello's [opening-book.txt](../Stello.Net/Book/opening-book.txt) ([chapter 10](10-opening-book.md)), Stello 1's [opening-book-stello1.txt](../Stello.Net/Book/opening-book-stello1.txt) or Egaroucid's `book.egbk3` | except `stello-lib` |
+| `lib=<absolute path>` | separately built Stello native library, with a different file name from the current engine | `stello-lib` |
+| `sha256=<64 hex digits>` | expected SHA-256 of that library | `stello-lib` |
+| `book-file=<file>` | another text book; turns the book on | Stello except `stello-lib` |
 | `book-acc=0` | Egaroucid's book accuracy; 0 plays one of the best book moves | Egaroucid |
 | `seed=1` | seeds Egaroucid's choice among equal book moves, anew every game | Egaroucid |
 | `time-strict=on` | include the book check and clog search in the time limit (default on in matches; use `off` for the C++-parity timing) | Egaroucid |
-| `eval=<file>` | another pattern evaluation file; `default` is the built-in one ([chapter 04](04-evaluation.md#the-file)) | Stello 2.0 |
-| `soft-pct=80` | the soft time limit in per cent of the hard limit: no new iteration after it (default two thirds, [chapter 09](09-time-control.md#how-the-search-uses-the-limits)) | Stello 2.0 |
-| `mpc=100` | Multi-ProbCut's t × 100: a cut needs the shallow search to be t standard deviations outside the window (default 100, [chapter 06](06-midgame-search.md#selective-search)) | Stello 2.0 |
+| `eval=<file>` | another pattern evaluation file; `default` is the built-in one ([chapter 04](04-evaluation.md#the-file)) | current Stello |
+| `soft-pct=80` | the soft time limit in per cent of the hard limit: no new iteration after it (default two thirds, [chapter 09](09-time-control.md#how-the-search-uses-the-limits)) | current Stello |
+| `mpc=100` | Multi-ProbCut's t × 100: a cut needs the shallow search to be t standard deviations outside the window (default 100, [chapter 06](06-midgame-search.md#selective-search)) | current Stello |
 | `name=new` | the name in the report and in the file name | all |
 
-Since Stello 3.0, `engine=stello` is the Rust engine and `engine=stello-v2` the frozen Stello 2.0 ([chapter 25](25-phases-0-4-the-engine-in-rust.md)). The Rust engine also accepts `threads=N` (1–256, default 1) and `ybwc=on|off` (default on). The match chooses its default workers from the physical cores and both sides' thread counts ([Timing](#timing); [chapter 26](26-phases-5-9-threads.md#threads-through-every-layer)). `mid-bench` and `solve-bench` take `--threads N` too.
+Since Stello 3.0, `engine=stello` is the Rust engine and `engine=stello-v2` the frozen Stello 2.0 ([chapter 25](25-phases-0-4-the-engine-in-rust.md)). `engine=stello` also accepts `threads=N` (1–256, default 1) and `ybwc=on|off` (default on). The match chooses its default workers from the physical cores and both sides' thread counts ([Timing](#timing); [chapter 26](26-phases-5-9-threads.md#threads-through-every-layer)). `mid-bench` and `solve-bench` take `--threads N` too.
+
+For a match against a separately built Stello ABI 3 library, use a side such as `engine=stello-lib,lib=<absolute path>,sha256=<hash>,time-ms=100,threads=1`. Copy the library under a different file name from `stello_engine.dll` (or `libstello_engine.so`/`.dylib`) to avoid a loader-name collision with the current engine. The file hash and ABI are checked before play and when each worker loads it; the report records the library version and hash. A resumed match must use the same side text and library bytes. This side supports the built-in evaluation and default search settings without a book; `threads` and `hash-bits` work, but books and search switches are rejected. It is available for matches only, not for `mid-quality`, `mid-bench` or `solve-bench`.
 
 For example `--a time-ms=100,name=old --b time-ms=200,name=new`. Neither side uses the opening book unless it has `book=on`, so the games test the search and the evaluation. A key that does not belong to the side's engine is an error.
 
@@ -120,12 +124,14 @@ Stello.Benchmark mid-bench --compare before.json      (with the new code)
 
 ## Comparing engines
 
-Since the Egaroucid port ([chapter 18](18-the-egaroucid-port.md)), the tool can measure three engines. A match side chooses one with the key `engine=`, `solve-bench` and `mid-bench` with `--engine`, and `mid-quality` takes a list in `--engines`:
+The tool can measure several engines. A match side chooses one with `engine=`, `solve-bench` and `mid-bench` with `--engine`, and `mid-quality` takes a list in `--engines`. The separately loaded `stello-lib` is a match side only:
 
 | Value | Engine |
 |---|---|
-| `stello` (the default) | Stello 2.0, the engine in `Stello.Engine` that the apps use ([chapter 01](01-overview.md)) |
+| `stello` (the default) | the current Rust engine through `Stello.Engine`, which the apps use ([chapter 01](01-overview.md)) |
+| `stello-v2` | the frozen C# Stello 2.0 engine |
 | `stello-v1` | Stello 1: the engine before 2.0, frozen in `Stello.Engine.V1` as the baseline ([Stello 1 documentation](stello-1/README.md)) |
+| `stello-lib` | a separate Stello ABI 3 native library, selected by absolute path and SHA-256 |
 | `egaroucid` | the C# port of Egaroucid in `Egaroucid.Engine`; it needs Egaroucid's resources ([chapter 18](18-the-egaroucid-port.md#running-it)) |
 
 Three commands compare the engines part by part:

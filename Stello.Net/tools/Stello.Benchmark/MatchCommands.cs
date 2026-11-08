@@ -145,10 +145,11 @@ internal static class MatchCommands
     /// <summary>
     /// A side such as <c>time-ms=100</c>, <c>depth=8</c>, <c>game-s=60,hash-bits=20,name=new,opt=ybwc=off</c> or
     /// <c>engine=egaroucid,time-ms=100,book=on</c>. The engines are <c>stello</c> (the engine being developed, the default),
-    /// <c>stello-v2</c> (Stello 2.0's C# engine, frozen), <c>stello-v1</c> (Stello 1, frozen) and <c>egaroucid</c> (the port).
+    /// <c>stello-v2</c> (Stello 2.0's C# engine, frozen), <c>stello-v1</c> (Stello 1, frozen),
+    /// <c>stello-lib</c> (a separate native library) and <c>egaroucid</c> (the port).
     /// </summary>
     /// <exception cref="ArgumentException">The text is not a valid side.</exception>
-    public static MatchSide ParseSide(string text)
+    public static MatchSide ParseSide(string text, bool allowLibrary = true)
     {
         TimeControlMode? mode = null;
         int amount = 0;
@@ -160,6 +161,8 @@ internal static class MatchCommands
         string? name = null;
         string? evalFile = null;
         string? bookFile = null;
+        string? libraryFile = null;
+        string? librarySha256 = null;
         int? softTimePercent = null;
         int? probCutPercent = null;
         int threads = 1;
@@ -173,7 +176,11 @@ internal static class MatchCommands
             string[] keyValue = part.Split('=', 2, StringSplitOptions.TrimEntries);
             string key = keyValue[0];
             string value = keyValue.Length == 2 ? keyValue[1] : throw new ArgumentException($"Expected key=value in the side \"{text}\": {part}");
-            keys.Add(key);
+            if (!keys.Add(key) && (key is "lib" or "sha256"))
+            {
+                throw new ArgumentException($"{key} is given more than once in the side \"{text}\".");
+            }
+
             switch (key)
             {
                 case "engine":
@@ -182,9 +189,16 @@ internal static class MatchCommands
                         "stello" => EngineKind.Stello,
                         "stello-v1" => EngineKind.StelloV1,
                         "stello-v2" => EngineKind.StelloV2,
+                        "stello-lib" => EngineKind.StelloLibrary,
                         "egaroucid" => EngineKind.Egaroucid,
-                        _ => throw new ArgumentException($"engine must be stello, stello-v2, stello-v1 or egaroucid in the side \"{text}\"."),
+                        _ => throw new ArgumentException($"engine must be stello, stello-v2, stello-v1, stello-lib or egaroucid in the side \"{text}\"."),
                     };
+                    break;
+                case "lib":
+                    libraryFile = value;
+                    break;
+                case "sha256":
+                    librarySha256 = value;
                     break;
                 case "time-ms":
                     SetLimit(TimeControlMode.TimePerMove, Number(key, value, 1, 3_600_000));
@@ -256,15 +270,40 @@ internal static class MatchCommands
         }
 
         bool egaroucid = engine == EngineKind.Egaroucid;
+        bool library = engine == EngineKind.StelloLibrary;
         if (mode is null)
         {
             throw new ArgumentException($"The side \"{text}\" needs time-ms, game-s, {(egaroucid ? "level" : "depth")}.");
         }
 
-        // Only the Rust engine searches with threads; the frozen engines and the Egaroucid port use 1.
-        if (keys.Contains("threads") && engine != EngineKind.Stello)
+        if (library)
         {
-            throw new ArgumentException($"threads is only for engine=stello (side \"{text}\").");
+            if (!allowLibrary)
+            {
+                throw new ArgumentException("engine=stello-lib is only supported by match --a and --b.");
+            }
+
+            string? unsupported = new[] { "book-file", "book-acc", "seed", "time-strict", "eval", "soft-pct", "mpc", "selective", "ybwc", "opt" }
+                .FirstOrDefault(keys.Contains);
+            if (unsupported is not null || useBook)
+            {
+                throw new ArgumentException($"engine=stello-lib supports no book or search switches (side \"{text}\").");
+            }
+
+            if (string.IsNullOrWhiteSpace(libraryFile) || string.IsNullOrWhiteSpace(librarySha256))
+            {
+                throw new ArgumentException($"engine=stello-lib needs lib and sha256 in the side \"{text}\".");
+            }
+        }
+        else if (keys.Contains("lib") || keys.Contains("sha256"))
+        {
+            throw new ArgumentException($"lib and sha256 are only for engine=stello-lib (side \"{text}\").");
+        }
+
+        // Only Rust engines search with threads; the frozen C# engines and Egaroucid port use 1.
+        if (keys.Contains("threads") && engine is not (EngineKind.Stello or EngineKind.StelloLibrary))
+        {
+            throw new ArgumentException($"threads is only for engine=stello or stello-lib (side \"{text}\").");
         }
 
         if (keys.Contains("ybwc") && engine != EngineKind.Stello)
@@ -317,6 +356,7 @@ internal static class MatchCommands
             {
                 EngineKind.StelloV1 => new MatchSide(name ?? text, limits, bits, CreatePlayer: () => new V1MatchPlayer(bits, book), Description: $"Stello 1, {description}"),
                 EngineKind.StelloV2 => new MatchSide(name ?? text, limits, bits, CreatePlayer: () => new Stello.Engine.V2.V2MatchPlayer(bits, book), Description: $"Stello 2.0 (C#), {description}"),
+                EngineKind.StelloLibrary => StelloLibrarySide(name ?? text, limits, bits, description, libraryFile!, librarySha256!),
                 _ => StelloSide(name ?? text, limits, bits, book, description, evalFile, softTimePercent, probCutPercent, selective, ybwc),
             };
         }
@@ -387,6 +427,16 @@ internal static class MatchCommands
         "off" => false,
         _ => throw new ArgumentException($"{key} must be on or off in the side \"{side}\"."),
     };
+
+    private static MatchSide StelloLibrarySide(string name, SearchLimits limits, int bits, string description, string path, string sha256)
+    {
+        using StelloLibrary library = StelloLibrary.Open(path, sha256);
+        string fullPath = library.Path;
+        string hash = library.Sha256;
+        return new MatchSide(name, limits, bits,
+            CreatePlayer: () => new StelloLibraryMatchPlayer(fullPath, hash, bits),
+            Description: $"Stello library {library.VersionText}, {description}, SHA-256 {hash}");
+    }
 
     /// <summary>A Stello side with its evaluation file and search switches.</summary>
     private static MatchSide StelloSide(string name, SearchLimits limits, int bits, OpeningBook? book, string description,
@@ -497,6 +547,9 @@ internal enum EngineKind
 
     /// <summary>Stello.Engine.V2: Stello 2.0's C# engine, frozen as the baseline for Stello 3.0.</summary>
     StelloV2,
+
+    /// <summary>A separately loaded Stello native library.</summary>
+    StelloLibrary,
 
     /// <summary>Egaroucid.Engine: the port of Egaroucid 7.9.</summary>
     Egaroucid,
