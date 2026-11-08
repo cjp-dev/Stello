@@ -39,9 +39,9 @@ The audit covered:
 - **Tooling Implementation:** Created [`scratch/audit_stello_snippets.mjs`](../scratch/audit_stello_snippets.mjs), a Node.js verification tool that scans all markdown files, parses frontmatter and markdown structures, catalogs all fenced code blocks with line coordinates, validates language specifiers, and checks for syntax errors or double-numbering artifacts.
 - **Defects Identified:**
   1. *Bare Fenced Code Blocks (10 instances):* Code blocks without language tags were identified in:
-     - [`docs/15-gui-and-settings.md`](../docs/15-gui-and-settings.md): Lines 119, 222, 261.
+     - [`docs/15-gui-and-settings.md`](../docs/stello-1/15-gui-and-settings.md): Lines 119, 222, 261.
      - [`Plans/general-game-gui-specification.md`](general-game-gui-specification.md): Lines 51, 81, 134, 219, 276, 347, 424.
-  2. *Double-Numbering Artifact:* In [`docs/15-gui-and-settings.md`](../docs/15-gui-and-settings.md) (Move History panel), lines read `1. 1. d3`, `2. 2. c5` through `6. 6. f4` instead of standard single numbering (`1. d3`, `2. c5` ... `6. f4`).
+  2. *Double-Numbering Artifact:* In [`docs/15-gui-and-settings.md`](../docs/stello-1/15-gui-and-settings.md) (Move History panel), lines read `1. 1. d3`, `2. 2. c5` through `6. 6. f4` instead of standard single numbering (`1. d3`, `2. c5` ... `6. f4`).
 - **Remediation:**
   - Added explicit ` ```text ` specifiers to all 10 bare blocks.
   - Corrected move history list numbering to single ordinal numbers.
@@ -57,14 +57,14 @@ The audit covered:
     $$r_1 = m \land (o \ll s), \quad r_{k+1} = r_k \lor \big(m \land (r_k \ll s)\big) \ (k=1\dots 5), \quad \text{moves} = (r_6 \ll s) \land e$$
   - Directional masks verified: `NotColumnA` (`0xFEFE_FEFE_FEFE_FEFEUL`), `NotColumnH` (`0x7F7F_7F7F_7F7F_7F7FUL`), `InnerColumns` (`0x7E7E_7E7E_7E7E_7E7EUL`), `InnerRows` (`0x00FF_FFFF_FFFF_FF00UL`), and `Inner` (`InnerColumns & InnerRows`).
 - **Documentation Update:**
-  - Enhanced [`docs/03-rules-and-move-generation.md`](../docs/03-rules-and-move-generation.md) to explicitly document the Edax broadword shift lineage.
+  - Enhanced [`docs/03-rules-and-move-generation.md`](../docs/stello-1/03-rules-and-move-generation.md) to explicitly document the Edax broadword shift lineage.
   - Updated [`docs/17-references.md`](../docs/stello-1/17-references.md) under Chapter 02/03 to cite Richard Delorme's `board.c`.
 - **Perft Validation:** Re-verified perft node counts against Aart Bik's standard test suite: Depth 1 = 4, Depth 2 = 12, Depth 3 = 56, Depth 4 = 244, Depth 5 = 1,396, Depth 6 = 8,200, Depth 7 = 55,092, Depth 8 = 390,216.
 
 ---
 
 ### Phase 3: Positional Evaluation, Edge Tables & Stability (Chapter 04)
-- **Code Inspected:** [`Evaluator.cs`](../Stello.Net/Stello.Engine/Evaluation/Evaluator.cs), [`EdgeTables.cs`](../Stello.Net/Stello.Engine/Evaluation/EdgeTables.cs), [`Eval.cpp`](../Stello%20C++/BRAIN/Eval.cpp), [`Kanter.cpp`](../Stello%20C++/BRAIN/Kanter.cpp).
+- **Code Inspected:** [`Evaluator.cs`](../Stello.Net/Stello.Engine.V1/Evaluation/Evaluator.cs), [`EdgeTables.cs`](../Stello.Net/Stello.Engine.V1/Evaluation/EdgeTables.cs), [`Eval.cpp`](../Stello%20C++/BRAIN/Eval.cpp), [`Kanter.cpp`](../Stello%20C++/BRAIN/Kanter.cpp).
 - **Evaluation Formulations Verified:**
   - Base edge score: $S_0(e) = \sigma \sum_{j=0}^{3} \text{Stability}[e_j]$.
   - Probability blending: $\text{propc} = (64 - \text{discs}) \times 1000 / 64 / 2 + 500$.
@@ -83,7 +83,7 @@ The audit covered:
 ---
 
 ### Phase 4: Move Ordering & Midgame Search (Chapters 05 & 06)
-- **Code Inspected:** [`MoveOrdering.cs`](../Stello.Net/Stello.Engine/Search/MoveOrdering.cs), [`SearchEngine.cs`](../Stello.Net/Stello.Engine/SearchEngine.cs).
+- **Code Inspected:** [`MoveOrdering.cs`](../Stello.Net/Stello.Engine.V1/Search/MoveOrdering.cs), [`SearchEngine.cs`](../Stello.Net/Stello.Engine.V1/SearchEngine.cs).
 - **Move Ordering Weights Verified:**
   - Static square scores ($8\times 8$ matrix): corners `127`, X-squares `-64`, C-squares `-32`, edge squares `22`/`11`, interior `1`/`0`/`-5`/`-8`.
   - Dynamic corner neighbor adjustments (`SquareScores`):
@@ -103,7 +103,7 @@ The audit covered:
 ---
 
 ### Phase 5: Transposition Tables, Endgame Solver & Time Control (Chapters 07, 08 & 09)
-- **Code Inspected:** [`TranspositionTable.cs`](../Stello.Net/Stello.Engine/Search/TranspositionTable.cs), [`SearchEngine.cs`](../Stello.Net/Stello.Engine/SearchEngine.cs), [`TimeControl.cs`](../Stello.Net/Stello.Engine/Search/TimeControl.cs).
+- **Code Inspected:** [`TranspositionTable.cs`](../Stello.Net/Stello.Engine.V1/Search/TranspositionTable.cs), [`SearchEngine.cs`](../Stello.Net/Stello.Engine.V1/SearchEngine.cs), [`TimeControl.cs`](../Stello.Net/Stello.Engine.V1/Search/TimeControl.cs).
 - **Transposition Table Layout & Logic Verified:**
   - 24-byte `Entry` record struct layout: `ulong Own` (8B), `ulong Opponent` (8B), `short Value` (2B), `sbyte Depth` (1B), `Bound Bound` (1B), `sbyte Move` (1B), `byte Tag` (1B), plus 2 bytes padding to 8-byte alignment.
   - Two-tier replacement policy: Entry 0 = depth-preferred (retains deeper results), Entry 1 = always-replaced (stores latest shallow searches).
@@ -147,7 +147,7 @@ The audit covered:
 ---
 
 ### Phase 7: App Integration, GUI Architecture & Blueprint (Chapters 14, 15 & GUI Spec)
-- **Code Inspected:** [`MainViewModel.cs`](../Stello.Net/Stello.App/ViewModels/MainViewModel.cs), [`LocalEngineHost.cs`](../Stello.Net/Stello.App/Services/LocalEngineHost.cs), [`WebEngineHost.cs`](../Stello.Net/Stello.Web/Services/WebEngineHost.cs), [`EngineWorker.cs`](../Stello.Net/Stello.Web/EngineWorker.cs).
+- **Code Inspected:** [`MainViewModel.cs`](../Stello.Net/Stello.App/ViewModels/MainViewModel.cs), [`LocalEngineHost.cs`](../Stello.Net/Stello.App/Services/LocalEngineHost.cs), [`WebEngineHost.cs`](../Stello.Net/Stello.Web/Services/WebEngineHost.cs), `EngineWorker.cs` (removed with the C# web worker; now [`engine-worker.js`](../Stello.Net/Stello.Web/wwwroot/js/engine-worker.js)).
 - **Architecture Verified:**
   - Clean MVVM pattern utilizing `CommunityToolkit.Mvvm`.
   - Desktop `Task.Run` background execution vs Blazor WebAssembly Web Worker execution (`EngineWorker.js`).
@@ -163,23 +163,23 @@ The audit covered:
   - When `Stello porting documentation.md` was moved into `Plans/` earlier during preparation for the review, all relative links in `docs/*.md` that pointed to `../../Stello%20porting%20documentation.md` became broken.
   - Systematic search identified 12 impacted files.
   - **Remediation:** Updated all 12 files to reference the new relative path `../../Plans/Stello%20porting%20documentation.md`:
-    1. [`docs/01-overview.md`](../docs/01-overview.md#L236)
-    2. [`docs/02-board-and-squares.md`](../docs/02-board-and-squares.md#L125)
-    3. [`docs/04-evaluation.md`](../docs/04-evaluation.md#L276)
-    4. [`docs/05-move-ordering.md`](../docs/05-move-ordering.md#L92)
-    5. [`docs/06-midgame-search.md`](../docs/06-midgame-search.md#L200)
-    6. [`docs/07-transposition-table.md`](../docs/07-transposition-table.md#L156-L158)
-    7. [`docs/08-endgame-solver.md`](../docs/08-endgame-solver.md#L154-L155)
-    8. [`docs/09-time-control.md`](../docs/09-time-control.md#L141)
-    9. [`docs/10-opening-book.md`](../docs/10-opening-book.md#L233)
-    10. [`docs/11-book-learning.md`](../docs/11-book-learning.md#L158)
-    11. [`docs/14-app-integration.md`](../docs/14-app-integration.md#L242)
-    12. [`docs/README.md`](../docs/README.md#L11-L65)
+    1. [`docs/01-overview.md`](../docs/stello-1/01-overview.md#design-principles)
+    2. [`docs/02-board-and-squares.md`](../docs/stello-1/02-board-and-squares.md#design-notes)
+    3. [`docs/04-evaluation.md`](../docs/stello-1/04-evaluation.md#design-notes)
+    4. [`docs/05-move-ordering.md`](../docs/stello-1/05-move-ordering.md#design-notes)
+    5. [`docs/06-midgame-search.md`](../docs/stello-1/06-midgame-search.md#design-notes)
+    6. [`docs/07-transposition-table.md`](../docs/stello-1/07-transposition-table.md#design-notes)
+    7. [`docs/08-endgame-solver.md`](../docs/stello-1/08-endgame-solver.md#design-notes)
+    8. [`docs/09-time-control.md`](../docs/stello-1/09-time-control.md#design-notes)
+    9. [`docs/10-opening-book.md`](../docs/stello-1/10-opening-book.md#design-notes)
+    10. [`docs/11-book-learning.md`](../docs/stello-1/11-book-learning.md#design-notes)
+    11. [`docs/14-app-integration.md`](../docs/stello-1/14-app-integration.md#design-notes)
+    12. [`docs/README.md`](../docs/stello-1/README.md#chapters)
   - Re-checked with PowerShell regex; zero broken links remain.
 - **Glossary Enhancements ([`docs/16-glossary.md`](../docs/stello-1/16-glossary.md)):**
   - Added definition for `Dumb7Fill`: "Broadword parallel bitboard fill technique (Delorme, Edax) used for directional ray casting in move generation."
   - Added definition for `Frontier disc`: "A disc adjacent to at least one empty square; potential mobility measures empty squares bordering opponent frontier discs."
-- **Master Index & Reading Paths ([`docs/README.md`](../docs/README.md)):**
+- **Master Index & Reading Paths ([`docs/README.md`](../docs/stello-1/README.md)):**
   - Verified reading paths (Full, Search, Opening Book, Tuning, UI Architecture).
   - Confirmed all 17 chapter links and Mermaid execution pipeline.
 

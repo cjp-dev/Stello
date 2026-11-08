@@ -151,7 +151,7 @@ Ported in dependency order. Each step gets a parity check against C# before the 
 
 ## Part 2: parallel search
 
-Modelled on Egaroucid ([Egaroucid-main/src/engine](../Egaroucid-main/src/engine)):
+Modelled on Egaroucid ([Egaroucid-main/src/engine](https://github.com/Nyanyan/Egaroucid/tree/main/src/engine)):
 - **`ai.hpp`:** a Lazy-SMP-like set of helper searches while the main iterative deepening runs at depths up to 10. Helper *i* searches deeper (main depth + ctz(i + 1)) or with more selectivity, and fills the shared hash table.
 - **`ybwc.hpp`:** Young Brothers Wait Concept. After the first move of a node has been searched, the remaining moves may be split to idle threads.
 - **`thread_pool.hpp` / `thread_pool_with_idling_manager.hpp`:** a fixed pool, with tasks only pushed while threads are idle.

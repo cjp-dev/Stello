@@ -152,25 +152,26 @@ Each item: read the code and decide whether it is a bug or a harmless quirk. If 
 - **Step 7 done (2026-11-08):** the Release publish loads in headless Chromium at 844×390 with `crossOriginIsolated` true, no browser errors, and no horizontal overflow. The page is 844×676; the side panels below the first viewport are accessible by scrolling. No CSS change was needed. Release solution build has 0 warnings/errors; tests pass: Stello.Engine 489/489, Egaroucid 42/42, Stello.Net.Tests 115/115. Chapters 14/15 describe both apps. Gate P3 now awaits the user's WPF check.
 
 ## Phase 4: tools and verification gaps
-1. **Matches save and resume** (`tools/Stello.Benchmark/MatchCommands.cs`): each finished game is appended to `<name>.games.jsonl`. The same command with `--resume` checks that the settings and start positions are the same and plays only the missing games. The `.md`/`.json` are written at the end as now.
-2. **Matches with threads:** the default `--workers` becomes max(1, cores / max threads of the two sides), so workers × threads ≤ cores without setting it by hand.
-3. **The Egaroucid port's time** (`Egaroucid.Engine`: `ClogSearch.cs:61`, `Ai.cs:107,128`):
+1. **Old plan links (done 2026-11-08):** repaired the 20 broken links in `Plans/Opening book improvment.md`, 86 in `Plans/stello-exhaustive-docs-and-code-audit-plan.md` and 18 in its findings. Historical references use the Stello 1 archive and frozen V1 source; the removed C# worker is plain text with a replacement note. The old GUI specification is now a pointer to `external/GameShell/docs/general-game-gui-specification.md`. The Plans and docs file/anchor checks both find 0 broken links.
+2. **Default match workers:** the default `--workers` becomes max(1, cores / max threads of the two sides), so workers × threads ≤ cores without setting it by hand. An explicit `--workers` still wins; test 1 and 8 threads per side.
+3. **Matches save and resume** (`tools/Stello.Benchmark/MatchCommands.cs`): each finished game is appended to `<name>.games.jsonl`. The same command with `--resume` checks the sides, limits, start positions and seed, then plays only the missing games. The `.md`/`.json` are written at the end as now. Test interruption/resume at a tiny depth and rejection of mismatched settings; do not run real matches.
+4. **The Egaroucid port's time** (`Egaroucid.Engine`: `ClogSearch.cs:61`, `Ai.cs:107,128`):
    - a time limit for the clog search, and a book exit within the move's time, behind the side key `time-strict=on|off`;
    - on by default in matches, off for the parity tests;
    - a 100 ms check that the port no longer overruns its time.
-4. **FFO #50–59 in `solve-bench`** (planned in the port, never run), with Egaroucid C++ times for comparison.
-5. **Platform checks, by the user and recorded:**
+5. **FFO #50–59 in `solve-bench`** (planned in the port, never run), with Egaroucid C++ times for comparison. Measure #50 alone to estimate, then give a numbered list before the long solves; run them only on the user's go.
+6. **Side A's longer longest move:** investigate the start-up/order cost in the match tool noted at Gate P2. Fix it in the tool, not the engine, and verify with a short 500 ms, 2-worker, roughly 20-game match only on the user's go.
+7. **Platform checks, by the user and recorded:**
    - on Windows, the Stello.Net.Tests run, `cargo test` with MSVC, and a Stello.Web build with the nightly (the threaded package);
    - Firefox and WebKit with Playwright (nested workers, shared memory, fallback), if the browsers can be installed; otherwise the user checks them by hand.
-6. **Old plan files:**
-   - fix the broken links in `Plans/Opening book improvment.md`, `Plans/stello-exhaustive-docs-and-code-audit-plan.md`/`-findings.md` and `Plans/general-game-gui-specification.md`;
-   - replace the old spec copy with a pointer to `external/GameShell/docs/general-game-gui-specification.md`.
+
+**Progress:** step 1 is done; the link check finds 0 broken links in Plans and docs, the Release build has 0 warnings/errors, and the .NET tests pass 489/489, 42/42 and 115/115. See the [step 1 findings](making-stello-3-1-findings.md#step-1-old-plan-links-2026-11-08). Step 2 is next.
 
 **Gate P4:**
 - a match interrupted on purpose resumes and gives the same result format;
 - the port meets its time at 100 ms;
 - FFO #50–59 are all correct;
-- the link check finds 0 broken links in `Plans/` too.
+- the link check finds 0 broken links in both `Plans/` and `docs/`.
 
 ## Phase 5: the 3.1 release
 - **The final matches** (a numbered list with estimates, each on the user's go):
@@ -293,3 +294,4 @@ The order puts speed first (it changes no nodes), then the threads, the search, 
 - **Phase 1: done (2026-11-06).** Items 1–6 fixed: an aborted solve reported as Exact, the natural delay charged to the computer clock, the clock restore after Back and Forward, the endgame soft limit (both gate matches not worse; its A/B switch removed after approval), web worker startup retry and thread reporting plus late progress reports (review fixed a restart loop on a failed pool worker), and the doc errors. Gate P1: item 1 checked in the web app against live 3.0, item 2 checked by the user in WPF.
 - **Phase 2: done (2026-11-07).** Items 1 and 3a–5 are kept; 2 and 6–8 needed no fix; item 9 unified counting. The combined kept search fixes passed Gate P2 at 500 ms and 2 s without evidence of a loss. The temporary comparison switch is removed again (ABI 3).
 - **Phase 3: done (2026-11-08).** Steps 1–7 are done: the shared view-model foundation, Computer vs Computer in both apps, the full WPF alignment (layout, board styles, 3D discs and flips, sound, Help), the Stello 1 archive decision (it stays on GitHub) and the mobile landscape check. Gate P3 passed: Release build with 0 warnings, Stello.Net.Tests 115/115, engine 489/489, Egaroucid 42/42, Node 15/15, the headless Chromium check at 844×390, docs 14/15 for both apps, and the user's WPF check on Windows (2026-11-08).
+- **Phase 4: in progress (2026-11-08).** Step 1, old plan links, is done. Plans and docs have 0 broken file/anchor links; the shared GUI specification has one source in GameShell. Default match workers (step 2) is next; the remaining tools and verification work and Gate P4 are not done.

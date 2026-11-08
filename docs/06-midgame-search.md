@@ -372,8 +372,8 @@ See [Stello porting documentation.md](../Plans/Stello%20porting%20documentation.
 | [Search/SearchOptions.cs](../Stello.Net/Stello.Engine/Search/SearchOptions.cs) | The switches for experiments, as the tools set them: `Pattern`, `SoftTimePercent`, `Selective`, `ProbCutPercent` |
 | [SearchLimits.cs](../Stello.Net/Stello.Engine/SearchLimits.cs), [SearchResult.cs](../Stello.Net/Stello.Engine/SearchResult.cs) | The C# limits, `SearchInfo`, `SearchResult`, `ScoreKind` |
 | [MpcCommand.cs](../Stello.Net/tools/Stello.Trainer/MpcCommand.cs) | The trainer's `mpc` command: the data and the fit of Multi-ProbCut's error model |
-| Egaroucid: [multi_probcut.hpp](../Egaroucid-main/src/engine/multi_probcut.hpp) | The original Multi-ProbCut that `try_probcut` follows |
-| Egaroucid: [ai.hpp](../Egaroucid-main/src/engine/ai.hpp), [ybwc.hpp](../Egaroucid-main/src/engine/ybwc.hpp), [thread_pool.hpp](../Egaroucid-main/src/engine/thread_pool.hpp) | The Lazy SMP helpers, YBWC and the thread pool that Stello's follow |
+| Egaroucid: [multi_probcut.hpp](https://github.com/Nyanyan/Egaroucid/blob/main/src/engine/multi_probcut.hpp) | The original Multi-ProbCut that `try_probcut` follows |
+| Egaroucid: [ai.hpp](https://github.com/Nyanyan/Egaroucid/blob/main/src/engine/ai.hpp), [ybwc.hpp](https://github.com/Nyanyan/Egaroucid/blob/main/src/engine/ybwc.hpp), [thread_pool.hpp](https://github.com/Nyanyan/Egaroucid/blob/main/src/engine/thread_pool.hpp) | The Lazy SMP helpers, YBWC and the thread pool that Stello's follow |
 | C++: [Minmax.cpp](../Stello%20C++/BRAIN/Minmax.cpp), [Kontrol.cpp](../Stello%20C++/BRAIN/Kontrol.cpp) | `findmax`, `findmax1`, `findmax2`, `zero_findmax`, `getcomputer` |
 | C# 2.0 (frozen): [Stello.Engine.V2/SearchEngine.cs](../Stello.Net/Stello.Engine.V2/SearchEngine.cs) | The C# original and a fixed reference for the Rust search ([chapter 25](25-phases-0-4-the-engine-in-rust.md)) |
 

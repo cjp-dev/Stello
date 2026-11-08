@@ -45,7 +45,7 @@ The plan is **[Plans/making-stello-3-1-plan.md](../making-stello-3-1-plan.md)**,
   | 8. The Multi-ProbCut shallow search uses the hash table at the same ply | — | harmless, no fix: entries keep their real depth; turning the shallow stores off cost +4.7 % nodes (depth 10) and +6.2 % (depth 12) |
   | 9. Counting: one `count_node` path with the abort check every 1,024 nodes; terminal scores count as evaluations | `bbeea17` | kept, no match (statistics and reachable abort checks); FFO #40–44 counted nodes +1.23 % (93,697,164), midgame unchanged; solver about 1.4 % slower, midgame unchanged |
 
-## 3. Done: phase 3, the apps (Gate P3 passed 2026-11-08)
+## 3. Phase 3 done; phase 4 in progress
 Phase 3 runs in seven steps. The Windows agent does one step at a time and stops; this session reviews and commits each step, and the user starts the next step.
 1. The two score-display tests: done.
 2. Done: the shared foundation in Stello.App (see the [phase 3 findings](../making-stello-3-1-findings.md#step-2-shared-app-foundation-2026-11-07)); MainViewModel notifications, active-player flags and paired history rows, one transposition-table choice list, and shared appearance/sound preferences.
@@ -61,6 +61,10 @@ Gate P2 (done):
 - All kept phase 2 fixes (items 1, 3a, 4 and 5) were tested together against 3.0 using the temporary `v30_search` switch.
 - At 500 ms, 3.1 scored 51.1% (95% interval 49.5–52.8, +8 Elo) over 1,180 games; at 2 s it scored 49.8% (47.9–51.7, −1 Elo) over 600 games. Neither result was significant; both pass the agreed not-worse criterion. See the [findings](../making-stello-3-1-findings.md#gate-p2-all-kept-fixes-against-30-2026-11-07) and the [500 ms](../benchmark-results/match_p2-gate-500ms.md) / [2 s](../benchmark-results/match_p2-gate-2s.md) reports.
 - The temporary comparison switch was reviewed and removed after the matches; the ABI is back to 3.
+
+### Phase 4: tools and verification gaps
+- **Step 1 done (2026-11-08):** repaired the 124 broken links in the three old plans and replaced the copied GUI specification with a GameShell pointer. Five more links into the git-ignored Egaroucid checkout (chapter 06 and the 3.0 plan) now go to upstream GitHub. The link check finds 0 broken links in Plans and docs (125 and 4 before, in a clean worktree). The Release build has 0 warnings/errors, and the .NET tests pass 489/489, 42/42 and 115/115.
+- **Step 2 next:** default match workers, max(1, cores / max threads of the two sides), with an explicit `--workers` taking precedence. Steps 3–7 and Gate P4 remain.
 
 ## 4. How we work (user decisions)
 - **Who does what:** an agent on the user's Windows machine implements each item. This session reviews it: the diff, the tests, the baseline, the findings, plus its own spot checks. It fixes review issues and **commits**. The user is the one that does the Git **push**. The session is not allowed to do a Git **Push**. If its needed it have to ask the user. The user reports back after each item. When a item is reviewed and comitted, finish with your rewiew and a commandline showing the commando for the final push.
@@ -164,8 +168,8 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
 - **Never commit:** training data, `Egaroucid-main`, Egaroucid resources, or binaries (`target/`, `wwwroot/engine*/`, `.so/.dll/.wasm`); `*.log` is git-ignored.
 - **Before/after builds:** use `git worktree add` in the session folder rather than `git stash` (the working tree may hold work in progress), then `git worktree remove --force`.
 - **The opening book** holds 2,988 exact values found with a 60 s limit. Some may be bounds from stopped solves (phase 1 item 1). They are marked for the phase 11 recalculation.
-- **Old plan files** (`Plans/stello-exhaustive-docs-and-code-audit-plan.md` and others) have pre-existing broken links, fixed in phase 4.
+- **Old plan links:** fixed in phase 4 step 1; both Plans and docs have 0 broken local file/anchor links.
 
 ## 8. Next steps
-1. **Phase 4, tools and verification gaps** (plan, phase 4): match save/resume, the Egaroucid port's time overruns behind a side key, FFO #50–59, the old Plans links, and side A's longer longest move in the match tool (gate P2 findings). Phase 3 is done; see the [findings](../making-stello-3-1-findings.md#gate-p3-2026-11-08).
+1. **Phase 4, step 2, after step 1 review:** default match workers based on the two sides' thread counts; an explicit `--workers` still wins. Step 1 is recorded in the [findings](../making-stello-3-1-findings.md#step-1-old-plan-links-2026-11-08). Then steps 3–7: match resume, the port's strict time limit, FFO #50–59, side A's longest move and platform checks. Matches and long solves still need the user's go.
 2. **Then phase 5:** the 3.1 release, asking the user before fast-forwarding main.

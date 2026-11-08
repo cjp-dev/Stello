@@ -14,7 +14,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 | 1 Real bugs | done (2026-11-06) | Six bugs fixed: an aborted solve reported as Exact, the natural delay charged to the clock, the clock restore after Back/Forward, the endgame soft limit (gate matches at 1 and 5 min per game not worse), web worker robustness (review found a restart loop) and doc errors; items 1 and 2 checked in the apps |
 | 2 The parity quirks | done (2026-11-07) | Items 1 and 3a–5 are kept; items 6–8 reviewed with no fix needed; item 9's counting is unified and its strict baseline regenerated. The combined fixes passed Gate P2 at 500 ms and 2 s without evidence of a loss |
 | 3 The apps | done (2026-11-08) | Shared view-model foundation, Computer vs Computer in both apps, full WPF alignment (layout, board styles, 3D discs and flips, sound, Help), the Stello 1 archive stays on GitHub, mobile landscape checked; Gate P3 passed with the user's WPF check |
-| 4 Tools and verification gaps | not started | |
+| 4 Tools and verification gaps | in progress | Step 1 done: old plan links repaired, GUI specification replaced by a GameShell pointer; Plans and docs have 0 broken local file/anchor links |
 | 5 The 3.1 release | not started | |
 | **Part 2: Stello 3.2** | | |
 | 6 Speed | not started | |
@@ -440,3 +440,14 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 
 ### Gate P3 (2026-11-08)
 - **Passed.** The user checked the Release WPF app on Windows (board styles, 3D pieces, flip animation, sound, Help F1/Shift+F1, Settings and Analysis), after the two problems found earlier in that check (the Settings crash and the Analysis toggle) were fixed in step 5. With the Release build at 0 warnings, Stello.Net.Tests 115/115, engine 489/489, Egaroucid 42/42, Node 15/15, the headless Chromium check and docs 14/15 describing both apps, every Gate P3 condition is met. Phase 3 is done.
+
+## Phase 4: tools and verification gaps
+
+### Step 1: old plan links (2026-11-08)
+- **Initial check (clean worktree of 25c2c30):** Plans had 125 broken local links: 20 in [Opening book improvment.md](Opening%20book%20improvment.md), 86 in the [audit plan](stello-exhaustive-docs-and-code-audit-plan.md), 18 in its [findings](stello-exhaustive-docs-and-code-audit-findings.md) and 1 in [making-stello-3-plan.md](making-stello-3-plan.md). Docs had 4, all in [chapter 06](../docs/06-midgame-search.md). Those last 5 point into the git-ignored `Egaroucid-main/` checkout, so they resolve only on a machine that has it.
+- **Repairs:** corrected paths relative to Plans, renamed book chapters and section anchors, and links to the separate Checkers repository. Historical algorithm references now point to the Stello 1 archive and frozen V1 C# source. The obsolete Markdown `#L...` fragments now use section anchors. `DialogHost.razor` points to its GameShell location; the removed `EngineWorker.cs` links became plain text with a short note and a link to the replacement JavaScript worker. The rest of the old-plan text was preserved.
+- **One GUI specification:** [general-game-gui-specification.md](general-game-gui-specification.md) is now a short pointer to [GameShell's specification](../external/GameShell/docs/general-game-gui-specification.md), not another copy.
+- **Egaroucid links:** the 5 machine-only links now go to upstream GitHub: the four files in chapter 06 to `Nyanyan/Egaroucid/blob/main/src/engine/…`, and the folder in the 3.0 plan to `…/tree/main/src/engine`.
+- **External URLs (HTTP HEAD):** the 7 Checkers URLs and the 4 Egaroucid file URLs answer 200. The Egaroucid folder page and the Edax repository page answered 504 to both HEAD and GET from this machine (GitHub's directory pages time out); they are the standard GitHub URLs but are unverified here.
+- **Validation:** Plans: 150 Markdown files, 289 local links, **0 broken**; docs (including the archive): 48 files, 1,750 local links, **0 broken**. Release solution build: 0 warnings/errors. Tests: Stello.Engine **489/489**, Egaroucid.Engine **42/42**, Stello.Net.Tests **115/115**. No Rust or web source changed, so their test suites were not rerun; the baseline signatures are unchanged.
+- **Next:** step 2, default match workers. No matches or long solves were run; Gate P4 remains open.
