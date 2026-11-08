@@ -19,6 +19,7 @@ internal static class Program
                                     threads (Stello: 1-256 threads sharing the hash tables, 1), ybwc (Stello: on/off, on; off = Lazy SMP alone), hash-bits
                                     (Stello 19; Egaroucid 21, the same memory), book (on/off, off), book-file (Stello: another text book, turns the book on), book-acc (Egaroucid, 0),
                                     seed (Egaroucid's book choice, 1), name.
+                                    --workers (1-256) overrides the default: max(1, physical cores / max(side threads)).
           solve-bench [--engine stello|stello-v2|stello-v1|egaroucid] [--eval <file>] [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits N]
                       [--threads N] [--out <file.json>] [--compare <file.json>]
                                     Solve the FFO positions exactly: score check, nodes, time to solve.

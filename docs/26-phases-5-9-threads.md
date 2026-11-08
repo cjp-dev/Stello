@@ -66,7 +66,7 @@ The first N-thread search was a stand-in: N − 1 helpers ran the same root sear
 | Web | `Threads` in `EngineProtocol.MoveRequest`; the WebAssembly engine searched with 1 thread until phase 8 |
 | Tools | `--threads N` for `stello-cli` and `Stello.Benchmark`'s `mid-bench` and `solve-bench`; the match side key `threads=` (for `engine=stello`), and each side's threads in the match header |
 
-**Matches with threads** must keep workers × threads at or below the cores, because the default number of games at a time (`--workers`) is the cores / 2.
+**Matches with threads:** at the time, the default number of games at a time (`--workers`) was the logical processors / 2. Since Stello 3.1 the default is the physical cores divided by the larger side's thread count, at least one; an explicit `--workers` overrides it ([chapter 17](17-measuring-the-engine.md#timing)).
 
 ### The gate of phase 5
 
@@ -289,7 +289,7 @@ Phase 9, part A (3 November 2026), gave both apps a **Threads** setting ([chapte
 | 2 × 12 | 3,129 |
 | 1 × 24 | 1,816 |
 
-The default stays at 12 workers. 24 × 1 was 25 % faster at depth 14, but with a time per position, hyperthreads and efficiency cores give each search less CPU.
+The book recalculation default stays at 12 workers on that machine. 24 × 1 was 25 % faster at depth 14, but with a time per position, hyperthreads and efficiency cores give each search less CPU.
 
 ### The final matches
 

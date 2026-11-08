@@ -28,7 +28,7 @@ internal static class MatchCommands
         MatchSide b = ParseSide(options.Text("b") ?? throw new ArgumentException("Give side B with --b, e.g. --b time-ms=200."));
         List<string> starts = LoadStarts(options.Text("starts"));
         starts = starts.Take(options.Number("max-starts", starts.Count, 1, int.MaxValue)).ToList();
-        int workers = options.Number("workers", Math.Max(1, Environment.ProcessorCount / 2), 1, 256);
+        int workers = WorkerCount(options, a, b, ProcessorTopology.PhysicalCores);
         string name = options.Text("name") ?? $"{FileName(a.Name)}_vs_{FileName(b.Name)}";
 
         Console.WriteLine($"match: A = {a.Name} ({Describe(a)}), B = {b.Name} ({Describe(b)})");
@@ -73,6 +73,16 @@ internal static class MatchCommands
         File.WriteAllText(basePath + ".json", JsonSerializer.Serialize(report, Json));
         Console.WriteLine($"Saved to {basePath}.md and .json");
         return completed ? 0 : 2;
+    }
+
+    public static int WorkerCount(Options options, MatchSide a, MatchSide b, Func<int> physicalCores)
+    {
+        if (options.Text("workers") is not null)
+        {
+            return options.Number("workers", 1, 1, 256);
+        }
+
+        return Math.Max(1, physicalCores() / Math.Max(a.Limits.Threads, b.Limits.Threads));
     }
 
     public static int MakeStarts(Options options)

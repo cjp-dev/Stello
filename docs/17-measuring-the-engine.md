@@ -54,7 +54,7 @@ A side is a short list of `key=value` settings, separated by commas. It needs ex
 | `mpc=100` | Multi-ProbCut's t × 100: a cut needs the shallow search to be t standard deviations outside the window (default 100, [chapter 06](06-midgame-search.md#selective-search)) | Stello 2.0 |
 | `name=new` | the name in the report and in the file name | all |
 
-Since Stello 3.0, `engine=stello` is the Rust engine and `engine=stello-v2` the frozen Stello 2.0 ([chapter 25](25-phases-0-4-the-engine-in-rust.md)). The Rust engine also accepts `threads=N` (1–256, default 1) and `ybwc=on|off` (default on); with threads, keep `--workers` × threads within the cores ([chapter 26](26-phases-5-9-threads.md#threads-through-every-layer)). `mid-bench` and `solve-bench` take `--threads N` too.
+Since Stello 3.0, `engine=stello` is the Rust engine and `engine=stello-v2` the frozen Stello 2.0 ([chapter 25](25-phases-0-4-the-engine-in-rust.md)). The Rust engine also accepts `threads=N` (1–256, default 1) and `ybwc=on|off` (default on). The match chooses its default workers from the physical cores and both sides' thread counts ([Timing](#timing); [chapter 26](26-phases-5-9-threads.md#threads-through-every-layer)). `mid-bench` and `solve-bench` take `--threads N` too.
 
 For example `--a time-ms=100,name=old --b time-ms=200,name=new`. Neither side uses the opening book unless it has `book=on`, so the games test the search and the evaluation. A key that does not belong to the side's engine is an error.
 
@@ -82,7 +82,9 @@ Othello games are seldom drawn, so the score varies more from game to game than 
 
 ### Timing
 
-With `time-ms` or `game-s` the result depends on the machine: `match` plays as many games at a time as there are physical cores (half the logical processors, `--workers` changes it), and both sides of a game run on the same thread, so they share any slowdown. Heavy work on the machine during a match still makes the result less exact. `depth` gives the same games on every machine.
+With `time-ms` or `game-s` the result depends on the machine. The default `--workers` (games at a time) is `max(1, physical cores / max(A threads, B threads))`, using integer division: the sides search in turn, so only the larger thread count is needed. The tool detects physical cores on Windows, Linux and macOS and caps the count at .NET's available logical processors. On 64-bit Windows with one processor group and on Linux it also takes the process's CPU affinity into account. For example, 16 physical cores give 16 workers with one thread per side, or 2 workers if either side uses 8 threads.
+
+An explicit `--workers N` (1–256) overrides the default, including when core detection is unavailable. The minimum is one worker, so a side requesting more threads than available cores can still oversubscribe the machine. Choose fewer workers if memory pressure or other work affects timing. Heavy work on the machine during a match makes the result less exact. `depth` avoids wall-clock limits, though multi-threaded searches can still vary.
 
 ## The endgame benchmark: `solve-bench`
 
