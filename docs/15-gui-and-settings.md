@@ -297,34 +297,35 @@ In the web app the letter shortcuts are Ctrl+letter (or Cmd+letter on a Mac); Ga
 | `Ctrl+O` | Open a game record (`.stello` or `.txt`) | Open |
 | `Ctrl+S` | Save the game record | Save |
 | `Ctrl+A` | Show or hide the **Analysis** panel | Show or hide the Analysis panel |
-| `Ctrl+Z` | Undo (the clocks go back too) | Back (also `Ctrl+T`) |
-| `Ctrl+Y` | Redo | Forward (also `Ctrl+F`) |
+| `Ctrl+Z` | Undo (the clocks go back too) | Undo (also `Ctrl+T`) |
+| `Ctrl+Y` | Redo | Redo (also `Ctrl+F`) |
 | `Ctrl+M` | **Move Now** | Move Now |
-| `F1` | **User guide** (this chapter) | – |
-| `Shift+F1` | **Rules & Documentation** (the index of this documentation) | – |
-| `F2` | **Settings** | – |
+| `F1` | **User guide** (this chapter) | User guide (menu item; browser link is added in step 5) |
+| `Shift+F1` | **Rules & Documentation** (the index of this documentation) | Rules & Documentation (menu item; browser link is added in step 5) |
+| `F2` | **Settings** | Settings |
 | `Escape` | Close an open menu or the mobile drawer | – |
 
 ---
 
 ## The desktop app
 
-The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs the same view model with the engine on a background task (chapter 14). Its Game menu includes CvC; Switch Sides stops CvC and gives the human White against the computer.
+The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs the same view model with the engine on a background task (chapter 14). Its menus and side panels now follow the web app. The user-guide menu items are visible but disabled until the browser links are added in step 5.
 
 | Menu | Items |
 |---|---|
-| File | New Game (`Ctrl+N`), Open... (`Ctrl+O`), Save (`Ctrl+S`), Save As..., Exit |
-| Game | vs Computer (both sides), Switch Sides, Move Now (`Ctrl+M`), Settings... |
-| Moves | Back (`Ctrl+Z`), Forward (`Ctrl+Y`) |
-| View | Analysis (`Ctrl+A`) |
-| Book | Add Game to Book..., Evaluate Book..., Self-play..., Stop Learning (chapter 11) |
-| Help | About Stello... (the same text as the web app, `AboutInfo`) |
+| File | New Game (`Ctrl+N`), Open... (`Ctrl+O`), Save (`Ctrl+S`), Save As..., Add Game to Book..., Exit |
+| Game | vs Computer (Black/White), vs Human, vs Computer (both sides), Switch sides, Settings (`F2`) |
+| Options | Analysis (`Ctrl+A`), Sound, Green Board, Golden Oak Board, Reddish Wood Board, 3D Pieces, Animate Flips |
+| Book | Evaluate Book..., Self-play..., Stop Learning (chapter 11) |
+| Help | User guide (`F1`), Rules & Documentation (`Shift+F1`), About Stello... (the same text as the web app, `AboutInfo`) |
 
-- **The board** (`BoardView`) is green (`#1E7A3C`), with a dark dot on each legal move and a red dot (`#E03030`) on the last move; it is sized to the window and centred together with the panels.
-- **Status** shows the status text (with the notices of chapter 14), the disc count (`Black 5 – White 5`), the human's colour in human-vs-computer modes (`You play Black`), and in `TimePerGame` mode the computer's clock (the side-to-move clock in CvC).
-- **Analysis** has seven fields: Move, Depth, Score, Best move, Nodes, Speed and Time, bound to the `AnalysisViewModel` properties of the same names. They show the same text as in the web app.
-- **Settings** ([SettingsWindow.xaml](../Stello.Net/Stello.Net/Views/SettingsWindow.xaml)) has the groups "Thinking Limits" (the three modes with sliders) and "Stello Opening Book & Transposition Table" (the checkbox "Enable Stello Opening Book (11,200 canonical positions)" and a "Table Capacity" combo box using the same five choices as the web app), and "Threads" ("Search with:", a list with "Automatic (N threads)" and 1 up to the computer's threads, and "of N on this computer").
-- There are no other game-mode choices, board styles, sound, quick action buttons, move history or Help pages yet. The window position and size are saved with the settings (chapter 14).
+- **The board** (`BoardView`) remains green (`#1E7A3C`), with a dark dot on each legal move and a red dot (`#E03030`) on the last move; it is sized to the window and centred together with the panels.
+- **Status** spaces the `STATUS` heading (crimson for a modified game), Othello badge and thinking-limit badge across its header, as on the web. It also has a thinking bar and Black/White player cards. Each card shows the player role, clock when time-per-game is selected, disc count, legal-move count and active-turn highlight. The status text reports whose turn it is and notices from chapter 14.
+- **Quick actions** are Undo (`Ctrl+Z`, also `Ctrl+T`), Redo (`Ctrl+Y`, also `Ctrl+F`) and Move Now (`Ctrl+M`) buttons.
+- **Move History** shows paired Black/White rows, the move count, the latest row highlighted and auto-scrolls to the latest move.
+- **Analysis** has seven fields: Move, Depth, Score, Best move, Nodes, Speed and Time. The title is uppercase; empty fields show `-`, as in the web app.
+- **Settings** ([SettingsWindow.xaml](../Stello.Net/Stello.Net/Views/SettingsWindow.xaml)) uses the web wording: "How long may the computer think?", "Stello Opening Book (11,200 canonical positions)", "Transposition Table Capacity" and "Search with (of N on this device):". It offers the same five table capacities and the same thread choices.
+- The board-style and piece-animation menu choices save the shared appearance settings; the WPF board renderer, desktop sound playback and Help browser links are added in step 5. The window position and size are saved with the settings (chapter 14).
 
 ---
 

@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
+using System.Windows.Data;
+using System.Windows.Threading;
 using Stello.App.Models;
 using Stello.App.ViewModels;
 
@@ -16,11 +18,17 @@ public partial class MainWindow : Window
         InitializeComponent();
         _viewModel = viewModel;
         DataContext = viewModel;
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        // The history list scrolls itself to the latest move; without this the request also scrolls the side panel,
+        // which hides the status and the player cards during a game.
+        MoveHistoryList.RequestBringIntoView += (_, e) => e.Handled = true;
+        Loaded += (_, _) => Dispatcher.InvokeAsync(ScrollHistoryToLatest, DispatcherPriority.Loaded);
         Restore(viewModel.WindowPlacement);
     }
 
     protected override void OnClosing(CancelEventArgs e)
     {
+        _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
         _viewModel.Stop();
         Rect bounds = WindowState == WindowState.Normal ? new Rect(Left, Top, Width, Height) : RestoreBounds;
         _viewModel.SaveWindowPlacement(new WindowPlacement(bounds.Left, bounds.Top, bounds.Width, bounds.Height, WindowState == WindowState.Maximized));
@@ -55,25 +63,62 @@ public partial class MainWindow : Window
 
     private void OnExit(object sender, RoutedEventArgs e) => Close();
 
-    // The square board fills the height, or the width left beside the panels.
-    // The panels' frames start level with the squares, below the a–h row (20 of BoardView's 440 units).
+    private void OnBoardStyleMenuOpened(object sender, RoutedEventArgs e)
+    {
+        GreenBoardMenuItem.IsChecked = _viewModel.Appearance.Board == BoardStyle.Green;
+        GoldenOakBoardMenuItem.IsChecked = _viewModel.Appearance.Board == BoardStyle.GoldenOak;
+        ReddishWoodBoardMenuItem.IsChecked = _viewModel.Appearance.Board == BoardStyle.ReddishWood;
+    }
+
+    private void OnBoardStyleSelected(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Tag: BoardStyle boardStyle })
+        {
+            _viewModel.Appearance = _viewModel.Appearance with { Board = boardStyle };
+        }
+    }
+
+    private void OnPieces3DToggled(object sender, RoutedEventArgs e)
+    {
+        _viewModel.Appearance = _viewModel.Appearance with { Pieces3D = !_viewModel.Appearance.Pieces3D };
+    }
+
+    private void OnAnimateFlipsToggled(object sender, RoutedEventArgs e)
+    {
+        _viewModel.Appearance = _viewModel.Appearance with { AnimateFlips = !_viewModel.Appearance.AnimateFlips };
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.MoveHistoryRows))
+        {
+            Dispatcher.InvokeAsync(ScrollHistoryToLatest, DispatcherPriority.Loaded);
+        }
+    }
+
+    private void ScrollHistoryToLatest()
+    {
+        if (_viewModel.MoveHistoryRows.Count > 0)
+        {
+            MoveHistoryList.ScrollIntoView(_viewModel.MoveHistoryRows[^1]);
+        }
+    }
+
     private void OnPlayAreaSizeChanged(object sender, SizeChangedEventArgs e)
     {
         double size = Math.Max(0, Math.Min(e.NewSize.Height, e.NewSize.Width - SidePanels.Width));
         Board.Width = size;
         Board.Height = size;
-        SidePanels.Margin = new Thickness(0, Math.Max(0, size * 20 / 440 - FrameTop(StatusBox)), 0, 0);
+        // Align the panels with the board below its coordinate labels.
+        SidePanels.Margin = new Thickness(0, Math.Max(0, size * 20 / 440), 0, 0);
     }
+}
 
-    // A GroupBox draws its frame part-way down its header; the template's first Border (not the header) is the frame.
-    private static double FrameTop(GroupBox box)
-    {
-        if (VisualTreeHelper.GetChildrenCount(box) == 0 || VisualTreeHelper.GetChild(box, 0) is not Panel root)
-        {
-            return 0;
-        }
+internal sealed class EmptyTextToDashConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is string text && !string.IsNullOrEmpty(text) ? text : "-";
 
-        Border? frame = root.Children.OfType<Border>().FirstOrDefault(border => border.Name != "Header");
-        return frame?.TranslatePoint(new Point(), box).Y ?? 0;
-    }
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
 }

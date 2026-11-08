@@ -13,7 +13,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 | 0 Set-up and the new baseline | done (2026-11-04) | 3.0 one-thread JSON references, 105-signature baseline test, and Rust-engine `opt=` match switches; Stello tests pass |
 | 1 Real bugs | done (2026-11-06) | Six bugs fixed: an aborted solve reported as Exact, the natural delay charged to the clock, the clock restore after Back/Forward, the endgame soft limit (gate matches at 1 and 5 min per game not worse), web worker robustness (review found a restart loop) and doc errors; items 1 and 2 checked in the apps |
 | 2 The parity quirks | done (2026-11-07) | Items 1 and 3a–5 are kept; items 6–8 reviewed with no fix needed; item 9's counting is unified and its strict baseline regenerated. The combined fixes passed Gate P2 at 500 ms and 2 s without evidence of a loss |
-| 3 The apps | in progress | Steps 1–3 done: shared app foundation and CvC in both apps. Release build clean; .NET tests 489/489, 42/42, 104/104; Node tests 15/15 |
+| 3 The apps | in progress | Steps 1–4 done: shared app foundation, CvC and WPF layout/controls. Release build clean; .NET tests 489/489, 42/42, 107/107; Node tests 15/15 (unchanged web code) |
 | 4 Tools and verification gaps | not started | |
 | 5 The 3.1 release | not started | |
 | **Part 2: Stello 3.2** | | |
@@ -369,3 +369,16 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
   - **Live check:** the Release WPF app was driven through UI Automation, with the user's `settings.json` backed up and restored. The Game menu's "vs Computer (both sides)" is enabled; invoking it shows "Computer vs Computer", the clock runs, and the discs went from 2–2 to 10–14 in 16 s.
   - **The pause between moves** is the existing 250 ms natural delay. That is short for watching fast settings (a low fixed depth); step 4 or the user's check may want a longer one.
   - **Undo** takes back one move, and the computer then plays on from there at once. **Redo** is not available while CvC runs, because the computer is always thinking.
+
+### Step 4: WPF layout and controls (2026-11-07)
+- **Menus:** WPF now has the File, Game, Options, Book and Help menus aligned with the web wording, including all four game modes, appearance/sound options and the F2 settings shortcut. Add Game to Book is in File; the Book menu keeps Evaluate Book, Self-play and Stop Learning.
+- **Side panels:** the status card has the modified-game heading, Othello/time-limit badges, thinking bar and Black/White player cards with role, both clocks, disc and legal-move counts, and active-turn highlights. Undo, Redo and Move Now are buttons; the Ctrl+Z/Ctrl+Y shortcuts and Ctrl+T/Ctrl+F aliases remain.
+- **History and analysis:** WPF now shows paired, highlighted move rows, a move-count heading, an empty-state message and auto-scroll. Analysis uses the uppercase heading and displays `-` for empty fields. The settings dialog now uses the web wording.
+- **Staged for step 5:** the board-style and piece-animation choices update and persist the shared appearance, but the renderer is still the old green board. Sound is stored but WPF still uses `NullSoundService`. User guide and documentation menu items are visible but disabled until their browser links are added.
+- **Tests:** added checks for the move-history heading and empty state, plus the empty-analysis-field converter.
+- **Checks:** Release solution build with 0 warnings/errors; Stello.Engine.Tests 489/489, Egaroucid.Engine.Tests 42/42 and Stello.Net.Tests 106/106. The web code was not changed, so the 15 Node tests were not rerun. WPF visual behavior remains for the user's Phase 3 hand check.
+- **Review adjustment (2026-11-08):** the WPF status header now spaces STATUS, Othello and the thinking limit across the row like the web app. A WPF layout test checks normal and modified games, two widths, the longest time limit and the hidden-limit state; Stello.Net.Tests passes 107/107.
+- **Review (screenshots of the Release app driven through UI Automation, with the user's settings backed up and restored):**
+  - **Start of a game:** the menus, the STATUS card with its badges, the player cards, the disabled Move Now button, ANALYSIS with "-" fields and the empty MOVE HISTORY all look right at the default 860 × 640 window.
+  - **Fixed, the side panel scrolled away during play:** at the default size the side panel is taller than the window, so it has an outer scroll bar. The history list's auto-scroll asked WPF to bring the latest row into view, and WPF passed that request on to the outer panel. During a Computer vs Computer game this scrolled the STATUS card and the player names off the top. `MainWindow` now marks the history list's request as handled, so only the list scrolls. A new screenshot shows the status and the cards staying in place.
+  - **Still for the user's check:** at the default size the move history is partly below the window, behind the side panel's scroll bar. At 640 × 480 the board shrinks and its coordinate labels get small. Whether the side panel should fit without scrolling is a layout choice for the Gate P3 check.

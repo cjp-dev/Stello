@@ -1,4 +1,5 @@
 using System.IO;
+using System.Globalization;
 using Stello.App.Models;
 using Stello.App.Services;
 using Stello.App.ViewModels;
@@ -24,6 +25,16 @@ public sealed class NewGuiFeaturesTests
             new FakeSettingsStore(new AppSettings(settings ?? QuickSettings, ShowAnalysis: true, Window: null)),
             startupNotice: null,
             soundService: _soundService);
+
+    [Theory]
+    [InlineData("", "-")]
+    [InlineData("f5", "f5")]
+    public void EmptyTextToDashConverter_DisplaysEmptyAnalysisFields(string value, string expected)
+    {
+        var converter = new EmptyTextToDashConverter();
+
+        Assert.Equal(expected, converter.Convert(value, typeof(string), null, CultureInfo.InvariantCulture));
+    }
 
     [Fact]
     public void AnalysisViewModel_SpeedAndUpdatedEvent()
@@ -68,6 +79,8 @@ public sealed class NewGuiFeaturesTests
         Assert.Equal(4, vm.WhiteMobility);
         Assert.Equal("Moves: 4", vm.BlackMobilityText);
         Assert.Empty(vm.MoveHistoryList);
+        Assert.Equal("MOVE HISTORY (0 moves)", vm.MoveHistoryHeaderText);
+        Assert.False(vm.HasMoveHistory);
     }
 
     [Fact]
@@ -85,6 +98,8 @@ public sealed class NewGuiFeaturesTests
         Assert.Equal("f5", vm.MoveHistoryList[0].Notation);
         Assert.Equal(2, vm.MoveHistoryList[1].Ply);
         Assert.NotEmpty(vm.MoveHistoryList[1].Notation);
+        Assert.Equal("MOVE HISTORY (2 moves)", vm.MoveHistoryHeaderText);
+        Assert.True(vm.HasMoveHistory);
     }
 
     [Fact]

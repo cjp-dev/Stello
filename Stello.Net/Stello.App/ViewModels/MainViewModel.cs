@@ -170,6 +170,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public string WhiteClockText => FormatClock(_whiteTimeLeft);
 
     public string MoveCountText => $"{_game.Ply} {(_game.Ply == 1 ? "move" : "moves")}";
+    public string MoveHistoryHeaderText => $"MOVE HISTORY ({MoveCountText})";
+    public bool HasMoveHistory => _game.Ply > 0;
 
     public TimeSpan ComputerTimeLeft => GameMode switch
     {
@@ -884,6 +886,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(BlackClockText));
         OnPropertyChanged(nameof(WhiteClockText));
         OnPropertyChanged(nameof(MoveCountText));
+        OnPropertyChanged(nameof(MoveHistoryHeaderText));
+        OnPropertyChanged(nameof(HasMoveHistory));
     }
 
     private void RebuildMoveHistory()

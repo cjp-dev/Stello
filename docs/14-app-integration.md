@@ -15,7 +15,7 @@ The state that matters for the engine:
 | Member | Contents |
 |---|---|
 | `_game` | The `Game` (chapter 13), including which colour the human plays (`Human`) in human-vs-computer modes |
-| `GameMode` | `HumanVsComputer` (the default, the human plays Black), `ComputerVsHuman`, `HumanVsHuman` (two players), or `ComputerVsComputer`; the web Game menu offers all four, while WPF switches between the first two and offers CvC in its menu |
+| `GameMode` | `HumanVsComputer` (the default, the human plays Black), `ComputerVsHuman`, `HumanVsHuman` (two players), or `ComputerVsComputer`; both apps offer all four modes |
 | `IsHumanTurn()` | True for two-player games and the human's turn in human-vs-computer modes; always false in CvC |
 | `_engine` | The `IEngineHost` that runs the searches and owns the opening book. In the desktop app it is `LocalEngineHost`, with the game's `ComputerPlayer` (its `SearchEngine`, the book and the `BookTracker`, chapter 10); in the browser it is `WebEngineHost`, which keeps the book and a `ComputerPlayer` for the book moves on the page and sends only the searches to the worker. Its `Threads` (a `ThreadCounts`) says how many threads the device offers and what Automatic means there ([below](#search-threads)) |
 | `IsThinking`, `IsLearning` | True while a search or a learning job runs; they enable and disable commands |

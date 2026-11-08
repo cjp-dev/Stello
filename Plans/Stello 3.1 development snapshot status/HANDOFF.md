@@ -50,7 +50,7 @@ Phase 3 runs in seven steps. The Windows agent does one step at a time and stops
 1. The two score-display tests: done.
 2. Done: the shared foundation in Stello.App (see the [phase 3 findings](../making-stello-3-1-findings.md#step-2-shared-app-foundation-2026-11-07)); MainViewModel notifications, active-player flags and paired history rows, one transposition-table choice list, and shared appearance/sound preferences.
 3. Done: Computer vs Computer in both apps; clocks, timeouts, Move Now, stopping, Undo and Save are covered.
-4. WPF alignment A: menus, buttons and shortcuts, the status panel and player cards, move history, analysis, and settings wording.
+4. Done: WPF alignment A: menus, buttons and shortcuts, the status panel and player cards, move history, analysis, and settings wording.
 5. WPF alignment B: board styles and textures, 3D discs and the flip animation, sound (`ISoundService` on SoundWaves), and help links.
 6. The docs viewer for `docs/stello-1/`: options only; the user decides.
 7. Mobile landscape check with Playwright.
@@ -139,6 +139,7 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
   dotnet publish Stello.Web/Stello.Web.csproj -c Release -o <dir> -p:StelloNativeEngine=false
   ```
   It needs a server with the COOP/COEP headers, plus Playwright. Neither is set up yet: the user allows `pip install playwright` (then `python -m playwright install chromium`) and small helper scripts in the session folder.
+- **WPF checks without a person at the screen:** start `Stello.Net\Stello.Net\bin\Release\net10.0-windows\Stello.Net.exe`, drive the menus with UI Automation (`UIAutomationClient`: find by name, expand or invoke), and capture the window with `PrintWindow` (flag 2) after `SetProcessDPIAware`. Back up `%AppData%\Stello\settings.json` first and restore it afterwards, and end the app with `$p.Kill()`, because the tool needs a literal process ID for `Stop-Process`. Save screenshots in the session folder, not the repository.
 - **Links:** `python -I <session folder>\files\linkcheck.py docs README.md Plans/making-stello-3-1-findings.md Plans/making-stello-3-1-plan.md`. It checks local files and `#anchors`. Session folders don't carry over, so a new session must recreate it.
 - **Git:**
   ```
@@ -156,6 +157,7 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
 - **Line endings:** `core.autocrlf=true` and `core.filemode=false`. The "LF will be replaced by CRLF" warnings are harmless (`.gitattributes` normalizes), and the sandbox's mode-755 problem doesn't occur here.
 - **Windows-only test failures:**
   - The 2 former `Stello.Net.Tests` score-display failures are fixed (phase 3 step 1); steps 1–2 pass 98/98 and step 3 passes 104/104.
+  - Phase 3 step 4 and its status-header review adjustment pass 107/107.
   - 2 Egaroucid-port wall-clock tests and the Rust 8-thread time-per-move test fail when the machine is loaded or throttled. Check the processor performance (section 6); after a reboot they pass.
 - **Toolchain:** the Rust `wasm32-unknown-unknown` target and `wasm-bindgen 0.2.130` are installed (checked 2026-11-07). The full build no longer needs `-p:StelloWasmEngine=false`. Python Playwright is not installed.
 - **Never commit:** training data, `Egaroucid-main`, Egaroucid resources, or binaries (`target/`, `wwwroot/engine*/`, `.so/.dll/.wasm`); `*.log` is git-ignored.
@@ -164,5 +166,5 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
 - **Old plan files** (`Plans/stello-exhaustive-docs-and-code-audit-plan.md` and others) have pre-existing broken links, fixed in phase 4.
 
 ## 8. Next steps
-1. **Phase 3, step 4:** WPF alignment A; then steps 5–7 and Gate P3. Steps 2 and 3 are recorded in the [findings](../making-stello-3-1-findings.md#phase-3-the-apps). The template for the WPF alignment is `Connect-4/Connect4.Net/Connect4.WPF/MainWindow.xaml`, a separate repository next to Stello that is only read.
+1. **Phase 3, step 5:** WPF alignment B (board, sound and Help); then steps 6–7 and Gate P3. Steps 2–4 are recorded in the [findings](../making-stello-3-1-findings.md#phase-3-the-apps). The template for the WPF alignment is `Connect-4/Connect4.Net/Connect4.WPF/MainWindow.xaml`, a separate repository next to Stello that is only read.
 2. **Then phases 4 and 5:** the 3.1 release, asking the user before fast-forwarding main. Phase 4 can also look at side A's longer longest move in the match tool (gate P2 findings).
