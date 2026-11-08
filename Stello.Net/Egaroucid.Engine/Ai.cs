@@ -28,23 +28,44 @@ internal static class Ai
     /// The best move with <paramref name="remainingTimeMsec"/> left for the rest of the game (ai.hpp
     /// <c>ai_time_limit</c>): the time for this move comes from <see cref="CalcTimeLimitPly"/>.
     /// </summary>
-    public static SearchResult SearchTimePerGame(SearchContext context, Board board, ulong remainingTimeMsec, Book? book, int bookAccLevel, Random? random, SearchingFlag searching)
+    public static SearchResult SearchTimePerGame(SearchContext context, Board board, ulong remainingTimeMsec, Book? book, int bookAccLevel, Random? random, SearchingFlag searching,
+        bool timeStrict = false)
     {
         ulong timeLimit = CalcTimeLimitPly(board, remainingTimeMsec);
-        return SearchTimePerMove(context, board, timeLimit, book, bookAccLevel, random, searching);
+        return SearchTimePerMove(context, board, timeLimit, book, bookAccLevel, random, searching, timeStrict);
     }
 
     /// <summary>
     /// The best move within <paramref name="timeLimitMsec"/> (<c>ai_common</c> at level 60 with a time limit). Unlike
-    /// C++, it always gives a legal move when there is one: if the search was stopped before its first iteration (for
-    /// example during the clog search), a level-1 search chooses the move.
+    /// C++, it always gives a legal move when there is one. If strict timing expires before the first iteration, it
+    /// returns the first legal move; otherwise a level-1 search chooses the fallback.
     /// </summary>
-    public static SearchResult SearchTimePerMove(SearchContext context, Board board, ulong timeLimitMsec, Book? book, int bookAccLevel, Random? random, SearchingFlag searching)
+    public static SearchResult SearchTimePerMove(SearchContext context, Board board, ulong timeLimitMsec, Book? book, int bookAccLevel, Random? random, SearchingFlag searching,
+        bool timeStrict = false)
     {
+        long start = timeStrict ? Stopwatch.GetTimestamp() : 0;
         SearchResult result = AiCommon(context, board, -Common.SCORE_MAX, Common.SCORE_MAX, Level.MAX_LEVEL, book, bookAccLevel, random,
-            useMultiThread: false, board.GetLegal(), timeLimitMsec, searching, log: null);
+            useMultiThread: false, board.GetLegal(), timeLimitMsec, searching, log: null, timeStrict: timeStrict);
         if (result.Policy is < 0 or >= Common.HW2 && board.GetLegal() != 0)
         {
+            if (timeStrict)
+            {
+                ulong legal = board.GetLegal();
+                return new SearchResult
+                {
+                    Level = Level.MAX_LEVEL,
+                    Policy = Bits.FirstBit(ref legal),
+                    Value = 0,
+                    Depth = 0,
+                    Time = ElapsedMsec(start),
+                    Nodes = result.Nodes,
+                    ClogTime = result.ClogTime,
+                    ClogNodes = result.ClogNodes,
+                    Nps = result.Nodes * 1000UL / Math.Max(1UL, ElapsedMsec(start)),
+                    Probability = 100,
+                };
+            }
+
             SearchResult quick = Search(context, board, 1, useMultiThread: false);
             quick.Nodes += result.Nodes;
             quick.ClogNodes += result.ClogNodes;
@@ -64,8 +85,11 @@ internal static class Ai
     /// nothing is searched and the result has no move. Callers pass first, as Egaroucid's own do.
     /// </remarks>
     public static SearchResult AiCommon(SearchContext context, Board board, int alpha, int beta, int level, Book? book, int bookAccLevel, Random? random,
-        bool useMultiThread, ulong useLegal, ulong timeLimit, SearchingFlag searching, Action<string>? log)
+        bool useMultiThread, ulong useLegal, ulong timeLimit, SearchingFlag searching, Action<string>? log, bool timeStrict = false)
     {
+        long start = timeStrict && timeLimit != SearchConst.TIME_LIMIT_INF ? Stopwatch.GetTimestamp() : 0;
+        ulong RemainingTimeLimit() => start == 0 ? timeLimit : Remaining(timeLimit, ElapsedMsec(start));
+
         SearchResult res;
         int valueSign = 1;
         if (board.GetLegal() == 0)
@@ -104,7 +128,8 @@ internal static class Ai
                 if (useLegal != 0)
                 {
                     int nAlpha = bookResult.Value;
-                    SearchResult additional = TreeSearchLegal(context, board, nAlpha, nAlpha + 1, depth, mpcLevel, useLegal, useMultiThread, timeLimit, searching, log);
+                    SearchResult additional = TreeSearchLegal(context, board, nAlpha, nAlpha + 1, depth, mpcLevel, useLegal, useMultiThread,
+                        RemainingTimeLimit(), searching, log, timeStrict);
                     if (additional.Value <= nAlpha)
                     {
                         // As in C++, the depth of the extra search overwrites SEARCH_BOOK.
@@ -125,7 +150,8 @@ internal static class Ai
                     }
                     else
                     {
-                        res = TreeSearchLegal(context, board, nAlpha, beta, depth, mpcLevel, useLegal, useMultiThread, timeLimit, searching, log);
+                        res = TreeSearchLegal(context, board, nAlpha, beta, depth, mpcLevel, useLegal, useMultiThread,
+                            RemainingTimeLimit(), searching, log, timeStrict);
                         res.Time += additional.Time;
                         res.Nodes += additional.Nodes;
                         res.ClogNodes += additional.ClogNodes;
@@ -145,7 +171,8 @@ internal static class Ai
         }
         else
         {
-            res = TreeSearchLegal(context, board, alpha, beta, depth, mpcLevel, useLegal, useMultiThread, timeLimit, searching, log);
+            res = TreeSearchLegal(context, board, alpha, beta, depth, mpcLevel, useLegal, useMultiThread,
+                RemainingTimeLimit(), searching, log, timeStrict);
             res.Level = level;
         }
 
@@ -166,7 +193,7 @@ internal static class Ai
 
     /// <summary>The clog search (when selective or timed) and then iterative deepening (<c>tree_search_legal</c>).</summary>
     public static SearchResult TreeSearchLegal(SearchContext context, Board board, int alpha, int beta, int depth, int mpcLevel, ulong useLegal, bool useMultiThread,
-        ulong timeLimit, SearchingFlag searching, Action<string>? log)
+        ulong timeLimit, SearchingFlag searching, Action<string>? log, bool timeStrict = false)
     {
         var res = new SearchResult();
         depth = Math.Min(Common.HW2 - board.NDiscs(), depth);
@@ -177,7 +204,23 @@ internal static class Ai
         {
             long start = Stopwatch.GetTimestamp();
             int clogDepth = useTimeLimit ? ClogSearch.CLOG_SEARCH_MAX_DEPTH : Math.Min(depth, ClogSearch.CLOG_SEARCH_MAX_DEPTH);
-            clogs = ClogSearch.FirstClogSearch(context, board, out ulong clogNodes, clogDepth, useLegal, searching);
+            ulong clogNodes;
+            if (useTimeLimit && timeStrict)
+            {
+                // Reserve most of the move budget for iterative deepening and returning a move.
+                var timed = RunTimed(Math.Max(1UL, timeLimit / 4), searching, flag =>
+                {
+                    List<ClogResult> results = ClogSearch.FirstClogSearch(context, board, out ulong nodes, clogDepth, useLegal, flag);
+                    return (Results: results, Nodes: nodes);
+                });
+                clogs = timed.Result.Results;
+                clogNodes = timed.Result.Nodes;
+            }
+            else
+            {
+                clogs = ClogSearch.FirstClogSearch(context, board, out clogNodes, clogDepth, useLegal, searching);
+            }
+
             clogTime = ElapsedMsec(start);
             res.ClogNodes = clogNodes;
             res.ClogTime = clogTime;

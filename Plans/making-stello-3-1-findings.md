@@ -473,3 +473,20 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
   - **Live check:** 6 starts at depth 2 against depth 3. The log was cut to 5 of 12 games and resumed; the pairs and points equalled an uninterrupted run, and the log ended with 12 games. Re-running without `--resume` is refused, and so is resuming with different sides.
   - **Wall time:** a resumed report's wall time covers only the resumed session, because the clock starts when the command starts.
   - **The `.games.jsonl` logs are git-ignored** (user decision, 2026-11-08): they are only for `--resume`, and the committed `.md`/`.json` reports hold the results.
+
+### Step 4: Egaroucid port time (2026-11-08)
+- **Behavior:** `time-strict=on|off` is an Egaroucid match-side key, on by default. Strict mode charges book checks against the move's remaining time and caps the clog search at one quarter of that budget, reserving time for iterative deepening and a legal move. If the search is cut off before an iteration completes, strict mode returns a legal move without an unbounded fallback search. Direct AI calls remain non-strict by default, so the C++ parity behavior is unchanged.
+- **Validation:** the adapter-level 100 ms test warms up first, then checks eight starts without a book and a book exit against a 175 ms ceiling (125% of the limit plus 50 ms). All return legal moves and pass. Parser tests check the match default, `time-strict=off`, and rejection for non-Egaroucid sides. The Egaroucid suite, including search parity fixtures, passes **76/76**.
+- **Build and tests:** Release solution build **0 warnings, 0 errors**; Stello.Engine **489/489**, Egaroucid.Engine **76/76**, Stello.Net.Tests **115/115**. `git diff --check` passes. No Rust or web source changed; baseline signatures are unchanged. No matches were run.
+- **Proposed matches (not run; 590 starts / 1,180 games each, `--workers 12` for comparability):**
+
+  | # | Match | Estimate |
+  |---|---|---|
+  | 1 | `match --a time-ms=100,name=stello --b engine=egaroucid,time-ms=100,time-strict=on,name=egaroucid --workers 12 --name p4-time-strict-100ms` | About 6 minutes; the previous 100 ms comparison took 5 m 25 s |
+  | 2 | `match --a time-ms=500,name=stello --b engine=egaroucid,time-ms=500,time-strict=on,name=egaroucid --workers 12 --name p4-time-strict-500ms` | About 24 minutes; the previous 500 ms comparison took 23 m 57 s |
+
+- **Next:** step 5, FFO #50–59; first measure #50 alone and get the user's go before the long solves. Gate P4 remains open.
+- **Review:**
+  - With `timeStrict` false, every path is the old one: `RemainingTimeLimit()` returns the full limit, the clog search runs unbounded, and the fallback is the level-1 search. The C++ parity tests pass (Egaroucid.Engine.Tests 76/76).
+  - In strict mode the clog search gets a quarter of the move's time, and iterative deepening gets the rest minus the clog time, as before. If nothing finished, the first legal move is played instead of an unbounded search.
+  - **Spot check, not a gate match:** Stello against the port at 100 ms, 8 starts (16 games), 4 workers. The port's longest move was **212 ms** with `time-strict=off` and **108 ms** with `on`; the averages were 68 and 65 ms. The scores of 16 games are noise. The test's ceiling of 175 ms at 100 ms is a timing test, so it can fail on a loaded machine like the other timing tests.

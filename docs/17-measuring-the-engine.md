@@ -49,6 +49,7 @@ A side is a short list of `key=value` settings, separated by commas. It needs ex
 | `book-file=<file>` | another text book; turns the book on | Stello 2.0, Stello 1 |
 | `book-acc=0` | Egaroucid's book accuracy; 0 plays one of the best book moves | Egaroucid |
 | `seed=1` | seeds Egaroucid's choice among equal book moves, anew every game | Egaroucid |
+| `time-strict=on` | include the book check and clog search in the time limit (default on in matches; use `off` for the C++-parity timing) | Egaroucid |
 | `eval=<file>` | another pattern evaluation file; `default` is the built-in one ([chapter 04](04-evaluation.md#the-file)) | Stello 2.0 |
 | `soft-pct=80` | the soft time limit in per cent of the hard limit: no new iteration after it (default two thirds, [chapter 09](09-time-control.md#how-the-search-uses-the-limits)) | Stello 2.0 |
 | `mpc=100` | Multi-ProbCut's t × 100: a cut needs the shallow search to be t standard deviations outside the window (default 100, [chapter 06](06-midgame-search.md#selective-search)) | Stello 2.0 |

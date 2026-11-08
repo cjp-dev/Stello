@@ -18,7 +18,8 @@ namespace Stello.Benchmark;
 /// <param name="book">Egaroucid's book, or null to search every move.</param>
 /// <param name="bookAccuracy">0 plays one of the best book moves; up to 10 allows worse ones (Egaroucid's book accuracy).</param>
 /// <param name="seed">Seeds the book's choice anew every game, so a game can be played again.</param>
-internal sealed class EgaroucidPlayer(int tableBits, Book? book, int bookAccuracy, int seed) : IMatchPlayer
+/// <param name="timeStrict">Includes book and clog searches in the move time limit.</param>
+internal sealed class EgaroucidPlayer(int tableBits, Book? book, int bookAccuracy, int seed, bool timeStrict = true) : IMatchPlayer
 {
     private readonly SearchContext _context = new(tableBits);
     private Random _random = new(seed);
@@ -41,8 +42,8 @@ internal sealed class EgaroucidPlayer(int tableBits, Book? book, int bookAccurac
         long started = Stopwatch.GetTimestamp();
         EgaroucidResult result = limits.Mode switch
         {
-            TimeControlMode.TimePerMove => Ai.SearchTimePerMove(_context, position, Milliseconds(limits.Time), book, bookAccuracy, _random, searching),
-            TimeControlMode.TimePerGame => Ai.SearchTimePerGame(_context, position, Milliseconds(limits.Time), book, bookAccuracy, _random, searching),
+            TimeControlMode.TimePerMove => Ai.SearchTimePerMove(_context, position, Milliseconds(limits.Time), book, bookAccuracy, _random, searching, timeStrict),
+            TimeControlMode.TimePerGame => Ai.SearchTimePerGame(_context, position, Milliseconds(limits.Time), book, bookAccuracy, _random, searching, timeStrict),
             TimeControlMode.FixedDepth => Ai.AiCommon(_context, position, -Common.SCORE_MAX, Common.SCORE_MAX, limits.Depth, book, bookAccuracy, _random,
                 useMultiThread: false, position.GetLegal(), SearchConst.TIME_LIMIT_INF, searching, log: null),
             _ => Ai.Search(_context, position, Level.MAX_LEVEL, useMultiThread: false),

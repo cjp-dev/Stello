@@ -2,6 +2,11 @@
 
 using System.Diagnostics;
 using System.Globalization;
+using Stello.Benchmark;
+using Stello.Engine;
+using EngineBoard = Stello.Engine.Board;
+using EnginePlayer = Stello.Engine.Player;
+using EngineSearchResult = Stello.Engine.SearchResult;
 
 namespace Stello.Egaroucid.Tests;
 
@@ -100,6 +105,39 @@ public class BookAndTimeTests
             Assert.True(watch.ElapsedMilliseconds < 200 * 1.25 + 50, $"{row[0]}: {watch.ElapsedMilliseconds} ms for 200 ms");
             Assert.True(result.Depth >= 1, $"{row[0]}: no completed iteration"); // depth itself depends on the machine load
         }
+    }
+
+    [EgaroucidFact]
+    public void TimePerMove_StrictModeIncludesClogAndBookWorkInTheLimit()
+    {
+        Fixtures.LoadResources();
+        List<string> starts = MatchCommands.LoadStarts(null).Take(8).ToList();
+        var warmup = new EgaroucidPlayer(16, book: null, bookAccuracy: 0, seed: 1);
+        (EngineBoard warmupBoard, EnginePlayer warmupPlayer) = BookTextFormat.Replay(starts[0]);
+        warmup.ChooseMove(warmupBoard, warmupPlayer, SearchLimits.TimePerMove(TimeSpan.FromMilliseconds(100)), CancellationToken.None);
+
+        var player = new EgaroucidPlayer(16, book: null, bookAccuracy: 0, seed: 1);
+        foreach (string start in starts)
+        {
+            (EngineBoard board, EnginePlayer toMove) = BookTextFormat.Replay(start);
+            player.NewGame();
+            var watch = Stopwatch.StartNew();
+            EngineSearchResult result = player.ChooseMove(
+                board, toMove, SearchLimits.TimePerMove(TimeSpan.FromMilliseconds(100)), CancellationToken.None);
+            watch.Stop();
+            Assert.True(board.IsLegal(toMove, result.Move.Square!.Value), $"{start}: the returned move is not legal");
+            Assert.True(watch.ElapsedMilliseconds <= 175, $"{start}: {watch.ElapsedMilliseconds} ms for 100 ms");
+        }
+
+        var bookPlayer = new EgaroucidPlayer(16, LoadBook(), 0, 1);
+        bookPlayer.ChooseMove(EngineBoard.Initial, EnginePlayer.Black, SearchLimits.TimePerMove(TimeSpan.FromMilliseconds(100)), CancellationToken.None);
+        bookPlayer.NewGame();
+        var bookWatch = Stopwatch.StartNew();
+        EngineSearchResult bookResult = bookPlayer.ChooseMove(
+            EngineBoard.Initial, EnginePlayer.Black, SearchLimits.TimePerMove(TimeSpan.FromMilliseconds(100)), CancellationToken.None);
+        bookWatch.Stop();
+        Assert.True(bookWatch.ElapsedMilliseconds <= 175, $"book exit took {bookWatch.ElapsedMilliseconds} ms for 100 ms");
+        Assert.Equal(ScoreKind.Book, bookResult.Kind);
     }
 
     [EgaroucidFact]

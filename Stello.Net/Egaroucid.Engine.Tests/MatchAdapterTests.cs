@@ -103,6 +103,7 @@ public class MatchAdapterTests
         MatchSide stello = MatchCommands.ParseSide("depth=2,name=stello");
         MatchSide egaroucid = MatchCommands.ParseSide("engine=egaroucid,time-ms=20,hash-bits=16,book=on,name=egaroucid");
         Assert.Contains("Egaroucid port, 20 ms/move, table bits 16, book", MatchCommands.Describe(egaroucid), StringComparison.Ordinal);
+        Assert.Contains("strict time on", MatchCommands.Describe(egaroucid), StringComparison.Ordinal);
 
         IReadOnlyList<MatchPair> pairs = new EngineMatch(stello, egaroucid, 2).Play(["d3c3c4c5f6f3f4e2d2c2", "d3c5e6d2c6d6c7f6f4f3b4"], null, CancellationToken.None);
 
@@ -159,5 +160,23 @@ public class MatchAdapterTests
             board = board.Play(toMove, a.Move.Square!.Value);
             toMove = toMove.Opponent();
         }
+    }
+
+    [Theory]
+    [InlineData("engine=egaroucid,time-ms=20", "strict time on")]
+    [InlineData("engine=egaroucid,time-ms=20,time-strict=off", "strict time off")]
+    public void ParseSide_EgaroucidTimeStrictDefaultsOnAndCanBeDisabled(string sideText, string expected)
+    {
+        MatchSide side = MatchCommands.ParseSide(sideText);
+
+        Assert.Contains(expected, MatchCommands.Describe(side), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ParseSide_TimeStrictIsOnlyValidForEgaroucid()
+    {
+        ArgumentException exception = Assert.Throws<ArgumentException>(() => MatchCommands.ParseSide("time-ms=20,time-strict=on"));
+
+        Assert.Contains("time-strict is only for engine=egaroucid", exception.Message, StringComparison.Ordinal);
     }
 }

@@ -165,6 +165,7 @@ internal static class MatchCommands
         int threads = 1;
         bool selective = true;
         bool ybwc = true;
+        bool timeStrict = true;
         var keys = new HashSet<string>();
         var searchOptionKeys = new HashSet<string>();
         foreach (string part in text.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
@@ -215,6 +216,9 @@ internal static class MatchCommands
                     break;
                 case "seed":
                     seed = Number(key, value, 0, int.MaxValue);
+                    break;
+                case "time-strict":
+                    timeStrict = OnOff(key, value, text);
                     break;
                 case "name":
                     name = value;
@@ -276,7 +280,7 @@ internal static class MatchCommands
         foreach ((string key, bool allowed) in new[]
         {
             ("depth", !egaroucid), ("level", egaroucid), ("book-acc", egaroucid), ("seed", egaroucid), ("eval", engine == EngineKind.Stello),
-            ("book-file", !egaroucid),
+            ("book-file", !egaroucid), ("time-strict", egaroucid),
             ("soft-pct", engine == EngineKind.Stello),
             ("mpc", engine == EngineKind.Stello),
             ("selective", engine == EngineKind.Stello),
@@ -332,9 +336,9 @@ internal static class MatchCommands
         }
 
         return new MatchSide(name ?? text, limits, tableBits,
-            CreatePlayer: () => new EgaroucidPlayer(tableBits, egaroucidBook, bookAccuracy, seed),
+            CreatePlayer: () => new EgaroucidPlayer(tableBits, egaroucidBook, bookAccuracy, seed, timeStrict),
             Description: $"Egaroucid port, {limitText}, table bits {tableBits}, " +
-                (useBook ? $"book (accuracy {bookAccuracy}, seed {seed})" : "no book"));
+                (useBook ? $"book (accuracy {bookAccuracy}, seed {seed})" : "no book") + $", strict time {(timeStrict ? "on" : "off")}");
 
         void SetLimit(TimeControlMode value, int number)
         {

@@ -217,6 +217,7 @@ None of these changes a result; the parity tests check that.
 | Book | all record fields, editing, older formats | value and level only; play only |
 | Book's random choice | seeded from the clock | **a seeded `Random`**, so games and matches can be repeated |
 | Time mode, iterations | each iteration in its own thread | on the calling thread, with a flag that checks its deadline every 256 reads (a timer thread came up to 260 ms late under load) |
+| Time mode, strict match timing | the clog search can outlast the move and the book check adds to the limit | `time-strict=on` bounds the clog search and charges book checking against the same move limit |
 | Time mode, stopping | an outer stop does not end the current iteration | Move Now also ends it: the iteration's flag has the outer flag as its parent |
 | Time mode, always a move | can return no move if stopped early | a level-1 search gives the move |
 | Time per game | extra pondering with 38 or more empty squares and at least 2 s | left out (about 400 C++ lines) |
@@ -224,6 +225,7 @@ None of these changes a result; the parity tests check that.
 **The match adapter** ([EgaroucidPlayer.cs](../Stello.Net/tools/Stello.Benchmark/EgaroucidPlayer.cs)) also:
 - passes by itself, because of the pass quirk;
 - keeps the transposition table through a game, as Egaroucid's GUI does, and clears it before the next;
+- enables strict timing by default for matches; `time-strict=off` keeps the C++-parity timing, while direct parity tests leave strict timing off;
 - reports a book move as `Book`, an exact endgame at 100 % as `Exact`, and everything else as `Heuristic`, including selective endgame searches. Match reports therefore count those in Egaroucid's midgame depth.
 
 ## Running it
@@ -258,6 +260,7 @@ mid-bench --engine egaroucid --level 21
 | `book=on` | use Egaroucid's book (off by default) |
 | `book-acc=0` | the book accuracy; 0 plays one of the best book moves |
 | `seed=1` | seeds the book's choice anew every game |
+| `time-strict=on|off` | include the book check and clog search in the move limit; on by default for matches |
 | `--mpc 74` … `--mpc 100` | `mid-bench` only: the selectivity of a fixed-depth search (100 = none, the default) |
 
 `eval-compare`, `make-exact` and `mid-quality` also use the port; [chapter 19](19-stello-1-against-egaroucid.md#reproducing-the-results) shows them. The trainer's `report` gives the port's error next to a trained Stello evaluation ([chapter 17](17-measuring-the-engine.md#the-trainers-measurements)).

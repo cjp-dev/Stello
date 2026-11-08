@@ -66,6 +66,7 @@ Gate P2 (done):
 - **Step 1 done (2026-11-08):** repaired the 124 broken links in the three old plans and replaced the copied GUI specification with a GameShell pointer. Five more links into the git-ignored Egaroucid checkout (chapter 06 and the 3.0 plan) now go to upstream GitHub. The link check finds 0 broken links in Plans and docs (125 and 4 before, in a clean worktree). The Release build has 0 warnings/errors, and the .NET tests pass 489/489, 42/42 and 115/115.
 - **Step 2 implemented (2026-11-08; awaiting review):** default match workers are max(1, physical cores / max threads of the two sides); explicit `--workers` takes precedence. The Windows machine detects 16 physical cores (24 logical), giving 16 workers at 1 thread and 2 at 8 threads. A restricted-affinity check and 24 new unit-test cases pass; Release build has 0 warnings/errors and the .NET suites pass 489/489, 66/66 and 115/115. Linux topology has synthetic tests; Linux/macOS detection has not been run on those OSes here.
 - **Step 3 implemented (2026-11-08; awaiting review):** each finished game is appended durably to `match_<name>.games.jsonl`. `--resume` validates sides, limits, seeds and ordered starts, then plays only missing games; reports are rebuilt from all saved games. Tiny-depth interruption/resume, mismatch, overwrite and partial-line recovery tests pass. Release build has 0 warnings/errors; tests pass 489/489, 72/72 and 115/115. No real matches were run. **Step 4 next after review.**
+- **Step 4 implemented (2026-11-08; awaiting review):** Egaroucid match sides accept `time-strict=on|off`; on is the default. Strict mode charges the book check to the move budget, caps clog search, and returns a legal fallback without further search if the deadline expires. Direct AI calls remain non-strict for C++ parity. Release build has 0 warnings/errors; tests pass 489/489, 76/76 and 115/115. No matches were run; the estimated 100 ms and 500 ms match list is in the [findings](../making-stello-3-1-findings.md#step-4-egaroucid-port-time-2026-11-08). **Step 5 next after review.**
 
 ## 4. How we work (user decisions)
 - **Who does what:** an agent on the user's Windows machine implements each item. This session reviews it: the diff, the tests, the baseline, the findings, plus its own spot checks. It fixes review issues and **commits**. The user is the one that does the Git **push**. The session is not allowed to do a Git **Push**. If its needed it have to ask the user. The user reports back after each item. When a item is reviewed and comitted, finish with your rewiew and a commandline showing the commando for the final push.
@@ -92,7 +93,7 @@ Gate P2 (done):
 - **Tools:**
   - `Stello.Net/tools/Stello.Benchmark` (`match`, `mid-bench`, `solve-bench --compare`; `Data/starts.txt` has 590 start positions);
   - `tools/Stello.BookTool` (`recalc` has no `--threads`, by user decision; `match` does).
-- **Tests:** `Stello.Engine.Tests` (489), `Stello.Net.Tests` (Windows-only, 115), `Egaroucid.Engine.Tests` (66), the Rust tests (83), the Node tests (15).
+- **Tests:** `Stello.Engine.Tests` (489), `Stello.Net.Tests` (Windows-only, 115), `Egaroucid.Engine.Tests` (76), the Rust tests (83), the Node tests (15).
 - **Docs:** `docs/` chapters 01–28 (07 table, 08 solver, 09 time, 14 apps, 15 GUI, 26 threads).
 
 ## 6. Commands (Windows, PowerShell 5.1)
@@ -172,5 +173,5 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
 - **Old plan links:** fixed in phase 4 step 1; both Plans and docs have 0 broken local file/anchor links.
 
 ## 8. Next steps
-1. **Phase 4, step 4, after step 3 review:** the port's strict time limit. Then steps 5–7: FFO #50–59, side A's longest move and platform checks. Matches and long solves still need the user's go.
+1. **Phase 4, step 5, after step 4 review:** FFO #50–59. Measure #50 alone for an estimate, then give a numbered list before the long solves; run them only on the user's go. Then steps 6–7: side A's longest move and platform checks. Matches also need the user's go.
 2. **Then phase 5:** the 3.1 release, asking the user before fast-forwarding main.
