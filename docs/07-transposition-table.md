@@ -288,7 +288,7 @@ The deep result A survived two shallow stores (steps 2 and 3); only a deeper res
 - [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html): "Transposition tables", with the same tiger-opening example.
 - [Seqlock – Wikipedia](https://en.wikipedia.org/wiki/Seqlock): the sequence lock, with readers that retry instead of waiting.
 - [Shared Hash Table – Chess Programming Wiki](https://www.chessprogramming.org/Shared_Hash_Table): how parallel searches share one table, with locks or with Hyatt's lockless XOR trick.
-- [References](28-references.md#26-phases-59-threads): more on threads.
+- [References](29-references.md#26-phases-59-threads): more on threads.
 
 ---
 

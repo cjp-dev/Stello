@@ -419,8 +419,8 @@ The ideas the phases left open ([findings](../Plans/making-stello-3-findings.md#
 - [making-stello-3-plan.md](../Plans/making-stello-3-plan.md): the plan, with its Status section.
 - [making-stello-3-findings.md](../Plans/making-stello-3-findings.md): every measurement of phases 5–9.
 - [Chapter 06](06-midgame-search.md#threads), [chapter 07](07-transposition-table.md#sharing-the-table-between-threads), [chapter 08](08-endgame-solver.md#threads-in-the-solver), [chapter 14](14-app-integration.md#threads-in-the-browser) and [chapter 15](15-gui-and-settings.md#3-threads): the threads in the current code.
-- [References](28-references.md#26-phases-59-threads): Lazy SMP, YBWC and Feldmann's papers, seqlocks, WebAssembly threads and cross-origin isolation.
+- [References](29-references.md#26-phases-59-threads): Lazy SMP, YBWC and Feldmann's papers, seqlocks, WebAssembly threads and cross-origin isolation.
 
 ---
 
-Previous: [25 Phases 0–4: the engine in Rust](25-phases-0-4-the-engine-in-rust.md) · Next: [27 Glossary](27-glossary.md)
+Previous: [25 Phases 0–4: the engine in Rust](25-phases-0-4-the-engine-in-rust.md) · Next: [27 Stello 3.1: fixes and the desktop app](27-stello-3-1-fixes-and-the-desktop-app.md)

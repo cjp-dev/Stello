@@ -422,7 +422,7 @@ Speed: the old build is b132d6f (the .NET AOT worker running Stello 2.0), and ea
 - **About** shows "Stello Version 3.0", and its text says the brain is written in Rust since 3.0.
 - **The docs:**
   - Part 1 (01–15) describes the Rust engine: code links, names, constants and the 3.0 numbers, plus new sections on `pext`, the generation-cleared table, the flips, the stop signals and clock, and how each app gets the engine.
-  - Part 3 begins with [chapter 25](../docs/25-phases-0-4-the-engine-in-rust.md). The glossary and references are now 26 and 27.
+  - Part 3 began with [chapter 25](../docs/25-phases-0-4-the-engine-in-rust.md). At that release the glossary and references became 26 and 27.
   - The link check finds 0 broken links in `docs/`, and all 46 Mermaid diagrams render in the docs viewer.
   - A new result file, [v3p2-solve-bench-40-49.json](benchmark-results/v3p2-solve-bench-40-49.json), has FFO #40–49 with 3.0 (26.1 s).
 - **The release:** main was fast-forwarded to c9aa054. Deploy run 41504303682 succeeded, including the new Rust steps (rustup with wasm32, prebuilt wasm-bindgen 0.2.130).
@@ -755,7 +755,7 @@ The result files are `benchmark-results/v3final-solve-bench-40-49-t{1,8,24}.json
 The 1-thread matches play 12 games at a time and the 8-thread matches 2, so the opponent runs on a more or less loaded machine (see match 10); compare rows of the same thread count. FFO #40–49: 25.8 s with 1 thread, 7.81 s with 8 and 6.56 s with 24. Part B is complete.
 
 ## Phase 9: the docs (2026-11-04)
-- **A new Part 3 chapter,** [26 Phases 5–9: threads](../docs/26-phases-5-9-threads.md): the decisions, what was measured before each choice, the gates, the browser results, the user decisions, and all final matches with the Elo summary, FFO, and what comes next. The glossary and references are now chapters 27 and 28.
+- **A new Part 3 chapter,** [26 Phases 5–9: threads](../docs/26-phases-5-9-threads.md): the decisions, what was measured before each choice, the gates, the browser results, the user decisions, and all final matches with the Elo summary, FFO, and what comes next. The glossary and references became chapters 27 and 28 at the time; in 3.1 they are [28](../docs/28-glossary.md) and [29](../docs/29-references.md).
 - **Part 1 updated for threads:**
   - 06: the shared tables, the pool, Lazy SMP, YBWC;
   - 07: the seqlock slot, memory, the new sizes 4–1,024 MB;

@@ -79,7 +79,7 @@ The web app's .NET code (the view models, the book, the game record) is publishe
 
 | | Desktop app, tools and tests | Web app |
 |---|---|---|
-| Crate | `stello-ffi`, a C ABI library (`cdylib`) named `stello_engine` | `stello-wasm`, a [wasm-bindgen](28-references.md#25-phases-04-the-engine-in-rust) package (`--target web`) |
+| Crate | `stello-ffi`, a C ABI library (`cdylib`) named `stello_engine` | `stello-wasm`, a [wasm-bindgen](29-references.md#25-phases-04-the-engine-in-rust) package (`--target web`) |
 | MSBuild target | `BuildStelloNative` in [Stello.Engine.csproj](../Stello.Net/Stello.Engine/Stello.Engine.csproj), before every build of `Stello.Engine` | `BuildStelloWasm` in [Stello.Web.csproj](../Stello.Net/Stello.Web/Stello.Web.csproj), before every build of the web app, then `BuildStelloWasmThreads` ([line 171](../Stello.Net/Stello.Web/Stello.Web.csproj#L171)) for the threaded package |
 | What Cargo builds | `cargo build --release -p stello-ffi`, into `Stello.Rust/target/<os>` (`linux`, `windows`: each OS has its own folder, because the repository folder is shared between the Linux sandbox and Windows) | `cargo build --release --target wasm32-unknown-unknown -p stello-wasm`, then `wasm-bindgen --target web --no-typescript` writes `stello_wasm.js` and `stello_wasm_bg.wasm` to `wwwroot/engine/` (git-ignored). The threaded package is the same crate built with a pinned nightly into `target/<os>-wasm-mt` and packaged into `wwwroot/engine-mt/` (git-ignored) |
 | When | Only when a Rust source, a Cargo file or `stello-eval.bin` is newer than the library (`StelloRustSource`) | The same (`StelloWasmSource`), for each package |
@@ -448,10 +448,10 @@ After Back, the computer gets back the time of the moves that were taken back, w
 - [ViewModelTests.cs](../Stello.Net/Stello.Net.Tests/ViewModelTests.cs): how scores are shown, `SettingsViewModel`, and `GameSettings.ToLimits` for each mode.
 - [NewGuiFeaturesTests.cs](../Stello.Net/Stello.Net.Tests/NewGuiFeaturesTests.cs): the move history and the sounds, Back and Switch Sides mark the game modified and New Game clears it, `SetGameMode`, the clock texts, the book and table settings of `SettingsViewModel`, and `ComputerPlayer` without the book when `UseOpeningBook` is off.
 
-- [NativeEngineTests.cs](../Stello.Net/Stello.Engine.Tests/NativeEngineTests.cs): the C# wrapper over the native library, its options and callbacks, stop signals and threads. It checks the cutoff switch and that one-thread searches are unchanged after threaded searches.
-- The unit tests in [stello-ffi/src/lib.rs](../Stello.Rust/stello-ffi/src/lib.rs#L607) check invalid engine pointers, thread counts and the cutoff switch; searches with the threads set finish.
-- [engine.test.mjs](../Stello.Rust/stello-wasm/tests/engine.test.mjs): Node tests of the single-threaded WebAssembly package, including recorded moves and scores, the equality-cutoff node count, progress, time limits, stop signals and rejected requests. The unit tests in `protocol.rs` check the JSON.
-- [engine-mt.test.mjs](../Stello.Rust/stello-wasm/tests/engine-mt.test.mjs): Node tests of the threaded package, skipped if it was not built. With 1 thread it checks recorded moves and scores and the equality-cutoff node count; with 4 threads FFO #40–44 are solved exactly, midgame moves are legal, and Move Now and cancel answer at once.
+- [NativeEngineTests.cs](../Stello.Net/Stello.Engine.Tests/NativeEngineTests.cs): the C# wrapper over the native library, its options and callbacks, stop signals and threads. It checks the default equality cutoff and that one-thread searches are unchanged after threaded searches.
+- The unit tests in [stello-ffi/src/lib.rs](../Stello.Rust/stello-ffi/src/lib.rs) check the version and ABI, invalid engine pointers, thread counts and the YBWC setting; searches with the threads set finish.
+- [engine.test.mjs](../Stello.Rust/stello-wasm/tests/engine.test.mjs): Node tests of the single-threaded WebAssembly package, including current-engine signatures node for node, progress, time limits, stop signals and rejected requests. The unit tests in `protocol.rs` check the JSON.
+- [engine-mt.test.mjs](../Stello.Rust/stello-wasm/tests/engine-mt.test.mjs): Node tests of the threaded package, skipped if it was not built. With 1 thread it checks the current-engine signatures node for node; with 4 threads FFO #40–44 are solved exactly, midgame moves are legal, and Move Now and cancel answer at once.
 - [NewGuiFeaturesTests.cs](../Stello.Net/Stello.Net.Tests/NewGuiFeaturesTests.cs) also checks `ThreadCounts` (the desktop keeps one thread for the app, the browser uses all) and `ThreadsFor` (chapter 15).
 
 `WebEngineHost` itself has no unit test; it was checked in Chromium ([findings, gate P3](../Plans/making-stello-3-findings.md#gate-p3-release-aot-publish-in-headless-chromium-served-with-coopcoep-and-brotli)), and with threads, the restart between 1 and more threads and the fallbacks ([gate P8](../Plans/making-stello-3-findings.md#gate-p8-local-passed)). The WPF Threads box was built here but needs a check on Windows.
@@ -464,7 +464,7 @@ After Back, the computer gets back the time of the moves that were taken back, w
 - [SharedArrayBuffer and cross-origin isolation – MDN](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer#security_requirements): why shared memory needs the COOP and COEP headers.
 - [Atomics.wait – MDN](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Atomics/wait): blocking is allowed in workers but not on the page's main thread.
 - [The threads proposal for WebAssembly](https://github.com/WebAssembly/threads): shared memory, atomics, `memory.atomic.wait` and `notify`.
-- [References](28-references.md#26-phases-59-threads) for the parallel search; how the threads came to be is in [chapter 26](26-phases-5-9-threads.md).
+- [References](29-references.md#26-phases-59-threads) for the parallel search; how the threads came to be is in [chapter 26](26-phases-5-9-threads.md).
 - [Cancellation in managed threads – Microsoft Learn](https://learn.microsoft.com/dotnet/standard/threading/cancellation-in-managed-threads): the cooperative cancellation model with `CancellationTokenSource` and `OperationCanceledException`.
 
 ---

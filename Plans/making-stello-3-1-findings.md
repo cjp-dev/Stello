@@ -15,7 +15,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 | 2 The parity quirks | done (2026-11-07) | Items 1 and 3a–5 are kept; items 6–8 reviewed with no fix needed; item 9's counting is unified and its strict baseline regenerated. The combined fixes passed Gate P2 at 500 ms and 2 s without evidence of a loss |
 | 3 The apps | done (2026-11-08) | Shared view-model foundation, Computer vs Computer in both apps, full WPF alignment (layout, board styles, 3D discs and flips, sound, Help), the Stello 1 archive stays on GitHub, mobile landscape checked; Gate P3 passed with the user's WPF check |
 | 4 Tools and verification gaps | done (2026-11-08) | Old plan links repaired, physical-core match workers, match save/resume, strict port timing, all ten FFO #50–59 correct, both match sides warmed up, Windows checks recorded; Gate P4 passed. The Firefox/Safari checklist follows the phase 5 deploy |
-| 5 The 3.1 release | in progress | All six final matches are complete; the actual 3.0 comparisons are statistically inconclusive. The 3.1 version bump and Release build/test suites pass; release docs remain |
+| 5 The 3.1 release | in progress | All six final matches are complete; the actual 3.0 comparisons are statistically inconclusive. The 3.1 version bump, Release build/tests and release documentation are done; release readiness remains |
 | **Part 2: Stello 3.2** | | |
 | 6 Speed | not started | |
 | 7 Threads | not started | |
@@ -609,4 +609,11 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 - **Version:** the Rust workspace and its four lockfile package entries are now 3.1.0; `stello_version()` is tested as 30100. The ABI remains 3. The native wrapper test expects 30100, and the shared About box used by both apps says “Stello Version 3.1.” The About text that the Rust engine was introduced in 3.0 is historical and remains accurate.
 - **Release build:** `dotnet build Stello.Net\Stello.Net.slnx -c Release` succeeded with 0 warnings and 0 errors.
 - **Tests:** `cargo test --release` passed 87 tests; `Stello.Engine.Tests` passed 497/497; `Egaroucid.Engine.Tests` passed 97 with 8 skipped (the optional tagged-v3.0-library tests were not enabled); `Stello.Net.Tests` passed 115/115; both WASM Node test files passed 15/15.
-- **Next:** step 3 is the release documentation and chapter/link updates. Step 4 is release readiness. No commit or push was made.
+- **Next at the time:** step 3 is the release documentation and chapter/link updates, recorded below. Step 4 is release readiness. No commit or push was made.
+
+### Step 3: release documentation (2026-11-08)
+- **Chapter 27:** [Stello 3.1: fixes and the desktop app](../docs/27-stello-3-1-fixes-and-the-desktop-app.md) covers the phase 1 bugs, phase 2 verdicts and Gate P2, both apps and the Stello 1 archive, the phase 4 tools, and all six final matches. It distinguishes the partial Gate P2 opponent from the actual 3.0 tag and does not claim a strength gain or completed browser checks.
+- **Chapter order:** the glossary and references were renamed with `git mv` to chapters [28](../docs/28-glossary.md) and [29](../docs/29-references.md); links and previous/next navigation were updated. The numbered tables now precede other chapter links in the [index](../docs/README.md): GameShell's viewer takes each chapter's first link, so this also fixes its menu and pager order. The frozen Stello 1 archive is unchanged.
+- **Part 1:** chapters 01 and 06 now describe the current version and strict signatures; 08, 14, 15 and 17 also have stale baseline, test, About and tool descriptions corrected. Historical 3.0 results stay labelled as such.
+- **Checks:** the local file and anchor check over docs, Plans and the root README found 0 broken links. The existing documentation snippet audit passed; all 29 chapter headings, viewer first-link order, and previous/next links were checked in order. No build, match or browser automation was run in this step.
+- **Next:** step 4, release readiness. Do not fast-forward main without the user's approval.

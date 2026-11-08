@@ -183,9 +183,9 @@ Each item: read the code and decide whether it is a bug or a harmless quirk. If 
 - **3.0 comparison:** the user chose the actual build from tag `v3.0`, not the removed `v30_search` switch. All four matches are complete. Every 95% score interval includes 50%; none shows a significant difference. Reports, game-log reconciliation, and assessment are in the [findings](making-stello-3-1-findings.md#final-matches-1-4-actual-30-reference-2026-11-08). The 500 ms and 2 s actual-tag results add a full comparison beyond Gate P2's partial switch. Search and signatures remain unchanged.
 - **Step 2, version 3.1 (done 2026-11-08):** Rust workspace and lockfile packages are 3.1.0; the native version is 30100 and ABI 3 is unchanged. The shared About box says 3.1. The Release build completed with 0 warnings/errors; `cargo test --release` passed 87, `Stello.Engine.Tests` 497/497, `Egaroucid.Engine.Tests` 97 passed/8 optional tagged-v3.0 tests skipped, `Stello.Net.Tests` 115/115, and the Node tests 15/15. Details are in the [findings](making-stello-3-1-findings.md#step-2-version-31-2026-11-08).
 - **Docs:**
-  - Step 3 next: check/update Part 1 chapters, add Part 3 chapter "27 Stello 3.1: fixes and the desktop app", renumber glossary and references, and verify links;
+  - **Step 3 done (2026-11-08):** Part 1 checked and updated; [chapter 27](../docs/27-stello-3-1-fixes-and-the-desktop-app.md) added; glossary and references renumbered to 28 and 29. The index, viewer and previous/next navigation are ordered 01–29, the local link/anchor check found 0 broken links, and the documentation snippet audit passed. See the [findings](making-stello-3-1-findings.md#step-3-release-documentation-2026-11-08);
   - About shows 3.1 (step 2 done).
-- **The release:** fast-forward main with the user's OK, follow the deploy, and do the live check (1 thread, threads, Computer vs Computer). Then the user runs the phase 4 step 7 browser checklist in Firefox and Safari on the live site, and the results are recorded.
+- **The release:** step 4, release readiness, is next. Fast-forward main only with the user's OK, follow the deploy, and do the live check (1 thread, threads, Computer vs Computer). Then the user runs the phase 4 step 7 browser checklist in Firefox and Safari on the live site, and the results are recorded.
 
 ---
 

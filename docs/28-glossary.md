@@ -1,4 +1,4 @@
-# 27 – Glossary
+# 28 – Glossary
 
 [Back to the index](README.md)
 
@@ -113,4 +113,4 @@ The terms used in these documents. The last column gives the chapter that explai
 
 ---
 
-Previous: [26 Phases 5–9: threads](26-phases-5-9-threads.md) · Next: [28 References](28-references.md)
+Previous: [27 Stello 3.1: fixes and the desktop app](27-stello-3-1-fixes-and-the-desktop-app.md) · Next: [29 References](29-references.md)

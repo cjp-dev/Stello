@@ -2,7 +2,7 @@ using Stello.Engine.Benchmark;
 
 namespace Stello.Engine.Tests;
 
-/// <summary>The Stello 3.0 one-thread baseline, independent of the frozen Stello 2.0 engine.</summary>
+/// <summary>The current Stello v3 one-thread baseline, independent of the frozen Stello 2.0 engine.</summary>
 public class StelloV3BaselineTests
 {
     public static TheoryData<string> Signatures()
