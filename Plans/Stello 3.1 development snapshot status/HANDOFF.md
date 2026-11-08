@@ -1,6 +1,6 @@
 # Handoff: Stello 3.1 development (snapshot 2026-11-07)
 
-For the next session. Repository: `C:\Udvikling\Privat\Spil\Stello` on the user's Windows machine (GitHub `cjp-dev/Stello`). Branch **`feature/stello-3.1`**, phase 2 done (items and gate P2) and committed; the user pushes (section 6, Git).
+For the next session. Repository: `C:\Udvikling\Privat\Spil\Stello` on the user's Windows machine (GitHub `cjp-dev/Stello`). Branch **`feature/stello-3.1`**, phases 2 and 3 done and committed; the user pushes (section 6, Git).
 
 ## 1. The objective
 Stello is an Othello program: a Rust engine with C# apps, WPF on the desktop and Blazor WebAssembly on the web. 3.0 was released on 2026-11-04 (main `baa44e5`, git tag `v3.0`).
@@ -45,7 +45,7 @@ The plan is **[Plans/making-stello-3-1-plan.md](../making-stello-3-1-plan.md)**,
   | 8. The Multi-ProbCut shallow search uses the hash table at the same ply | — | harmless, no fix: entries keep their real depth; turning the shallow stores off cost +4.7 % nodes (depth 10) and +6.2 % (depth 12) |
   | 9. Counting: one `count_node` path with the abort check every 1,024 nodes; terminal scores count as evaluations | `bbeea17` | kept, no match (statistics and reachable abort checks); FFO #40–44 counted nodes +1.23 % (93,697,164), midgame unchanged; solver about 1.4 % slower, midgame unchanged |
 
-## 3. In progress: phase 3, the apps (gate P2 done)
+## 3. Done: phase 3, the apps (Gate P3 passed 2026-11-08)
 Phase 3 runs in seven steps. The Windows agent does one step at a time and stops; this session reviews and commits each step, and the user starts the next step.
 1. The two score-display tests: done.
 2. Done: the shared foundation in Stello.App (see the [phase 3 findings](../making-stello-3-1-findings.md#step-2-shared-app-foundation-2026-11-07)); MainViewModel notifications, active-player flags and paired history rows, one transposition-table choice list, and shared appearance/sound preferences.
@@ -53,9 +53,9 @@ Phase 3 runs in seven steps. The Windows agent does one step at a time and stops
 4. Done: WPF alignment A: menus, buttons and shortcuts, the status panel and player cards, move history, analysis, and settings wording.
 5. Done: WPF alignment B: shared board styles and web textures, 3D discs/flip animation, sound (`ISoundService` on SoundWaves), and F1/Shift+F1 Help links. The web's view-model appearance now stays synchronized with AppearanceStore and AppSettings.
 6. Done: keep the frozen `docs/stello-1/` archive on GitHub, not in the GameShell viewer. All 24 links (14 distinct targets) retain anchors and safe new-tab attributes; all nine distinct GitHub URLs return HTTP 200. No code or GameShell changes.
-7. Mobile landscape check with Playwright.
+7. Done: the Release web publish loads in headless Chromium at 844×390 with COOP/COEP headers and no horizontal overflow or browser errors. The page scrolls to the analysis and history below the fold, so no CSS fix was needed. Release build and all .NET test suites pass (489/489, 42/42, 115/115). Gate P3 awaits the user's WPF check.
 
-Then Gate P3: the user checks WPF on Windows, a headless Chromium check passes, and docs 14/15 describe both apps.
+Gate P3 passed (2026-11-08): the user checked WPF on Windows, the headless Chromium check passed, and docs 14/15 describe both apps.
 
 Gate P2 (done):
 - All kept phase 2 fixes (items 1, 3a, 4 and 5) were tested together against 3.0 using the temporary `v30_search` switch.
@@ -167,5 +167,5 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
 - **Old plan files** (`Plans/stello-exhaustive-docs-and-code-audit-plan.md` and others) have pre-existing broken links, fixed in phase 4.
 
 ## 8. Next steps
-1. **Phase 3, step 7, after step 6 review:** check mobile landscape with Playwright, then Gate P3. Steps 2–6 are recorded in the [findings](../making-stello-3-1-findings.md#phase-3-the-apps). The template for the WPF alignment is `Connect-4/Connect4.Net/Connect4.WPF/MainWindow.xaml`, a separate repository next to Stello that is only read.
-2. **Then phases 4 and 5:** the 3.1 release, asking the user before fast-forwarding main. Phase 4 can also look at side A's longer longest move in the match tool (gate P2 findings).
+1. **Phase 4, tools and verification gaps** (plan, phase 4): match save/resume, the Egaroucid port's time overruns behind a side key, FFO #50–59, the old Plans links, and side A's longer longest move in the match tool (gate P2 findings). Phase 3 is done; see the [findings](../making-stello-3-1-findings.md#gate-p3-2026-11-08).
+2. **Then phase 5:** the 3.1 release, asking the user before fast-forwarding main.

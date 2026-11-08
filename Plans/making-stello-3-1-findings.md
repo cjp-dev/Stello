@@ -13,7 +13,7 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 | 0 Set-up and the new baseline | done (2026-11-04) | 3.0 one-thread JSON references, 105-signature baseline test, and Rust-engine `opt=` match switches; Stello tests pass |
 | 1 Real bugs | done (2026-11-06) | Six bugs fixed: an aborted solve reported as Exact, the natural delay charged to the clock, the clock restore after Back/Forward, the endgame soft limit (gate matches at 1 and 5 min per game not worse), web worker robustness (review found a restart loop) and doc errors; items 1 and 2 checked in the apps |
 | 2 The parity quirks | done (2026-11-07) | Items 1 and 3a–5 are kept; items 6–8 reviewed with no fix needed; item 9's counting is unified and its strict baseline regenerated. The combined fixes passed Gate P2 at 500 ms and 2 s without evidence of a loss |
-| 3 The apps | in progress | Steps 1–6 done: shared foundation, CvC, WPF alignment and the archive decision. Release build clean; .NET tests 489/489, 42/42, 115/115; Node tests 15/15; browser appearance persistence checked; archive links verified |
+| 3 The apps | done (2026-11-08) | Shared view-model foundation, Computer vs Computer in both apps, full WPF alignment (layout, board styles, 3D discs and flips, sound, Help), the Stello 1 archive stays on GitHub, mobile landscape checked; Gate P3 passed with the user's WPF check |
 | 4 Tools and verification gaps | not started | |
 | 5 The 3.1 release | not started | |
 | **Part 2: Stello 3.2** | | |
@@ -429,3 +429,14 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
 | [stello-1/README.md](https://github.com/cjp-dev/Stello/blob/main/docs/stello-1/README.md) | 200 |
 
 - **Next:** step 7, mobile landscape, then Gate P3. No commit or push in this step.
+
+### Step 7: mobile landscape (2026-11-08)
+- **Publish and server:** `Stello.Web` published in Release and served from the publish output with `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`.
+- **Headless Chromium:** the app loaded at **844×390**; `crossOriginIsolated` was true, with no console errors, page errors or failed requests.
+- **Layout:** document width is 844 px, matching the viewport, with no horizontal overflow. The board is 312×312 px and the side panels are 280 px wide. The document height is 676 px, so analysis and move history extend below the first viewport; browser scrolling reaches them without clipping. No `Stello.Web` CSS change was needed.
+- **Screenshots:** the initial viewport, full page and scrolled view are saved outside the repository in the session files directory.
+- **Validation:** the Release solution build succeeded with 0 warnings and 0 errors. Tests passed: Stello.Engine **489/489**, Egaroucid.Engine **42/42**, Stello.Net.Tests **115/115**. Node tests were not rerun because no web source changed; the 15 tests passed in step 5. Chapters 14 and 15 already describe both apps.
+- **Gate P3:** the build, test and browser checks are complete. The reviewer looked at the three screenshots: at 844×390 the board and the status column fit side by side, and the analysis and history follow below.
+
+### Gate P3 (2026-11-08)
+- **Passed.** The user checked the Release WPF app on Windows (board styles, 3D pieces, flip animation, sound, Help F1/Shift+F1, Settings and Analysis), after the two problems found earlier in that check (the Settings crash and the Analysis toggle) were fixed in step 5. With the Release build at 0 warnings, Stello.Net.Tests 115/115, engine 489/489, Egaroucid 42/42, Node 15/15, the headless Chromium check and docs 14/15 describing both apps, every Gate P3 condition is met. Phase 3 is done.
