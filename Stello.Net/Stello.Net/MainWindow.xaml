@@ -45,7 +45,14 @@
         <local:EmptyTextToDashConverter x:Key="EmptyTextToDash" />
     </Window.Resources>
 
+    <Window.CommandBindings>
+        <CommandBinding Command="{x:Static local:MainWindow.UserGuideCommand}" Executed="OnUserGuide" />
+        <CommandBinding Command="{x:Static local:MainWindow.DocumentationCommand}" Executed="OnDocumentation" />
+    </Window.CommandBindings>
+
     <Window.InputBindings>
+        <KeyBinding Key="F1" Command="{x:Static local:MainWindow.UserGuideCommand}" />
+        <KeyBinding Key="F1" Modifiers="Shift" Command="{x:Static local:MainWindow.DocumentationCommand}" />
         <KeyBinding Modifiers="Control" Key="N" Command="{Binding NewGameCommand}" />
         <KeyBinding Modifiers="Control" Key="O" Command="{Binding OpenCommand}" />
         <KeyBinding Modifiers="Control" Key="S" Command="{Binding SaveCommand}" />
@@ -109,8 +116,8 @@
                 <MenuItem Header="S_top Learning" Command="{Binding StopLearningCommand}" />
             </MenuItem>
             <MenuItem Header="_Help">
-                <MenuItem Header="_User guide" InputGestureText="F1" IsEnabled="False" />
-                <MenuItem Header="_Rules &amp; Documentation" InputGestureText="Shift+F1" IsEnabled="False" />
+                <MenuItem Header="_User guide" InputGestureText="F1" Command="{x:Static local:MainWindow.UserGuideCommand}" />
+                <MenuItem Header="_Rules &amp; Documentation" InputGestureText="Shift+F1" Command="{x:Static local:MainWindow.DocumentationCommand}" />
                 <Separator />
                 <MenuItem Header="_About Stello..." Command="{Binding AboutCommand}" />
             </MenuItem>
@@ -280,9 +287,8 @@
                         </Grid>
 
                         <Border Style="{StaticResource Card}"
-                                Visibility="{Binding IsAnalysisVisible, Converter={StaticResource BooleanToVisibility}}"
-                                DataContext="{Binding Analysis}">
-                            <StackPanel>
+                                Visibility="{Binding IsAnalysisVisible, Converter={StaticResource BooleanToVisibility}}">
+                            <StackPanel DataContext="{Binding Analysis}">
                                 <TextBlock Text="ANALYSIS" FontSize="11" FontWeight="Bold" Foreground="#888888"
                                            Margin="0,0,0,8" />
                                 <Grid>

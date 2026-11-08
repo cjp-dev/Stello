@@ -73,7 +73,7 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0" Foreground="#475569">
                     <Run Text="Search with (of " />
-                    <Run Text="{Binding DeviceThreads}" />
+                    <Run Text="{Binding DeviceThreads, Mode=OneWay}" />
                     <Run Text=" on this device):" />
                 </TextBlock>
                 <ComboBox Grid.Column="1" ItemsSource="{Binding ThreadChoices}" DisplayMemberPath="Text" SelectedValuePath="Value"

@@ -9,29 +9,50 @@
              d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
              d:DesignWidth="440" d:DesignHeight="440">
     <UserControl.Resources>
+        <SolidColorBrush x:Key="BoardBrush" Color="#145A2B" />
+        <SolidColorBrush x:Key="CellBrush" Color="#1E7A3C" />
+        <SolidColorBrush x:Key="CellBorderBrush" Color="#0B3D1C" />
+        <SolidColorBrush x:Key="HoverCellBrush" Color="#23893F" />
+        <SolidColorBrush x:Key="CoordinateBrush" Color="#E2E8F0" />
+        <SolidColorBrush x:Key="HintBrush" Color="#B32ECC71" />
+        <SolidColorBrush x:Key="BlackDiscBrush" Color="Black" />
+        <SolidColorBrush x:Key="WhiteDiscBrush" Color="White" />
         <Style x:Key="Coordinate" TargetType="TextBlock">
             <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="FontSize" Value="13" />
-            <Setter Property="Foreground" Value="#333" />
+            <Setter Property="Foreground" Value="{DynamicResource CoordinateBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
 
         <ControlTemplate x:Key="SquareTemplate" TargetType="Button">
-            <Border x:Name="Cell" Background="#1E7A3C" BorderBrush="#0B3D1C" BorderThickness="1">
+            <Border x:Name="Cell" Background="{DynamicResource CellBrush}" BorderBrush="{DynamicResource CellBorderBrush}" BorderThickness="1">
                 <Grid>
-                    <Ellipse x:Name="Disc" Margin="5" Stroke="#222" StrokeThickness="1" Visibility="Collapsed" />
-                    <Ellipse x:Name="Hint" Width="12" Height="12" Fill="#55000000" Visibility="Collapsed" />
-                    <Ellipse x:Name="Last" Width="10" Height="10" Fill="#E03030" Visibility="Collapsed" />
+                    <Ellipse x:Name="Rim" Margin="5,7,5,3" Visibility="Collapsed"
+                             RenderTransformOrigin="0.5,0.5" RenderTransform="{Binding RenderTransform, ElementName=Disc}"
+                             Opacity="{Binding Opacity, ElementName=Disc}" />
+                    <Ellipse x:Name="Disc" Margin="5" Stroke="#222" StrokeThickness="1" Visibility="Collapsed"
+                             RenderTransformOrigin="0.5,0.5">
+                        <Ellipse.RenderTransform>
+                            <TransformGroup><ScaleTransform /><TranslateTransform /></TransformGroup>
+                        </Ellipse.RenderTransform>
+                    </Ellipse>
+                    <Ellipse x:Name="Hint" Width="13" Height="13" Fill="{DynamicResource HintBrush}" Visibility="Collapsed">
+                        <Ellipse.Effect><DropShadowEffect Color="#2ECC71" BlurRadius="6" ShadowDepth="0" Opacity="0.8" /></Ellipse.Effect>
+                    </Ellipse>
+                    <Ellipse x:Name="Last" Width="10" Height="10" Fill="#E74C3C" Visibility="Collapsed">
+                        <Ellipse.Effect><DropShadowEffect Color="#E74C3C" BlurRadius="6" ShadowDepth="0" Opacity="0.8" /></Ellipse.Effect>
+                    </Ellipse>
                 </Grid>
             </Border>
             <ControlTemplate.Triggers>
                 <DataTrigger Binding="{Binding Disc}" Value="{x:Static engine:Player.Black}">
                     <Setter TargetName="Disc" Property="Visibility" Value="Visible" />
-                    <Setter TargetName="Disc" Property="Fill" Value="Black" />
+                    <Setter TargetName="Disc" Property="Fill" Value="{DynamicResource BlackDiscBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Disc}" Value="{x:Static engine:Player.White}">
                     <Setter TargetName="Disc" Property="Visibility" Value="Visible" />
-                    <Setter TargetName="Disc" Property="Fill" Value="White" />
+                    <Setter TargetName="Disc" Property="Fill" Value="{DynamicResource WhiteDiscBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsLegalMove}" Value="True">
                     <Setter TargetName="Hint" Property="Visibility" Value="Visible" />
@@ -40,10 +61,10 @@
                     <Setter TargetName="Last" Property="Visibility" Value="Visible" />
                 </DataTrigger>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter TargetName="Cell" Property="Background" Value="#23893F" />
+                    <Setter TargetName="Cell" Property="Background" Value="{DynamicResource HoverCellBrush}" />
                 </Trigger>
                 <Trigger Property="IsKeyboardFocused" Value="True">
-                    <Setter TargetName="Cell" Property="BorderBrush" Value="Yellow" />
+                    <Setter TargetName="Cell" Property="BorderBrush" Value="#3498DB" />
                 </Trigger>
             </ControlTemplate.Triggers>
         </ControlTemplate>
@@ -61,6 +82,8 @@
                 <RowDefinition Height="400" />
                 <RowDefinition Height="20" />
             </Grid.RowDefinitions>
+
+            <Border Grid.RowSpan="3" Grid.ColumnSpan="3" Background="{DynamicResource BoardBrush}" CornerRadius="8" />
 
             <UniformGrid Grid.Column="1" Rows="1">
                 <TextBlock Style="{StaticResource Coordinate}" Text="a" />
@@ -85,7 +108,7 @@
             </UniformGrid>
 
             <!-- Squares in index order: a1 top left, h8 bottom right. -->
-            <ItemsControl Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Squares}" Focusable="False">
+            <ItemsControl x:Name="SquareItems" Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Squares}" Focusable="False">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <UniformGrid Rows="8" Columns="8" />

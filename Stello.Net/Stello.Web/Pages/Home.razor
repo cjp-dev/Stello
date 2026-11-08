@@ -13,7 +13,7 @@
 
 <ShellLayout Brand="Stello" Menus="_menus" Shortcuts="_shortcuts" Inert="@(Dialogs.Current is not null)" OnCommand="() => { }">
     <BoardArea>
-        <Board Squares="Vm.Squares" Appearance="_appearance" OnPlay="Play" />
+        <Board Squares="Vm.Squares" Appearance="Vm.Appearance" OnPlay="Play" />
     </BoardArea>
     <SidePanels>
         <StatusPanel IsModified="Vm.IsStatusModified"
@@ -40,7 +40,6 @@
     private MenuDefinition[] _menus = [];
     private Dictionary<string, Func<Task>> _shortcuts = [];
     private AnalysisAdapter _analysis = default!;
-    private Appearance _appearance = Appearance.Default;
     private bool _renderPending;
 
     // Black moves first, so its card comes first.
@@ -59,7 +58,7 @@
 
     protected override void OnInitialized()
     {
-        _appearance = AppearanceStore.Load();
+        Vm.Appearance = AppearanceStore.Load().Normalize();
         _analysis = new AnalysisAdapter(Vm.Analysis);
 
         _menus =
@@ -88,8 +87,8 @@
                 BoardEntry("Green Board", BoardStyle.Green, separatorBefore: true),
                 BoardEntry("Golden Oak Board", BoardStyle.GoldenOak),
                 BoardEntry("Reddish Wood Board", BoardStyle.ReddishWood),
-                new("3D Pieces", ChangeAppearance(a => a with { Pieces3D = !a.Pieces3D }), IsChecked: () => _appearance.Pieces3D, SeparatorBefore: true),
-                new("Animate Flips", ChangeAppearance(a => a with { AnimateFlips = !a.AnimateFlips }), IsChecked: () => _appearance.AnimateFlips),
+                new("3D Pieces", ChangeAppearance(a => a with { Pieces3D = !a.Pieces3D }), IsChecked: () => Vm.Appearance.Pieces3D, SeparatorBefore: true),
+                new("Animate Flips", ChangeAppearance(a => a with { AnimateFlips = !a.AnimateFlips }), IsChecked: () => Vm.Appearance.AnimateFlips),
             ]),
             new("Help",
             [
@@ -131,8 +130,12 @@
         }
     }
 
-    private void OnChanged(object? sender, EventArgs e)
+    private void OnChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (sender == Vm && e.PropertyName == nameof(MainViewModel.Appearance))
+        {
+            AppearanceStore.Save(Vm.Appearance);
+        }
         if (_renderPending)
         {
             return;
@@ -164,11 +167,10 @@
     }
 
     private MenuEntry BoardEntry(string text, BoardStyle board, bool separatorBefore = false) =>
-        new(text, ChangeAppearance(a => a with { Board = board }), IsChecked: () => _appearance.Board == board, Radio: true, SeparatorBefore: separatorBefore);
+        new(text, ChangeAppearance(a => a with { Board = board }), IsChecked: () => Vm.Appearance.Board == board, Radio: true, SeparatorBefore: separatorBefore);
 
     private RelayCommand ChangeAppearance(Func<Appearance, Appearance> change) => new(() =>
     {
-        _appearance = change(_appearance);
-        AppearanceStore.Save(_appearance);
+        Vm.Appearance = change(Vm.Appearance);
     });
 }

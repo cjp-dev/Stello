@@ -5,7 +5,7 @@ using Stello.App.Models;
 
 namespace Stello.Web.Services;
 
-/// <summary>The appearance as JSON in local storage, apart from the settings shared with the desktop app.</summary>
+/// <summary>The existing local-storage entry used to initialize the shared appearance.</summary>
 public sealed class AppearanceStore(IJSInProcessRuntime js)
 {
     private const string Key = "stello.appearance";

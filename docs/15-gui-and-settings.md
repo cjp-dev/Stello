@@ -48,7 +48,7 @@ The web app uses a palette designed for high contrast, clean typography, and tac
 | **Status Modified Notice** | `#E74C3C` | Crimson red text for `STATUS` indicating unranked/casual state |
 | **Evaluation Score** | `#B45309` | Warm amber text displaying the score in discs |
 | **Best Move Coordinate** | `#0284C7` | Blue accent text displaying the engine's current candidate move |
-| **Legal Move Hints** | `#27AE60` | Soft translucent green circular markers indicating valid placement squares |
+| **Legal Move Hints** | `#2ECC71` | Soft translucent green circular markers indicating valid placement squares |
 | **Last Move Indicator** | `#E74C3C` | Crimson central pip marking the most recently placed disc |
 
 ### Board Themes & Visual Appearance
@@ -60,7 +60,7 @@ The interface supports customization of board materials and piece rendering dire
   * **Golden Oak Board:** Warm natural oak wood grain.
   * **Reddish Wood Board:** Rich mahogany / cherry wood finish.
 * **3D Pieces:** Toggles realistic spherical beveling, radial lighting gradients, and ambient disc drop shadows.
-* **Animate Flips:** Toggles smooth CSS 3D rotational transitions when discs are captured and converted.
+* **Animate Flips:** Toggles smooth rotations when discs are captured and converted: CSS 3D transitions in the web app and WPF scale/rise animations on the desktop.
 
 ---
 
@@ -278,7 +278,7 @@ Each row is one round: the round number, Black's move and White's move (a pass i
 
 ## Procedural Sound System
 
-The web app plays sounds through the Web Audio API (`BrowserSoundService`); **Options → Sound** turns them off (`IsSoundOn`). The shared setting is saved in `AppSettings` by both settings stores (browser local storage and the desktop `settings.json`). The desktop app currently uses `NullSoundService` and remains silent; its WPF sound service is part of phase 3, step 5 (chapter 14). `SoundWaves.Create` synthesizes each sound as a 16-bit PCM WAV byte array at run time, so no `.mp3` or `.wav` files are downloaded; the bytes are registered with the page once, on the first sound:
+The web app plays sounds through the Web Audio API (`BrowserSoundService`); the desktop plays the same sounds through a background `SoundPlayer` queue (`SoundService`). **Options → Sound** switches playback on or off (`IsSoundOn`). The shared setting is saved in `AppSettings` by both settings stores (browser local storage and the desktop `settings.json`). On the desktop, muting discards pending sounds; an already-playing sound can finish. `SoundWaves.Create` synthesizes each sound as a 16-bit PCM WAV byte array at run time, so no `.mp3` or `.wav` files are downloaded; the browser registers the bytes once, on the first sound:
 
 * **Move:** a short click, for every move of the human and of the computer.
 * **Pass:** a double clack, when the game loop passes for a player.
@@ -300,8 +300,8 @@ In the web app the letter shortcuts are Ctrl+letter (or Cmd+letter on a Mac); Ga
 | `Ctrl+Z` | Undo (the clocks go back too) | Undo (also `Ctrl+T`) |
 | `Ctrl+Y` | Redo | Redo (also `Ctrl+F`) |
 | `Ctrl+M` | **Move Now** | Move Now |
-| `F1` | **User guide** (this chapter) | User guide (menu item; browser link is added in step 5) |
-| `Shift+F1` | **Rules & Documentation** (the index of this documentation) | Rules & Documentation (menu item; browser link is added in step 5) |
+| `F1` | **User guide** (this chapter) | User guide on the live site, in the default browser |
+| `Shift+F1` | **Rules & Documentation** (the index of this documentation) | Documentation index on the live site, in the default browser |
 | `F2` | **Settings** | Settings |
 | `Escape` | Close an open menu or the mobile drawer | – |
 
@@ -309,7 +309,7 @@ In the web app the letter shortcuts are Ctrl+letter (or Cmd+letter on a Mac); Ga
 
 ## The desktop app
 
-The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs the same view model with the engine on a background task (chapter 14). Its menus and side panels now follow the web app. The user-guide menu items are visible but disabled until the browser links are added in step 5.
+The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs the same view model with the engine on a background task (chapter 14). Its menus, side panels, board styles and sound follow the web app. Help menu items and their shortcuts open the live site's `/docs/15-gui-and-settings` and `/docs/` pages in the default browser.
 
 | Menu | Items |
 |---|---|
@@ -319,13 +319,14 @@ The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs t
 | Book | Evaluate Book..., Self-play..., Stop Learning (chapter 11) |
 | Help | User guide (`F1`), Rules & Documentation (`Shift+F1`), About Stello... (the same text as the web app, `AboutInfo`) |
 
-- **The board** (`BoardView`) remains green (`#1E7A3C`), with a dark dot on each legal move and a red dot (`#E03030`) on the last move; it is sized to the window and centred together with the panels.
+- **The board** (`BoardView`) follows `MainViewModel.Appearance`: Green (`#1E7A3C`), Golden Oak or Reddish Wood. The WPF assembly embeds the same wood JPEGs used by the web app. Legal hints are translucent green (`#2ECC71`), 26% of a cell; the last-move pip is red (`#E74C3C`), 20%. The board is sized to the window and centred together with the panels.
+- **3D Pieces** adds radial lighting, contrasting lower rims and shadows; turning it off uses flat black/white discs. **Animate Flips** adds a 250 ms placement animation and 450 ms flips, delayed by 150 ms plus 70 ms per further square from the placed disc. Faces change at the flip midpoint. Undo, Redo, Open and New Game redraw without animation; changing appearance cancels outstanding animations. The Windows client-area animation preference is respected.
 - **Status** spaces the `STATUS` heading (crimson for a modified game), Othello badge and thinking-limit badge across its header, as on the web. It also has a thinking bar and Black/White player cards. Each card shows the player role, clock when time-per-game is selected, disc count, legal-move count and active-turn highlight. The status text reports whose turn it is and notices from chapter 14.
 - **Quick actions** are Undo (`Ctrl+Z`, also `Ctrl+T`), Redo (`Ctrl+Y`, also `Ctrl+F`) and Move Now (`Ctrl+M`) buttons.
 - **Move History** shows paired Black/White rows, the move count, the latest row highlighted and auto-scrolls to the latest move.
 - **Analysis** has seven fields: Move, Depth, Score, Best move, Nodes, Speed and Time. The title is uppercase; empty fields show `-`, as in the web app.
 - **Settings** ([SettingsWindow.xaml](../Stello.Net/Stello.Net/Views/SettingsWindow.xaml)) uses the web wording: "How long may the computer think?", "Stello Opening Book (11,200 canonical positions)", "Transposition Table Capacity" and "Search with (of N on this device):". It offers the same five table capacities and the same thread choices.
-- The board-style and piece-animation menu choices save the shared appearance settings; the WPF board renderer, desktop sound playback and Help browser links are added in step 5. The window position and size are saved with the settings (chapter 14).
+- Board-style, piece-animation and Sound choices are remembered in the shared settings. The window position and size are also saved (chapter 14).
 
 ---
 
@@ -340,13 +341,14 @@ The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs t
 | [`MainViewModel.cs`](../Stello.Net/Stello.App/ViewModels/MainViewModel.cs) | `MainViewModel` | Central orchestrator managing game flow, competitive integrity (`IsStatusModified`), clocks, and undo/redo |
 | [`SettingsViewModel.cs`](../Stello.Net/Stello.App/ViewModels/SettingsViewModel.cs) | `SettingsViewModel` | Data backing for thinking limits, opening book toggle, the shared transposition-table choices (`TranspositionTableChoices`), and threads (`Threads`, `ThreadChoices`, `ThreadsText`, `DeviceThreads`) |
 | [`GameSettings.cs`](../Stello.Net/Stello.App/Models/GameSettings.cs), [`ThreadCounts.cs`](../Stello.Net/Stello.App/Models/ThreadCounts.cs) | `GameSettings`, `ThreadCounts` | The stored settings (`Threads`, `AutomaticThreads`, `ThreadsFor`); the device's thread counts on the desktop (`ForThisProcess`) and in the browser (`ForBrowser`) |
-| [`AppSettings.cs`](../Stello.Net/Stello.App/Models/AppSettings.cs), [`Appearance.cs`](../Stello.Net/Stello.App/Models/Appearance.cs) | `AppSettings`, `Appearance`, `BoardStyle` | Shared settings model (including sound); the desktop stores appearance in `AppSettings`, while the web keeps it in its existing `AppearanceStore` entry |
+| [`AppSettings.cs`](../Stello.Net/Stello.App/Models/AppSettings.cs), [`Appearance.cs`](../Stello.Net/Stello.App/Models/Appearance.cs) | `AppSettings`, `Appearance`, `BoardStyle` | Shared settings model (including appearance and sound); the web also keeps its existing `AppearanceStore` entry synchronized with the view model |
 | [`AnalysisViewModel.cs`](../Stello.Net/Stello.App/ViewModels/AnalysisViewModel.cs) | `AnalysisViewModel` | Observable ViewModel formatting depth, evaluation score, node counts, and elapsed search time |
 | [`WebEngineHost.cs`](../Stello.Net/Stello.Web/Services/WebEngineHost.cs) | `WebEngineHost` | The book move on the page, the Web Worker's lifecycle (a new worker between 1 and more threads), the message serializer, and the cancellation controller |
 | [`engine-worker.js`](../Stello.Net/Stello.Web/wwwroot/js/engine-worker.js), [`stello-wasm/src/lib.rs`](../Stello.Rust/stello-wasm/src/lib.rs) | `init`, `search` | The Web Worker and the Rust engine in WebAssembly, which makes a new engine when the hash bits change |
 | [`LocalEngineHost.cs`](../Stello.Net/Stello.App/Services/LocalEngineHost.cs) | `LocalEngineHost` | Desktop background task runner for search and book operations |
 | [`SoundWaves.cs`](../Stello.Net/Stello.App/Services/SoundWaves.cs) | `SoundWaves` | Procedural 16-bit PCM WAV synthesized sound generator |
 | [`BrowserSoundService.cs`](../Stello.Net/Stello.Web/Services/BrowserSoundService.cs) | `BrowserSoundService` | Registers the sounds with the page and plays them (web app) |
+| [`SoundService.cs`](../Stello.Net/Stello.Net/Services/SoundService.cs) | `SoundService` | WPF background FIFO playback of the same generated sounds, controlled by Options → Sound |
 | [`AboutInfo.cs`](../Stello.Net/Stello.App/Models/AboutInfo.cs) | `AboutInfo` | The title, version, picture caption and paragraphs of the About box, shared by both apps |
 | [`MainWindow.xaml`](../Stello.Net/Stello.Net/MainWindow.xaml) | `MainWindow` | WPF desktop application window, menus and key bindings |
 | [`BoardView.xaml`](../Stello.Net/Stello.Net/Views/BoardView.xaml), [`AboutWindow.xaml`](../Stello.Net/Stello.Net/Views/AboutWindow.xaml) | `BoardView`, `AboutWindow` | The WPF board and About box |

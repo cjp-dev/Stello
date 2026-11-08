@@ -8,6 +8,10 @@ namespace Stello.Net;
 
 public partial class App : Application
 {
+    private SoundService? _sound;
+    private MainViewModel? _viewModel;
+    private int _soundErrorReported;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -17,13 +21,29 @@ public partial class App : Application
             new ComputerPlayer(new SearchEngine(), book, new Random()),
             book,
             new FileBookStore(AppPaths.UserBookFile, AppPaths.SelfPlayLogFile));
-        var viewModel = new MainViewModel(
+        var dialogs = new DialogService();
+        _sound = new SoundService(exception =>
+        {
+            if (Interlocked.Exchange(ref _soundErrorReported, 1) == 0)
+            {
+                Dispatcher.InvokeAsync(() => dialogs.ShowError($"Sound could not be played. You can disable it in Options.\n\n{exception.Message}"));
+            }
+        });
+        _viewModel = new MainViewModel(
             engine,
-            new DialogService(),
+            dialogs,
             new GameFileService(),
             new JsonSettingsStore(AppPaths.SettingsFile),
-            notice);
-        MainWindow = new MainWindow(viewModel);
+            notice,
+            _sound);
+        MainWindow = new MainWindow(_viewModel);
         MainWindow.Show();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _viewModel?.Dispose();
+        _sound?.Dispose();
+        base.OnExit(e);
     }
 }

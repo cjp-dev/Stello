@@ -51,7 +51,7 @@ Phase 3 runs in seven steps. The Windows agent does one step at a time and stops
 2. Done: the shared foundation in Stello.App (see the [phase 3 findings](../making-stello-3-1-findings.md#step-2-shared-app-foundation-2026-11-07)); MainViewModel notifications, active-player flags and paired history rows, one transposition-table choice list, and shared appearance/sound preferences.
 3. Done: Computer vs Computer in both apps; clocks, timeouts, Move Now, stopping, Undo and Save are covered.
 4. Done: WPF alignment A: menus, buttons and shortcuts, the status panel and player cards, move history, analysis, and settings wording.
-5. WPF alignment B: board styles and textures, 3D discs and the flip animation, sound (`ISoundService` on SoundWaves), and help links.
+5. Done: WPF alignment B: shared board styles and web textures, 3D discs/flip animation, sound (`ISoundService` on SoundWaves), and F1/Shift+F1 Help links. The web's view-model appearance now stays synchronized with AppearanceStore and AppSettings.
 6. The docs viewer for `docs/stello-1/`: options only; the user decides.
 7. Mobile landscape check with Playwright.
 
@@ -158,6 +158,7 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
 - **Windows-only test failures:**
   - The 2 former `Stello.Net.Tests` score-display failures are fixed (phase 3 step 1); steps 1–2 pass 98/98 and step 3 passes 104/104.
   - Phase 3 step 4 and its status-header review adjustment pass 107/107.
+  - Phase 3 step 5 and the Settings/Analysis follow-ups pass 115/115; Release build has 0 warnings/errors, engine suites pass 489/489 and 42/42, and Node tests pass 15/15. Browser appearance persistence was checked; desktop visual/audio checks remain for the user.
   - 2 Egaroucid-port wall-clock tests and the Rust 8-thread time-per-move test fail when the machine is loaded or throttled. Check the processor performance (section 6); after a reboot they pass.
 - **Toolchain:** the Rust `wasm32-unknown-unknown` target and `wasm-bindgen 0.2.130` are installed (checked 2026-11-07). The full build no longer needs `-p:StelloWasmEngine=false`. Python Playwright is not installed.
 - **Never commit:** training data, `Egaroucid-main`, Egaroucid resources, or binaries (`target/`, `wwwroot/engine*/`, `.so/.dll/.wasm`); `*.log` is git-ignored.
@@ -166,5 +167,5 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
 - **Old plan files** (`Plans/stello-exhaustive-docs-and-code-audit-plan.md` and others) have pre-existing broken links, fixed in phase 4.
 
 ## 8. Next steps
-1. **Phase 3, step 5:** WPF alignment B (board, sound and Help); then steps 6–7 and Gate P3. Steps 2–4 are recorded in the [findings](../making-stello-3-1-findings.md#phase-3-the-apps). The template for the WPF alignment is `Connect-4/Connect4.Net/Connect4.WPF/MainWindow.xaml`, a separate repository next to Stello that is only read.
+1. **Phase 3, step 6, after step 5 review:** report docs-viewer/archive options only; then step 7 and Gate P3. Steps 2–5 are recorded in the [findings](../making-stello-3-1-findings.md#phase-3-the-apps). The template for the WPF alignment is `Connect-4/Connect4.Net/Connect4.WPF/MainWindow.xaml`, a separate repository next to Stello that is only read.
 2. **Then phases 4 and 5:** the 3.1 release, asking the user before fast-forwarding main. Phase 4 can also look at side A's longer longest move in the match tool (gate P2 findings).

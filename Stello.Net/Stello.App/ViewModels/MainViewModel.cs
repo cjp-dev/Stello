@@ -116,6 +116,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public IReadOnlyList<SquareViewModel> Squares { get; }
 
+    public int BoardMoveVersion { get; private set; }
+
     public AnalysisViewModel Analysis { get; } = new();
 
     public WindowPlacement? WindowPlacement { get; private set; }
@@ -338,6 +340,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         _soundService.Play(SoundType.Move);
         _game.Play(square.Square);
+        BoardMoveVersion++;
         Start();
     }
 
@@ -799,6 +802,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
             _soundService.Play(SoundType.Move);
             _game.Play(result.Move);
+            BoardMoveVersion++;
             _isWaitingForNaturalDelay = false;
             return true;
         }

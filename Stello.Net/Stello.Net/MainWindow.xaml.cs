@@ -1,8 +1,10 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Threading;
 using Stello.App.Models;
 using Stello.App.ViewModels;
@@ -11,10 +13,22 @@ namespace Stello.Net;
 
 public partial class MainWindow : Window
 {
-    private readonly MainViewModel _viewModel;
+    public static RoutedUICommand UserGuideCommand { get; } = new("User guide", nameof(UserGuideCommand), typeof(MainWindow));
+    public static RoutedUICommand DocumentationCommand { get; } = new("Rules & Documentation", nameof(DocumentationCommand), typeof(MainWindow));
+    internal static Uri UserGuideUri { get; } = new("https://polite-sky-0e9899910.3.azurestaticapps.net/docs/15-gui-and-settings");
+    internal static Uri DocumentationUri { get; } = new("https://polite-sky-0e9899910.3.azurestaticapps.net/docs/");
 
-    public MainWindow(MainViewModel viewModel)
+    private readonly MainViewModel _viewModel;
+    private readonly Action<Uri> _openBrowser;
+
+    public MainWindow(MainViewModel viewModel) : this(viewModel, uri =>
+        Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true }))
     {
+    }
+
+    internal MainWindow(MainViewModel viewModel, Action<Uri> openBrowser)
+    {
+        _openBrowser = openBrowser;
         InitializeComponent();
         _viewModel = viewModel;
         DataContext = viewModel;
@@ -62,6 +76,23 @@ public partial class MainWindow : Window
     }
 
     private void OnExit(object sender, RoutedEventArgs e) => Close();
+
+    private void OnUserGuide(object sender, ExecutedRoutedEventArgs e) => OpenHelp(UserGuideUri);
+
+    private void OnDocumentation(object sender, ExecutedRoutedEventArgs e) => OpenHelp(DocumentationUri);
+
+    private void OpenHelp(Uri uri)
+    {
+        try
+        {
+            _openBrowser(uri);
+        }
+        catch (Exception exception) when (exception is Win32Exception or InvalidOperationException)
+        {
+            MessageBox.Show(this, $"The documentation could not be opened.\n\n{exception.Message}",
+                "Stello", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 
     private void OnBoardStyleMenuOpened(object sender, RoutedEventArgs e)
     {

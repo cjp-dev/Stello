@@ -25,7 +25,8 @@ The state that matters for the engine:
 | `_searchId` | A number that goes up with each computer move, to recognise old progress reports |
 | `Settings` | The `GameSettings`: mode, depth, seconds per move, minutes per game, opening book toggle, transposition table capacity, threads |
 | `ComputerTimeLeft` | The computer's clock in human-vs-computer modes; in CvC, the clock of the side to move |
-| `Appearance`, `IsSoundOn` | The desktop stores both preferences in `AppSettings`; the web keeps appearance in its separate `AppearanceStore` entry and saves sound with `AppSettings` |
+| `Appearance`, `IsSoundOn` | Both apps store these preferences in `AppSettings`; the web initializes appearance from its existing `AppearanceStore` entry and keeps that entry synchronized |
+| `BoardMoveVersion` | Increments for played human/computer moves, not navigation; WPF uses it to animate actual moves without animating Undo, Redo, Open or New Game |
 | `ToMove`, `IsGameOver`, `CanUndo`, `CanRedo`, `IsClockVisible`, `SettingsBadgeText` | Computed state with `PropertyChanged` notifications for both front ends |
 | `IsBlackActive`, `IsWhiteActive`, `MoveHistoryRows` | The active-player flags and paired Black/White history rows, including which row is latest |
 | `_blackTimeLeft`, `_whiteTimeLeft`, `_timeLeftAtPly` | The player clocks, and their snapshot pairs for every ply so Undo and Redo restore the destination position's clocks |
@@ -42,12 +43,14 @@ The view model reaches the engine, files and dialogs only through small interfac
 |---|---|---|---|
 | `IEngineHost` | `LocalEngineHost` | `WebEngineHost` | Runs the searches and book learning; owns the book |
 | `IBookStore` | `FileBookStore` | `LocalStorageBookStore` | Saves the learned book; appends to the self-play log |
-| `ISettingsStore` | `JsonSettingsStore` | `LocalStorageSettingsStore` | Loads and saves `AppSettings` as JSON (game settings, sound, analysis panel and desktop window placement) |
+| `ISettingsStore` | `JsonSettingsStore` | `LocalStorageSettingsStore` | Loads and saves `AppSettings` as JSON (game settings, appearance, sound, analysis panel and desktop window placement) |
 | `IDialogService` | `DialogService` | `BrowserDialogService` | Message boxes, file dialogs, the settings dialog, "Did Black win the game?" |
 | `IGameFileService` | `GameFileService` | `BrowserGameFileService` | Opens and saves game files (`.stello`, `.txt`) |
-| `ISoundService` | `NullSoundService` (no sound) | `BrowserSoundService` | Sounds synthesized by `SoundWaves` for a move, a pass, a win and a loss (chapter 15) |
+| `ISoundService` | `SoundService` | `BrowserSoundService` | Sounds synthesized by `SoundWaves` for a move, a pass, a win and a loss (chapter 15) |
 
-In the desktop app, `BookLoader` (static) picks the book file at start-up, and `AppPaths` (static) holds all file locations. The web app keeps the settings and the learned book in the browser's local storage instead. The web appearance service keeps its `Appearance` in a separate local-storage entry; the desktop stores the same model in `settings.json`.
+In the desktop app, `BookLoader` (static) picks the book file at start-up, and `AppPaths` (static) holds all file locations. The web app keeps the settings and the learned book in the browser's local storage instead. Its existing `stello.appearance` entry remains the authority at startup for compatibility: `Home` loads it into `MainViewModel.Appearance`, and menu changes update both that entry and `AppSettings`. The desktop stores the same model in `settings.json`.
+
+The WPF [SoundService](../Stello.Net/Stello.Net/Services/SoundService.cs) queues generated WAVs and plays them in order with `SoundPlayer` on a background task. Turning Sound off discards pending sounds; a sound already playing can finish. Playback errors are traced and shown in a dialog rather than silently ignored. The app owns and disposes the service at shutdown.
 
 ### Files
 
