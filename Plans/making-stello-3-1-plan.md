@@ -174,7 +174,7 @@ Each item: read the code and decide whether it is a bug or a harmless quirk. If 
 - **The final matches** (a numbered list with estimates, each on the user's go):
   - 3.1 against 3.0 on 1 thread at 100 ms, 500 ms and 2 s;
   - 8 threads against 3.0 with 8 threads at 500 ms;
-  - against the port with `time-strict` on, at 100 and 500 ms.
+  - against the port with `time-strict` on, at 100 and 500 ms (user decision, 2026-11-08: these also serve as phase 4's port matches, which were not run separately; the commands are in the phase 4 step 4 findings).
 - **Docs:**
   - Part 1 chapters updated;
   - a new Part 3 chapter, "27 Stello 3.1: fixes and the desktop app", with glossary and references renumbered;
