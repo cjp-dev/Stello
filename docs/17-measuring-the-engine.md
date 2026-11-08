@@ -93,7 +93,7 @@ An explicit `--workers N` (1–256) overrides the default, including when core d
 
 [ffo-40-59.txt](../Stello.Net/tools/Stello.Benchmark/Data/ffo-40-59.txt) holds the FFO endgame positions #40 to #59 (20 to 34 empty squares) with the exact score of the best moves, from [the FFO test suite page](http://radagast.se/othello/ffotest.html) and Edax's `problem/fforum-40-59.obf`. `solve-bench` solves each position with `SearchLimits.Solve` and empty hash tables, and checks the score and the move. With `--passes N` each position is solved N times, one round over all positions after the other, and the fastest time counts.
 
-By default it solves #40–#44. `--to 49` adds five harder positions. Stello 2.0 solves #40–#49 in about 47 s ([chapter 08](08-endgame-solver.md#the-ffo-positions)); Stello 1 needed about 6 minutes ([the baseline](#endgame-solve-bench---to-49)). `--positions` reads another file in the same format.
+By default it solves #40–#44. `--to 49` adds five harder positions; use `--from 50 --to 59` for the last ten positions. Stello 2.0 solves #40–#49 in about 47 s ([chapter 08](08-endgame-solver.md#the-ffo-positions)); Stello 1 needed about 6 minutes ([the baseline](#endgame-solve-bench---to-49)). `--positions` reads another file in the same format.
 
 ## The midgame benchmark: `mid-bench`
 

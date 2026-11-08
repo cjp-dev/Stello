@@ -27,7 +27,7 @@ Usage: stello <command> [options]
                             are numbers only from --from to --to), each with cleared hash tables: score, move, nodes and
                             speed of each, checked against the scores in the file. --out writes the JSON of
                             `Stello.Benchmark solve-bench --out`, for `Stello.Benchmark solve-bench --engine stello-v2
-                            --compare <file.json>`.
+                            --compare <file.json>`. For example, --from 50 --to 59 selects FFO #50–#59.
   mid-bench [--positions <file>] [--depth 10] [--passes 3] [--hash-bits 19] [--eval <file>]
             [--selective on|off] [--probcut-pct N] [--out <file.json>] [--cpu auto|portable] [--threads 1]
                             Search the midgame positions (default Stello.Net/tools/Stello.Benchmark/Data/midgame.txt)

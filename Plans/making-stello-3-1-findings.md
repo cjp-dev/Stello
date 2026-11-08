@@ -491,3 +491,15 @@ What the work on Stello 3.1 and 3.2 teaches us, written down as we go: the decis
   - In strict mode the clog search gets a quarter of the move's time, and iterative deepening gets the rest minus the clog time, as before. If nothing finished, the first legal move is played instead of an unbounded search.
   - **Spot check, not a gate match:** Stello against the port at 100 ms, 8 starts (16 games), 4 workers. The port's longest move was **212 ms** with `time-strict=off` and **108 ms** with `on`; the averages were 68 and 65 ms. The scores of 16 games are noise. The test's ceiling of 175 ms at 100 ms is a timing test, so it can fail on a loaded machine like the other timing tests.
   - **The two port matches** (100 ms about 6 min, 500 ms about 24 min) are postponed to phase 5's final matches by the user's decision (2026-11-08); the spot check and the test cover Gate P4's time condition.
+
+### Step 5: FFO range and sample (2026-11-08)
+- **Selection:** the C# benchmark tool and Rust CLI both load the 40–59 data and accept an inclusive numeric ID range. Factored the range selection into helpers and added tests that select exactly #50–#59 without running their searches. The CLI help and [chapter 17](../docs/17-measuring-the-engine.md) now show `--from 50 --to 59`.
+- **#50 sample only:** both implementations returned the expected **+10, d8**, with **822,416,133 nodes**. C# took **25.8 s** (31.93M nodes/s); Rust took **25.3 s** (32.57M nodes/s). No positions #51–59 were solved.
+- **Estimate for the full range (not a reliable upper bound; extrapolated from #50 only):**
+  1. C# `solve-bench --from 50 --to 59`: about **4–5 minutes**.
+  2. Rust `solve-bench --from 50 --to 59 --passes 1`: about **4–5 minutes**.
+  Running both sequentially is about **8–10 minutes**. Position difficulty varies, so the #50 sample cannot guarantee the total.
+- **C++ comparison:** no cited Egaroucid C++ timings for #50–59 were found in the checked project references; none are included.
+- **Validation:** the new C# and Rust range tests pass; the Release solution build has 0 warnings/errors. Stello.Engine.Tests **489/489**, Egaroucid.Engine.Tests **77/77**, Stello.Net.Tests **115/115**, and `cargo test --release` pass. `cargo fmt --check` passes.
+- **Next:** wait for the user's go before running #50–59 in either CLI; then record all ten results. Gate P4 remains open.
+- **Review:** the selection already worked before; it is now one tested helper in each tool, with the default still #40–44. Rust formatting, Clippy with warnings denied and the CLI test pass; the .NET build has 0 warnings and Egaroucid.Engine.Tests passes 77/77. The C# tool's default engine is the same Rust engine through the FFI, which is why #50 gave the same 822,416,133 nodes in both. **One full run is enough**, for example the Rust CLI. The estimate of 4–5 minutes is an extrapolation from #50 alone, and the other positions may take longer.

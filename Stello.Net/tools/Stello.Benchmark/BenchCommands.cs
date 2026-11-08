@@ -28,9 +28,7 @@ internal static class BenchCommands
         List<BenchmarkPosition> all = BenchmarkPosition.Load(options.Text("positions") ?? Program.DataFile("ffo-40-59.txt"));
         int from = options.Number("from", 40, 0, int.MaxValue);
         int to = options.Number("to", 44, 0, int.MaxValue);
-        List<BenchmarkPosition> positions = all
-            .Where(p => !int.TryParse(p.Id, out int id) || (id >= from && id <= to))
-            .ToList();
+        List<BenchmarkPosition> positions = SelectByIdRange(all, from, to);
 
         BenchRun run = Run("solve-bench", positions, BenchSearcher.Create(options, SearchLimits.Solve, "solve"), options);
         int wrong = 0;
@@ -56,6 +54,9 @@ internal static class BenchCommands
         Finish(run, options);
         return wrong == 0 ? 0 : 3;
     }
+
+    internal static List<BenchmarkPosition> SelectByIdRange(IEnumerable<BenchmarkPosition> positions, int from, int to) =>
+        positions.Where(p => !int.TryParse(p.Id, out int id) || id >= from && id <= to).ToList();
 
     public static int MidBench(Options options)
     {

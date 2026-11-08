@@ -2,6 +2,7 @@
 
 using Stello.Benchmark;
 using Stello.Engine;
+using Stello.Engine.Benchmark;
 using EngineBoard = Stello.Engine.Board;
 
 namespace Stello.Egaroucid.Tests;
@@ -14,6 +15,16 @@ public class MatchAdapterTests
     public void ToEgaroucid_TheStartPositionIsEgaroucids()
     {
         Assert.Equal(Board.Initial, EgaroucidPlayer.ToEgaroucid(EngineBoard.Initial, Player.Black));
+    }
+
+    [Fact]
+    public void SolveBench_SelectsFfoPositions50Through59()
+    {
+        List<BenchmarkPosition> all = BenchmarkPosition.Load(Program.DataFile("ffo-40-59.txt"));
+
+        List<BenchmarkPosition> selected = BenchCommands.SelectByIdRange(all, 50, 59);
+
+        Assert.Equal(Enumerable.Range(50, 10).Select(id => id.ToString()), selected.Select(position => position.Id));
     }
 
     /// <summary>Along random games, both boards have the same legal moves and give the same position after each move.</summary>

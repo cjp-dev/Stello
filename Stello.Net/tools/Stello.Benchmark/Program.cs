@@ -24,6 +24,7 @@ internal static class Program
           solve-bench [--engine stello|stello-v2|stello-v1|egaroucid] [--eval <file>] [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits N]
                       [--threads N] [--out <file.json>] [--compare <file.json>]
                                     Solve the FFO positions exactly: score check, nodes, time to solve.
+                                    Select an inclusive numeric ID range, e.g. --from 50 --to 59 for FFO #50–#59.
           mid-bench [--engine stello|stello-v2|stello-v1|egaroucid] [--eval <file>] [--side <Stello side keys>] [--positions <file>] [--depth 10] [--mpc 100 | --level L] [--passes 3]
                     [--hash-bits N] [--selective on|off] [--probcut-pct N] [--threads N] [--out <file.json>] [--compare <file.json>]
                                     Search the midgame positions to a fixed depth: nodes, move and score of each search, speed.

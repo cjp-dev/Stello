@@ -164,9 +164,7 @@ pub(crate) fn solve_bench(args: &[String]) -> Result<(), String> {
     let all = load_positions(&positions_path(&options, "ffo-40-59.txt")?)?;
     let from = number(&options, "from", 40, 0, i32::MAX)?;
     let to = number(&options, "to", 44, 0, i32::MAX)?;
-    // C#: ids that are not numbers are always searched.
-    let positions: Vec<Position> =
-        all.into_iter().filter(|p| p.id.parse::<i32>().map_or(true, |id| id >= from && id <= to)).collect();
+    let positions = select_by_id_range(all, from, to);
     let passes = number(&options, "passes", 1, 1, 100)?;
     let hash_bits = number(&options, "hash-bits", 19u32, 10, 26)?;
     let (search_options, options_text) = engine_options(&options)?;
@@ -420,4 +418,25 @@ fn seconds(ms: f64) -> String {
 
 fn speed(nodes: u64, ms: f64) -> String {
     if ms > 0.0 { format!("{:.2}M", nodes as f64 / ms / 1000.0) } else { "-".to_string() }
+}
+
+fn select_by_id_range(all: Vec<Position>, from: i32, to: i32) -> Vec<Position> {
+    // C#: ids that are not numbers are always searched.
+    all.into_iter().filter(|p| p.id.parse::<i32>().map_or(true, |id| id >= from && id <= to)).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn solve_bench_selects_ffo_positions_50_through_59() {
+        let path = crate::repository_folder()
+            .expect("the repository root is available during tests")
+            .join("Stello.Net/tools/Stello.Benchmark/Data/ffo-40-59.txt");
+        let positions = select_by_id_range(load_positions(&path).expect("FFO data loads"), 50, 59);
+        let ids: Vec<String> = positions.into_iter().map(|position| position.id).collect();
+
+        assert_eq!(ids, (50..=59).map(|id| id.to_string()).collect::<Vec<_>>());
+    }
 }
