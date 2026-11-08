@@ -57,6 +57,8 @@ dlldata.c
 
 # Benchmark Results
 BenchmarkDotNet.Artifacts/
+# Stello.Benchmark match game logs (used by --resume); the .md/.json reports are committed
+Plans/benchmark-results/*.games.jsonl
 
 # .NET Core
 project.lock.json
