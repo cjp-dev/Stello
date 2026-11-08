@@ -37,14 +37,15 @@ internal sealed class EgaroucidPlayer(int tableBits, Book? book, int bookAccurac
     public SearchResult ChooseMove(Engine.Board board, Player player, SearchLimits limits, CancellationToken cancellationToken)
     {
         EgaroucidBoard position = ToEgaroucid(board, player);
+        Book? activeBook = limits.UseOpeningBook ? book : null;
         var searching = new SearchingFlag();
         using CancellationTokenRegistration stop = cancellationToken.Register(() => searching.Value = false);
         long started = Stopwatch.GetTimestamp();
         EgaroucidResult result = limits.Mode switch
         {
-            TimeControlMode.TimePerMove => Ai.SearchTimePerMove(_context, position, Milliseconds(limits.Time), book, bookAccuracy, _random, searching, timeStrict),
-            TimeControlMode.TimePerGame => Ai.SearchTimePerGame(_context, position, Milliseconds(limits.Time), book, bookAccuracy, _random, searching, timeStrict),
-            TimeControlMode.FixedDepth => Ai.AiCommon(_context, position, -Common.SCORE_MAX, Common.SCORE_MAX, limits.Depth, book, bookAccuracy, _random,
+            TimeControlMode.TimePerMove => Ai.SearchTimePerMove(_context, position, Milliseconds(limits.Time), activeBook, bookAccuracy, _random, searching, timeStrict),
+            TimeControlMode.TimePerGame => Ai.SearchTimePerGame(_context, position, Milliseconds(limits.Time), activeBook, bookAccuracy, _random, searching, timeStrict),
+            TimeControlMode.FixedDepth => Ai.AiCommon(_context, position, -Common.SCORE_MAX, Common.SCORE_MAX, limits.Depth, activeBook, bookAccuracy, _random,
                 useMultiThread: false, position.GetLegal(), SearchConst.TIME_LIMIT_INF, searching, log: null),
             _ => Ai.Search(_context, position, Level.MAX_LEVEL, useMultiThread: false),
         };

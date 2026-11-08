@@ -1,3 +1,4 @@
+using System.Numerics;
 using Stello.Engine.Search;
 
 namespace Stello.Engine;
@@ -162,6 +163,7 @@ internal sealed class EngineMatch(MatchSide a, MatchSide b, int workers)
         {
             IMatchPlayer? playerA = null;
             IMatchPlayer? playerB = null;
+            bool warmedUp = false;
             int index;
             while ((index = Interlocked.Increment(ref next)) < starts.Count)
             {
@@ -176,6 +178,7 @@ internal sealed class EngineMatch(MatchSide a, MatchSide b, int workers)
                 {
                     playerA ??= A.NewPlayer();
                     playerB ??= B.NewPlayer();
+                    WarmUpPlayers(board, toMove);
                     first = PlayGame(board, toMove, toMove.Opponent(), playerA, playerB, cancellationToken);
                     gamePlayed?.Invoke(index, false, first);
                     newGame = true;
@@ -190,6 +193,7 @@ internal sealed class EngineMatch(MatchSide a, MatchSide b, int workers)
                 {
                     playerA ??= A.NewPlayer();
                     playerB ??= B.NewPlayer();
+                    WarmUpPlayers(board, toMove);
                     second = PlayGame(board, toMove, toMove, playerA, playerB, cancellationToken);
                     gamePlayed?.Invoke(index, true, second);
                     newGame = true;
@@ -205,11 +209,41 @@ internal sealed class EngineMatch(MatchSide a, MatchSide b, int workers)
                     }
                 }
             }
+
+            void WarmUpPlayers(Board board, Player toMove)
+            {
+                if (warmedUp || board.IsGameOver)
+                {
+                    return;
+                }
+
+                if (BitOperations.PopCount(board.LegalMoves(toMove)) < 2)
+                {
+                    (board, toMove) = (Board.Initial, Player.Black);
+                }
+
+                // Side A normally gets the first measured search; warm both cold search paths beforehand.
+                playerA!.NewGame();
+                playerA.ChooseMove(board, toMove, WarmUpLimits(A.Limits), cancellationToken);
+                playerB!.NewGame();
+                playerB.ChooseMove(board, toMove, WarmUpLimits(B.Limits), cancellationToken);
+                warmedUp = true;
+            }
         }
 
         ParallelWork.Run(Math.Min(workers, starts.Count), Work, cancellationToken);
         return pairs;
     }
+
+    internal static SearchLimits WarmUpLimits(SearchLimits limits) =>
+        limits.Mode switch
+        {
+            TimeControlMode.TimePerMove => SearchLimits.TimePerMove(
+                TimeSpan.FromMilliseconds(100), useOpeningBook: false, hashBits: limits.HashBits) with { Threads = limits.Threads },
+            TimeControlMode.TimePerGame => SearchLimits.TimePerGame(
+                TimeSpan.FromMilliseconds(100), useOpeningBook: false, hashBits: limits.HashBits) with { Threads = limits.Threads },
+            _ => SearchLimits.FixedDepth(1, useOpeningBook: false, hashBits: limits.HashBits) with { Threads = limits.Threads },
+        };
 
     private MatchGame PlayGame(
         Board board, Player toMove, Player colourB, IMatchPlayer playerA, IMatchPlayer playerB, CancellationToken cancellationToken)

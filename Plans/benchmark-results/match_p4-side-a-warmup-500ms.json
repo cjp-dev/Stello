@@ -1,0 +1,91 @@
+{
+  "A": {
+    "Name": "stello2",
+    "Settings": "Stello 2.0 (C#), 500 ms/move, hash bits 19, no book",
+    "SearchedMoves": 470,
+    "NodesPerSecond": 6557758.241134235,
+    "MidgameDepth": 17.404669260700388,
+    "FirstSolve": 22.7,
+    "SecondsPerGame": 6.420737849999999,
+    "MsPerSearchedMove": 273.2228872340425,
+    "LongestMoveMs": 508.0848
+  },
+  "B": {
+    "Name": "stello3",
+    "Settings": "Stello, 500 ms/move, hash bits 19, no book",
+    "SearchedMoves": 469,
+    "NodesPerSecond": 15009041.167024927,
+    "MidgameDepth": 19.13095238095238,
+    "FirstSolve": 23.3,
+    "SecondsPerGame": 6.260356085,
+    "MsPerSearchedMove": 266.9661443496802,
+    "LongestMoveMs": 500.6617
+  },
+  "Games": 20,
+  "WinsB": 9,
+  "DrawsB": 4,
+  "LossesB": 7,
+  "PointsB": 11,
+  "Score": 0.55,
+  "ScoreLow": 0.32133333333333336,
+  "ScoreHigh": 0.7786666666666667,
+  "Elo": 34.86007028756008,
+  "EloLow": -129.8802959047561,
+  "EloHigh": 218.52190362893782,
+  "LikelihoodOfSuperiority": 0.6658823928231655,
+  "DiscsB": 0.5,
+  "DiscsMargin": 2.1520367613547453,
+  "Duration": "2m 08s",
+  "Pairs": [
+    {
+      "Start": "d3c5f6f3f4f5g4g3d6c6",
+      "DiscsBWhenAFirst": 8,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5f6f3f4e2d2c2",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c5e6d2c6d6c7f6f4f3b4",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": 6
+    },
+    {
+      "Start": "d3c3c4c5f6f3e3d2g3f2e2f4",
+      "DiscsBWhenAFirst": -12,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5b3f3b5e3c6d2f4a3",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 2
+    },
+    {
+      "Start": "d3c5e6d2c3e3c2b3c6c1c4",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5d6f4b4b6b5c6b3",
+      "DiscsBWhenAFirst": -6,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c5e6f7e7e3d6c3b4f5f4g5",
+      "DiscsBWhenAFirst": 2,
+      "DiscsBWhenBFirst": 4
+    },
+    {
+      "Start": "d3c3c4c5b3c2b4a5b6d6",
+      "DiscsBWhenAFirst": 0,
+      "DiscsBWhenBFirst": -2
+    },
+    {
+      "Start": "d3c3c4c5b3e3d6c6b5e6f3e2",
+      "DiscsBWhenAFirst": 4,
+      "DiscsBWhenBFirst": 0
+    }
+  ]
+}

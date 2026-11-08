@@ -74,6 +74,34 @@ public class BookAndTimeTests
         Assert.True((Board.Initial.GetLegal() & (1UL << result.Policy)) != 0);
     }
 
+    [EgaroucidFact]
+    public void MatchPlayer_UsesTheBookOnlyWhenLimitsAllowIt()
+    {
+        var player = new EgaroucidPlayer(16, LoadBook(), 0, 1);
+        player.NewGame();
+        EngineSearchResult bookResult = player.ChooseMove(
+            EngineBoard.Initial, EnginePlayer.Black, SearchLimits.FixedDepth(1), CancellationToken.None);
+        Assert.Equal(ScoreKind.Book, bookResult.Kind);
+
+        SearchLimits[] limits =
+        [
+            SearchLimits.FixedDepth(1, useOpeningBook: false),
+            SearchLimits.TimePerMove(TimeSpan.FromMilliseconds(20), useOpeningBook: false),
+            SearchLimits.TimePerGame(TimeSpan.FromMilliseconds(200), useOpeningBook: false),
+        ];
+        foreach (SearchLimits limit in limits)
+        {
+            player.NewGame();
+            EngineSearchResult result = player.ChooseMove(EngineBoard.Initial, EnginePlayer.Black, limit, CancellationToken.None);
+            Assert.NotEqual(ScoreKind.Book, result.Kind);
+            Assert.True(EngineBoard.Initial.IsLegal(EnginePlayer.Black, result.Move.Square!.Value));
+            if (limit.Mode == TimeControlMode.FixedDepth)
+            {
+                Assert.True(result.Nodes > 0);
+            }
+        }
+    }
+
     /// <summary>As in C++: when the side to move must pass, <c>ai</c> searches nothing and gives no move.</summary>
     [EgaroucidFact]
     public void Search_WhenTheSideToMoveMustPass_GivesNoMove()

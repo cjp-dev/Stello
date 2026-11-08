@@ -109,6 +109,97 @@ public class BenchmarkTests
     }
 
     [Fact]
+    public void EngineMatch_WarmsBothPlayersBeforeRecordingGames()
+    {
+        List<string> starts = BookMatch.StartsAtPly(BookTestData.Master, 8).Take(1).ToList();
+        var playerA = new RecordingMatchPlayer(hashBits: 10);
+        var playerB = new RecordingMatchPlayer(hashBits: 10);
+
+        _ = new EngineMatch(RecordedSide("A", playerA), RecordedSide("B", playerB), workers: 1)
+            .Play(starts, null, CancellationToken.None);
+
+        (Board board, Player toMove) = BookTextFormat.Replay(starts[0]);
+        Assert.Equal((board, toMove), playerA.Positions[0]);
+        Assert.Equal((board, toMove), playerB.Positions[0]);
+        Assert.Equal(1, playerA.Limits[0].Depth);
+        Assert.Equal(1, playerB.Limits[0].Depth);
+        Assert.True(playerA.Limits.Skip(1).All(limits => limits.Depth == 3));
+        Assert.True(playerB.Limits.Skip(1).All(limits => limits.Depth == 3));
+        Assert.Equal([1, 2, 3], playerA.ResetCountsAtMoves.Distinct());
+        Assert.Equal([1, 2, 3], playerB.ResetCountsAtMoves.Distinct());
+    }
+
+    [Theory]
+    [InlineData("d3c3b3b2f5a3a1c1", 0)]
+    [InlineData("d3e3f5c3d2f6f7d6b4g7c6f8f3e2f2e1h8c2f4h7d1g2c1b2h6c5c4b6f1g4" +
+        "c7a4h3g5a6b5d7b3a1c8e7b1a3e8b7b8a8d8g8g1a7a5g3e6h5h1h2g6", 1)]
+    public void EngineMatch_WarmsPlayablePositionWhenStartHasFewerThanTwoMoves(string start, int legalMoves)
+    {
+        (Board board, Player toMove) = BookTextFormat.Replay(start);
+        Assert.False(board.IsGameOver);
+        Assert.Equal(legalMoves, System.Numerics.BitOperations.PopCount(board.LegalMoves(toMove)));
+        var playerA = new RecordingMatchPlayer(hashBits: 10);
+        var playerB = new RecordingMatchPlayer(hashBits: 10);
+
+        IReadOnlyList<MatchPair> pairs = new EngineMatch(RecordedSide("A", playerA), RecordedSide("B", playerB), workers: 1)
+            .Play([start], null, CancellationToken.None);
+
+        Assert.Equal((Board.Initial, Player.Black), playerA.Positions[0]);
+        Assert.Equal((Board.Initial, Player.Black), playerB.Positions[0]);
+        Assert.NotEmpty(pairs[0].AFirst.Moves);
+        Assert.NotEmpty(pairs[0].BFirst.Moves);
+    }
+
+    [Fact]
+    public void EngineMatch_DefersWarmUpPastFinishedStarts()
+    {
+        string finished = TestGames.WhiteWipedOut.Replace(" ", "");
+        Assert.True(BookTextFormat.Replay(finished).Board.IsGameOver);
+        var playerA = new RecordingMatchPlayer(hashBits: 10);
+        var playerB = new RecordingMatchPlayer(hashBits: 10);
+        var calls = new List<(int Start, int A, int B)>();
+
+        _ = new EngineMatch(RecordedSide("A", playerA), RecordedSide("B", playerB), workers: 1)
+            .Play([finished, "d3c3b3b2f5a3a1c1"], null, CancellationToken.None,
+                gamePlayed: (index, _, _) => calls.Add((index, playerA.Limits.Count, playerB.Limits.Count)));
+
+        Assert.Equal(4, calls.Count);
+        Assert.Equal((0, 0, 0), calls[0]);
+        Assert.Equal((0, 0, 0), calls[1]);
+        Assert.Equal(1, calls[2].Start);
+        Assert.True(calls[2].A > 0 && calls[2].B > 0);
+        Assert.Equal((Board.Initial, Player.Black), playerA.Positions[0]);
+        Assert.Equal((Board.Initial, Player.Black), playerB.Positions[0]);
+    }
+
+    [Theory]
+    [InlineData(TimeControlMode.FixedDepth)]
+    [InlineData(TimeControlMode.TimePerMove)]
+    [InlineData(TimeControlMode.TimePerGame)]
+    [InlineData(TimeControlMode.Solve)]
+    public void EngineMatch_WarmUpLimitsPreserveTimedPathsAndDisableTheBook(TimeControlMode mode)
+    {
+        SearchLimits limits = (mode switch
+        {
+            TimeControlMode.FixedDepth => SearchLimits.FixedDepth(3, useOpeningBook: true, hashBits: 12),
+            TimeControlMode.TimePerMove => SearchLimits.TimePerMove(TimeSpan.FromMilliseconds(500), useOpeningBook: true, hashBits: 12),
+            TimeControlMode.TimePerGame => SearchLimits.TimePerGame(TimeSpan.FromMilliseconds(500), useOpeningBook: true, hashBits: 12),
+            TimeControlMode.Solve => SearchLimits.Solve,
+            _ => throw new ArgumentOutOfRangeException(nameof(mode)),
+        }) with { Threads = 2 };
+
+        SearchLimits warmup = EngineMatch.WarmUpLimits(limits);
+
+        bool timed = mode is TimeControlMode.TimePerMove or TimeControlMode.TimePerGame;
+        Assert.Equal(timed ? mode : TimeControlMode.FixedDepth, warmup.Mode);
+        Assert.Equal(timed ? TimeSpan.FromMilliseconds(100) : TimeSpan.Zero, warmup.Time);
+        Assert.Equal(timed ? 0 : 1, warmup.Depth);
+        Assert.False(warmup.UseOpeningBook);
+        Assert.Equal(limits.HashBits, warmup.HashBits);
+        Assert.Equal(2, warmup.Threads);
+    }
+
+    [Fact]
     public void EngineMatch_WithAGameClock_StaysWithinTheTimeForTheGame()
     {
         List<string> starts = BookMatch.StartsAtPly(BookTestData.Master, 8).Take(1).ToList();
@@ -137,5 +228,34 @@ public class BenchmarkTests
             .Add(midgame, 30, midgame.Elapsed).Add(solved, 18, solved.Elapsed).Add(solved, 16, TimeSpan.FromMilliseconds(8));
 
         Assert.Equal(new SideStats(3, 11_000, TimeSpan.FromMilliseconds(18), 1, 8, 18, TimeSpan.FromMilliseconds(8)), stats);
+    }
+
+    private static MatchSide RecordedSide(string name, RecordingMatchPlayer player) =>
+        new(name, SearchLimits.FixedDepth(3, useOpeningBook: false), HashBits: 10, CreatePlayer: () => player);
+
+    private sealed class RecordingMatchPlayer(int hashBits) : IMatchPlayer
+    {
+        private readonly StelloMatchPlayer _inner = new(hashBits, null);
+        private int _resetCount;
+
+        public List<SearchLimits> Limits { get; } = [];
+
+        public List<(Board Board, Player Player)> Positions { get; } = [];
+
+        public List<int> ResetCountsAtMoves { get; } = [];
+
+        public void NewGame()
+        {
+            _resetCount++;
+            _inner.NewGame();
+        }
+
+        public SearchResult ChooseMove(Board board, Player player, SearchLimits limits, CancellationToken cancellationToken)
+        {
+            Limits.Add(limits);
+            Positions.Add((board, player));
+            ResetCountsAtMoves.Add(_resetCount);
+            return _inner.ChooseMove(board, player, limits, cancellationToken);
+        }
     }
 }
