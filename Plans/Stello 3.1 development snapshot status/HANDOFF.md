@@ -176,58 +176,11 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
 - **Old plan links:** fixed in phase 4 step 1; both Plans and docs have 0 broken local file/anchor links.
 
 ## 8. Next steps
-1. **Phase 5, the 3.1 release** (plan, phase 5): final matches 5 and 6 against the Egaroucid port with `time-strict=on` are done. Stello scored 878/1,180 points (74.4%) at 100 ms in 4m 57s, and 795.5/1,180 (67.4%) at 500 ms in 22m 47s. See the [100 ms findings](../making-stello-3-1-findings.md#final-match-5-egaroucid-strict-time-at-100-ms-2026-11-08) and [500 ms findings](../making-stello-3-1-findings.md#final-match-6-egaroucid-strict-time-at-500-ms-2026-11-08). The user chose a separate `v3.0` build for matches 1–4; the match side and reference DLL are ready for review, and every match still needs the user's go. Then complete the docs (chapter 27, About 3.1) and release readiness. Do not fast-forward main without the user's OK; the reviewer does that and the user pushes. Phase 4 is done; see [Gate P4](../making-stello-3-1-findings.md#gate-p4-2026-11-08).
+1. **Phase 5, the 3.1 release** (plan, phase 5): all six final matches are done. Against the Egaroucid port with `time-strict=on`, Stello scored 878/1,180 (74.4%) at 100 ms in 4m 57s and 795.5/1,180 (67.4%) at 500 ms in 22m 47s. Against the actual 3.0 tag, all four results were statistically inconclusive: at 100 ms, 3.0 scored 50.3% (48.4–52.2%); at 500 ms, one thread, 50.3% (48.8–51.8%); at 2 s, 48.5% (46.5–50.5%); and at 500 ms, eight threads, 49.6% (47.5–51.6%). The four runs took 3h 5m 37s total and their reports/logs were checked. See the [3.0 match findings](../making-stello-3-1-findings.md#final-matches-1-4-actual-30-reference-2026-11-08) and the [port match findings](../making-stello-3-1-findings.md#final-match-5-egaroucid-strict-time-at-100-ms-2026-11-08). Next: the 3.1 version bump and release docs, then release readiness. Do not fast-forward main without the user's OK; the reviewer does that and the user pushes. Phase 4 is done; see [Gate P4](../making-stello-3-1-findings.md#gate-p4-2026-11-08).
 2. **After the deploy:** the user runs the phase 4 step 7 Firefox/Safari checklist on the live site; record the results in the step 7 findings.
 
-### Match commands for the 3.0 reference
+### Final matches against the 3.0 reference
 
-The user chose the actual `v3.0` tag (`baa44e5a6212e8dfdb38013af180892ef6f0053b`). A detached source worktree and MSVC Release target are in the session folder; the renamed reference DLL reports version 30000 and ABI 3. Its SHA-256 is `DC8BF6668DFC4FF4A695D71315F6F11B0646ACDA0B72DD89B89C61C39B583192`. It reproduced all 100 saved depth-10 results and FFO #40–44 node for node, and the current engine remained distinct. Targeted tests passed 69/69, including 12 one-thread and 2 eight-thread workers; the current engine's strict baseline passed 105/105. No games were played. See the [findings](../making-stello-3-1-findings.md#the-30-comparison-separate-native-build-2026-11-08).
+The user chose the actual `v3.0` tag (`baa44e5a6212e8dfdb38013af180892ef6f0053b`). The separately loaded MSVC DLL is retained at `Stello.Rust\target\v3.0-reference\stello_engine_v30.dll` (git-ignored), SHA-256 `DC8BF6668DFC4FF4A695D71315F6F11B0646ACDA0B72DD89B89C61C39B583192`. It reproduced 100 historical depth-10 results and FFO #40–44 node for node before matches. All four 3.0 comparisons are now complete; their report summaries and independent game-log reconciliation are in the [findings](../making-stello-3-1-findings.md#final-matches-1-4-actual-30-reference-2026-11-08). The JSON/Markdown reports are in `Plans/benchmark-results/`; the `.games.jsonl` files remain git-ignored.
 
-The DLL is not a repository file. The reviewer copied it (same SHA-256) to `Stello.Rust\target\v3.0-reference\stello_engine_v30.dll`, which survives agent sessions and is git-ignored with the rest of `target/`; the copy in the agent's session folder may disappear with that session. If it is gone, build tag `v3.0` in a detached session-folder worktree with `CARGO_TARGET_DIR` in the session folder and `cargo build --offline --locked --release -p stello-ffi`, copy `stello_engine.dll` to a different file name, and verify its version, ABI, hash and historical results before using it. A new match may use a newly verified hash if a rebuild differs; record that hash and use it in the command. An existing match can resume only with the original library bytes and side text. Do not commit the worktree, target or DLL.
-
-The following PowerShell setup is from the repository root; the current benchmark was built by the targeted Release tests:
-
-```powershell
-Set-Location 'C:\Udvikling\Privat\Spil\Stello'
-$benchmark = '.\Stello.Net\tools\Stello.Benchmark\bin\Release\net10.0\Stello.Benchmark.dll'
-$reference = Join-Path (Get-Location) 'Stello.Rust\target\v3.0-reference\stello_engine_v30.dll'
-$sha = 'DC8BF6668DFC4FF4A695D71315F6F11B0646ACDA0B72DD89B89C61C39B583192'
-if ((Get-FileHash -LiteralPath $reference -Algorithm SHA256).Hash -ne $sha) { throw 'The 3.0 reference DLL hash changed.' }
-```
-
-To repeat the targeted verification when no match is running:
-
-```powershell
-$env:STELLO_V30_LIBRARY = $reference
-cmd /c 'dotnet test "Stello.Net\Egaroucid.Engine.Tests\Egaroucid.Engine.Tests.csproj" -c Release --no-restore --filter "FullyQualifiedName~StelloLibraryMatchTests|FullyQualifiedName~MatchWorkerTests|FullyQualifiedName~MatchAdapterTests.ParseSide" 2>&1'
-if ($LASTEXITCODE -ne 0) { throw 'The reference-library tests failed.' }
-Remove-Item Env:\STELLO_V30_LIBRARY
-```
-
-After review, check the load and processor performance (section 6) before each match and do nothing heavy while it runs:
-
-```powershell
-(Get-CimInstance Win32_Processor).LoadPercentage
-(Get-Counter '\Processor Information(_Total)\% Processor Performance').CounterSamples.CookedValue
-```
-
-Run **only the one the user authorizes**, then stop and record the result. Side A is the 3.1 development engine and side B is actual 3.0; the match report's score is from B's point of view. Each uses hash bits 19, no book, and the 590 starts unless `--max-starts` is given.
-
-1. **100 ms, one thread, 1,180 games: about 6 minutes.**
-   ```powershell
-   dotnet $benchmark match --a "time-ms=100,threads=1,hash-bits=19,name=stello31" --b "engine=stello-lib,lib=${reference},sha256=${sha},time-ms=100,threads=1,hash-bits=19,name=stello30" --workers 12 --name p5-v30-100ms
-   ```
-2. **500 ms, one thread, 1,180 games: about 22 minutes.**
-   ```powershell
-   dotnet $benchmark match --a "time-ms=500,threads=1,hash-bits=19,name=stello31" --b "engine=stello-lib,lib=${reference},sha256=${sha},time-ms=500,threads=1,hash-bits=19,name=stello30" --workers 12 --name p5-v30-500ms
-   ```
-3. **2 s, one thread, 600 games: about 40–45 minutes.**
-   ```powershell
-   dotnet $benchmark match --a "time-ms=2000,threads=1,hash-bits=19,name=stello31" --b "engine=stello-lib,lib=${reference},sha256=${sha},time-ms=2000,threads=1,hash-bits=19,name=stello30" --workers 12 --max-starts 300 --name p5-v30-2s
-   ```
-4. **500 ms, eight threads per engine, 1,180 games: about 2 hours.**
-   ```powershell
-   dotnet $benchmark match --a "time-ms=500,threads=8,hash-bits=19,name=stello31" --b "engine=stello-lib,lib=${reference},sha256=${sha},time-ms=500,threads=8,hash-bits=19,name=stello30" --workers 2 --name p5-v30-8t-500ms
-   ```
-
-The 500 ms and 2 s runs add an actual-tag comparison beyond Gate P2's partial switch: both P2 sides had the phase 1 fixes and item 9, and the phase 4 match-tool changes came later. On interruption, repeat the identical command with `--resume` and the same DLL bytes; the side settings, hash and starts must match the saved game log.
+All four 95% score intervals include 50%, so the results do not show a significant difference. The 500 ms and 2 s one-thread matches directly compare against the actual 3.0 tag, beyond Gate P2's partial switch. Phase 5 next is the version bump, docs, and release-readiness checks.
