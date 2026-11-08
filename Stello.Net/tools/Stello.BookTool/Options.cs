@@ -8,13 +8,14 @@ internal sealed class Options
 {
     private readonly Dictionary<string, string> _named = new(StringComparer.Ordinal);
     private readonly List<string> _positional = [];
+    private readonly HashSet<string> _flags = new(StringComparer.Ordinal);
 
     public IReadOnlyList<string> Positional => _positional;
 
     public string this[int index] => _positional[index];
 
     /// <exception cref="ArgumentException">An option has no value or is given twice.</exception>
-    public static Options Parse(IEnumerable<string> args)
+    public static Options Parse(IEnumerable<string> args, params string[] flags)
     {
         var options = new Options();
         using IEnumerator<string> arg = args.GetEnumerator();
@@ -27,6 +28,16 @@ internal sealed class Options
             }
 
             string name = arg.Current[2..];
+            if (flags.Contains(name))
+            {
+                if (!options._flags.Add(name))
+                {
+                    throw new ArgumentException($"--{name} cannot be repeated.");
+                }
+
+                continue;
+            }
+
             if (!arg.MoveNext() || !options._named.TryAdd(name, arg.Current))
             {
                 throw new ArgumentException($"--{name} needs one value.");
@@ -39,13 +50,15 @@ internal sealed class Options
     /// <exception cref="ArgumentException">An option that the command does not know was given.</exception>
     public void Allow(params string[] names)
     {
-        if (_named.Keys.FirstOrDefault(name => !names.Contains(name)) is { } unknown)
+        if (_named.Keys.Concat(_flags).FirstOrDefault(name => !names.Contains(name)) is { } unknown)
         {
             throw new ArgumentException($"Unknown option --{unknown}.");
         }
     }
 
     public string? Text(string name) => _named.GetValueOrDefault(name);
+
+    public bool Flag(string name) => _flags.Contains(name);
 
     /// <exception cref="ArgumentException">The value is not a whole number in the range.</exception>
     public int Number(string name, int defaultValue, int min, int max)

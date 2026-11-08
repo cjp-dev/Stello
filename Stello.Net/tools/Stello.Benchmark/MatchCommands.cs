@@ -23,13 +23,27 @@ internal static class MatchCommands
 
     public static int Match(Options options)
     {
-        options.Allow("a", "b", "starts", "max-starts", "workers", "name");
-        MatchSide a = ParseSide(options.Text("a") ?? throw new ArgumentException("Give side A with --a, e.g. --a time-ms=100."));
-        MatchSide b = ParseSide(options.Text("b") ?? throw new ArgumentException("Give side B with --b, e.g. --b time-ms=200."));
+        string folder = Path.Combine(Program.RepositoryFolder(), "Plans", "benchmark-results");
+        return Match(options, folder, Program.Cancellable);
+    }
+
+    internal static int Match(Options options, string folder, Func<Action<CancellationToken>, bool> cancellable)
+    {
+        options.Allow("a", "b", "starts", "max-starts", "workers", "name", "resume");
+        string sideAText = options.Text("a") ?? throw new ArgumentException("Give side A with --a, e.g. --a time-ms=100.");
+        string sideBText = options.Text("b") ?? throw new ArgumentException("Give side B with --b, e.g. --b time-ms=200.");
+        MatchSide a = ParseSide(sideAText);
+        MatchSide b = ParseSide(sideBText);
         List<string> starts = LoadStarts(options.Text("starts"));
         starts = starts.Take(options.Number("max-starts", starts.Count, 1, int.MaxValue)).ToList();
         int workers = WorkerCount(options, a, b, ProcessorTopology.PhysicalCores);
         string name = options.Text("name") ?? $"{FileName(a.Name)}_vs_{FileName(b.Name)}";
+        string basePath = Path.Combine(folder, $"match_{name}");
+        string gamesPath = basePath + ".games.jsonl";
+        var settings = MatchRunSettings.Create(sideAText, sideBText, starts);
+        using MatchJournal journal = options.Flag("resume")
+            ? MatchJournal.Resume(gamesPath, settings, starts)
+            : MatchJournal.Create(gamesPath, settings, starts);
 
         Console.WriteLine($"match: A = {a.Name} ({Describe(a)}), B = {b.Name} ({Describe(b)})");
         // With threads=N sides, --workers × N should not exceed the cores (each game's engines search in turn).
@@ -38,9 +52,9 @@ internal static class MatchCommands
             : $"{a.Limits.Threads} threads for A and {b.Limits.Threads} for B";
         Console.WriteLine($"{starts.Count:N0} start positions, 2 games each, {workers} games at a time, {threads}.");
 
-        var pairs = new List<MatchPair>();
+        var pairs = journal.Pairs();
         var clock = Stopwatch.StartNew();
-        bool completed = Program.Cancellable(token => new EngineMatch(a, b, workers).Play(
+        bool completed = cancellable(token => new EngineMatch(a, b, workers).Play(
             starts,
             pair =>
             {
@@ -53,11 +67,16 @@ internal static class MatchCommands
                         $"discs {sofar.AverageDiscsB:+0.0;-0.0;0.0}, {Program.Duration(clock.Elapsed)}");
                 }
             },
-            token));
+            token,
+            journal.AFirstGames(),
+            journal.BFirstGames(),
+            (startIndex, second, game) => journal.Append(new MatchGameRecord(
+                MatchJournal.FormatVersion, settings, startIndex, second ? 1 : 0, starts[startIndex], MatchGameData.From(game)))));
+        pairs = journal.Pairs();
 
         if (pairs.Count == 0)
         {
-            Console.WriteLine("Stopped before the first pair was finished.");
+            Console.WriteLine("Stopped before a complete pair of games was finished. Completed games are saved in " + gamesPath);
             return 2;
         }
 
@@ -66,12 +85,10 @@ internal static class MatchCommands
         Console.WriteLine();
         Console.WriteLine(markdown);
 
-        string folder = Path.Combine(Program.RepositoryFolder(), "Plans", "benchmark-results");
         Directory.CreateDirectory(folder);
-        string basePath = Path.Combine(folder, $"match_{name}");
         File.WriteAllText(basePath + ".md", markdown);
         File.WriteAllText(basePath + ".json", JsonSerializer.Serialize(report, Json));
-        Console.WriteLine($"Saved to {basePath}.md and .json");
+        Console.WriteLine($"Saved to {basePath}.md and .json; completed games are in {gamesPath}");
         return completed ? 0 : 2;
     }
 

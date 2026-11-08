@@ -9,8 +9,9 @@ internal static class Program
     private const string Usage = """
         Usage: Stello.Benchmark <command> [options]
 
-          match --a <side> --b <side> [--starts <file>] [--max-starts N] [--workers N] [--name <name>]
+          match --a <side> --b <side> [--starts <file>] [--max-starts N] [--workers N] [--name <name>] [--resume]
                                     Play side A against side B, two games per start position with the colours swapped.
+                                    Append each finished game to match_<name>.games.jsonl; --resume continues a compatible match.
                                     A side is a list such as "time-ms=100", "depth=8", "game-s=60,hash-bits=20,name=new"
                                     or "engine=egaroucid,time-ms=100,book=on": engine (stello, stello-v2 = Stello 2.0 in C#, stello-v1 = Stello 1 or egaroucid), time-ms
                                     (per move), game-s (per game), depth (Stello) or level (Egaroucid), eval (Stello: another pattern evaluation file),
@@ -62,7 +63,7 @@ internal static class Program
         Plans/benchmark-results.
         --compare reports whether every search visited the same nodes and found the same move and score as in the saved
         file (the check that a change kept the search unchanged), and the time against the saved time.
-        Ctrl+C stops match cleanly and reports the games played so far.
+        Ctrl+C stops match cleanly and reports the games played so far; a later --resume continues from the game log.
         """;
 
     public static int Main(string[] args)
@@ -75,7 +76,7 @@ internal static class Program
 
         try
         {
-            Options options = Options.Parse(args[1..]);
+            Options options = Options.Parse(args[1..], args[0] == "match" ? ["resume"] : []);
             if (options.Positional.Count != 0)
             {
                 return Fail(Usage);

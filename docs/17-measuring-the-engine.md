@@ -20,7 +20,7 @@ dotnet run -c Release --project Stello.Net/tools/Stello.Benchmark -- <command> [
 
 | Command | What it does |
 |---|---|
-| `match --a <side> --b <side> [--starts <file>] [--max-starts N] [--workers N] [--name <name>]` | Plays side A against side B ([below](#the-engine-match-match)). |
+| `match --a <side> --b <side> [--starts <file>] [--max-starts N] [--workers N] [--name <name>] [--resume]` | Plays side A against side B and can resume completed games ([below](#the-engine-match-match)). |
 | `solve-bench [--engine stello\|stello-v1\|egaroucid] [--eval <file>] [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits N] [--out <file.json>] [--compare <file.json>]` | Solves FFO positions #40 to #44 (or another range of #40–#59) exactly ([below](#the-endgame-benchmark-solve-bench)). |
 | `mid-bench [--engine stello\|stello-v1\|egaroucid] [--eval <file>] [--side <keys>] [--positions <file>] [--depth 10] [--mpc 100 \| --level L] [--passes 3] [--hash-bits N] [--out <file.json>] [--compare <file.json>]` | Searches the midgame positions to a fixed depth ([below](#the-midgame-benchmark-mid-bench)). |
 | `eval-compare [--data <folder>] [--files N] [--per-empties 5000] [--name <name>]` | Scores Stello 1's and Egaroucid's evaluations against the final scores of Egaroucid's training games ([Comparing engines](#comparing-engines)). |
@@ -65,6 +65,8 @@ The keys `eval`, `soft-pct` and `mpc` are what is left of the switches of the 2.
 [starts.txt](../Stello.Net/tools/Stello.Benchmark/Data/starts.txt) holds 590 positions from the master opening book: every book position 10 to 12 plies from the start whose best book move has a value of at most 40 evaluation units either way (Stello 1's units: the file was made from the book before 2.0). The book's values come from deep searches, so these are openings that real games reach and that neither side has clearly won. They are in a fixed shuffled order, so the first N positions (`--max-starts N`) mix the plies and the openings.
 
 From each start position a **pair** of games is played: first side A plays the side to move, then side B. A start position that favours one colour is played once with each colour, so its effect cancels out. Every game starts with empty hash tables and fresh book trackers.
+
+After each finished game, `match` immediately flushes one JSON line to `Plans/benchmark-results/match_<name>.games.jsonl`. It records the start position, game result and search statistics needed to produce the final report. If the run is interrupted, repeat the same command with `--resume` and the same sides, limits, Egaroucid book seed and ordered start positions. The worker count may change. The tool refuses to resume if the saved sides, limits, seed or start positions differ; the Markdown and JSON reports are then regenerated from all completed games. A non-empty game log is never overwritten by a fresh run: use `--resume` or choose another `--name`. A log with no completed games cannot be resumed; rerun without `--resume`.
 
 ### The result
 

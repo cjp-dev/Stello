@@ -130,11 +130,25 @@ internal sealed class EngineMatch(MatchSide a, MatchSide b, int workers)
     public MatchSide B { get; } = b;
 
     /// <param name="played">Called after each pair, one at a time.</param>
+    /// <param name="aFirstGames">Previously completed games where A played the side to move, one entry per start.</param>
+    /// <param name="bFirstGames">Previously completed games where B played the side to move, one entry per start.</param>
+    /// <param name="gamePlayed">Called after each newly completed game with its start index and whether it is the second game in the pair.</param>
     /// <returns>The pairs in the order of <paramref name="starts"/>.</returns>
     /// <exception cref="FormatException">A start position is not a legal line from d3.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
-    public IReadOnlyList<MatchPair> Play(IReadOnlyList<string> starts, Action<MatchPair>? played, CancellationToken cancellationToken)
+    public IReadOnlyList<MatchPair> Play(
+        IReadOnlyList<string> starts,
+        Action<MatchPair>? played,
+        CancellationToken cancellationToken,
+        IReadOnlyList<MatchGame?>? aFirstGames = null,
+        IReadOnlyList<MatchGame?>? bFirstGames = null,
+        Action<int, bool, MatchGame>? gamePlayed = null)
     {
+        if (aFirstGames is not null && aFirstGames.Count != starts.Count || bFirstGames is not null && bFirstGames.Count != starts.Count)
+        {
+            throw new ArgumentException("The saved match games must have one entry per start position.");
+        }
+
         foreach (string start in starts)
         {
             BookTextFormat.Replay(start);
@@ -146,19 +160,49 @@ internal sealed class EngineMatch(MatchSide a, MatchSide b, int workers)
 
         void Work()
         {
-            IMatchPlayer playerA = A.NewPlayer();
-            IMatchPlayer playerB = B.NewPlayer();
+            IMatchPlayer? playerA = null;
+            IMatchPlayer? playerB = null;
             int index;
             while ((index = Interlocked.Increment(ref next)) < starts.Count)
             {
                 (Board board, Player toMove) = BookTextFormat.Replay(starts[index]);
-                MatchGame first = PlayGame(board, toMove, toMove.Opponent(), playerA, playerB, cancellationToken);
-                MatchGame second = PlayGame(board, toMove, toMove, playerA, playerB, cancellationToken);
+                bool newGame = false;
+                MatchGame first;
+                if (aFirstGames?[index] is { } savedFirst)
+                {
+                    first = savedFirst;
+                }
+                else
+                {
+                    playerA ??= A.NewPlayer();
+                    playerB ??= B.NewPlayer();
+                    first = PlayGame(board, toMove, toMove.Opponent(), playerA, playerB, cancellationToken);
+                    gamePlayed?.Invoke(index, false, first);
+                    newGame = true;
+                }
+
+                MatchGame second;
+                if (bFirstGames?[index] is { } savedSecond)
+                {
+                    second = savedSecond;
+                }
+                else
+                {
+                    playerA ??= A.NewPlayer();
+                    playerB ??= B.NewPlayer();
+                    second = PlayGame(board, toMove, toMove, playerA, playerB, cancellationToken);
+                    gamePlayed?.Invoke(index, true, second);
+                    newGame = true;
+                }
+
                 var pair = new MatchPair(starts[index], first, second);
                 lock (gate)
                 {
                     pairs[index] = pair;
-                    played?.Invoke(pair);
+                    if (newGame)
+                    {
+                        played?.Invoke(pair);
+                    }
                 }
             }
         }

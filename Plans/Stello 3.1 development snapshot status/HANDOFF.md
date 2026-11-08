@@ -65,7 +65,7 @@ Gate P2 (done):
 ### Phase 4: tools and verification gaps
 - **Step 1 done (2026-11-08):** repaired the 124 broken links in the three old plans and replaced the copied GUI specification with a GameShell pointer. Five more links into the git-ignored Egaroucid checkout (chapter 06 and the 3.0 plan) now go to upstream GitHub. The link check finds 0 broken links in Plans and docs (125 and 4 before, in a clean worktree). The Release build has 0 warnings/errors, and the .NET tests pass 489/489, 42/42 and 115/115.
 - **Step 2 implemented (2026-11-08; awaiting review):** default match workers are max(1, physical cores / max threads of the two sides); explicit `--workers` takes precedence. The Windows machine detects 16 physical cores (24 logical), giving 16 workers at 1 thread and 2 at 8 threads. A restricted-affinity check and 24 new unit-test cases pass; Release build has 0 warnings/errors and the .NET suites pass 489/489, 66/66 and 115/115. Linux topology has synthetic tests; Linux/macOS detection has not been run on those OSes here.
-- **Step 3 next:** match save and resume. Steps 3–7 and Gate P4 remain.
+- **Step 3 implemented (2026-11-08; awaiting review):** each finished game is appended durably to `match_<name>.games.jsonl`. `--resume` validates sides, limits, seeds and ordered starts, then plays only missing games; reports are rebuilt from all saved games. Tiny-depth interruption/resume, mismatch, overwrite and partial-line recovery tests pass. Release build has 0 warnings/errors; tests pass 489/489, 72/72 and 115/115. No real matches were run. **Step 4 next after review.**
 
 ## 4. How we work (user decisions)
 - **Who does what:** an agent on the user's Windows machine implements each item. This session reviews it: the diff, the tests, the baseline, the findings, plus its own spot checks. It fixes review issues and **commits**. The user is the one that does the Git **push**. The session is not allowed to do a Git **Push**. If its needed it have to ask the user. The user reports back after each item. When a item is reviewed and comitted, finish with your rewiew and a commandline showing the commando for the final push.
@@ -75,7 +75,7 @@ Gate P2 (done):
   - 1 min per game: about 3 h;
   - 5 min per game, 600 games: about 7.5 h.
 
-  At 8 threads use 2 workers (500 ms: about 2 h). Check the load first (section 6), and run nothing heavy during a match. The match tool **cannot resume**: a power cut means restarting.
+  At 8 threads use 2 workers (500 ms: about 2 h). Check the load first (section 6), and run nothing heavy during a match. Matches now save each finished game to a JSONL log; resume with the same `--name` and `--resume` after repeating the same sides, limits, seeds and ordered starts. The tool rejects mismatches and recreates the reports from the saved games.
 - **Fixes are kept unless they play worse** (upper bound above 50 % at 500 ms; confirm at 2 s if it matters). A new strategy, not a fix, must show a gain. If a significant loss shows no mechanism in the statistics, confirm it on the disjoint start positions 301–590 before dropping a fix.
 - **A/B switches:** each change is temporarily a `SearchOptions` switch through Rust → FFI (`stello_engine_set_*`, an ABI bump) → C# internal `SearchOptions` → match key `opt=…`. It is **removed as soon as the match is approved**, and the ABI goes back to 3 (it is 3 now). For gate P2 a combined `v30_search` switch played 3.0; it is removed too.
 - **The baseline stays strict, node for node** (C# `StelloV3BaselineTests`, Rust `tests/search.rs`, Node `engine.test.mjs`/`engine-mt.test.mjs`, all reading `stello-v3-signatures.txt`). If a kept fix changes nodes, **regenerate that file with a header note**; never loosen the tests. `stello-v2-signatures.txt` pins only the frozen C# 2.0 (`StelloV2Tests`).
@@ -172,5 +172,5 @@ PowerShell 5.1 has no `&&` or `||`: chain with `;` and gate with `if ($?) { … 
 - **Old plan links:** fixed in phase 4 step 1; both Plans and docs have 0 broken local file/anchor links.
 
 ## 8. Next steps
-1. **Phase 4, step 3, after step 2 review:** match save and resume. Steps 1 and 2 are recorded in the [findings](../making-stello-3-1-findings.md#phase-4-tools-and-verification-gaps). Then steps 4–7: the port's strict time limit, FFO #50–59, side A's longest move and platform checks. Matches and long solves still need the user's go.
+1. **Phase 4, step 4, after step 3 review:** the port's strict time limit. Then steps 5–7: FFO #50–59, side A's longest move and platform checks. Matches and long solves still need the user's go.
 2. **Then phase 5:** the 3.1 release, asking the user before fast-forwarding main.
