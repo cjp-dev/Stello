@@ -181,10 +181,10 @@ Each item: read the code and decide whether it is a bug or a harmless quirk. If 
   5. **Done 2026-11-08:** 3.1 against the Egaroucid port, 100 ms, `time-strict=on`, 1,180 games, `--workers 12`; Stello scored 878 points (74.4%), and the run took 4m 57s. See the [findings](making-stello-3-1-findings.md#final-match-5-egaroucid-strict-time-at-100-ms-2026-11-08) and [report](benchmark-results/match_p5-time-strict-100ms.md).
   6. **Done 2026-11-08:** the same Egaroucid comparison at 500 ms, 1,180 games, `--workers 12`; Stello scored 795.5 points (67.4%), and the run took 22m 47s. See the [findings](making-stello-3-1-findings.md#final-match-6-egaroucid-strict-time-at-500-ms-2026-11-08) and [report](benchmark-results/match_p5-time-strict-500ms.md). This also serves as the phase 4 port comparison, which was not run separately.
 - **3.0 comparison:** the user chose the actual build from tag `v3.0`, not the removed `v30_search` switch. All four matches are complete. Every 95% score interval includes 50%; none shows a significant difference. Reports, game-log reconciliation, and assessment are in the [findings](making-stello-3-1-findings.md#final-matches-1-4-actual-30-reference-2026-11-08). The 500 ms and 2 s actual-tag results add a full comparison beyond Gate P2's partial switch. Search and signatures remain unchanged.
+- **Step 2, version 3.1 (done 2026-11-08):** Rust workspace and lockfile packages are 3.1.0; the native version is 30100 and ABI 3 is unchanged. The shared About box says 3.1. The Release build completed with 0 warnings/errors; `cargo test --release` passed 87, `Stello.Engine.Tests` 497/497, `Egaroucid.Engine.Tests` 97 passed/8 optional tagged-v3.0 tests skipped, `Stello.Net.Tests` 115/115, and the Node tests 15/15. Details are in the [findings](making-stello-3-1-findings.md#step-2-version-31-2026-11-08).
 - **Docs:**
-  - Part 1 chapters updated;
-  - a new Part 3 chapter, "27 Stello 3.1: fixes and the desktop app", with glossary and references renumbered;
-  - About shows 3.1.
+  - Step 3 next: check/update Part 1 chapters, add Part 3 chapter "27 Stello 3.1: fixes and the desktop app", renumber glossary and references, and verify links;
+  - About shows 3.1 (step 2 done).
 - **The release:** fast-forward main with the user's OK, follow the deploy, and do the live check (1 thread, threads, Computer vs Computer). Then the user runs the phase 4 step 7 browser checklist in Firefox and Safari on the live site, and the results are recorded.
 
 ---

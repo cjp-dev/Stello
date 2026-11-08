@@ -5,7 +5,7 @@ public static class AboutInfo
 {
     public const string Title = "About Stello";
 
-    public const string Version = "Stello Version 3.0";
+    public const string Version = "Stello Version 3.1";
 
     public const string PictureCaption = "Claus Pedersen – wrote Stello in C++ in 1992 and ported it to C# in 2026";
 

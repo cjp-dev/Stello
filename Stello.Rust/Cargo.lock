@@ -82,28 +82,28 @@ checksum = "3a219298ac11a56ea9a6d2120044824d6f01aeb034955e7af7bc16858527deea"
 
 [[package]]
 name = "stello-cli"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "stello-core",
 ]
 
 [[package]]
 name = "stello-core"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "flate2",
 ]
 
 [[package]]
 name = "stello-ffi"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "stello-core",
 ]
 
 [[package]]
 name = "stello-wasm"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "stello-core",
  "wasm-bindgen",

@@ -513,7 +513,7 @@ mod tests {
 
     #[test]
     fn version_and_layout() {
-        assert_eq!(stello_version(), 30_000);
+        assert_eq!(stello_version(), 30_100);
         assert_eq!(ABI_VERSION, 3);
         assert_eq!(stello_abi_version(), ABI_VERSION);
         assert_eq!(std::mem::offset_of!(StelloSearchInfo, depth), 24);
