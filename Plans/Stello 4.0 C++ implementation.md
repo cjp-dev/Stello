@@ -4,7 +4,8 @@ This plan follows [making-stello-3-plan.md](making-stello-3-plan.md) (Stello 3.0
 
 ## Status
 
-- **Plan:** Updated on 8 November 2026 to target **Stello 3.1** (`Stello.Rust` v3.1.0, `stello_version() = 30100`, ABI v3). Ready to execute Part 1 (Phases 0–4).
+- **Part 1 (Phases 0–4):** Completed on 9 November 2026. All parity gates (P0–P3) and the controlled Rust vs. Clang vs. MSVC benchmark matrix (Gate P4) are recorded in [Stello 4.0 C++ findings.md](Stello%204.0%20C++%20findings.md).
+- **Gate P4 Decision (user, 9 November 2026):** **Approved Option B — Proceed with Part 2 (Phases 5–7)** to integrate `Stello.Cpp` into `.NET` and `Stello.Web` as **Stello 4.0**, incorporating the Phase 4 tuning improvements (`STELLO_ABORT_EXCEPTIONS=ON` by default and disabling Clang's AVX-512 SLP vectorization in `endgame::bits::flips()`).
 
 ## Goal
 
@@ -42,8 +43,8 @@ flowchart LR
 | Multi-threading | Port both in steps: first 1-to-1 single-threaded parity (exact evaluation, move, and node counts), then the 1-to-1 seqlock TT + scoped thread pool + Lazy SMP + YBWC so both 1-thread and 4/8/16-thread speeds are compared. |
 | Compilers | Benchmark **both Clang (LLVM)** and **MSVC (`cl.exe`)** against `rustc` on Windows (installing LLVM in Phase 0). |
 | CPU / ISA modes | Test **both** Baseline `x86-64` + runtime BMI2 `pext` dispatch (plus `--cpu portable`) AND Native Zen 4 (`-march=native` / `target-cpu=native` / `/arch:AVX2`) on both Rust and C++. |
-| Part 2 decision gate | Pause after Phase 4 so the user inspects the full Phase 4 benchmark report directly before deciding whether to proceed to Part 2. |
-| Preserving Stello 3.x | `Stello.Benchmark` in 3.1 already supports loading any ABI-3 native library via `engine=stello-lib,lib=<path>,sha256=<hash>` ([`StelloLibraryMatchPlayer.cs`](../Stello.Net/tools/Stello.Benchmark/StelloLibraryMatchPlayer.cs)). If Part 2 runs, we also preserve the Rust 3.1 library (and optional `engine=stello-v3` alias) so timed matches can always be run between Stello 4.0 (C++) and Stello 3.1 (Rust). |
+| Part 2 decision gate | Pause after Phase 4 so the user inspects the full Phase 4 benchmark report directly before deciding whether to proceed to Part 2. **Approved on 9 November 2026 (Option B):** proceed with Part 2 (Phases 5–7), enabling `STELLO_ABORT_EXCEPTIONS=ON` by default and disabling Clang's AVX-512 SLP vectorization in `endgame::bits::flips()`. |
+| Preserving Stello 3.x | `Stello.Benchmark` in 3.1 already supports loading any ABI-3 native library via `engine=stello-lib,lib=<path>,sha256=<hash>` ([`StelloLibraryMatchPlayer.cs`](../Stello.Net/tools/Stello.Benchmark/StelloLibraryMatchPlayer.cs)). In Part 2, we also preserve the Rust 3.1 library (`stello_engine_v3.dll` / `libstello_engine_v3.so` and `engine=stello-v3` alias) so timed matches can always be run between Stello 4.0 (C++) and Stello 3.1 (Rust). |
 
 ## The Engines (If Part 2 Proceeds)
 
@@ -191,20 +192,65 @@ Reads the existing test fixtures directly from [`Stello.Rust/stello-core/tests/d
 
 ---
 
-### Part 2 (Conditional on Gate P4) — Stello 4.0 Integration
+### Part 2 (Approved — Option B) — Stello 4.0 Tuning & Integration
 
-Executed **only** if the user inspects the Phase 4 benchmark report and approves proceeding:
+Executed following user approval of **Option B** after the Phase 4 benchmark report:
 
-- **Phase 5 — `.NET` FFI (`stello_engine.dll` / `libstello_engine.so`), `stello-v3` / `stello-lib` Preservation & Timed Matches:**
-  - `[NEW] Stello.Cpp/src/ffi/stello_ffi.cpp`: Implements the exact 14 `extern "C"` functions and struct layouts (`StelloSearchInfo` = 48 bytes, `StelloSearchResult` = 40 bytes, `ABI_VERSION = 3`) expected by [`StelloNative.cs`](../Stello.Net/Stello.Engine/Native/StelloNative.cs), catching all C++ exceptions before the C ABI boundary.
-  - `[MODIFY] Stello.Net/Stello.Engine/Stello.Engine.csproj` & `Stello.Net/tools/Stello.Benchmark`: Build `stello_engine` from `Stello.Cpp` via CMake/Clang (static CRT); preserve `Stello.Rust` 3.1 as `stello_engine_v3.dll` / `libstello_engine_v3.so` (accessible via `engine=stello-v3` as well as 3.1's `engine=stello-lib,lib=...,sha256=...` in [`StelloLibraryMatchPlayer.cs`](../Stello.Net/tools/Stello.Benchmark/StelloLibraryMatchPlayer.cs)) so timed matches can always be run between Stello 4.0 (C++) and Stello 3.1 (Rust).
-  - **Gate P5:** All 497 `Stello.Engine.Tests`, 97 `Egaroucid.Engine.Tests`, and 115 `Stello.Net.Tests` pass; 1,180-game timed match of Stello 4.0 (C++) vs. Stello 3.1 (Rust) at 500 ms (with 3.1's worker warm-up and `.games.jsonl` journal) confirms real Elo gain.
-- **Phase 6 — WebAssembly via Emscripten (`Stello.Web`):**
-  - `[NEW] Stello.Cpp/src/wasm/`: Emscripten build (`em++ -O3 -flto`) producing single-threaded `wwwroot/engine` and `-pthread` shared-memory Web Worker pool `wwwroot/engine-mt` with the exact `init` / `search` / `version` / `info` protocol of 3.1's `engine-worker.js` (including worker startup retry and actual started-thread reporting).
-  - `[MODIFY] .github/workflows/azure-static-web-apps.yml` & `Stello.Web.csproj`: Build WASM with Emscripten SDK.
-  - **Gate P6:** Node (`engine.test.mjs`, `engine-mt.test.mjs`, 15/15 tests) and headless Chromium checks pass; browser speed measured head-to-head against Rust 3.1 WASM.
-- **Phase 7 — Documentation & Stello 4.0 Release:**
-  - Update shared `AboutInfo.cs` to "Stello Version 4.0", update `docs/` Part 1 links, add chapter 28 for the C++ vs. Rust findings, and renumber Glossary and References to chapters 29 and 30 (following 3.1's [`27-stello-3-1-fixes-and-the-desktop-app.md`](../docs/27-stello-3-1-fixes-and-the-desktop-app.md)).
+#### Phase 5 — Pre-FFI C++ Tuning, `.NET` FFI (`stello_engine.dll` / `libstello_engine.so`), `stello-v3` Preservation & Timed Matches
+
+1. **Step 5.1 — Apply Phase 4 Tuning Recommendations in `Stello.Cpp`:**
+   - **Default `STELLO_ABORT_EXCEPTIONS=ON`:** Flip `option(STELLO_ABORT_EXCEPTIONS ... ON)` in [`Stello.Cpp/CMakeLists.txt`](../Stello.Cpp/CMakeLists.txt) so all release/native/FFI/WASM builds use zero-cost table-driven C++ exception unwinding (`throw Abort`) for search aborts (`+5.6%` 1t and `+3.8%` to `+6.5%` 4t–16t FFO endgame speedup, `+0.9–6.7%` 1t midgame speedup, 100% node-for-node identical). Keep `STELLO_ABORT_EXCEPTIONS=OFF` covered by a test target or preset check.
+   - **Prevent Clang AVX-512 (`zmm`) SLP Vectorization in `endgame::bits::flips()`:** In [`Stello.Cpp/src/endgame/bits.hpp`](../Stello.Cpp/src/endgame/bits.hpp), annotate both 4-iteration ray loops in `flips()` with `#if defined(__clang__)` `#pragma clang loop vectorize(disable)` (and `#pragma clang loop interleave(disable)` if needed). Verify via `llvm-objdump -d` on `clang-native` that `flips()` emits scalar GPR instructions (`lzcnt`, `blsr`, `tzcnt`) with `0` `zmm` instructions, and re-measure `perft(8..9)`, `mid-bench` d12/d16, and `solve-bench` FFO #40–49 (1t, 8t, 16t) in [Stello 4.0 C++ findings.md](Stello%204.0%20C++%20findings.md).
+   - **Bump Version to `4.0.0` (`40000`):** Update `PROJECT_VERSION` in `Stello.Cpp/CMakeLists.txt` and `stello::VERSION` (`"4.0.0"`, `40000`) so Stello 4.0 identifies itself as `4.0.0` (`stello_version() == 40000`), while `ABI_VERSION` remains `3`.
+
+2. **Step 5.2 — Implement C ABI Shared Library (`stello_ffi` -> `stello_engine.dll` / `libstello_engine.so`):**
+   - `[NEW] Stello.Cpp/src/ffi/stello_ffi.hpp` & `Stello.Cpp/src/ffi/stello_ffi.cpp`: 1-to-1 port of [`Stello.Rust/stello-ffi/src/lib.rs`](../Stello.Rust/stello-ffi/src/lib.rs) implementing all 14 `extern "C"` functions and exact struct layouts expected by [`StelloNative.cs`](../Stello.Net/Stello.Engine/Native/StelloNative.cs):
+     - `StelloSearchInfo` (`48` bytes, `offsetof(depth) == 24`) and `StelloSearchResult` (`40` bytes, `offsetof(mv) == 24`), verified by `static_assert`.
+     - Exports: `stello_version` (`40000`), `stello_abi_version` (`3`), `stello_engine_create`, `stello_engine_destroy`, `stello_engine_clear_hash`, `stello_engine_set_threads`, `stello_engine_set_ybwc`, `stello_engine_set_iteration_done`, `stello_engine_search`, `stello_signals_create`, `stello_signals_destroy`, `stello_signals_cancel`, `stello_signals_move_now`, `stello_signals_reset`.
+     - Every `extern "C"` entry point catches all C++ exceptions (`try { ... } catch (...) { return STELLO_INTERNAL_ERROR; }`) so no exception ever crosses the C ABI boundary.
+   - `[NEW] Stello.Cpp/tests/ffi_tests.cpp`: Port all unit tests from `Stello.Rust/stello-ffi/src/lib.rs` (`version_and_layout`, `create_checks_its_arguments`, `search_checks_its_arguments_and_finds_a_move`, `threads_are_checked_and_searches_with_them_finish`, `callbacks_and_signals`) into `stello_tests`.
+   - `[MODIFY] Stello.Cpp/CMakeLists.txt`: Add `SHARED` library target `stello_engine` (`OUTPUT_NAME "stello_engine"`) linking `stello_core`.
+
+3. **Step 5.3 — `.NET` Integration (`Stello.Engine.csproj`) & `stello-v3` Preservation (`Stello.Benchmark`):**
+   - `[MODIFY] Stello.Net/Stello.Engine/Stello.Engine.csproj`: Update `BuildStelloNative` to build `stello_engine` from `Stello.Cpp` via CMake + Ninja + Clang (`clang-release` preset by default, outputting to `Stello.Cpp/build/<os>-ffi/stello_engine.dll` or `libstello_engine.so`), copying it to the output directory just as the Cargo build did.
+   - `[MODIFY] Stello.Net/tools/Stello.Benchmark/`: Preserve `Stello.Rust` 3.1 by adding an `engine=stello-v3` match engine option (backed by [`StelloLibraryMatchPlayer.cs`](../Stello.Net/tools/Stello.Benchmark/StelloLibraryMatchPlayer.cs) loading `stello_engine_v3.dll` / `libstello_engine_v3.so` built from `Stello.Rust/stello-ffi`, in addition to `engine=stello-lib,lib=...,sha256=...`).
+   - `[MODIFY] Stello.Net/Stello.Engine.Tests/`: Update version assertions that check `3.1` / `30100` to `4.0` / `40000` while keeping all 105 [`stello-v3-signatures.txt`](../Stello.Net/Stello.Engine.Tests/Data/stello-v3-signatures.txt) node-for-node baseline tests strict.
+   - **Gate P5:**
+     - All C++ tests (`ctest` across presets) and all .NET tests (`Stello.Engine.Tests`, `Egaroucid.Engine.Tests`, `Stello.Net.Tests`) pass with 0 warnings;
+     - `Stello.Benchmark mid-bench` and `solve-bench` with `--engine stello` match `stello-v3` node-for-node on 1 thread;
+     - Run a 1,180-game timed match at 500 ms per move (`engine=stello` C++ 4.0 vs. `engine=stello-v3` Rust 3.1, 1 thread per engine, 12 workers, `.games.jsonl` journal) and record the Elo / score interval and speed in [Stello 4.0 C++ findings.md](Stello%204.0%20C++%20findings.md).
+
+#### Phase 6 — WebAssembly Engine (`Stello.Web`)
+
+1. **Step 6.1 — C++ WebAssembly Module & Worker Glue (`Stello.Cpp/src/wasm/`):**
+   - `[NEW] Stello.Cpp/src/wasm/protocol.hpp`, `protocol.cpp`, `threads.hpp`, `threads.cpp`, `wasm_exports.cpp`, and `stello_wasm.js`:
+     - Port [`Stello.Rust/stello-wasm/src/lib.rs`](../Stello.Rust/stello-wasm/src/lib.rs), [`protocol.rs`](../Stello.Rust/stello-wasm/src/protocol.rs), and [`threads.rs`](../Stello.Rust/stello-wasm/src/threads.rs) 1-to-1.
+     - Build two packages via Emscripten (`emcmake cmake` / `em++ -O3 -flto` — installing `emsdk` or using Clang WASM toolchain if needed):
+       1. `Stello.Net/Stello.Web/wwwroot/engine/` (`stello_wasm.js` + `stello_wasm_bg.wasm`): single-threaded release build.
+       2. `Stello.Net/Stello.Web/wwwroot/engine-mt/` (`stello_wasm.js` + `stello_wasm_bg.wasm`): multi-threaded release build with `-pthread` / `+atomics,+bulk-memory,+mutable-globals` and shared memory (up to 2 GiB), where pool Web Workers (`engine-pool-worker.js`) wait on `std::condition_variable` (`memory.atomic.wait32`) inside `poolWorker()` and `web_spawner` dispatches `ThreadPool` tasks to them.
+     - Expose the exact ES module exports expected by [`engine-worker.js`](../Stello.Net/Stello.Web/wwwroot/js/engine-worker.js), [`engine-pool-worker.js`](../Stello.Net/Stello.Web/wwwroot/js/engine-pool-worker.js), [`engine.test.mjs`](../Stello.Rust/stello-wasm/tests/engine.test.mjs), and [`engine-mt.test.mjs`](../Stello.Rust/stello-wasm/tests/engine-mt.test.mjs): `default({ module_or_path })`, `initSync({ module, memory })`, `version()`, `init(evaluation, hashBits)`, `search(requestJson, host)`, `threaded()`, `idleThreads()`, and `poolWorker()`.
+
+2. **Step 6.2 — Integrate into `Stello.Web.csproj`, Node Tests & CI Workflow:**
+   - `[MODIFY] Stello.Net/Stello.Web/Stello.Web.csproj`: Update `BuildStelloWasm` and `BuildStelloWasmThreads` to build `Stello.Cpp` WASM targets into `wwwroot/engine` and `wwwroot/engine-mt`.
+   - `[MODIFY] Stello.Rust/stello-wasm/tests/engine.test.mjs`: Update the version regex check from `/^3\.\d+\.\d+$/` to `/^4\.\d+\.\d+$/` (or Copy/Alias the test under `Stello.Cpp/tests/wasm/`).
+   - `[MODIFY] .github/workflows/azure-static-web-apps.yml`: Add `Stello.Cpp/**` to trigger paths and configure the C++ WASM toolchain in CI.
+   - **Gate P6:**
+     - `node --test Stello.Rust/stello-wasm/tests/engine.test.mjs` and `node --test Stello.Rust/stello-wasm/tests/engine-mt.test.mjs` pass all 15/15 tests (including exact node-for-node parity on `stello-v3-signatures.txt`, 4-thread FFO #40–44 exact solves, and Move Now / cancel latency < 30 ms);
+     - Benchmark C++ WASM vs. Rust 3.1 WASM (1-thread and 4-thread `mid-bench` d10/d12 and `FFO #40–44`) in Node / headless Chromium and record in [Stello 4.0 C++ findings.md](Stello%204.0%20C++%20findings.md).
+
+#### Phase 7 — Documentation & Stello 4.0 Release
+
+1. **Step 7.1 — Version Bump & App Verification:**
+   - `[MODIFY] Stello.Net/Stello.App/AboutInfo.cs` (and corresponding unit tests): Update version display to `"Stello Version 4.0"`.
+2. **Step 7.2 — Documentation (`docs/`):**
+   - `[NEW] docs/28-stello-4-0-the-engine-in-cpp.md`: Write Chapter 28 covering:
+     - The engineering question ("Is an identical Othello engine faster in C++20 than in Rust?");
+     - The 1-to-1 C++20 architecture, zero-dependency gzip weight loader, and the 5 C++ undefined-behavior / evaluation-order guards;
+     - The controlled Ryzen 7 7800X3D benchmark matrix (`rustc` vs. `clang++` vs. `cl.exe`, baseline vs. native, 1/4/8/16 threads);
+     - What actually differed: why strict 1-to-1 LLVM codegen was tied in endgame (`+0.1%`), how C++ zero-cost `throw Abort` exceptions (`STELLO_ABORT_EXCEPTIONS=ON`) gained `+5.7%` in endgame solving, and how disassembly caught Clang's AVX-512 `zmm` SLP vectorization in `flips()`;
+     - Native `.NET` FFI and WebAssembly speeds, and the 1,180-game timed match of Stello 4.0 (C++) against Stello 3.1 (Rust).
+   - `[MODIFY] docs/28-glossary.md` -> `docs/29-glossary.md` and `docs/29-references.md` -> `docs/30-references.md`: Renumber Glossary and References to 29 and 30, and update links across `docs/README.md`, `docs/01-overview.md`, `docs/14-app-integration.md`, and `docs/27-stello-3-1-fixes-and-the-desktop-app.md`.
+3. **Gate P7:** All C++, .NET (`Stello.Engine.Tests`, `Egaroucid.Engine.Tests`, `Stello.Net.Tests`), and Node WASM tests pass; `dotnet build -c Release Stello.Net/Stello.sln` succeeds with 0 warnings; findings and documentation are complete.
 
 ---
 

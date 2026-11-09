@@ -385,3 +385,8 @@ Traning data
 # Rust build output (Stello.Rust): never committed
 Stello.Rust/target/
 Stello.Rust/**/pkg/
+
+# C++ engine build output (Stello.Cpp): never committed
+Stello.Cpp/build/
+Stello.Cpp/out/
+
