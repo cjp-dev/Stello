@@ -73,7 +73,7 @@ test('this is the threaded build', options, () => {
 
 test('with 1 thread, searches equal the baseline node for node', options, () => {
     const signatures = readFileSync(`${repository}Stello.Net/Stello.Engine.Tests/Data/stello-v3-signatures.txt`, 'utf8')
-        .split('\n').filter(line => line !== '' && !line.startsWith('#'));
+        .split(/\r?\n/).filter(line => line !== '' && !line.startsWith('#'));
     const files = { 'midgame.txt': positions('midgame.txt'), 'ffo-40-59.txt': positions('ffo-40-59.txt') };
     const lines = signatures.filter(line => line.startsWith('midgame.txt ')).filter((_, i) => i % 10 === 0)
         .concat(signatures.filter(line => / (40|41) solve /.test(line)));

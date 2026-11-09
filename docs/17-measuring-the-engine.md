@@ -10,7 +10,7 @@ Before the engine is changed, there must be a way to tell whether a change helps
 - **`solve-bench`** solves FFO endgame positions with known scores. This measures the **endgame solver**: correct scores, nodes and time to solve.
 - **`mid-bench`** searches 100 midgame positions to a fixed depth. This measures **midgame speed** and records the nodes, move and score of every search, so a later run can check that a change kept the search **unchanged**.
 
-Match sides can use the current Rust engine, a separately loaded Stello native library, the frozen Stello 1 and 2.0 engines, or the Egaroucid port ([Comparing engines](#comparing-engines)). Every step from Stello 1 to Stello 2.0 was measured with the tool, and every result file of that work is in [Plans/benchmark-results](../Plans/benchmark-results) ([The result files](#the-result-files)). The numbers at the end of this chapter are [the baseline before 2.0](#the-baseline-before-20): the engine as it was ported from C++, now frozen as Stello 1. What Stello 2.0 measures is told phase by phase in chapters [20](20-phases-0-2-the-evaluation.md) to [24](24-results-and-what-comes-next.md).
+Match sides can use the current C++ 4.0 engine, the preserved Stello 3.1 Rust engine, a separately loaded Stello native library, the frozen Stello 1 and 2.0 engines, or the Egaroucid port ([Comparing engines](#comparing-engines)). Every step from Stello 1 to Stello 2.0 was measured with the tool, and every result file of that work is in [Plans/benchmark-results](../Plans/benchmark-results) ([The result files](#the-result-files)). The numbers at the end of this chapter are [the baseline before 2.0](#the-baseline-before-20): the engine as it was ported from C++, now frozen as Stello 1. What Stello 2.0 measures is told phase by phase in chapters [20](20-phases-0-2-the-evaluation.md) to [24](24-results-and-what-comes-next.md).
 
 ## Running the tool
 
@@ -21,8 +21,8 @@ dotnet run -c Release --project Stello.Net/tools/Stello.Benchmark -- <command> [
 | Command | What it does |
 |---|---|
 | `match --a <side> --b <side> [--starts <file>] [--max-starts N] [--workers N] [--name <name>] [--resume]` | Plays side A against side B and can resume completed games ([below](#the-engine-match-match)). |
-| `solve-bench [--engine stello\|stello-v1\|egaroucid] [--eval <file>] [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits N] [--out <file.json>] [--compare <file.json>]` | Solves FFO positions #40 to #44 (or another range of #40–#59) exactly ([below](#the-endgame-benchmark-solve-bench)). |
-| `mid-bench [--engine stello\|stello-v1\|egaroucid] [--eval <file>] [--side <keys>] [--positions <file>] [--depth 10] [--mpc 100 \| --level L] [--passes 3] [--hash-bits N] [--out <file.json>] [--compare <file.json>]` | Searches the midgame positions to a fixed depth ([below](#the-midgame-benchmark-mid-bench)). |
+| `solve-bench [--engine stello\|stello-v3\|stello-v2\|stello-v1\|egaroucid] [--eval <file>] [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits N] [--threads N] [--out <file.json>] [--compare <file.json>]` | Solves FFO positions #40 to #44 (or another range of #40–#59) exactly ([below](#the-endgame-benchmark-solve-bench)). |
+| `mid-bench [--engine stello\|stello-v3\|stello-v2\|stello-v1\|egaroucid] [--eval <file>] [--side <keys>] [--positions <file>] [--depth 10] [--mpc 100 \| --level L] [--passes 3] [--hash-bits N] [--selective on\|off] [--probcut-pct N] [--threads N] [--out <file.json>] [--compare <file.json>]` | Searches the midgame positions to a fixed depth ([below](#the-midgame-benchmark-mid-bench)). |
 | `eval-compare [--data <folder>] [--files N] [--per-empties 5000] [--name <name>]` | Scores Stello 1's and Egaroucid's evaluations against the final scores of Egaroucid's training games ([Comparing engines](#comparing-engines)). |
 | `make-exact [--starts <file>] [--from 20] [--games 100] [--depth 6] [--empties 28,26,24] [--workers N] [--out <file>]` | Writes midgame positions with every move solved exactly by the Egaroucid port. |
 | `mid-quality [--positions <file>] [--times 50,200,1000] [--engines stello,stello-v1,egaroucid \| --sides "<side>;<side>"] [--workers N] [--max-positions N] [--name <name>]` | The discs each engine's move loses against perfect play, at a fixed time per move. |
@@ -39,16 +39,16 @@ A side is a short list of `key=value` settings, separated by commas. It needs ex
 
 | Key | Meaning | Engines |
 |---|---|---|
-| `engine=stello-v1` | the engine: `stello` (the current Rust engine), `stello-v2` (Stello 2.0), `stello-v1` (Stello 1), `stello-lib` (a separate native library) or `egaroucid` ([below](#comparing-engines)) | all |
+| `engine=stello-v1` | the engine: `stello` (the current C++ 4.0 engine), `stello-v3` (the preserved Rust 3.1 library), `stello-v2` (Stello 2.0), `stello-v1` (Stello 1), `stello-lib` (a separate native library) or `egaroucid` ([below](#comparing-engines)) | all |
 | `time-ms=100` | 100 ms per move (`TimePerMove`) | all |
 | `game-s=60` | 60 s for the whole game (`TimePerGame`); the side's clock runs down during the game, as in the app | all |
 | `depth=8` | 8 plies per move (`FixedDepth`) | all Stello engines |
 | `level=21` | an Egaroucid level from 1 to 60 instead of a depth ([chapter 18](18-the-egaroucid-port.md#levels)) | Egaroucid |
 | `hash-bits=19` | the size of each hash table: 2<sup>19</sup> slots (the app's default, 10–26). Egaroucid's table has 2<sup>21</sup> slots by default, the same memory, and at most 2<sup>25</sup> | all |
-| `book=on` | use the opening book (off by default): Stello's [opening-book.txt](../Stello.Net/Book/opening-book.txt) ([chapter 10](10-opening-book.md)), Stello 1's [opening-book-stello1.txt](../Stello.Net/Book/opening-book-stello1.txt) or Egaroucid's `book.egbk3` | except `stello-lib` |
+| `book=on` | use the opening book (off by default): Stello's [opening-book.txt](../Stello.Net/Book/opening-book.txt) ([chapter 10](10-opening-book.md)), Stello 1's [opening-book-stello1.txt](../Stello.Net/Book/opening-book-stello1.txt) or Egaroucid's `book.egbk3` | except `stello-v3`, `stello-lib` |
 | `lib=<absolute path>` | separately built Stello native library, with a different file name from the current engine | `stello-lib` |
 | `sha256=<64 hex digits>` | expected SHA-256 of that library | `stello-lib` |
-| `book-file=<file>` | another text book; turns the book on | Stello except `stello-lib` |
+| `book-file=<file>` | another text book; turns the book on | Stello except `stello-v3`, `stello-lib` |
 | `book-acc=0` | Egaroucid's book accuracy; 0 plays one of the best book moves | Egaroucid |
 | `seed=1` | seeds Egaroucid's choice among equal book moves, anew every game | Egaroucid |
 | `time-strict=on` | include the book check and clog search in the time limit (default on in matches; use `off` for the C++-parity timing) | Egaroucid |
@@ -57,9 +57,9 @@ A side is a short list of `key=value` settings, separated by commas. It needs ex
 | `mpc=100` | Multi-ProbCut's t × 100: a cut needs the shallow search to be t standard deviations outside the window (default 100, [chapter 06](06-midgame-search.md#selective-search)) | current Stello |
 | `name=new` | the name in the report and in the file name | all |
 
-Since Stello 3.0, `engine=stello` is the Rust engine and `engine=stello-v2` the frozen Stello 2.0 ([chapter 25](25-phases-0-4-the-engine-in-rust.md)). `engine=stello` also accepts `threads=N` (1–256, default 1) and `ybwc=on|off` (default on). The match chooses its default workers from the physical cores and both sides' thread counts ([Timing](#timing); [chapter 26](26-phases-5-9-threads.md#threads-through-every-layer)). `mid-bench` and `solve-bench` take `--threads N` too.
+Since Stello 4.0, `engine=stello` is the C++20 engine, `engine=stello-v3` is the preserved Stello 3.1 Rust library (built in `Stello.Rust/target/<os>-v3/release/stello_engine_v3`, or set by `STELLO_V3_LIBRARY`), and `engine=stello-v2` is the frozen Stello 2.0 ([chapter 25](25-phases-0-4-the-engine-in-rust.md), [chapter 28](28-stello-4-0-the-engine-in-cpp.md)). `engine=stello` also accepts `threads=N` (1–256, default 1) and `ybwc=on|off` (default on); `engine=stello-v3` accepts `threads=N` and `hash-bits=N`, and is also available in `mid-bench` and `solve-bench`. The match chooses its default workers from the physical cores and both sides' thread counts ([Timing](#timing); [chapter 26](26-phases-5-9-threads.md#threads-through-every-layer)). `mid-bench` and `solve-bench` take `--threads N` too.
 
-For a match against a separately built Stello ABI 3 library, use a side such as `engine=stello-lib,lib=<absolute path>,sha256=<hash>,time-ms=100,threads=1`. Copy the library under a different file name from `stello_engine.dll` (or `libstello_engine.so`/`.dylib`) to avoid a loader-name collision with the current engine. The file hash and ABI are checked before play and when each worker loads it; the report records the library version and hash. A resumed match must use the same side text and library bytes. This side supports the built-in evaluation and default search settings without a book; `threads` and `hash-bits` work, but books and search switches are rejected. It is available for matches only, not for `mid-quality`, `mid-bench` or `solve-bench`.
+For a match against any other separately built Stello ABI 3 library, use a side such as `engine=stello-lib,lib=<absolute path>,sha256=<hash>,time-ms=100,threads=1`. Copy the library under a different file name from `stello_engine.dll` (or `libstello_engine.so`/`.dylib`) to avoid a loader-name collision with the current engine. The file hash and ABI are checked before play and when each worker loads it; the report records the library version and hash. A resumed match must use the same side text and library bytes. Both `stello-lib` and `stello-v3` support the built-in evaluation and default search settings without a book (`threads` and `hash-bits` work, books and search switches are rejected). `stello-lib` is for matches only; `stello-v3` works in matches, `mid-bench` and `solve-bench`.
 
 For example `--a time-ms=100,name=old --b time-ms=200,name=new`. Neither side uses the opening book unless it has `book=on`, so the games test the search and the evaluation. A key that does not belong to the side's engine is an error.
 
@@ -128,7 +128,8 @@ The tool can measure several engines. A match side chooses one with `engine=`, `
 
 | Value | Engine |
 |---|---|
-| `stello` (the default) | the current Rust engine through `Stello.Engine`, which the apps use ([chapter 01](01-overview.md)) |
+| `stello` (the default) | the current C++ 4.0 engine through `Stello.Engine`, which the apps use ([chapter 01](01-overview.md), [chapter 28](28-stello-4-0-the-engine-in-cpp.md)) |
+| `stello-v3` | the preserved Rust 3.1 engine (`stello_engine_v3`), via `StelloLibraryMatchPlayer` |
 | `stello-v2` | the frozen C# Stello 2.0 engine |
 | `stello-v1` | Stello 1: the engine before 2.0, frozen in `Stello.Engine.V1` as the baseline ([Stello 1 documentation](stello-1/README.md)) |
 | `stello-lib` | a separate Stello ABI 3 native library, selected by absolute path and SHA-256 |

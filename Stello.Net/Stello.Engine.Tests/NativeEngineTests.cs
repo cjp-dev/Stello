@@ -8,7 +8,7 @@ using V2 = Stello.Engine.V2;
 namespace Stello.Engine.Tests;
 
 /// <summary>
-/// The <see cref="SearchEngine"/> wrapper over the Rust engine (stello_engine): the ABI, the options, the callbacks and
+/// The <see cref="SearchEngine"/> wrapper over the C++ engine (stello_engine): the ABI, the options, the callbacks and
 /// the stop signals. The frozen C# engine is used as a correctness reference for moves and scores.
 /// </summary>
 public class NativeEngineTests
@@ -18,7 +18,7 @@ public class NativeEngineTests
     [Fact]
     public void Library_HasTheVersionAndLayoutOfThisWrapper()
     {
-        Assert.Equal(30100u, StelloNative.Version());
+        Assert.Equal(40000u, StelloNative.Version());
         Assert.Equal(3u, StelloNative.AbiVersion);
         Assert.Equal(StelloNative.AbiVersion, StelloNative.LibraryAbiVersion());
         Assert.Equal(48, Unsafe.SizeOf<NativeSearchInfo>());

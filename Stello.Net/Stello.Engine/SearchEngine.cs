@@ -9,14 +9,14 @@ namespace Stello.Engine;
 /// <summary>
 /// Stello's search: the midgame search ported from Minmax.cpp and Kontrol.cpp (iterative deepening with a hash
 /// table, response killers and selective search), with the trained pattern evaluation, and the endgame solver
-/// adapted from Egaroucid. Since Stello 3.0 the search runs in Rust (<c>Stello.Rust/stello-core</c>), ported from the
-/// C# engine of Stello 2.0 kept in <c>Stello.Engine.V2</c>; this class calls it through the C ABI of
+/// adapted from Egaroucid. In Stello 3.0–3.1 the search ran in Rust (<c>Stello.Rust/stello-core</c>); since
+/// Stello 4.0 it runs in C++20 (<c>Stello.Cpp</c>). This class calls it through the C ABI of
 /// <c>stello_engine</c> (<see cref="StelloNative"/>). An instance runs one search at a time; instances on different
 /// threads are independent. A search with <see cref="SearchLimits.Threads"/> above 1 also runs on worker threads of the
-/// Rust engine, which share its hash tables; they are started at the first such search and kept for the next ones.
+/// native engine, which share its hash tables; they are started at the first such search and kept for the next ones.
 /// </summary>
 /// <remarks>
-/// The Rust engine and its hash tables are made at the first search, so an engine that never searches (such as the
+/// The native engine and its hash tables are made at the first search, so an engine that never searches (such as the
 /// one a <see cref="BookLearner"/> only adds games with) needs no native library.
 /// </remarks>
 public sealed class SearchEngine
@@ -33,7 +33,7 @@ public sealed class SearchEngine
     private EngineHandle? _engine;
     private SignalsHandle? _signals;
 
-    // The threads the Rust engine was last set to (a new one uses 1).
+    // The threads the native engine was last set to (a new one uses 1).
     private int _threads = 1;
 
     /// <param name="hashBits">Each of the two hash tables gets 2^hashBits slots of two entries (C++: HASHSIZE 19, one entry).</param>
@@ -83,7 +83,7 @@ public sealed class SearchEngine
     /// <param name="onlyMoves">
     /// Search only these moves, even if just one is left (C++ calclib: the best move not yet in the book).
     /// </param>
-    /// <exception cref="DllNotFoundException">The Rust engine library is missing.</exception>
+    /// <exception cref="DllNotFoundException">The native engine library is missing.</exception>
     public unsafe SearchResult Search(
         Board board,
         Player player,
@@ -171,7 +171,7 @@ public sealed class SearchEngine
             StelloNative.Elapsed(result.ElapsedNs));
     }
 
-    // The Rust engine and the stop signals, made at the first search.
+    // The native engine and the stop signals, made at the first search.
     private unsafe (EngineHandle Engine, SignalsHandle Signals) Native()
     {
         if (_engine is not null && _signals is not null)
@@ -199,8 +199,8 @@ public sealed class SearchEngine
         {
             engine.Dispose();
             throw status == StelloNative.InvalidEvaluation
-                ? new InvalidDataException("The Rust engine could not read the evaluation (SearchOptions.Pattern).")
-                : new InvalidOperationException($"The Rust engine could not be made (status {status}).");
+                ? new InvalidDataException("The native engine could not read the evaluation (SearchOptions.Pattern).")
+                : new InvalidOperationException($"The native engine could not be made (status {status}).");
         }
 
         if (!Options.Ybwc)
@@ -221,13 +221,13 @@ public sealed class SearchEngine
             case StelloNative.Ok:
                 return;
             case StelloNative.InvalidArgument:
-                throw new ArgumentException("The Rust engine rejected the arguments of the search.");
+                throw new ArgumentException("The native engine rejected the arguments of the search.");
             default:
-                throw new InvalidOperationException($"The Rust engine failed (status {status}).");
+                throw new InvalidOperationException($"The native engine failed (status {status}).");
         }
     }
 
-    // Called by Rust on the searching thread, during the search. An exception must not reach Rust: the first one is
+    // Called by native code on the searching thread, during the search. An exception must not cross back: the first one is
     // kept, the search is cancelled, and Search throws it.
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static unsafe void OnProgress(NativeSearchInfo* info, nint user)

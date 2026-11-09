@@ -81,7 +81,7 @@ internal sealed class EvalWeights
 
     /// <summary>Reads an evaluation file, such as Stello's own, <c>Stello.Net/Book/stello-eval.bin</c>.</summary>
     /// <remarks>
-    /// Stello's evaluation is built into the Rust engine (stello-core), which searches with it unless
+    /// Stello's evaluation is built into the native C++ engine (Stello.Cpp), which searches with it unless
     /// <see cref="Search.SearchOptions.Pattern"/> gives another. It is not built into this assembly, so that the web
     /// app does not download it twice; the tools that evaluate in C# load the file, which their builds copy to their
     /// Data folder.
@@ -99,7 +99,7 @@ internal sealed class EvalWeights
 
     /// <summary>
     /// The weights as an evaluation file (see the remarks): the file they were loaded from, or else what
-    /// <see cref="Write"/> writes. The Rust engine reads it (<c>EvalWeights::read</c>) to get the same weights.
+    /// <see cref="Write"/> writes. The native engine reads it (<c>EvalWeights::read</c>) to get the same weights.
     /// </summary>
     internal byte[] FileBytes
     {

@@ -43,14 +43,24 @@ inline uint64_t legal_moves(uint64_t own, uint64_t opponent) noexcept {
     const uint64_t vertical = opponent & detail::INNER_ROWS;
     const uint64_t diagonal = opponent & detail::INNER;
 
-    const uint64_t moves = detail::scan_left(own, horizontal, 1)
-                         | detail::scan_right(own, horizontal, 1)
-                         | detail::scan_left(own, vertical, 8)
-                         | detail::scan_right(own, vertical, 8)
-                         | detail::scan_left(own, diagonal, 7)
-                         | detail::scan_right(own, diagonal, 7)
-                         | detail::scan_left(own, diagonal, 9)
-                         | detail::scan_right(own, diagonal, 9);
+    uint64_t moves = detail::scan_left(own, horizontal, 1)
+                   | detail::scan_right(own, horizontal, 1);
+#if defined(__clang__) && (defined(__AVX2__) || defined(__AVX512F__)) && !defined(__EMSCRIPTEN__)
+    // Keep Clang -march=native in scalar GPRs instead of SLP-vectorizing legal_moves into ymm/zmm.
+    __asm__ volatile("" : "+r"(moves));
+#endif
+    moves |= detail::scan_left(own, vertical, 8)
+           | detail::scan_right(own, vertical, 8);
+#if defined(__clang__) && (defined(__AVX2__) || defined(__AVX512F__)) && !defined(__EMSCRIPTEN__)
+    __asm__ volatile("" : "+r"(moves));
+#endif
+    moves |= detail::scan_left(own, diagonal, 7)
+           | detail::scan_right(own, diagonal, 7);
+#if defined(__clang__) && (defined(__AVX2__) || defined(__AVX512F__)) && !defined(__EMSCRIPTEN__)
+    __asm__ volatile("" : "+r"(moves));
+#endif
+    moves |= detail::scan_left(own, diagonal, 9)
+           | detail::scan_right(own, diagonal, 9);
 
     return moves & empty;
 }

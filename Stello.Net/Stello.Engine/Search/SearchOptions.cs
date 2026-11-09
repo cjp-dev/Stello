@@ -11,7 +11,7 @@ internal sealed record SearchOptions
     /// <summary>The engine as the apps use it.</summary>
     public static SearchOptions Default { get; } = new();
 
-    /// <summary>Another pattern evaluation, or null for the Rust engine's built-in one (<c>Book/stello-eval.bin</c>).</summary>
+    /// <summary>Another pattern evaluation, or null for the native engine's built-in one (<c>Book/stello-eval.bin</c>).</summary>
     public EvalWeights? Pattern { get; init; }
 
     /// <summary>

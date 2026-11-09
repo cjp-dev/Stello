@@ -400,7 +400,7 @@ See [Stello porting documentation.md](../Plans/Stello%20porting%20documentation.
 - [ProbCut – Chess Programming Wiki](https://www.chessprogramming.org/ProbCut) and [Buro (1995), ProbCut (pdf)](https://skatgame.net/mburo/ps/probcut.pdf): ProbCut and Multi-ProbCut, the statistical form of the selective search.
 - [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html): "Searching", with alpha-beta, move ordering and selective search in Othello.
 - [Lazy SMP – Chess Programming Wiki](https://www.chessprogramming.org/Lazy_SMP) and [Young Brothers Wait Concept – Chess Programming Wiki](https://www.chessprogramming.org/Young_Brothers_Wait_Concept): the two ways of searching on several threads.
-- [Chapter 26](26-phases-5-9-threads.md): how the threads were added and measured, and the [references](29-references.md#26-phases-59-threads) for it.
+- [Chapter 26](26-phases-5-9-threads.md): how the threads were added and measured, and the [references](30-references.md#26-phases-59-threads) for it.
 
 ---
 

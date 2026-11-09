@@ -23,12 +23,17 @@ using Spawner = bool (*)(size_t index, std::function<void()> body);
 
 /// Spawns a detached `std::thread`; the pool waits for all worker bodies to return in `~ThreadPool()`.
 inline bool std_spawner(size_t /*index*/, std::function<void()> body) {
+#if defined(__wasm__) && !defined(__wasm_atomics__)
+    (void)body;
+    return false;
+#else
     try {
         std::thread([b = std::move(body)]() mutable { b(); }).detach();
         return true;
     } catch (...) {
         return false;
     }
+#endif
 }
 
 namespace detail {

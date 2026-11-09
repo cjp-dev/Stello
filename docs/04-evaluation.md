@@ -304,7 +304,7 @@ Once, when the evaluation was ported, both evaluated the whole test split of the
 - [Technical explanation – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/explanation/): Egaroucid's pattern evaluation, where the four 10-square patterns come from.
 - [Training data – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/train-data/): the data the weights were trained on.
 - [Phases 0–2: the evaluation](20-phases-0-2-the-evaluation.md): how the evaluation was trained and chosen; [Phase 5: the search](23-phase-5-the-search.md): how the search was tuned to it; [Phases 0–4: the engine in Rust](25-phases-0-4-the-engine-in-rust.md): the port and the faster reading of the features.
-- [Glossary](28-glossary.md) and [References](29-references.md).
+- [Glossary](29-glossary.md) and [References](30-references.md).
 
 ---
 

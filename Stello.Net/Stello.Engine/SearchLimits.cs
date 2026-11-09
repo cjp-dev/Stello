@@ -49,7 +49,7 @@ public sealed record SearchLimits
 
     /// <summary>
     /// The threads the search uses, 1 to <see cref="MaxThreads"/> (default 1), set with <c>limits with { Threads = n }</c>.
-    /// The threads share the engine's hash tables. Only <see cref="SearchEngine"/> (the Rust engine) reads it; the frozen
+    /// The threads share the engine's hash tables. Only <see cref="SearchEngine"/> (the native engine) reads it; the frozen
     /// engines of Stello 1 and 2.0 always search with 1.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">The value is outside 1 to <see cref="MaxThreads"/>.</exception>

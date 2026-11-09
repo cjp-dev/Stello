@@ -14,9 +14,9 @@ This file records the toolchain setup, parity gates, undefined-behavior guards, 
 | 2. 1-thread search & endgame solver (3.1 parity) | done (2026-11-09) | All 5 presets (`clang-release`, `clang-native`, `msvc-release`, `msvc-native`, `clang-sanitized`) + `STELLO_ABORT_EXCEPTIONS=ON` pass 27/27 tests (all 105 `stello-v3-signatures.txt`, 34-ply aging `2,156,127`) with 0 warnings and exact node-for-node parity across >31.7B nodes / 3,600+ `Stello.Benchmark --compare` searches |
 | 3. Seqlock TT, Lazy SMP & YBWC | done (2026-11-09) | All 5 presets (`clang-release`, `clang-native`, `msvc-release`, `msvc-native`, `clang-sanitized`) + `STELLO_ABORT_EXCEPTIONS=ON` pass 35/35 tests (0 warnings, 0 ASan/UBSan findings); Gate P3 passes 1-thread node parity (`3,716,389` mid d10; `1,115,666,701` FFO #40–49), FFO #40–49 (2/4/8/16t + YBWC off + exceptions), and 500 random endgames (2/4/8/16t: 2,000 exact solves, 0 score/move diffs) |
 | 4. Controlled Rust vs Clang vs MSVC benchmarks | done (2026-11-09) | Complete idle-machine matrix (1/4/8/16 threads, baseline/portable/native, `Result` vs `STELLO_ABORT_EXCEPTIONS=ON`, disassembly analysis); **Gate P4 approved (Option B — proceed to Part 2)** |
-| 5. Pre-FFI tuning, `.NET` FFI & `stello-v3` timed match | ready | Default `STELLO_ABORT_EXCEPTIONS=ON`, disable Clang AVX-512 SLP in `flips()`, implement `stello_ffi`, wire `Stello.Engine.csproj` + `stello-v3`, run 1,180-game match |
-| 6. Emscripten WebAssembly (`Stello.Web`) | pending | Single-threaded (`wwwroot/engine`) + `-pthread` (`wwwroot/engine-mt`) C++ WASM packages, 15/15 Node tests, browser speed comparison |
-| 7. Documentation & Stello 4.0 release | pending | `AboutInfo.cs` 4.0, Chapter 28 (`28-stello-4-0-the-engine-in-cpp.md`), renumber Glossary/References to 29/30 |
+| 5. Pre-FFI tuning, `.NET` FFI & `stello-v3` timed match | done (2026-11-09) | `STELLO_ABORT_EXCEPTIONS=ON` default, scalar `flips()`, `4.0.0` (`40000`), `stello_engine.dll` C ABI, `Stello.Engine.csproj` + `stello-v3` preservation, 40/40 C++ + 497/97/115 `.NET` tests, FFI speed check (`+4.3–5.3%` 1t, `+3.0%` 8t), 1,180-game 500 ms match (`cpp-4.0` 591–589 `rust-3.1`, `-1 Elo` [-10..+9], `16.58M vs 15.41M nps`, no significant difference) |
+| 6. Emscripten WebAssembly (`Stello.Web`) | done (2026-11-09) | Standalone (`wwwroot/engine`) + `-pthread` (`wwwroot/engine-mt`) C++ WASM packages (`-20.5–25.4 KB` brotli vs Rust 3.1), `+6.8–17.3%` (1t) and `+3.6–15.8%` (4–8t) faster in Node `v24.19.0`, `15/15` Node tests + `43/43` C++ tests |
+| 7. Documentation & Stello 4.0 release | done (2026-11-09) | `AboutInfo.cs` 4.0, Chapter 28 (`28-stello-4-0-the-engine-in-cpp.md`), Glossary/References renumbered to `29`/`30`; Gate P7 verified across all 5 C++ presets + exceptions `OFF` (`43/43`), Node (`15/15`), `Stello.Net.slnx` (0 warnings, `497` / `97+8 skipped` / `116`), and clean AOT Web publish |
 
 ## Hardware & Toolchain Environment (Windows x64)
 
@@ -112,12 +112,12 @@ Ten standalone binaries (all untracked under `Stello.Cpp/build/` and `Stello.Cpp
 Plus `--cpu portable` (`--cpu portable` CLI flag forcing scalar LUT bit-extraction) on `rust-base`, `clang-base`, and `msvc-base`.
 
 - **`eval-split` dataset note:** `Traning data/stello-bin` is not present on this machine, so `eval-split` was measured on a deterministic `1,005,001`-position split across discs `8..60` (25,000 seeded random games stored in scratch). All configs returned identical FNV-1a checksums and sums.
-- **Preflight & per-run node parity:** Every 1-thread search pass matched Stello 3.1 bit-for-bit and node-for-node (`perft(8)=390,216`, `perft(9)=3,005,320`, `rand d8=9,620,457`, `mid d10=3,716,389`, `mid d12=10,579,515`, `mid d14=29,779,568`, `mid d16=77,867,024`, `FFO #40–49=1,115,666,701`).
+- **Preflight & per-run node parity:** Every 1-thread search pass matched Stello 3.1 bit-for-bit and node-for-node (`perft(8)=390,216`, `perft(9)=3,005,288`, `rand d8=9,620,457`, `mid d10=3,716,389`, `mid d12=10,579,515`, `mid d14=29,779,568`, `mid d16=77,867,024`, `FFO #40–49=1,115,666,701`).
 - **Percentage convention (`Δ`):** Computed on `mean` values: `(rust-base_mean / cfg_mean - 1)` for time benchmarks and `(cfg_mean / rust-base_mean - 1)` for throughput benchmarks (`eval-split`, `M nps`), so positive `+X%` always means faster.
 
 ### 1. Microbenchmarks: `perft(8)`, `perft(9)`, and `eval-split` (1,005,001 positions)
 
-5 interleaved idle-machine passes per binary. All configs produced identical checksums on `eval-split` (`eval-fnv 11c6fe79fd476f4b`, `score-fnv b5d384fb3835cdda`, `sum 95729301`) and `perft(8) = 390,216`, `perft(9) = 3,005,320`.
+5 interleaved idle-machine passes per binary. All configs produced identical checksums on `eval-split` (`eval-fnv 11c6fe79fd476f4b`, `score-fnv b5d384fb3835cdda`, `sum 95729301`) and `perft(8) = 390,216`, `perft(9) = 3,005,288`.
 
 | Config | `perft(8)` min / mean (ms) | `Δ` vs `rust-base` | `perft(9)` min / mean (ms) | `Δ` vs `rust-base` | `eval-split` max / mean (M pos/s) | `Δ` vs `rust-base` |
 |---|---:|---:|---:|---:|---:|---:|
@@ -247,4 +247,117 @@ Lazy SMP + YBWC node counts fluctuate slightly (~1–3%) between runs due to thr
 - **Portable `x86-64` distribution build (`clang-base-exc` vs `rust-base`):** C++20 matches Rust in baseline `AbortResult` midgame/endgame parity (`+0.1%` FFO, `+1.3–5.9%` midgame, `+5.4%` eval) and — by switching one compile-time macro (`STELLO_ABORT_EXCEPTIONS=ON`) that Rust (`panic=abort`, `Result`) cannot easily use on search abort paths — gains a consistent **+5.6% (1t), +3.8% (4t), +6.5% (8t), and +5.0% (16t)** speedup in exact endgame solving (`FFO #40–49`) plus **+0.9–6.7%** in 1t midgame with **0 node difference**.
 - **Native / tuned builds:** `clang-native` already leads 1t & MT midgame (**+6.7% 1t d16**, **+8.7–9.2% d10/d12**), and `clang-native-exc` sets the fastest 16t FFO mark (**4.840 s**, **+17.6%** over `rust-base`). If native `-march=native` builds are desired in Part 2, adding a targeted tweak to prevent Clang's ZMM SLP vectorization in `endgame::bits::flips()` (putting it in sync with `msvc-native`/`rust-native` scalar `blsr`/`lzcnt`) would likely combine `clang-native`'s midgame lead with fast 1t–8t endgame solving.
 - **Standalone Phase 4 Gate (Approved 2026-11-09):** User approved **Option B** — proceed to **Part 2** (Phases 5–7: pre-FFI C++ tuning pass with `STELLO_ABORT_EXCEPTIONS=ON` by default and scalar `flips()` loop pragmas, `.NET` FFI + `stello-v3` preservation and 1,180-game timed match comparison, Emscripten WASM + Node/Chromium comparison vs. Rust WASM, and Chapter 28 / Stello 4.0 release).
+
+## Phase 5: Pre-FFI Tuning, `.NET` FFI & `stello-v3` Preservation (done 2026-11-09)
+
+### Step 5.1 — Pre-FFI Tuning & Version `4.0.0` (`40000`)
+
+- **`STELLO_ABORT_EXCEPTIONS=ON` default:** [`Stello.Cpp/CMakeLists.txt`](../Stello.Cpp/CMakeLists.txt#L13) now defaults `STELLO_ABORT_EXCEPTIONS` to `ON`; `AbortResult` (`OFF`) remains tested separately as a build configuration.
+- **Scalar `flips()` on Clang `-march=native`:** Both 4-iteration ray loops in [`endgame::bits::flips()`](../Stello.Cpp/src/endgame/bits.hpp#L112-L146) now carry `#pragma clang loop vectorize(disable)` and `#pragma clang loop interleave(disable)` (plus a zero-cost scalar `__asm__ volatile("" : "+r"(flipped))` barrier guarded by `#if defined(__clang__) && (defined(__AVX2__) || defined(__AVX512F__)) && !defined(__EMSCRIPTEN__)`), keeping Clang `23.1.5` in scalar GPRs (`lzcnt`, `blsr`) instead of AVX-512 `vplzcntq`/`zmm`.
+- **Disassembly check (`clang-native`, `llvm-objdump` / `-S`):**
+  - Whole `stello-cpp.exe` binary: `vplzcntq = 0` (`popcnt=74`, `tzcnt=38`, `lzcnt=14`, `pext=2`, `blsr=27`, `ymm=2,522`, `zmm=3,189` vs Phase 4's `8,275`).
+  - Per-TU `-O3 -march=native -S` check: `board.cpp` (`flips()` / `perft`) = **`0 zmm`** (`2 ymm`, `0 vplzcnt`); `endgame/last.cpp` = **`0 zmm`** (`0 ymm`, `0 vplzcnt`); `endgame/search.cpp` still emits `232 zmm` (`300 ymm`) inside vectorized bitboard fill in `endgame::bits::legal_moves()`.
+- **Version bump:** [`Stello.Cpp/CMakeLists.txt`](../Stello.Cpp/CMakeLists.txt#L7) (`4.0.0`) and [`version.hpp`](../Stello.Cpp/src/core/version.hpp) report `stello_version() = 40000`, `stello-cpp version` = `stello-cpp 4.0.0 (40000)`, keeping `stello_abi_version() = 3`.
+
+#### Re-Benchmark Comparison (`clang-native` Before vs. After + Tuned `clang-release` `.NET` Config)
+
+Idle-machine comparison (`5` interleaved passes for `perft`, `3` passes for search/endgame, `--hash-bits 19`), retaining exact 1-thread node parity (`perft(8)=390,216`, `perft(9)=3,005,288`, `d10=3,716,389`, `d12=10,579,515`, `d14=29,779,568`, `d16=77,867,024`, `FFO #40–49=1,115,666,701`):
+
+| Workload | Phase 4 `rust-base` min / mean | Phase 4 `clang-native` (`OFF`) min / mean | Phase 5 `clang-native` (tuned, `ON`) min / mean | Phase 5 `clang-release` (tuned `.NET` default, `ON`) min / mean | Tuned `clang-release` `Δ` vs `rust-base` |
+|---|---:|---:|---:|---:|---:|
+| `perft(8)` (ms) | 4.20 / 4.22 | 7.40 / 7.56 | **4.40 / 4.40** (**+71.8%** vs P4) | 4.50 / 4.62 | -8.7% |
+| `perft(9)` (ms) | 30.80 / 31.06 | 55.60 / 56.56 | **32.40 / 33.10** (**+70.9%** vs P4) | 33.50 / 33.80 | -8.1% |
+| `mid d10` 1t (`s`) | 0.375 / 0.381 | 0.346 / 0.350 | 0.361 / 0.364 | **0.353 / 0.356** (`10.43M nps`) | **+7.0%** |
+| `mid d12` 1t (`s`) | 1.034 / 1.068 | 0.960 / 0.978 | 1.005 / 1.029 | **0.992 / 0.998** (`10.60M nps`) | **+7.0%** |
+| `mid d14` 1t (`s`) | 2.835 / 2.855 | **2.670 / 2.689** | 2.777 / 2.828 | 2.740 / 2.796 (`10.66M nps`) | **+2.1%** |
+| `mid d16` 1t (`s`) | 7.441 / 7.542 | **6.969 / 7.069** | 7.131 / 7.233 | 7.058 / 7.106 (`10.96M nps`) | **+6.1%** |
+| `mid d16` 8t (`s` / M nps) | 2.714 / 2.777 (`59.05M`) | 2.683 / 2.761 (`60.98M`) | 2.735 / 2.817 (`60.31M`) | **2.575 / 2.688** (`61.59M`, `165.6M` nodes) | **+3.3%** |
+| `FFO #40–49` 1t (`s` / M nps) | 23.788 / 23.845 (`46.79M`) | 24.062 / 24.379 (`45.77M`) | 23.577 / 23.599 (`47.28M`, +3.3% vs P4) | **22.484 / 22.488** (`49.61M`) | **+6.0%** |
+| `FFO #40–49` 8t (`s` / M nps) | 6.340 / 6.431 (`253.67M`) | 6.308 / 6.436 (`251.22M`) | 6.373 / 6.402 (`255.16M`) | **5.931 / 6.132** (`271.36M`, `1.664B` nodes) | **+4.9%** |
+| `FFO #40–49` 16t (`s` / M nps) | 5.376 / 5.691 (`304.65M`) | 5.033 / 5.090 (`338.65M`) | 5.056 / 5.316 (**`328.82M`**, `1.748B` nodes) | **5.212 / 5.307** (`323.37M`, `1.716B` nodes) | **+7.2%** |
+
+Keeping `clang-release` (`-O3 -flto` + `STELLO_ABORT_EXCEPTIONS=ON` + `-mcx16`) as the default `.NET` FFI configuration avoids the remaining AVX-512 `zmm` downclocking in `endgame::bits::legal_moves()` while beating `clang-native` across 1t/8t search and endgame benchmarks (`49.61M` vs `47.28M nps` on 1t FFO #40–49) and beating `rust-base` by **+6.0–7.0%** on 1t d10/d12/d16/FFO and **+4.9–7.2%** on 8t–16t FFO #40–49.
+
+### Step 5.2 — `stello_ffi` C ABI Shared Library (`stello_engine.dll`)
+
+- Implemented [`stello_ffi.hpp`](../Stello.Cpp/src/ffi/stello_ffi.hpp) and [`stello_ffi.cpp`](../Stello.Cpp/src/ffi/stello_ffi.cpp) exporting all 14 `extern "C"` ABI-3 entry points (`stello_version` = `40000`, `stello_abi_version` = `3`) with compile-time layout assertions (`sizeof(StelloSearchInfo) == 48`, `offsetof(depth) == 24`, `sizeof(StelloSearchResult) == 40`, `offsetof(mv) == 24`) and full `try { ... } catch (...)` boundaries.
+- Ported all 5 Rust `stello-ffi` unit test groups into [`ffi_tests.cpp`](../Stello.Cpp/tests/ffi_tests.cpp) (`40/40` C++ tests total).
+- Built and passed `40/40` tests with **0 warnings** across all 5 CMake presets (`clang-release`, `clang-native`, `msvc-release`, `msvc-native`, `clang-sanitized`) plus `clang-release` with `STELLO_ABORT_EXCEPTIONS=OFF`.
+
+### Step 5.3 — `.NET` Integration, `stello-v3` Preservation & FFI Comparison
+
+- Wired [`Stello.Engine.csproj`](../Stello.Net/Stello.Engine/Stello.Engine.csproj) (`BuildStelloNative`) to build `Stello.Cpp` (`stello_engine`) via [`build_ffi.cmd`](../Stello.Cpp/cmake/build_ffi.cmd) (CMake + Ninja + Clang `-O3 -flto`, `STELLO_ABORT_EXCEPTIONS=ON`, static CRT `/MT`) on Windows and Clang + LLD on POSIX. Built all 11 non-web projects in [`Stello.Net.slnx`](../Stello.Net/Stello.Net.slnx) with **0 warnings / 0 errors**.
+- Preserved Rust 3.1 natively alongside C++ 4.0: built `Stello.Rust/target/windows-v3/release/stello_engine_v3.dll` (`stello_version() = 30100`, ABI v3) and added `engine=stello-v3` in [`Stello.Benchmark`](../Stello.Net/tools/Stello.Benchmark/MatchCommands.cs) backed by [`StelloLibraryMatchPlayer.cs`](../Stello.Net/tools/Stello.Benchmark/StelloLibraryMatchPlayer.cs).
+  - **C++ 4.0 DLL:** `stello_engine.dll` (`1,373,184` bytes, SHA-256 `D38288014087E556EFA8CE3B78C0DEF1C9C6AE02A9CB89C33F7AD61DFA2B48D3`; fixed `Stello.Benchmark.csproj` copy path for `stello_engine_v3.dll`)
+  - **Rust 3.1 DLL:** `stello_engine_v3.dll` (`1,316,864` bytes, SHA-256 `E6B715BD7ED74B10FD141D0B6FE8788695C99E012F96CB6248A18111597E8B95`)
+- **Gate P5 Verification:**
+  - `.NET` test suites (`-c Release`): `Stello.Engine.Tests` **497/497 passed** (all 105 `stello-v3-signatures.txt` checks strict node-for-node; version assertion updated to `40000`), `Egaroucid.Engine.Tests` **97 passed, 8 skipped** (optional tagged-3.0 library tests), **0 failed**, `Stello.Net.Tests` **115/115 passed**.
+  - `.NET` FFI parity (`Stello.Benchmark --compare`): both `--engine stello` and `--engine stello-v3` matched `cpp-mid10.json` (`3,716,389` nodes) and `cpp-ffo40-44.json` (`93,697,164` nodes) bit-for-bit.
+  - **Head-to-head `.NET` FFI Speed (`Stello.Benchmark`, 3 interleaved passes, `--hash-bits 19`):**
+
+| Workload | Nodes (`stello` / `stello-v3`) | C++ 4.0 (`engine=stello`) min / mean | Rust 3.1 (`engine=stello-v3`) min / mean | C++ `Δ` wall time (on mean) |
+|---|---|---|---|---|
+| `mid-bench --depth 14` (1t) | 29,779,568 / 29,779,568 | **2.751 / 2.785 s** (`10.70M nps`) | 2.869 / 2.906 s (`10.25M nps`) | **+4.3%** |
+| `solve-bench` FFO #40–49 (1t) | 1,115,666,701 / 1,115,666,701 | **22.600 / 22.700 s** (`49.15M nps`) | 23.900 / 23.900 s (`46.68M nps`) | **+5.3%** |
+| `solve-bench` FFO #40–49 (8t) | ~1,597M / ~1,586M | **6.118 / 6.141 s** (`260.11M nps`) | 6.291 / 6.327 s (`250.70M nps`) | **+3.0%** (`+3.8%` M nps) |
+
+- **1,180-game 500 ms timed match (`cpp-4.0` vs. `rust-3.1`, `--workers 8`, 30m 50s; [`match_p5-cpp-vs-v3-500ms.md`](benchmark-results/match_p5-cpp-vs-v3-500ms.md)):**
+  - **C++ 4.0 (`A`, `engine=stello`):** **591 / 1,180** (`50.1%`, `+501 =180 −499`), avg midgame depth **19.29**, first solve **23.6** empties, **16.58M nps**, `6.2 s/game` (`264 / 500 ms` avg/max)
+  - **Rust 3.1 (`B`, `engine=stello-v3`, SHA-256 `E6B715...`):** **589 / 1,180** (`49.9%`, 95% CI `48.6%` to `51.3%`, `+499 =180 −501`), avg midgame depth **19.21**, first solve **23.5** empties, **15.41M nps**, `6.2 s/game` (`266 / 502 ms` avg/max)
+  - **Summary:** Elo **-1** (`-10` to `+9`), likelihood of superiority `45.1%`, discs `0.0 ± 0.2` — **no significant strength difference**, while C++ 4.0 achieved **+7.6% higher average nodes/s** (`16.58M vs 15.41M nps`) and `+0.08` plies average midgame depth.
+
+## Phase 6: Emscripten WebAssembly (`Stello.Web`) (done 2026-11-09)
+
+- **Architecture without `wasm-bindgen` or Rust nightly:** [`Stello.Cpp/src/wasm/`](../Stello.Cpp/src/wasm) (`protocol.hpp`, `protocol.cpp`, `threads.hpp`, `threads.cpp`, `wasm_exports.cpp`, [`stello_wasm.js`](../Stello.Cpp/src/wasm/stello_wasm.js)) compiles `stello_core` with Emscripten (`emcmake` / `em++` from `emsdk`, `-O3 -flto -fwasm-exceptions -sSTANDALONE_WASM=1 --no-entry -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=2GB`) into standalone ES module packages exposing the exact API consumed by [`engine-worker.js`](../Stello.Net/Stello.Web/wwwroot/js/engine-worker.js) and [`engine-pool-worker.js`](../Stello.Net/Stello.Web/wwwroot/js/engine-pool-worker.js): `default`, `initSync`, `version`, `init`, `search`, `threaded`, `idleThreads`, and `poolWorker`.
+  - [`protocol.cpp`](../Stello.Cpp/src/wasm/protocol.cpp) parses `MoveRequest` JSON directly (preserving 64-bit `ulong` bitmasks) and serializes `ProgressReport` / `MoveResponse`; 3 new C++ protocol tests in [`wasm_protocol_tests.cpp`](../Stello.Cpp/tests/wasm_protocol_tests.cpp) bring `stello_tests` from `40/40` to **`43/43`**.
+  - `engine-mt` compiles the same C++ sources with `-pthread` and `INITIAL_MEMORY=32MB`; nested pool workers serialize briefly under `g_boot_lock`, allocate a 1 MiB C stack via `stello_wasm_worker_prepare`, initialize Emscripten pthread/TLS state, and enter `pool_worker()` waiting on `std::condition_variable` (`memory.atomic.wait32`).
+  - [`Stello.Web.csproj`](../Stello.Net/Stello.Web/Stello.Web.csproj) (`BuildStelloWasm`, `BuildStelloWasmThreads` invoking [`build_wasm.cmd`](../Stello.Cpp/cmake/build_wasm.cmd) / [`build_wasm.sh`](../Stello.Cpp/cmake/build_wasm.sh)) and [`.github/workflows/azure-static-web-apps.yml`](../.github/workflows/azure-static-web-apps.yml) (`ninja-build` + `emscripten-core/setup-emsdk@v15` `7.0.0`) build both packages without Rust or Rust nightly (temporary nightly toolchain removed; `rustup toolchain list` has `stable-x86_64-pc-windows-msvc` only).
+
+### Package Sizes (`node` `zlib`, C++ 4.0 vs. Preserved Rust 3.1 WASM)
+
+| File | C++ 4.0 raw / gz / br (bytes) | Rust 3.1 raw / gz / br (bytes) | Delta (C++ vs Rust) |
+|---|---:|---:|---:|
+| `wwwroot/engine/stello_wasm.js` (ST) | 10,011 / 2,639 / 2,360 | 10,250 / 3,102 / 2,732 | **-239 B** raw / **-372 B** br |
+| `wwwroot/engine/stello_wasm_bg.wasm` (ST) | **1,174,429** / 1,062,199 / **1,048,704** | 1,226,794 / 1,089,533 / 1,074,129 | **-52,365 B** raw / **-25,425 B** br |
+| `wwwroot/engine-mt/stello_wasm.js` (MT) | 10,011 / 2,639 / 2,360 | 11,405 / 3,429 / 3,016 | **-1,394 B** raw / **-656 B** br |
+| `wwwroot/engine-mt/stello_wasm_bg.wasm` (MT) | **1,203,076** / 1,074,438 / **1,058,234** | 1,251,378 / 1,094,741 / 1,078,725 | **-48,302 B** raw / **-20,491 B** br |
+
+- **Exception mode in WASM (`ST` paired check, `-fwasm-exceptions`):** `STELLO_ABORT_EXCEPTIONS=ON` produces a `1,174,429` B module vs. `1,178,699` B with `OFF` (`-4,270` B) and runs +2.0% faster on `FFO #40–44` (`2,407.4 ms` / `38.92M nps` vs. `2,456.5 ms` / `38.14M nps`), while `OFF` ran +4.8–5.2% faster on midgame (`773.4 ms` vs. `810.5 ms` d10; `2,180.7 ms` vs. `2,294.1 ms` d12). Keeping `STELLO_ABORT_EXCEPTIONS=ON` keeps one unified default across native and WASM while outperforming Rust 3.1 on every workload.
+
+### Head-to-Head WebAssembly Benchmarks (`Node v24.19.0`, 3 passes, `--hash-bits 19`)
+
+Every 1-thread run retained bit-for-bit Stello 3.1 node parity (`mid-d10 = 3,716,389`; `mid-d12 = 10,579,515`; `FFO #40–44 = 93,697,164`), and all 4-thread / 8-thread `FFO #40–44` solves returned 5/5 exact scores (`min / mean`):
+
+| Package & Threads | Workload | C++ 4.0 min / mean (`nodes`, `M nps`) | Rust 3.1 min / mean (`nodes`, `M nps`) | C++ `Δ` (`mean` wall / `M nps`) |
+|---|---|---:|---:|---:|
+| `ST` 1t | `mid-d10` (100 pos) | **785.3 / 789.0 ms** (`3.716M`, 4.71M) | 838.0 / 842.4 ms (`3.716M`, 4.41M) | **+6.8%** |
+| `ST` 1t | `mid-d12` (100 pos) | **2,205.8 / 2,208.0 ms** (`10.580M`, 4.79M) | 2,357.5 / 2,367.5 ms (`10.580M`, 4.47M) | **+7.2%** |
+| `ST` 1t | `FFO #40–44` (5 pos) | **2,413.6 / 2,419.4 ms** (`93.697M`, 38.73M) | 2,696.4 / 2,797.6 ms (`93.697M`, 33.49M) | **+15.6%** |
+| `MT` 1t | `mid-d10` (100 pos) | **798.4 / 803.7 ms** (`3.716M`, 4.62M) | 933.0 / 935.9 ms (`3.716M`, 3.97M) | **+16.4%** |
+| `MT` 1t | `mid-d12` (100 pos) | **2,211.6 / 2,225.0 ms** (`10.580M`, 4.75M) | 2,607.2 / 2,609.6 ms (`10.580M`, 4.05M) | **+17.3%** |
+| `MT` 1t | `FFO #40–44` (5 pos) | **2,409.3 / 2,420.1 ms** (`93.697M`, 38.72M) | 2,558.7 / 2,564.8 ms (`93.697M`, 36.53M) | **+6.0%** |
+| `MT` 4t | `mid-d10` (100 pos) | **559.3 / 562.2 ms** (`7.595M`, 13.51M) | 612.4 / 622.9 ms (`7.482M`, 12.01M) | **+10.8%** (`+12.5%` nps) |
+| `MT` 4t | `mid-d12` (100 pos) | **1,364.8 / 1,391.5 ms** (`20.214M`, 14.53M) | 1,497.8 / 1,532.7 ms (`19.760M`, 12.89M) | **+10.1%** (`+12.7%` nps) |
+| `MT` 4t | `FFO #40–44` (5 pos) | **1,015.2 / 1,030.7 ms** (`107.710M`, 104.50M) | 1,045.5 / 1,067.5 ms (`105.789M`, 99.10M) | **+3.6%** (`+5.4%` nps) |
+| `MT` 8t | `mid-d10` (100 pos) | **454.1 / 464.4 ms** (`10.245M`, 22.06M) | 526.6 / 537.9 ms (`10.556M`, 19.63M) | **+15.8%** (`+12.4%` nps) |
+| `MT` 8t | `mid-d12` (100 pos) | **1,083.5 / 1,132.6 ms** (`26.690M`, 23.56M) | 1,225.1 / 1,232.2 ms (`26.226M`, 21.28M) | **+8.8%** (`+10.7%` nps) |
+| `MT` 8t | `FFO #40–44` (5 pos) | **678.2 / 691.5 ms** (`104.608M`, 151.27M) | 710.6 / 724.8 ms (`105.568M`, 145.65M) | **+4.8%** (`+3.9%` nps) |
+
+- **Gate P6 passed:** `node --test Stello.Rust/stello-wasm/tests/engine.test.mjs Stello.Rust/stello-wasm/tests/engine-mt.test.mjs` — **15 passed, 0 failed, 0 skipped**. Live browser smoke verification in Edge/Chrome/Firefox/Safari after deployment remains a manual step.
+
+## Phase 7: Documentation & Stello 4.0 Release (done 2026-11-09)
+
+- **UI version bump:** [`AboutInfo.cs`](../Stello.Net/Stello.App/Models/AboutInfo.cs) updated to `"Stello Version 4.0"` with C++20 engine description; `AboutInfoTests` added in [`ViewModelTests.cs`](../Stello.Net/Stello.Net.Tests/ViewModelTests.cs).
+- **Documentation rewrite:**
+  - Wrote [`docs/28-stello-4-0-the-engine-in-cpp.md`](../docs/28-stello-4-0-the-engine-in-cpp.md) and renumbered `docs/28-glossary.md` -> [`docs/29-glossary.md`](../docs/29-glossary.md) and `docs/29-references.md` -> [`docs/30-references.md`](../docs/30-references.md).
+  - Updated [`docs/README.md`](../docs/README.md), [`docs/01-overview.md`](../docs/01-overview.md), [`docs/14-app-integration.md`](../docs/14-app-integration.md), [`docs/15-gui-and-settings.md`](../docs/15-gui-and-settings.md), [`docs/17-measuring-the-engine.md`](../docs/17-measuring-the-engine.md), and Glossary/References links across chapters `04`, `06`, `07`, `08`, `18`, `20`, `21`, `25`, `26`, `27`. Link and anchor audit verified **0 broken relative links/anchors** and **0 leftover `28-glossary`/`29-references` links**.
+- **Gate P7 Final Verification (0 compiler/MSBuild warnings across all configurations):**
+  - **C++ (`ctest --preset ... --output-on-failure` after `--clean-first`):** all 5 presets (`clang-release` 54.31 s, `clang-native` 37.45 s, `msvc-release` 33.97 s, `msvc-native` 38.93 s, `clang-sanitized` ASan+UBSan 70.66 s) + temporary `STELLO_ABORT_EXCEPTIONS=OFF` Clang build (39.93 s) compiled cleanly with **0 warning lines** and **100% pass rate** (`43/43` unit/parity/FFI/WASM-protocol tests + `stello_cli_version` reporting `stello-cpp 4.0.0 (40000)`).
+  - **WebAssembly (`node --test`):** `Stello.Rust/stello-wasm/tests/engine.test.mjs` + `engine-mt.test.mjs` — **15 passed, 0 failed, 0 skipped** (2.42 s).
+  - **`.NET` Release build & tests (`dotnet build -c Release Stello.Net\Stello.Net.slnx --no-incremental`):** **0 Warning(s), 0 Error(s)** across all 13 solution projects plus clean C++ FFI (`stello_engine.dll`) and Emscripten ST/MT WASM builds (`wwwroot/engine`, `wwwroot/engine-mt`).
+    - `Stello.Engine.Tests`: **497 passed**, 0 failed, 0 skipped (18 s)
+    - `Egaroucid.Engine.Tests`: **97 passed**, **8 skipped** (`TaggedV30_*` optional tagged 3.0 baseline), 0 failed (31 s)
+    - `Stello.Net.Tests`: **116 passed**, 0 failed, 0 skipped (26 s)
+  - **Clean `Stello.Web` AOT publish (`dotnet publish Stello.Net\Stello.Web\Stello.Web.csproj -c Release -p:StelloNativeEngine=false -p:StelloWasmThreads=required`):** succeeded cleanly; verified `wwwroot/content/docs/` contains `28-stello-4-0-the-engine-in-cpp.md`, `29-glossary.md`, and `30-references.md` with no stale `28-glossary.md`, plus both `wwwroot/engine/` and `wwwroot/engine-mt/` (temporary publish directory removed).
+- **Remaining optional verification / git status:** All 7 implementation phases and the 1,180-game Phase 5 timed match are complete. Live browser smoke checks after deployment remain manual, and all changes stay uncommitted and unpushed on `feature/stello-4-cpp` pending user review.
 

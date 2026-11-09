@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/compiler.hpp"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -84,8 +86,8 @@ class Direct {
 public:
     static Direct build(std::span<const PatternShape> shapes, std::span<const Feature> features);
 
-    int32_t sum_portable(uint64_t own, uint64_t opponent, std::span<const int16_t> weights) const noexcept;
-    int32_t sum_pext(uint64_t own, uint64_t opponent, const int16_t* weights) const noexcept;
+    STELLO_NOINLINE int32_t sum_portable(uint64_t own, uint64_t opponent, std::span<const int16_t> weights) const noexcept;
+    STELLO_NOINLINE int32_t sum_pext(uint64_t own, uint64_t opponent, const int16_t* weights) const noexcept;
 
 private:
     template <size_t N>

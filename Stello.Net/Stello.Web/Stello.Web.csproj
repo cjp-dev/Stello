@@ -26,7 +26,7 @@
   </ItemGroup>
 
   <!--
-    Stello.Engine's native Rust library (libstello_engine.so / stello_engine.dll) flows to the output of every project
+    Stello.Engine's native C++ library (libstello_engine.so / stello_engine.dll) flows to the output of every project
     that references it; the browser cannot load it, so it stays out of this app's output and publish folder.
   -->
   <Target Name="RemoveStelloNativeEngine" AfterTargets="GetCopyToOutputDirectoryItems">
@@ -46,169 +46,104 @@
   </Target>
 
   <!--
-    The engine in the Web Worker (wwwroot/js/engine-worker.js) is Stello's Rust engine compiled to WebAssembly
-    (Stello.Rust, crate stello-wasm). Before the build, Cargo builds it for wasm32-unknown-unknown and wasm-bindgen
-    makes the module and its JavaScript glue (target web) in wwwroot/engine (git-ignored), when the Rust sources are
-    newer than the module. It is always a release build: a debug build would search many times slower.
+    The engine in the Web Worker (wwwroot/js/engine-worker.js) is Stello's C++ engine compiled to WebAssembly with
+    Emscripten (Stello.Cpp, target stello_wasm). Before the build, CMake + Ninja + em++ build it into wwwroot/engine
+    (git-ignored) when the C++ or glue sources are newer than the module. It is always a release build (-O3 -flto):
+    a debug build would search many times slower.
 
-    - Needs Cargo (rustup), the target (rustup target add wasm32-unknown-unknown) and wasm-bindgen-cli of the version
-      of the wasm-bindgen crate in Stello.Rust/Cargo.toml (0.2.130; the error messages below give the commands).
-      Cargo and wasm-bindgen are taken from the PATH, else from ~/.cargo/bin, else from the properties StelloCargo and
-      StelloWasmBindgen.
-    - No wasm-opt: Binaryen's -O3 made the module neither faster nor much smaller (measured in phase 3).
-    - The Cargo target folder is the OS's own one (Stello.Rust/target/linux, target/windows), as in Stello.Engine.
-    - StelloWasmEngine=false skips all of this (a build that is not run, e.g. a check of the C# code without Rust).
+    - Needs Emscripten SDK (emcmake / em++, installed via emsdk) on PATH, via EMSDK / StelloEmsdk, or in
+      %USERPROFILE%\emsdk (~/emsdk), plus CMake and Ninja.
+    - StelloWasmEngine=false skips both WebAssembly builds (for C#-only checks without Emscripten).
 
-    The threaded build (BuildStelloWasmThreads, Plans/making-stello-3-plan.md phase 8) goes to wwwroot/engine-mt: the
-    same crate with shared memory and atomics, which needs a pinned nightly Rust (StelloWasmNightly) with rust-src
-    (-Z build-std). The engine worker loads it only when the page asks for more than 1 thread and is cross-origin
-    isolated, and falls back to wwwroot/engine otherwise.
-    - StelloWasmThreads=auto (the default): built if the nightly and rust-src are installed; otherwise a warning, and
-      the web app has the single-threaded engine only.
-    - StelloWasmThreads=required: a missing nightly is an error (the deploy workflow). StelloWasmThreads=false: not built.
+    The threaded build (BuildStelloWasmThreads) goes to wwwroot/engine-mt: the same C++ engine compiled with -pthread,
+    shared memory up to 2 GiB, and Web Worker stack/TLS bootstrap glue (engine-pool-worker.js). The engine worker loads
+    it only when the page asks for more than 1 thread and is cross-origin isolated, and falls back to wwwroot/engine
+    otherwise.
+    - StelloWasmThreads=auto (the default): built when Emscripten is available; StelloWasmThreads=required errors if
+      Emscripten is missing (deploy workflow); StelloWasmThreads=false skips wwwroot/engine-mt.
   -->
   <PropertyGroup>
-    <StelloRustDir>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', 'Stello.Rust'))</StelloRustDir>
-    <_StelloWasmOS Condition="$([MSBuild]::IsOSPlatform('Windows'))">windows</_StelloWasmOS>
-    <_StelloWasmOS Condition="'$(_StelloWasmOS)' == '' and $([MSBuild]::IsOSPlatform('OSX'))">macos</_StelloWasmOS>
-    <_StelloWasmOS Condition="'$(_StelloWasmOS)' == ''">linux</_StelloWasmOS>
-    <_StelloWasmTargetDir>$(StelloRustDir)target$([System.IO.Path]::DirectorySeparatorChar)$(_StelloWasmOS)</_StelloWasmTargetDir>
-    <_StelloWasmBuilt>$(_StelloWasmTargetDir)$([System.IO.Path]::DirectorySeparatorChar)wasm32-unknown-unknown$([System.IO.Path]::DirectorySeparatorChar)release$([System.IO.Path]::DirectorySeparatorChar)stello_wasm.wasm</_StelloWasmBuilt>
+    <StelloCppDir>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', 'Stello.Cpp'))</StelloCppDir>
+    <_StelloWasmSingleBuildDir>$(StelloCppDir)build$([System.IO.Path]::DirectorySeparatorChar)wasm-st</_StelloWasmSingleBuildDir>
     <StelloWasmDir>$(MSBuildThisFileDirectory)wwwroot$([System.IO.Path]::DirectorySeparatorChar)engine</StelloWasmDir>
     <_StelloWasmModule>$(StelloWasmDir)$([System.IO.Path]::DirectorySeparatorChar)stello_wasm_bg.wasm</_StelloWasmModule>
+    <_StelloWasmJs>$(StelloWasmDir)$([System.IO.Path]::DirectorySeparatorChar)stello_wasm.js</_StelloWasmJs>
 
     <StelloWasmThreads Condition="'$(StelloWasmThreads)' == ''">auto</StelloWasmThreads>
-    <StelloWasmNightly Condition="'$(StelloWasmNightly)' == ''">nightly-2026-11-02</StelloWasmNightly>
-    <_StelloWasmMtTargetDir>$(StelloRustDir)target$([System.IO.Path]::DirectorySeparatorChar)$(_StelloWasmOS)-wasm-mt</_StelloWasmMtTargetDir>
-    <_StelloWasmMtBuilt>$(_StelloWasmMtTargetDir)$([System.IO.Path]::DirectorySeparatorChar)wasm32-unknown-unknown$([System.IO.Path]::DirectorySeparatorChar)release$([System.IO.Path]::DirectorySeparatorChar)stello_wasm.wasm</_StelloWasmMtBuilt>
+    <_StelloWasmMtBuildDir>$(StelloCppDir)build$([System.IO.Path]::DirectorySeparatorChar)wasm-mt</_StelloWasmMtBuildDir>
     <StelloWasmMtDir>$(MSBuildThisFileDirectory)wwwroot$([System.IO.Path]::DirectorySeparatorChar)engine-mt</StelloWasmMtDir>
     <_StelloWasmMtModule>$(StelloWasmMtDir)$([System.IO.Path]::DirectorySeparatorChar)stello_wasm_bg.wasm</_StelloWasmMtModule>
-    <!--
-      Shared memory (up to 2 GiB: the largest hash table setting takes 1 GiB) and the thread-local storage exports
-      that wasm-bindgen's threads need.
-    -->
-    <_StelloWasmMtRustFlags>-C target-feature=+atomics,+bulk-memory,+mutable-globals -C link-arg=--shared-memory -C link-arg=--max-memory=2147483648 -C link-arg=--import-memory -C link-arg=--export=__wasm_init_tls -C link-arg=--export=__tls_size -C link-arg=--export=__tls_align -C link-arg=--export=__tls_base</_StelloWasmMtRustFlags>
+    <_StelloWasmMtJs>$(StelloWasmMtDir)$([System.IO.Path]::DirectorySeparatorChar)stello_wasm.js</_StelloWasmMtJs>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(StelloWasmEngine)' != 'false'">
-    <StelloWasmSource Include="$(StelloRustDir)Cargo.toml;$(StelloRustDir)Cargo.lock;$(StelloRustDir).cargo\config.toml" />
-    <StelloWasmSource Include="$(StelloRustDir)stello-core\Cargo.toml;$(StelloRustDir)stello-core\src\**\*.rs" />
-    <StelloWasmSource Include="$(StelloRustDir)stello-wasm\Cargo.toml;$(StelloRustDir)stello-wasm\src\**\*.rs" />
-    <!-- Embedded by stello-core (include_bytes!). -->
+    <StelloWasmSource Include="$(StelloCppDir)CMakeLists.txt;$(StelloCppDir)cmake\build_wasm.cmd;$(StelloCppDir)cmake\build_wasm.sh;$(StelloCppDir)cmake\embed_eval.cmake" />
+    <StelloWasmSource Include="$(StelloCppDir)src\**\*.hpp;$(StelloCppDir)src\**\*.cpp;$(StelloCppDir)src\wasm\stello_wasm.js" />
+    <!-- Embedded by stello_core (cmake/embed_eval.cmake). -->
     <StelloWasmSource Include="..\Book\stello-eval.bin" />
     <UpToDateCheckInput Include="@(StelloWasmSource)" />
   </ItemGroup>
 
-  <!-- Cargo, rustc and wasm-bindgen from the PATH, else rustup's folder (for both builds of the engine). -->
-  <Target Name="_StelloFindWasmTools" Condition="'$(StelloWasmEngine)' != 'false' and '$(DesignTimeBuild)' != 'true'">
-    <!-- Cargo, rustc and wasm-bindgen from the PATH, else rustup's folder. -->
-    <PropertyGroup>
-      <_StelloRustupBin Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(USERPROFILE)\.cargo\bin\</_StelloRustupBin>
-      <_StelloRustupBin Condition="!$([MSBuild]::IsOSPlatform('Windows'))">$(HOME)/.cargo/bin/</_StelloRustupBin>
-      <_StelloExe Condition="$([MSBuild]::IsOSPlatform('Windows'))">.exe</_StelloExe>
-    </PropertyGroup>
-    <Exec Command="cargo --version" Condition="'$(StelloCargo)' == ''" ContinueOnError="true" IgnoreExitCode="true"
-          StandardOutputImportance="low" StandardErrorImportance="low" EchoOff="true">
-      <Output TaskParameter="ExitCode" PropertyName="_StelloCargoOnPath" />
-    </Exec>
-    <PropertyGroup Condition="'$(StelloCargo)' == ''">
-      <StelloCargo Condition="'$(_StelloCargoOnPath)' == '0'">cargo</StelloCargo>
-      <_StelloRustc Condition="'$(_StelloCargoOnPath)' == '0'">rustc</_StelloRustc>
-      <StelloCargo Condition="'$(StelloCargo)' == '' and Exists('$(_StelloRustupBin)cargo$(_StelloExe)')">"$(_StelloRustupBin)cargo$(_StelloExe)"</StelloCargo>
-      <_StelloRustc Condition="'$(_StelloRustc)' == '' and Exists('$(_StelloRustupBin)rustc$(_StelloExe)')">"$(_StelloRustupBin)rustc$(_StelloExe)"</_StelloRustc>
-    </PropertyGroup>
-    <Exec Command="wasm-bindgen --version" Condition="'$(StelloWasmBindgen)' == ''" ContinueOnError="true" IgnoreExitCode="true"
-          StandardOutputImportance="low" StandardErrorImportance="low" EchoOff="true">
-      <Output TaskParameter="ExitCode" PropertyName="_StelloWasmBindgenOnPath" />
-    </Exec>
-    <PropertyGroup Condition="'$(StelloWasmBindgen)' == ''">
-      <StelloWasmBindgen Condition="'$(_StelloWasmBindgenOnPath)' == '0'">wasm-bindgen</StelloWasmBindgen>
-      <StelloWasmBindgen Condition="'$(StelloWasmBindgen)' == '' and Exists('$(_StelloRustupBin)wasm-bindgen$(_StelloExe)')">"$(_StelloRustupBin)wasm-bindgen$(_StelloExe)"</StelloWasmBindgen>
-    </PropertyGroup>
-  </Target>
-
-  <Target Name="BuildStelloWasm" BeforeTargets="AssignTargetPaths" DependsOnTargets="_StelloFindWasmTools"
+  <Target Name="BuildStelloWasm" BeforeTargets="AssignTargetPaths"
           Condition="'$(StelloWasmEngine)' != 'false' and '$(DesignTimeBuild)' != 'true'"
-          Inputs="@(StelloWasmSource)" Outputs="$(_StelloWasmModule)">
-    <Error Condition="'$(StelloCargo)' == ''"
-           Text="Stello.Web builds its engine from Rust (Stello.Rust, crate stello-wasm), but Cargo was not found on the PATH or in ~/.cargo/bin. Install Rust with rustup (https://rustup.rs), then run: rustup target add wasm32-unknown-unknown, and: cargo install wasm-bindgen-cli --version 0.2.130 --locked. Or set the MSBuild property StelloCargo to cargo's path." />
+          Inputs="@(StelloWasmSource)" Outputs="$(_StelloWasmModule);$(_StelloWasmJs)">
+    <Message Importance="high" Text="Stello.Web: building the C++ WebAssembly engine (Stello.Cpp, single -> $(StelloWasmDir))" />
 
-    <!-- The target's standard library is in rustc's sysroot (rustup or not). -->
-    <Exec Command="$(_StelloRustc) --print sysroot" Condition="'$(_StelloRustc)' != ''" ConsoleToMSBuild="true"
-          ContinueOnError="true" IgnoreExitCode="true" StandardOutputImportance="low" EchoOff="true">
-      <Output TaskParameter="ConsoleOutput" PropertyName="_StelloRustSysroot" />
-    </Exec>
-    <Error Condition="'$(_StelloRustSysroot)' != '' and !Exists('$(_StelloRustSysroot.Trim())/lib/rustlib/wasm32-unknown-unknown')"
-           Text="Stello.Web builds its engine for WebAssembly, but Rust's wasm32-unknown-unknown target is not installed ($(_StelloRustSysroot.Trim())). Run: rustup target add wasm32-unknown-unknown" />
-
-    <Error Condition="'$(StelloWasmBindgen)' == ''"
-           Text="Stello.Web builds its engine for WebAssembly, but wasm-bindgen was not found on the PATH or in ~/.cargo/bin. Install the version of the wasm-bindgen crate in Stello.Rust/Cargo.toml: cargo install wasm-bindgen-cli --version 0.2.130 --locked. Or set the MSBuild property StelloWasmBindgen to its path." />
-
-    <PropertyGroup>
-      <_StelloWasmCargoArguments>build --release --target wasm32-unknown-unknown -p stello-wasm --target-dir "$(_StelloWasmTargetDir)"</_StelloWasmCargoArguments>
-    </PropertyGroup>
-    <Message Importance="high" Text="Stello.Web: building the WebAssembly engine ($(StelloCargo) $(_StelloWasmCargoArguments))" />
-    <!-- Incremental builds fail on some shared folders, and a release build does not use them anyway. -->
-    <Exec Command="$(StelloCargo) $(_StelloWasmCargoArguments)" WorkingDirectory="$(StelloRustDir)" EnvironmentVariables="CARGO_INCREMENTAL=0"
-          ContinueOnError="true" IgnoreExitCode="true" CustomErrorRegularExpression="^error(\[E\d+\])?:">
-      <Output TaskParameter="ExitCode" PropertyName="_StelloWasmCargoExit" />
-    </Exec>
-    <Error Condition="'$(_StelloWasmCargoExit)' != '0'"
-           Text="Cargo could not build the WebAssembly engine (Stello.Rust, stello-wasm, target wasm32-unknown-unknown; exit code $(_StelloWasmCargoExit)); see Cargo's messages above." />
-
-    <Exec Command="$(StelloWasmBindgen) --target web --no-typescript --out-dir &quot;$(StelloWasmDir)&quot; &quot;$(_StelloWasmBuilt)&quot;"
+    <Exec Condition="$([MSBuild]::IsOSPlatform('Windows'))"
+          Command="call &quot;$(StelloCppDir)cmake\build_wasm.cmd&quot; &quot;$(StelloCppDir.TrimEnd('\/'))&quot; &quot;$(_StelloWasmSingleBuildDir)&quot; &quot;$(StelloWasmDir)&quot; single ON"
+          WorkingDirectory="$(StelloCppDir)"
+          EnvironmentVariables="STELLO_EMSDK=$(StelloEmsdk)"
           ContinueOnError="true" IgnoreExitCode="true">
-      <Output TaskParameter="ExitCode" PropertyName="_StelloWasmBindgenExit" />
+      <Output TaskParameter="ExitCode" PropertyName="_StelloWasmExit" />
     </Exec>
-    <Error Condition="'$(_StelloWasmBindgenExit)' != '0'"
-           Text="wasm-bindgen could not make the engine's package (exit code $(_StelloWasmBindgenExit)); see its messages above. wasm-bindgen-cli must be the version of the wasm-bindgen crate in Stello.Rust/Cargo.toml (cargo install wasm-bindgen-cli --version 0.2.130 --locked)." />
 
-    <!-- Cargo leaves an up-to-date module alone; the new time stamp keeps this target from running again. -->
-    <Touch Files="$(_StelloWasmModule)" />
+    <Exec Condition="!$([MSBuild]::IsOSPlatform('Windows'))"
+          Command="bash &quot;$(StelloCppDir)cmake/build_wasm.sh&quot; &quot;$(StelloCppDir.TrimEnd('\/'))&quot; &quot;$(_StelloWasmSingleBuildDir)&quot; &quot;$(StelloWasmDir)&quot; single ON"
+          WorkingDirectory="$(StelloCppDir)"
+          EnvironmentVariables="STELLO_EMSDK=$(StelloEmsdk)"
+          ContinueOnError="true" IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="_StelloWasmExit" />
+    </Exec>
+
+    <Error Condition="'$(_StelloWasmExit)' != '0'"
+           Text="Emscripten could not build the WebAssembly engine (Stello.Cpp, target stello_wasm_stage; exit code $(_StelloWasmExit)); see the messages above. Install Emscripten SDK (emsdk) or set EMSDK / StelloEmsdk (or pass -p:StelloWasmEngine=false for C#-only checks)." />
+    <Error Condition="!Exists('$(_StelloWasmModule)') or !Exists('$(_StelloWasmJs)')"
+           Text="The Emscripten build finished, but $(_StelloWasmModule) or $(_StelloWasmJs) is missing." />
+    <!-- Keep timestamps newer than sources so incremental .NET builds skip rebuilding. -->
+    <Touch Files="$(_StelloWasmModule);$(_StelloWasmJs)" />
   </Target>
 
-  <!-- The threaded build (see above): Cargo with the pinned nightly, then wasm-bindgen into wwwroot/engine-mt. -->
+  <!-- The threaded build (see above): Emscripten with -pthread and shared linear memory into wwwroot/engine-mt. -->
   <Target Name="BuildStelloWasmThreads" BeforeTargets="AssignTargetPaths" AfterTargets="BuildStelloWasm"
-          DependsOnTargets="_StelloFindWasmTools"
           Condition="'$(StelloWasmEngine)' != 'false' and '$(StelloWasmThreads)' != 'false' and '$(DesignTimeBuild)' != 'true'"
-          Inputs="@(StelloWasmSource)" Outputs="$(_StelloWasmMtModule)">
-    <!-- RUSTUP_AUTO_INSTALL=0: a build only asks whether the nightly is there, and does not download it. -->
-    <Exec Command="$(_StelloRustc) +$(StelloWasmNightly) --print sysroot" Condition="'$(_StelloRustc)' != ''" ConsoleToMSBuild="true"
-          EnvironmentVariables="RUSTUP_AUTO_INSTALL=0" IgnoreStandardErrorWarningFormat="true"
-          ContinueOnError="true" IgnoreExitCode="true" StandardOutputImportance="low" StandardErrorImportance="low" EchoOff="true">
-      <Output TaskParameter="ConsoleOutput" PropertyName="_StelloNightlySysroot" />
-      <Output TaskParameter="ExitCode" PropertyName="_StelloNightlyExit" />
-    </Exec>
-    <PropertyGroup>
-      <_StelloNightlyReady Condition="'$(_StelloNightlyExit)' == '0' and Exists('$(_StelloNightlySysroot.Trim())/lib/rustlib/src/rust/library')">true</_StelloNightlyReady>
-      <_StelloNightlyHelp>The threaded WebAssembly engine needs Rust $(StelloWasmNightly) with rust-src. Run: rustup toolchain install $(StelloWasmNightly) --profile minimal --component rust-src</_StelloNightlyHelp>
-    </PropertyGroup>
-    <Error Condition="'$(_StelloNightlyReady)' != 'true' and '$(StelloWasmThreads)' == 'required'" Text="$(_StelloNightlyHelp)" />
-    <Warning Condition="'$(_StelloNightlyReady)' != 'true' and '$(StelloWasmThreads)' != 'required'"
-             Text="$(_StelloNightlyHelp) Without it the web app has only the single-threaded engine (StelloWasmThreads=false hides this warning)." />
-    <!-- An old threaded build would not match the new single-threaded one: without the nightly there is none. -->
-    <RemoveDir Directories="$(StelloWasmMtDir)" Condition="'$(_StelloNightlyReady)' != 'true'" />
+          Inputs="@(StelloWasmSource)" Outputs="$(_StelloWasmMtModule);$(_StelloWasmMtJs)">
+    <Message Importance="high" Text="Stello.Web: building the threaded C++ WebAssembly engine (Stello.Cpp, threaded -> $(StelloWasmMtDir))" />
 
-    <PropertyGroup>
-      <_StelloWasmMtCargoArguments>+$(StelloWasmNightly) build --release --target wasm32-unknown-unknown -p stello-wasm -Z build-std=std,panic_abort --target-dir "$(_StelloWasmMtTargetDir)"</_StelloWasmMtCargoArguments>
-    </PropertyGroup>
-    <Message Condition="'$(_StelloNightlyReady)' == 'true'" Importance="high"
-             Text="Stello.Web: building the threaded WebAssembly engine ($(StelloCargo) $(_StelloWasmMtCargoArguments))" />
-    <Exec Condition="'$(_StelloNightlyReady)' == 'true'" Command="$(StelloCargo) $(_StelloWasmMtCargoArguments)" WorkingDirectory="$(StelloRustDir)"
-          EnvironmentVariables="CARGO_INCREMENTAL=0;RUSTFLAGS=$(_StelloWasmMtRustFlags)"
-          ContinueOnError="true" IgnoreExitCode="true" CustomErrorRegularExpression="^error(\[E\d+\])?:">
-      <Output TaskParameter="ExitCode" PropertyName="_StelloWasmMtCargoExit" />
-    </Exec>
-    <Error Condition="'$(_StelloNightlyReady)' == 'true' and '$(_StelloWasmMtCargoExit)' != '0'"
-           Text="Cargo could not build the threaded WebAssembly engine (Stello.Rust, stello-wasm, $(StelloWasmNightly); exit code $(_StelloWasmMtCargoExit)); see Cargo's messages above. StelloWasmThreads=false builds the single-threaded engine only." />
-    <Exec Condition="'$(_StelloNightlyReady)' == 'true'"
-          Command="$(StelloWasmBindgen) --target web --no-typescript --out-dir &quot;$(StelloWasmMtDir)&quot; &quot;$(_StelloWasmMtBuilt)&quot;"
+    <Exec Condition="$([MSBuild]::IsOSPlatform('Windows'))"
+          Command="call &quot;$(StelloCppDir)cmake\build_wasm.cmd&quot; &quot;$(StelloCppDir.TrimEnd('\/'))&quot; &quot;$(_StelloWasmMtBuildDir)&quot; &quot;$(StelloWasmMtDir)&quot; threaded ON"
+          WorkingDirectory="$(StelloCppDir)"
+          EnvironmentVariables="STELLO_EMSDK=$(StelloEmsdk)"
           ContinueOnError="true" IgnoreExitCode="true">
-      <Output TaskParameter="ExitCode" PropertyName="_StelloWasmMtBindgenExit" />
+      <Output TaskParameter="ExitCode" PropertyName="_StelloWasmMtExit" />
     </Exec>
-    <Error Condition="'$(_StelloNightlyReady)' == 'true' and '$(_StelloWasmMtBindgenExit)' != '0'"
-           Text="wasm-bindgen could not make the threaded engine's package (exit code $(_StelloWasmMtBindgenExit)); see its messages above." />
-    <Touch Condition="'$(_StelloNightlyReady)' == 'true'" Files="$(_StelloWasmMtModule)" />
+
+    <Exec Condition="!$([MSBuild]::IsOSPlatform('Windows'))"
+          Command="bash &quot;$(StelloCppDir)cmake/build_wasm.sh&quot; &quot;$(StelloCppDir.TrimEnd('\/'))&quot; &quot;$(_StelloWasmMtBuildDir)&quot; &quot;$(StelloWasmMtDir)&quot; threaded ON"
+          WorkingDirectory="$(StelloCppDir)"
+          EnvironmentVariables="STELLO_EMSDK=$(StelloEmsdk)"
+          ContinueOnError="true" IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="_StelloWasmMtExit" />
+    </Exec>
+
+    <Error Condition="'$(_StelloWasmMtExit)' != '0' and ('$(StelloWasmThreads)' == 'required' or '$(_StelloWasmMtExit)' != '2')"
+           Text="Emscripten could not build the threaded WebAssembly engine (Stello.Cpp, target stello_wasm_stage; exit code $(_StelloWasmMtExit)); see the messages above. StelloWasmThreads=false builds the single-threaded engine only." />
+    <Warning Condition="'$(_StelloWasmMtExit)' == '2' and '$(StelloWasmThreads)' != 'required'"
+             Text="Emscripten was not found for the threaded WebAssembly engine; wwwroot/engine-mt will be omitted (StelloWasmThreads=false hides this warning)." />
+    <RemoveDir Directories="$(StelloWasmMtDir)" Condition="'$(_StelloWasmMtExit)' == '2' and '$(StelloWasmThreads)' != 'required'" />
+
+    <Error Condition="'$(_StelloWasmMtExit)' == '0' and (!Exists('$(_StelloWasmMtModule)') or !Exists('$(_StelloWasmMtJs)'))"
+           Text="The threaded Emscripten build finished, but $(_StelloWasmMtModule) or $(_StelloWasmMtJs) is missing." />
+    <Touch Condition="'$(_StelloWasmMtExit)' == '0'" Files="$(_StelloWasmMtModule);$(_StelloWasmMtJs)" />
   </Target>
 
   <!-- The engine's files are made during the build, so they are added as content here (as the book below). -->

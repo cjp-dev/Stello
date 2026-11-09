@@ -93,3 +93,17 @@ public class SettingsViewModelTests
         }, limits.Time);
     }
 }
+
+public class AboutInfoTests
+{
+    [Fact]
+    public void AboutInfo_ReportsVersionFourAndNonEmptyText()
+    {
+        Assert.Equal("About Stello", AboutInfo.Title);
+        Assert.Equal("Stello Version 4.0", AboutInfo.Version);
+        Assert.False(string.IsNullOrWhiteSpace(AboutInfo.PictureCaption));
+        Assert.Equal(4, AboutInfo.Paragraphs.Count);
+        Assert.All(AboutInfo.Paragraphs, p => Assert.False(string.IsNullOrWhiteSpace(p)));
+        Assert.Contains("C++20", AboutInfo.Paragraphs[2]);
+    }
+}

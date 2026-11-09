@@ -13,22 +13,22 @@ internal static class Program
                                     Play side A against side B, two games per start position with the colours swapped.
                                     Append each finished game to match_<name>.games.jsonl; --resume continues a compatible match.
                                     A side is a list such as "time-ms=100", "depth=8", "game-s=60,hash-bits=20,name=new"
-                                    or "engine=egaroucid,time-ms=100,book=on": engine (stello, stello-v2 = Stello 2.0 in C#, stello-v1 = Stello 1,
-                                    stello-lib = a separate Stello native library, or egaroucid), time-ms
-                                    (per move), game-s (per game), depth (Stello) or level (Egaroucid), eval (Stello: another pattern evaluation file),
-                                    soft-pct (1-100), mpc (Multi-ProbCut t × 100), and opt (repeatable Stello search switches, e.g.
-                                    opt=selective=off, opt=soft-pct=80, opt=mpc=150, opt=ybwc=off),
-                                    threads (Rust Stello: 1-256 threads sharing the hash tables, 1), ybwc (current Stello: on/off, on; off = Lazy SMP alone), hash-bits
+                                    or "engine=egaroucid,time-ms=100,book=on": engine (stello = C++ 4.0, stello-v3 = Rust 3.1,
+                                    stello-v2 = Stello 2.0 in C#, stello-v1 = Stello 1, stello-lib = a separate Stello native library,
+                                    or egaroucid), time-ms (per move), game-s (per game), depth (Stello) or level (Egaroucid),
+                                    eval (Stello: another pattern evaluation file), soft-pct (1-100), mpc (Multi-ProbCut t × 100), and opt
+                                    (repeatable Stello search switches, e.g. opt=selective=off, opt=soft-pct=80, opt=mpc=150, opt=ybwc=off),
+                                    threads (native Stello: 1-256 threads sharing the hash tables, 1), ybwc (current Stello: on/off, on; off = Lazy SMP alone), hash-bits
                                     (Stello 19; Egaroucid 21, the same memory), book (on/off, off), book-file (Stello: another text book, turns the book on), book-acc (Egaroucid, 0),
                                     seed (Egaroucid's book choice, 1), time-strict (Egaroucid: on, off to use C++-parity timing), name.
                                     stello-lib requires lib=<absolute path> and sha256=<file SHA-256>; its file name must differ from
                                     the current native library. Match only; supports threads and hash-bits, but no book or search switches.
                                     --workers (1-256) overrides the default: max(1, physical cores / max(side threads)).
-          solve-bench [--engine stello|stello-v2|stello-v1|egaroucid] [--eval <file>] [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits N]
+          solve-bench [--engine stello|stello-v3|stello-v2|stello-v1|egaroucid] [--eval <file>] [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits N]
                       [--threads N] [--out <file.json>] [--compare <file.json>]
                                     Solve the FFO positions exactly: score check, nodes, time to solve.
                                     Select an inclusive numeric ID range, e.g. --from 50 --to 59 for FFO #50–#59.
-          mid-bench [--engine stello|stello-v2|stello-v1|egaroucid] [--eval <file>] [--side <Stello side keys>] [--positions <file>] [--depth 10] [--mpc 100 | --level L] [--passes 3]
+          mid-bench [--engine stello|stello-v3|stello-v2|stello-v1|egaroucid] [--eval <file>] [--side <Stello side keys>] [--positions <file>] [--depth 10] [--mpc 100 | --level L] [--passes 3]
                     [--hash-bits N] [--selective on|off] [--probcut-pct N] [--threads N] [--out <file.json>] [--compare <file.json>]
                                     Search the midgame positions to a fixed depth: nodes, move and score of each search, speed.
                                     --mpc (Egaroucid's selectivity: 74, 88, 93, 98, 99, 99.9 or 100) and --level are for Egaroucid.

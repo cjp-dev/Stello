@@ -1,5 +1,7 @@
 #include "core/cpu.hpp"
 
+#include "core/compiler.hpp"
+
 #include <atomic>
 #include <cstdint>
 
@@ -76,7 +78,7 @@ uint8_t detect_features() noexcept {
 
 #endif
 
-uint8_t detect() noexcept {
+STELLO_NOINLINE uint8_t detect() noexcept {
     const uint8_t state = detect_features();
     g_state.store(state, std::memory_order_relaxed);
     return state;

@@ -254,9 +254,7 @@ AbortResult<int32_t> Searcher::end_window(
 
     for (size_t i = 0; i < count; ++i) {
         if (i == 1 && empties > YBWC_END_MIN_EMPTIES && may_split()) {
-            std::array<EndgameChild, DEEP_MOVES> children{};
-            const size_t child_count = make_end_children(own, opponent, empties, moves, i, 0, children);
-            STELLO_TRY_VOID_I32(split(std::span<const EndgameChild>(children.data(), child_count), alpha, beta, best, best_move));
+            STELLO_TRY_VOID_I32(split_endgame(own, opponent, empties, moves, i, 0, alpha, beta, best, best_move));
             break;
         }
 
@@ -415,12 +413,7 @@ AbortResult<int32_t> Searcher::end_deep(
         bool searched = hash_move_searched;
         for (size_t i = 0; i < count; ++i) {
             if (searched && empties > YBWC_END_MIN_EMPTIES && may_split()) {
-                std::array<EndgameChild, DEEP_MOVES> children{};
-                const size_t child_count = make_end_children(own, opponent, empties, moves, i, done, children);
-                if (child_count > 0) {
-                    STELLO_TRY_VOID_I32(
-                        split(std::span<const EndgameChild>(children.data(), child_count), alpha, alpha + 1, best, best_move));
-                }
+                STELLO_TRY_VOID_I32(split_endgame(own, opponent, empties, moves, i, done, alpha, alpha + 1, best, best_move));
                 break;
             }
 
@@ -448,6 +441,26 @@ AbortResult<int32_t> Searcher::end_deep(
     const Bound bound = (best > alpha) ? Bound::Lower : Bound::Upper;
     endgame_table->store_at_root(own, opponent, 0, empties, bound, best, best_move, root_empties);
     STELLO_RETURN_OK_R(int32_t, best);
+}
+
+AbortVoid Searcher::split_endgame(
+    uint64_t own,
+    uint64_t opponent,
+    int32_t empties,
+    std::span<EndMove> moves,
+    size_t from,
+    uint64_t done,
+    int32_t alpha,
+    int32_t beta,
+    int32_t& best,
+    int32_t& best_move
+) {
+    std::array<EndgameChild, DEEP_MOVES> children{};
+    const size_t child_count = make_end_children(own, opponent, empties, moves, from, done, children);
+    if (child_count > 0) {
+        return split(std::span<const EndgameChild>(children.data(), child_count), alpha, beta, best, best_move);
+    }
+    STELLO_RETURN_OK_VOID();
 }
 
 AbortResult<int32_t> Searcher::ordering_value(

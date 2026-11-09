@@ -1,4 +1,4 @@
-// Web Worker that runs the engine: Stello's Rust engine compiled to WebAssembly (Stello.Rust/stello-wasm, built by
+// Web Worker that runs the engine: Stello's C++ engine compiled to WebAssembly (Stello.Cpp/src/wasm, built by
 // Stello.Web's build). The page looks up the opening book itself and sends only searches.
 //
 // There are two builds of the engine:

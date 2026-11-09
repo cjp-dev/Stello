@@ -389,7 +389,7 @@ The trainer's `report` needs Egaroucid's resources for the Egaroucid column ([ch
 - [Technical explanation – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/explanation/): Egaroucid's pattern evaluation and its training with Adam.
 - [Kingma and Ba (2014): Adam: A Method for Stochastic Optimization – arXiv](https://arxiv.org/abs/1412.6980): the optimiser the trainer uses.
 - [Logistello – Michael Buro](https://skatgame.net/mburo/log.html): the program that brought trained pattern evaluations to Othello.
-- [References](29-references.md).
+- [References](30-references.md).
 
 ---
 

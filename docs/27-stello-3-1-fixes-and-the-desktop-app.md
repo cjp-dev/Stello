@@ -116,4 +116,4 @@ The release-readiness review and deployment follow this documentation. Firefox a
 
 ---
 
-Previous: [26 Phases 5–9: threads](26-phases-5-9-threads.md) · Next: [28 Glossary](28-glossary.md)
+Previous: [26 Phases 5–9: threads](26-phases-5-9-threads.md) · Next: [28 Stello 4.0: the engine in C++](28-stello-4-0-the-engine-in-cpp.md)

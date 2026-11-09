@@ -24,6 +24,9 @@
     <None Include="..\..\Book\opening-book.txt" Link="Data\opening-book.txt" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Book\opening-book-stello1.txt" Link="Data\opening-book-stello1.txt" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Book\stello-eval.bin" Link="Data\stello-eval.bin" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\Stello.Rust\target\windows-v3\release\stello_engine_v3.dll" Link="stello_engine_v3.dll" CopyToOutputDirectory="PreserveNewest" Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' == 'true' and Exists('..\..\..\Stello.Rust\target\windows-v3\release\stello_engine_v3.dll')" Visible="false" />
+    <None Include="..\..\..\Stello.Rust\target\linux-v3\release\libstello_engine_v3.so" Link="libstello_engine_v3.so" CopyToOutputDirectory="PreserveNewest" Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))' == 'true' and Exists('..\..\..\Stello.Rust\target\linux-v3\release\libstello_engine_v3.so')" Visible="false" />
+    <None Include="..\..\..\Stello.Rust\target\macos-v3\release\libstello_engine_v3.dylib" Link="libstello_engine_v3.dylib" CopyToOutputDirectory="PreserveNewest" Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))' == 'true' and Exists('..\..\..\Stello.Rust\target\macos-v3\release\libstello_engine_v3.dylib')" Visible="false" />
   </ItemGroup>
 
 </Project>

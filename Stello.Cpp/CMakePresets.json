@@ -31,10 +31,12 @@
     },
     {
       "name": "clang-native",
-      "displayName": "Clang Native (Zen 4 -march=native, LTO)",
+      "displayName": "Clang Native (Zen 4 -march=native, LTO, scalar flips)",
       "inherits": "clang-release",
       "cacheVariables": {
-        "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG -flto -march=native"
+        "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG -flto -march=native",
+        "CMAKE_EXE_LINKER_FLAGS_RELEASE": "-flto -fuse-ld=lld",
+        "CMAKE_SHARED_LINKER_FLAGS_RELEASE": "-flto -fuse-ld=lld"
       }
     },
     {

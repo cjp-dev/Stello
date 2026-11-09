@@ -7,7 +7,7 @@ on:
       - 'Stello.Net/Stello.Web/**'
       - 'Stello.Net/Stello.App/**'
       - 'Stello.Net/Stello.Engine/**'
-      - 'Stello.Rust/**'
+      - 'Stello.Cpp/**'
       - 'Stello.Net/Book/**'
       - 'docs/**'
       - 'Stello.Net/Images/**'
@@ -36,35 +36,18 @@ jobs:
       - name: Install WebAssembly build tools
         run: dotnet workload install wasm-tools
 
-      # The engine in the browser is the Rust engine (Stello.Rust/stello-wasm), which the Stello.Web build compiles
-      # for wasm32-unknown-unknown and packages with wasm-bindgen.
-      - name: Install Rust and the WebAssembly target
-        run: |
-          rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown
-          rustup default stable
-          cargo --version
+      # The engine in the browser is the C++ engine (Stello.Cpp), which Stello.Web compiles to single- and
+      # multi-threaded WebAssembly with Emscripten via CMake + Ninja.
+      - name: Install Ninja build tool
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
 
-      # The threaded engine (wwwroot/engine-mt) is built with a pinned nightly and its standard library source
-      # (-Z build-std); the version must equal StelloWasmNightly in Stello.Net/Stello.Web/Stello.Web.csproj.
-      - name: Install the nightly Rust of the threaded engine
-        env:
-          STELLO_WASM_NIGHTLY: 'nightly-2026-11-02'
-        run: |
-          rustup toolchain install "$STELLO_WASM_NIGHTLY" --profile minimal --component rust-src
-          cargo "+$STELLO_WASM_NIGHTLY" --version
+      - name: Install Emscripten SDK
+        uses: emscripten-core/setup-emsdk@v15
+        with:
+          version: '7.0.0'
 
-      # A prebuilt wasm-bindgen-cli; its version must equal the wasm-bindgen crate's (=0.2.130 in Stello.Rust/Cargo.toml).
-      - name: Install wasm-bindgen
-        env:
-          WASM_BINDGEN_VERSION: '0.2.130'
-        run: |
-          name="wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl"
-          curl -sSfL "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/${name}.tar.gz" | tar -xz -C "$RUNNER_TEMP"
-          install -m 755 "$RUNNER_TEMP/${name}/wasm-bindgen" "$HOME/.cargo/bin/wasm-bindgen"
-          wasm-bindgen --version
-
-      # StelloNativeEngine=false: the web app does not need Stello.Engine's native library (stello-ffi).
-      # StelloWasmThreads=required: the threaded engine must be built here (a local build without the nightly only warns).
+      # StelloNativeEngine=false: the web app does not need Stello.Engine's native library (stello_engine).
+      # StelloWasmThreads=required: the threaded engine must be built here (a local build without Emscripten only warns).
       - name: Publish (AOT)
         run: dotnet publish Stello.Net/Stello.Web/Stello.Web.csproj -c Release -o publish -p:StelloNativeEngine=false -p:StelloWasmThreads=required
 

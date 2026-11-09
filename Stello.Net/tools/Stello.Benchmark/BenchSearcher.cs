@@ -30,9 +30,9 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
     public static BenchSearcher Create(Options options, SearchLimits limits, string limitText)
     {
         string engine = options.Text("engine") ?? "stello";
-        if (engine != "stello" && options.Text("threads") is not null)
+        if (engine is not ("stello" or "stello-v3") && options.Text("threads") is not null)
         {
-            throw new ArgumentException("--threads is only for --engine stello.");
+            throw new ArgumentException("--threads is only for --engine stello or stello-v3.");
         }
 
         switch (engine)
@@ -76,6 +76,29 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                 {
                     stello.ClearHash();
                     return stello.Search(position.Board, position.Player, limits);
+                });
+
+            case "stello-v3":
+                if (options.Text("mpc") is not null || options.Text("level") is not null || options.Text("eval") is not null
+                    || options.Text("side") is not null || options.Text("selective") is not null || options.Text("probcut-pct") is not null)
+                {
+                    throw new ArgumentException("--mpc, --level, --eval, --side, --selective and --probcut-pct are not supported by --engine stello-v3.");
+                }
+
+                int v3Bits = options.Number("hash-bits", SearchLimits.DefaultHashBits, 10, 26);
+                int v3Threads = options.Number("threads", 1, 1, SearchLimits.MaxThreads);
+                if (v3Threads > 1)
+                {
+                    limits = limits with { Threads = v3Threads };
+                    limitText += $", {v3Threads} threads";
+                }
+
+                (string v3Path, string v3Hash, _) = StelloLibrary.ResolveV3();
+                var v3 = new StelloLibraryMatchPlayer(v3Path, v3Hash, v3Bits);
+                return new BenchSearcher(engine, limitText, v3Bits, position =>
+                {
+                    v3.NewGame();
+                    return v3.ChooseMove(position.Board, position.Player, limits, CancellationToken.None);
                 });
 
             case "stello-v1":
@@ -157,7 +180,7 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                 });
 
             default:
-                throw new ArgumentException("--engine must be stello, stello-v2, stello-v1 or egaroucid.");
+                throw new ArgumentException("--engine must be stello, stello-v3, stello-v2, stello-v1 or egaroucid.");
         }
     }
 

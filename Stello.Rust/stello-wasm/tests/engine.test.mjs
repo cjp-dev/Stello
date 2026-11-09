@@ -44,7 +44,7 @@ const kinds = ['None', 'Heuristic', 'WinLossDraw', 'Exact', 'Book'];
 const squareName = square => square < 0 ? 'pass' : String.fromCharCode(97 + square % 8) + (Math.floor(square / 8) + 1);
 const run = (text, host = { progress() {}, signal: () => 0 }) => JSON.parse(engine.search(text, host));
 const signatures = readFileSync(`${repository}Stello.Net/Stello.Engine.Tests/Data/stello-v3-signatures.txt`, 'utf8')
-    .split('\n').filter(line => line !== '' && !line.startsWith('#'));
+    .split(/\r?\n/).filter(line => line !== '' && !line.startsWith('#'));
 
 function checkSignature(line, files) {
     const [file, id, limit] = line.split(' ');
@@ -56,8 +56,8 @@ function checkSignature(line, files) {
     assert.equal(actual.join(' '), line);
 }
 
-test('the version is 3.x', () => {
-    assert.match(engine.version(), /^3\.\d+\.\d+$/);
+test('the version is 4.x', () => {
+    assert.match(engine.version(), /^4\.\d+\.\d+$/);
 });
 
 test('midgame searches equal the baseline node for node', () => {

@@ -707,21 +707,9 @@ AbortResult<ScoreMove> Searcher::search(
 
     for (size_t index = 0; index < list.size(); ++index) {
         if (index == 1 && look >= YBWC_MID_MIN_DEPTH && may_split()) {
-            std::array<MidgameChild, MAX_MOVES> children{};
-            const size_t tail_count = list.size() - 1;
-            for (size_t c = 0; c < tail_count; ++c) {
-                const int32_t child_mv = list[1 + c];
-                children[c] = MidgameChild{
-                    board.play_unchecked(player, static_cast<uint32_t>(child_mv)),
-                    opp,
-                    look - 1,
-                    ply + 1,
-                    child_mv,
-                };
-            }
             STELLO_TRY_VOID_R(
                 ScoreMove,
-                split(std::span<const MidgameChild>(children.data(), tail_count), alpha, beta, best, best_move));
+                split_midgame(board, player, look, ply, list.subspan(1), alpha, beta, best, best_move));
             if (best >= beta) {
                 bound = Bound::Lower;
             } else if (best > alpha_start) {
@@ -808,6 +796,32 @@ AbortVoid Searcher::order_by_evaluation(
 
     stello::search::sort_descending(list, std::span<int32_t>(keys.data(), list.size()));
     STELLO_RETURN_OK_VOID();
+}
+
+AbortVoid Searcher::split_midgame(
+    const Board& board,
+    Player player,
+    int32_t look,
+    int32_t ply,
+    std::span<const int32_t> tail,
+    int32_t alpha,
+    int32_t beta,
+    int32_t& best,
+    int32_t& best_move
+) {
+    const Player opp = opponent(player);
+    std::array<MidgameChild, MAX_MOVES> children{};
+    for (size_t c = 0; c < tail.size(); ++c) {
+        const int32_t child_mv = tail[c];
+        children[c] = MidgameChild{
+            board.play_unchecked(player, static_cast<uint32_t>(child_mv)),
+            opp,
+            look - 1,
+            ply + 1,
+            child_mv,
+        };
+    }
+    return split(std::span<const MidgameChild>(children.data(), tail.size()), alpha, beta, best, best_move);
 }
 
 AbortResult<std::optional<int32_t>> Searcher::try_probcut(

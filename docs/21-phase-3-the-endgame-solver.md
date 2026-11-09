@@ -194,7 +194,7 @@ The C# search files of this chapter are kept, frozen, in `Stello.Engine.V2`. Sin
 - [Egaroucid on GitHub](https://github.com/Nyanyan/Egaroucid): `src/engine/endsearch_nws.hpp`, `endsearch_nws_last_generic.hpp`, `stability_cutoff.hpp`, `move_ordering.hpp`.
 - [The FFO endgame test suite – radagast.se](http://radagast.se/othello/ffotest.html): the positions of the gate.
 - [Enhanced Transposition Cutoff – Chess Programming Wiki](https://www.chessprogramming.org/Enhanced_Transposition_Cutoff) and [Null Window – Chess Programming Wiki](https://www.chessprogramming.org/Null_Window).
-- [References](29-references.md).
+- [References](30-references.md).
 
 ---
 

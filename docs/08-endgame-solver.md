@@ -359,7 +359,7 @@ The C# tests in [EndgameTests.cs](../Stello.Net/Stello.Engine.Tests/EndgameTests
 - [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html): the "Endgame" section explains why move ordering decides everything.
 - [Enhanced Transposition Cutoff – Chess Programming Wiki](https://www.chessprogramming.org/Enhanced_Transposition_Cutoff).
 - [Young Brothers Wait Concept – Chess Programming Wiki](https://www.chessprogramming.org/Young_Brothers_Wait_Concept), and [chapter 26](26-phases-5-9-threads.md) for how the threads were added to the solver and measured.
-- [Glossary](28-glossary.md) and [References](29-references.md).
+- [Glossary](29-glossary.md) and [References](30-references.md).
 
 ---
 

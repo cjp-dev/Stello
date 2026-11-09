@@ -113,6 +113,10 @@ inline uint64_t flips(uint64_t own, uint64_t opponent, uint32_t square) noexcept
     uint64_t flipped = 0;
     const uint64_t not_opponent = ~opponent;
     const auto& rays = RAYS[static_cast<size_t>(square)];
+#if defined(__clang__)
+#pragma clang loop vectorize(disable)
+#pragma clang loop interleave(disable)
+#endif
     for (size_t d = 0; d < 4; ++d) {
         const uint64_t ray = rays[d];
         uint64_t outflank = ray & not_opponent;
@@ -120,12 +124,23 @@ inline uint64_t flips(uint64_t own, uint64_t opponent, uint32_t square) noexcept
         if ((outflank & own) != 0) {
             flipped |= (outflank - 1ULL) & ray;
         }
+#if defined(__clang__) && (defined(__AVX2__) || defined(__AVX512F__)) && !defined(__EMSCRIPTEN__)
+        // Keep Clang -march=native unrolled in scalar GPRs instead of SLP-vectorizing rays into ymm/zmm.
+        __asm__ volatile("" : "+r"(flipped));
+#endif
     }
+#if defined(__clang__)
+#pragma clang loop vectorize(disable)
+#pragma clang loop interleave(disable)
+#endif
     for (size_t d = 4; d < 8; ++d) {
         const uint64_t ray = rays[d];
         const uint64_t top = 0x8000'0000'0000'0000ULL >> std::countl_zero((ray & not_opponent) | 1ULL);
         const uint64_t outflanked = 0ULL - static_cast<uint64_t>((top & ray & own) != 0);
         flipped |= ray & ((0ULL - top) << 1) & outflanked;
+#if defined(__clang__) && (defined(__AVX2__) || defined(__AVX512F__)) && !defined(__EMSCRIPTEN__)
+        __asm__ volatile("" : "+r"(flipped));
+#endif
     }
     return flipped;
 }

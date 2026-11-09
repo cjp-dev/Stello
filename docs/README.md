@@ -1,6 +1,6 @@
 # The Stello brain
 
-Stello is an Othello program. Its "brain" is the engine, which decides the computer's move: the search core in Rust (`Stello.Rust`), called from the C# library `Stello.Engine`, which also holds the rules, the game record and the opening book. The brain consists of:
+Stello is an Othello program. Its "brain" is the engine, which decides the computer's move: the search core in C++20 (`Stello.Cpp`), called from the C# library `Stello.Engine`, which also holds the rules, the game record and the opening book (while Stello 3.1's Rust workspace, `Stello.Rust`, is kept for comparisons). The brain consists of:
 
 - **the board and rules**: bitboards and fast move generation;
 - **the evaluation**: a pattern evaluation, 15 patterns of squares with weights trained on 500 million positions, in 10 stages of the game;
@@ -8,13 +8,13 @@ Stello is an Othello program. Its "brain" is the engine, which decides the compu
 - **the endgame solver**: perfect play near the end of the game, adapted from Egaroucid;
 - **the opening book**: about 11 000 known opening positions, which can learn from games.
 
-These documents explain how the parts work, how they fit together and how they came to be. They describe Stello 3.1, the current code: the search in Rust in [Stello.Rust](../Stello.Rust), and the engine library, the apps and the tools in C# in [Stello.Net](../Stello.Net).
+These documents explain how the parts work, how they fit together and how they came to be. They describe Stello 4.0, the current code: the search core in C++20 in [Stello.Cpp](../Stello.Cpp), the engine library, the apps and the tools in C# in [Stello.Net](../Stello.Net), and the preserved Rust 3.1 engine in [Stello.Rust](../Stello.Rust).
 
 ## Chapters
 
 <!-- GameShell lists chapters in the order of their first link; keep these tables before other chapter links. -->
 
-### Part 1: How Stello 3.1 works
+### Part 1: How Stello 4.0 works
 
 | # | Chapter | Content |
 |---|---|---|
@@ -31,7 +31,7 @@ These documents explain how the parts work, how they fit together and how they c
 | 11 | [Book learning](11-book-learning.md) | Adding games, dropout expansion, minimax, self-play |
 | 12 | [Book tool](12-book-tool.md) | The console tool for the master book: import, build, verify, statistics, recalculating the leaves, comparing and matching books |
 | 13 | [Game record](13-game-record.md) | Move history, undo/redo, the text file format |
-| 14 | [App integration](14-app-integration.md) | The game loop, threading, engine hosts, the native library and the WebAssembly worker, search threads on the desktop and in the browser, the Rust toolchain, settings, data files |
+| 14 | [App integration](14-app-integration.md) | The game loop, threading, engine hosts, the native C++ library and the Emscripten WebAssembly worker, search threads on the desktop and in the browser, the build toolchains, settings, data files |
 | 15 | [GUI and settings](15-gui-and-settings.md) | The web and desktop interfaces, menu commands, settings (with Threads), real-time analysis |
 
 ### Part 2: From Stello 1 to Stello 2.0
@@ -56,14 +56,20 @@ These documents explain how the parts work, how they fit together and how they c
 | 26 | [Phases 5–9: threads](26-phases-5-9-threads.md) | The shared hash table and the thread pool, Lazy SMP, YBWC, threads in the browser, the Threads setting, the final matches, and what comes next |
 | 27 | [Stello 3.1: fixes and the desktop app](27-stello-3-1-fixes-and-the-desktop-app.md) | Search and clock fixes, the parity decisions, Computer vs Computer and the desktop, the match tools, and the final comparisons |
 
+### Part 4: From Stello 3.1 to 4.0
+
+| # | Chapter | Content |
+|---|---|---|
+| 28 | [Stello 4.0: the engine in C++](28-stello-4-0-the-engine-in-cpp.md) | The 1-to-1 C++20 core, controlled Rust vs Clang vs MSVC benchmarks, exception unwinding, scalar `flips()`, `.NET` FFI and Emscripten WebAssembly |
+
 ### Reference
 
 | # | Chapter | Content |
 |---|---|---|
-| 28 | [Glossary](28-glossary.md) | The terms used in these documents |
-| 29 | [References](29-references.md) | Articles, papers and source code on the internet |
+| 29 | [Glossary](29-glossary.md) | The terms used in these documents |
+| 30 | [References](30-references.md) | Articles, papers and source code on the internet |
 
-## Five versions
+## Six versions
 
 | Version | When | What it is |
 |---|---|---|
@@ -71,7 +77,8 @@ These documents explain how the parts work, how they fit together and how they c
 | **Stello .NET 1.0** ("Stello 1") | September–October 2026 | The C++ program ported to C# and .NET 10, with a WPF app for Windows and a Blazor WebAssembly app for the browser. The engine works as in C++, made faster with bitboards; the opening book was imported and recalculated. How it was ported, phase by phase, is in [Stello porting documentation.md](../Plans/Stello%20porting%20documentation.md). Its engine is kept, frozen, as `Stello.Engine.V1` for matches. |
 | **Stello .NET 2.0** | November 2026 | A new trained pattern evaluation, an endgame solver adapted from Egaroucid, a new search (PVS everywhere, Multi-ProbCut, evaluation ordering) and the opening book recalculated by the new engine. It scores about 95 % against Stello 1 and beats the C# port of Egaroucid at short time limits ([chapter 24](24-results-and-what-comes-next.md)). Its C# engine is kept, frozen, as `Stello.Engine.V2`. |
 | **Stello 3.0** | November 2026 | The same search rewritten in Rust, node for node: 2.8–3.1 times faster in the midgame and 1.75 times on the FFO endgames, in the Windows app through a native library and in the browser compiled to WebAssembly ([chapter 25](25-phases-0-4-the-engine-in-rust.md)). Then a parallel search on several threads, with a shared hash table, Lazy SMP and YBWC, in both apps: with 8 threads the FFO endgames are solved 3.3 times faster. Against Stello 2.0 it scores +78 Elo on 1 thread and +121 Elo on 8 threads at 500 ms per move ([chapter 26](26-phases-5-9-threads.md)). |
-| **Stello 3.1** | November 2026 | Fixes to stopped solves, clocks, search and browser workers; Computer vs Computer and an aligned desktop app; and more reliable match tools. The final comparisons with the actual 3.0 engine found no significant playing-strength difference ([chapter 27](27-stello-3-1-fixes-and-the-desktop-app.md)). |
+| **Stello 3.1** | November 2026 | Fixes to stopped solves, clocks, search and browser workers; Computer vs Computer and an aligned desktop app; and more reliable match tools. The final comparisons with the actual 3.0 engine found no significant playing-strength difference ([chapter 27](27-stello-3-1-fixes-and-the-desktop-app.md)). Preserved natives (`engine=stello-v3`) remain testable alongside 4.0. |
+| **Stello 4.0** | November 2026 | The search core ported 1-to-1 from Rust 3.1 into C++20 ([`Stello.Cpp`](../Stello.Cpp)), matching every single-thread node count while gaining speed from zero-cost `throw Abort` exceptions (`+4.3–5.3%` natively through `.NET` FFI) and Emscripten `-fwasm-exceptions` / `-pthread` WebAssembly (`+6.8–17.3%` 1t, `+3.6–15.8%` 4–8t, `-20–25 KB` brotli, no Rust nightly required; [chapter 28](28-stello-4-0-the-engine-in-cpp.md)). |
 
 The documentation of Stello 1 is kept as it was in the **[Stello 1 documentation](stello-1/README.md)** (archive).
 
@@ -103,13 +110,14 @@ The time limit can stop the search at any point; the best move found so far is t
 ## Reading paths
 
 - **Everything:** read the chapters in order.
-- **Just the engine:** 01, 02, 03, 04, 05, 06, 07, 08, 09; and 25 for how it moved to Rust, 26 for how it got threads, and 27 for the 3.1 fixes.
+- **Just the engine:** 01, 02, 03, 04, 05, 06, 07, 08, 09; and 25 for how it moved to Rust, 26 for how it got threads, 27 for the 3.1 fixes, and 28 for the C++20 engine of 4.0.
 - **Just the opening book:** 01, 02 (square numbers), 10, 11, 12.
 - **UI and application architecture:** 01, 13, 14, 15.
 - **Tuning the engine:** 17 (how to measure a change), then 23 for what has been tried, with its measurements, and 24 for the ideas that remain.
 - **The story of Stello 2.0:** 16 to 24, then the working documents [improve-stello-strength-plan.md](../Plans/improve-stello-strength-plan.md) and [improve-stello-strength-findings.md](../Plans/improve-stello-strength-findings.md).
 - **The story of Stello 3.0:** 25 and 26, then [making-stello-3-plan.md](../Plans/making-stello-3-plan.md) and [making-stello-3-findings.md](../Plans/making-stello-3-findings.md).
 - **The story of Stello 3.1:** 27, then [making-stello-3-1-plan.md](../Plans/making-stello-3-1-plan.md) and [making-stello-3-1-findings.md](../Plans/making-stello-3-1-findings.md).
+- **The story of Stello 4.0:** 28, then [Stello 4.0 C++ implementation.md](../Plans/Stello%204.0%20C++%20implementation.md) and [Stello 4.0 C++ findings.md](../Plans/Stello%204.0%20C++%20findings.md).
 
 ## How to view these documents
 

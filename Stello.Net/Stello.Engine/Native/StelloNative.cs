@@ -4,18 +4,19 @@ using Microsoft.Win32.SafeHandles;
 namespace Stello.Engine.Native;
 
 /// <summary>
-/// The C ABI of the Rust engine, <c>stello_engine</c> (<c>Stello.Rust/stello-ffi/src/lib.rs</c>, where every function
-/// is documented): <c>libstello_engine.so</c> on Linux and <c>stello_engine.dll</c> on Windows, next to the
-/// application. Stello.Engine's build makes it with Cargo and copies it to every output that references Stello.Engine.
+/// The C ABI of the C++ engine, <c>stello_engine</c> (<c>Stello.Cpp/src/ffi/stello_ffi.hpp</c> and <c>stello_ffi.cpp</c>,
+/// ported from <c>Stello.Rust/stello-ffi/src/lib.rs</c>): <c>libstello_engine.so</c> on Linux and
+/// <c>stello_engine.dll</c> on Windows, next to the application. Stello.Engine's build compiles it with CMake + Clang
+/// and copies it to every output that references Stello.Engine.
 /// </summary>
 internal static unsafe partial class StelloNative
 {
     private const string Library = "stello_engine";
 
-    /// <summary>The ABI version this wrapper is written for (<c>ABI_VERSION</c> in the Rust library).</summary>
+    /// <summary>The ABI version this wrapper is written for (<c>kAbiVersion</c> in Stello.Cpp).</summary>
     public const uint AbiVersion = 3;
 
-    // Status codes (STELLO_OK ... in the Rust library).
+    // Status codes (STELLO_OK ... in Stello.Cpp/src/ffi/stello_ffi.hpp).
     public const int Ok = 0;
     public const int Cancelled = 1;
     public const int NoLegalOnlyMove = 2;
@@ -79,7 +80,7 @@ internal static unsafe partial class StelloNative
     [LibraryImport(Library, EntryPoint = "stello_signals_reset")]
     public static partial void ResetSignals(SignalsHandle signals);
 
-    /// <summary>Rust's elapsed time in nanoseconds as a <see cref="TimeSpan"/> (100 ns ticks).</summary>
+    /// <summary>The engine's elapsed time in nanoseconds as a <see cref="TimeSpan"/> (100 ns ticks).</summary>
     public static TimeSpan Elapsed(ulong nanoseconds) => TimeSpan.FromTicks((long)(nanoseconds / 100));
 
     private static readonly Lazy<Exception?> LoadError = new(() =>
@@ -90,15 +91,15 @@ internal static unsafe partial class StelloNative
             return abi == AbiVersion
                 ? null
                 : new InvalidOperationException(
-                    $"The Rust engine library {Library} has ABI version {abi}, but this Stello.Engine needs {AbiVersion}. " +
-                    "Rebuild Stello.Engine, which builds Stello.Rust with Cargo.");
+                    $"The C++ engine library {Library} has ABI version {abi}, but this Stello.Engine needs {AbiVersion}. " +
+                    "Rebuild Stello.Engine, which builds Stello.Cpp with CMake and Clang.");
         }
         catch (Exception exception) when (exception is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
         {
             return new DllNotFoundException(
-                $"The Rust engine library {Library} ({(OperatingSystem.IsWindows() ? "stello_engine.dll" : "libstello_engine.so")}) " +
+                $"The C++ engine library {Library} ({(OperatingSystem.IsWindows() ? "stello_engine.dll" : "libstello_engine.so")}) " +
                 $"could not be loaded from {AppContext.BaseDirectory}: {exception.Message} Stello.Engine's build makes it " +
-                "with Cargo (Stello.Rust) and copies it next to the application.", exception);
+                "with CMake + Clang (Stello.Cpp) and copies it next to the application.", exception);
         }
     });
 
@@ -114,7 +115,7 @@ internal static unsafe partial class StelloNative
     }
 }
 
-/// <summary>An engine of the Rust library (<c>stello_engine_create</c>), with the memory of its hash tables.</summary>
+/// <summary>An engine instance of the native library (<c>stello_engine_create</c>), with the memory of its hash tables.</summary>
 internal sealed class EngineHandle : SafeHandleZeroOrMinusOneIsInvalid
 {
     private long _memoryPressure;
@@ -143,7 +144,7 @@ internal sealed class EngineHandle : SafeHandleZeroOrMinusOneIsInvalid
     }
 }
 
-/// <summary>Stop signals of the Rust library (<c>stello_signals_create</c>): cancel and Move Now.</summary>
+/// <summary>Stop signals of the native library (<c>stello_signals_create</c>): cancel and Move Now.</summary>
 internal sealed class SignalsHandle : SafeHandleZeroOrMinusOneIsInvalid
 {
     public SignalsHandle()
@@ -158,7 +159,7 @@ internal sealed class SignalsHandle : SafeHandleZeroOrMinusOneIsInvalid
     }
 }
 
-/// <summary>Rust's <c>StelloSearchInfo</c> (48 bytes, the same field order).</summary>
+/// <summary>Native <c>StelloSearchInfo</c> (48 bytes, the same field order).</summary>
 [StructLayout(LayoutKind.Sequential)]
 internal struct NativeSearchInfo
 {
@@ -173,7 +174,7 @@ internal struct NativeSearchInfo
     public int Reserved;
 }
 
-/// <summary>Rust's <c>StelloSearchResult</c> (40 bytes, the same field order).</summary>
+/// <summary>Native <c>StelloSearchResult</c> (40 bytes, the same field order).</summary>
 [StructLayout(LayoutKind.Sequential)]
 internal struct NativeSearchResult
 {

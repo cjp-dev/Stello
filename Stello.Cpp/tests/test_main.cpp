@@ -11,8 +11,8 @@
 namespace stello::tests {
 
 STELLO_TEST(phase0_version_and_embedded_eval_smoke) {
-    STELLO_CHECK(std::string_view(kEngineVersion) == "3.1.0");
-    STELLO_CHECK_EQ(kEngineVersionCode, 30100u);
+    STELLO_CHECK(std::string_view(kEngineVersion) == "4.0.0");
+    STELLO_CHECK_EQ(kEngineVersionCode, 40000u);
     STELLO_CHECK_EQ(kAbiVersion, 3u);
 
     const auto eval_bytes = eval::detail::embedded_eval_bytes();

@@ -265,7 +265,7 @@ public:
     bool may_split() const noexcept { return helpers.has_value() && ybwc; }
 
     template <typename ChildT>
-    AbortVoid split(
+    STELLO_NOINLINE AbortVoid split(
         std::span<const ChildT> children,
         int32_t alpha,
         int32_t beta,
@@ -312,7 +312,30 @@ public:
 
 private:
     AbortVoid order_by_evaluation(std::span<int32_t> list, int32_t hash_move, const Board& board, Player player);
-    AbortResult<std::optional<int32_t>> try_probcut(
+    STELLO_NOINLINE AbortVoid split_midgame(
+        const Board& board,
+        Player player,
+        int32_t look,
+        int32_t ply,
+        std::span<const int32_t> tail,
+        int32_t alpha,
+        int32_t beta,
+        int32_t& best,
+        int32_t& best_move
+    );
+    STELLO_NOINLINE AbortVoid split_endgame(
+        uint64_t own,
+        uint64_t opponent,
+        int32_t empties,
+        std::span<EndMove> moves,
+        size_t from,
+        uint64_t done,
+        int32_t alpha,
+        int32_t beta,
+        int32_t& best,
+        int32_t& best_move
+    );
+    STELLO_NOINLINE AbortResult<std::optional<int32_t>> try_probcut(
         const Board& board,
         Player player,
         int32_t look,

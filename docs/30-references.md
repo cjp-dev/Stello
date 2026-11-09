@@ -1,4 +1,4 @@
-# 29 – References
+# 30 – References
 
 [Back to the index](README.md)
 
@@ -188,6 +188,16 @@ Articles, papers and source code on the internet that explain the techniques use
 | [build-std – the Cargo Book](https://doc.rust-lang.org/cargo/reference/unstable.html#build-std) | Building the standard library with atomics, which the threaded WebAssembly package needs nightly Rust for. |
 | [wasm-bindgen-rayon on GitHub](https://github.com/RReverser/wasm-bindgen-rayon) | The usual way to run Rust threads on Web Workers; Stello uses its own small pool instead (chapter 14). |
 
+## 28 Stello 4.0: the engine in C++
+
+| Link | What you find there |
+|---|---|
+| [Standard library header `&lt;bit&gt;` – cppreference](https://en.cppreference.com/w/cpp/header/bit) | C++20 `std::popcount`, `std::countr_zero`, `std::countl_zero` and `std::rotr` used across bitboards and the endgame solver. |
+| [Clang Compiler User's Manual – LLVM](https://clang.llvm.org/docs/UsersManual.html) | Clang 23.1, `-flto`, `-march=native`, ASan/UBSan and `#pragma clang loop vectorize(disable)` for scalar `flips()`. |
+| [Emscripten](https://emscripten.org/) | The C++ to WebAssembly toolchain (`emcmake` / `em++`, `-sSTANDALONE_WASM=1`, `-fwasm-exceptions`, `-pthread`). |
+| [WebAssembly Exception Handling – GitHub](https://github.com/WebAssembly/exception-handling) | Native WebAssembly `-fwasm-exceptions` unwinding used by `STELLO_ABORT_EXCEPTIONS=ON` in `stello_wasm`. |
+| [RFC 1951 (DEFLATE)](https://datatracker.ietf.org/doc/html/rfc1951) and [RFC 1952 (GZIP)](https://datatracker.ietf.org/doc/html/rfc1952) | The bitstream and multi-member container formats decoded by `eval/gzip.cpp`. |
+
 ## Writing these documents
 
 | Link | What you find there |
@@ -198,4 +208,4 @@ Articles, papers and source code on the internet that explain the techniques use
 
 ---
 
-Previous: [28 Glossary](28-glossary.md) · Next: [Index](README.md)
+Previous: [29 Glossary](29-glossary.md) · Next: [Index](README.md)

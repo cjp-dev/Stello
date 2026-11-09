@@ -53,6 +53,53 @@ internal sealed class StelloLibrary : IDisposable
 
     public string VersionText => $"{Version / 10_000}.{Version / 100 % 100}.{Version % 100}";
 
+    /// <summary>Locates the preserved Stello 3.1 Rust native library (<c>stello_engine_v3</c>), verifies its version and computes its SHA-256.</summary>
+    public static (string Path, string Sha256, string VersionText) ResolveV3()
+    {
+        string os = OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "macos" : "linux";
+        string file = OperatingSystem.IsWindows()
+            ? "stello_engine_v3.dll"
+            : OperatingSystem.IsMacOS() ? "libstello_engine_v3.dylib" : "libstello_engine_v3.so";
+
+        string? envPath = Environment.GetEnvironmentVariable("STELLO_V3_LIBRARY");
+        string? found = null;
+        if (!string.IsNullOrWhiteSpace(envPath))
+        {
+            string fullEnv = System.IO.Path.GetFullPath(envPath);
+            found = File.Exists(fullEnv)
+                ? fullEnv
+                : throw new ArgumentException($"STELLO_V3_LIBRARY points to a missing file: {fullEnv}");
+        }
+        else
+        {
+            string repo = Program.RepositoryFolder();
+            string[] candidates =
+            [
+                System.IO.Path.Combine(AppContext.BaseDirectory, file),
+                System.IO.Path.Combine(repo, "Stello.Rust", "target", $"{os}-v3", "release", file),
+                System.IO.Path.Combine(repo, "Stello.Rust", "target", os, "release", file),
+            ];
+            found = candidates.FirstOrDefault(File.Exists)
+                ?? throw new ArgumentException(
+                    $"Could not find {file} for engine=stello-v3. Build Stello.Rust/stello-ffi with Cargo into " +
+                    $"Stello.Rust/target/{os}-v3/release/{file} (or set STELLO_V3_LIBRARY).");
+        }
+
+        string hash;
+        using (var stream = new FileStream(found, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            hash = Convert.ToHexString(SHA256.HashData(stream));
+        }
+
+        using StelloLibrary library = Open(found, hash);
+        if (library.Version is < 30_100 or >= 30_200)
+        {
+            throw new ArgumentException($"Expected Stello 3.1 (301xx) at {found}, found {library.VersionText} ({library.Version}).");
+        }
+
+        return (library.Path, library.Sha256, library.VersionText);
+    }
+
     public static StelloLibrary Open(string path, string expectedSha256)
     {
         if (string.IsNullOrWhiteSpace(path) || !System.IO.Path.IsPathFullyQualified(path))

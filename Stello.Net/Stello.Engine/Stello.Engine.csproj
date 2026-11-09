@@ -1,10 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <!-- The P/Invoke source generator ([LibraryImport]) and the callbacks of the Rust engine (Native/StelloNative.cs). -->
+    <!-- The P/Invoke source generator ([LibraryImport]) and the callbacks of the C++ engine (Native/StelloNative.cs). -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
@@ -19,80 +19,72 @@
   </ItemGroup>
 
   <!--
-    The search runs in Rust (Stello.Rust, crate stello-ffi, library stello_engine). Before the build, Cargo builds it
-    when its sources are newer than the library, and the library is copied to the output of this project and of every
-    project that references it (apps, tools, tests), next to the assemblies.
+    The search runs in C++20 (Stello.Cpp, target stello_engine). Before the build, CMake + Ninja + Clang build it with
+    -O3 -flto -DNDEBUG, STELLO_ABORT_EXCEPTIONS=ON and static CRT on Windows, when its sources are newer than the library,
+    and the library is copied to the output of this project and of every project that references it (apps, tools, tests),
+    next to the assemblies.
 
-    - Each OS has its own Cargo target folder (Stello.Rust/target/linux, target/windows), because the repository
-      folder is shared between the Linux sandbox and Windows.
-    - Cargo: from the PATH, else from ~/.cargo/bin (rustup's folder), else set StelloCargo to its path.
-    - StelloCargoTarget=<triple> cross-compiles, e.g. x86_64-pc-windows-gnu (MinGW) to check the WPF output on Linux.
-    - StelloNativeEngine=false skips Cargo and the library (for a build without Rust that never searches).
+    - Each OS has its own CMake build folder (Stello.Cpp/build/windows-ffi, linux-ffi, macos-ffi), because the
+      repository folder may be shared across OSes and separate from developer CMakePresets builds.
+    - StelloLlvmBin can point to LLVM's bin folder if clang++ / llvm-ar are not on the PATH or in C:\Program Files\LLVM\bin.
+    - StelloNativeEngine=false skips CMake and the native library (e.g. Stello.Web WASM publish).
   -->
   <PropertyGroup>
-    <StelloRustDir>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', 'Stello.Rust'))</StelloRustDir>
+    <StelloCppDir>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', 'Stello.Cpp'))</StelloCppDir>
     <StelloNativeOS Condition="'$(StelloNativeOS)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">windows</StelloNativeOS>
     <StelloNativeOS Condition="'$(StelloNativeOS)' == '' and $([MSBuild]::IsOSPlatform('OSX'))">macos</StelloNativeOS>
     <StelloNativeOS Condition="'$(StelloNativeOS)' == ''">linux</StelloNativeOS>
-    <StelloCargoTargetDir>$(StelloRustDir)target$([System.IO.Path]::DirectorySeparatorChar)$(StelloNativeOS)$([System.IO.Path]::DirectorySeparatorChar)</StelloCargoTargetDir>
 
-    <!-- The library's file name on the OS it runs on: the host's, or the one of StelloCargoTarget. -->
-    <_StelloNativeRunsOn>$(StelloNativeOS)</_StelloNativeRunsOn>
-    <_StelloNativeRunsOn Condition="'$(StelloCargoTarget)' != '' and $(StelloCargoTarget.Contains('windows'))">windows</_StelloNativeRunsOn>
-    <_StelloNativeRunsOn Condition="'$(StelloCargoTarget)' != '' and $(StelloCargoTarget.Contains('apple'))">macos</_StelloNativeRunsOn>
-    <_StelloNativeRunsOn Condition="'$(StelloCargoTarget)' != '' and $(StelloCargoTarget.Contains('linux'))">linux</_StelloNativeRunsOn>
-    <StelloNativeFile Condition="'$(_StelloNativeRunsOn)' == 'windows'">stello_engine.dll</StelloNativeFile>
-    <StelloNativeFile Condition="'$(_StelloNativeRunsOn)' == 'macos'">libstello_engine.dylib</StelloNativeFile>
+    <StelloNativeFile Condition="'$(StelloNativeOS)' == 'windows'">stello_engine.dll</StelloNativeFile>
+    <StelloNativeFile Condition="'$(StelloNativeOS)' == 'macos'">libstello_engine.dylib</StelloNativeFile>
     <StelloNativeFile Condition="'$(StelloNativeFile)' == ''">libstello_engine.so</StelloNativeFile>
 
-    <_StelloCargoProfileDir>$(StelloCargoTargetDir)release</_StelloCargoProfileDir>
-    <_StelloCargoProfileDir Condition="'$(StelloCargoTarget)' != ''">$(StelloCargoTargetDir)$(StelloCargoTarget)$([System.IO.Path]::DirectorySeparatorChar)release</_StelloCargoProfileDir>
-    <StelloNativePath>$(_StelloCargoProfileDir)$([System.IO.Path]::DirectorySeparatorChar)$(StelloNativeFile)</StelloNativePath>
+    <StelloCppBuildDir>$(StelloCppDir)build$([System.IO.Path]::DirectorySeparatorChar)$(StelloNativeOS)-ffi</StelloCppBuildDir>
+    <StelloNativePath>$(StelloCppBuildDir)$([System.IO.Path]::DirectorySeparatorChar)$(StelloNativeFile)</StelloNativePath>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(StelloNativeEngine)' != 'false'">
     <!-- Flows to the output of every project that references Stello.Engine. -->
     <None Include="$(StelloNativePath)" Link="$(StelloNativeFile)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
-    <StelloRustSource Include="$(StelloRustDir)Cargo.toml;$(StelloRustDir)Cargo.lock;$(StelloRustDir).cargo\config.toml" />
-    <StelloRustSource Include="$(StelloRustDir)stello-core\Cargo.toml;$(StelloRustDir)stello-core\src\**\*.rs" />
-    <StelloRustSource Include="$(StelloRustDir)stello-ffi\Cargo.toml;$(StelloRustDir)stello-ffi\src\**\*.rs" />
-    <!-- Embedded by stello-core (include_bytes!). -->
-    <StelloRustSource Include="..\Book\stello-eval.bin" />
-    <!-- Visual Studio's fast up-to-date check: build when only the Rust sources changed. -->
-    <UpToDateCheckInput Include="@(StelloRustSource)" />
+    <StelloCppSource Include="$(StelloCppDir)CMakeLists.txt;$(StelloCppDir)cmake\*.cmake;$(StelloCppDir)cmake\*.cmd" />
+    <StelloCppSource Include="$(StelloCppDir)src\**\*.hpp;$(StelloCppDir)src\**\*.cpp" />
+    <!-- Embedded by stello_core (cmake/embed_eval.cmake). -->
+    <StelloCppSource Include="..\Book\stello-eval.bin" />
+    <!-- Visual Studio's fast up-to-date check: rebuild when any C++ engine source changes. -->
+    <UpToDateCheckInput Include="@(StelloCppSource)" />
   </ItemGroup>
 
   <Target Name="BuildStelloNative" BeforeTargets="BeforeBuild"
           Condition="'$(StelloNativeEngine)' != 'false' and '$(DesignTimeBuild)' != 'true'"
-          Inputs="@(StelloRustSource)" Outputs="$(StelloNativePath)">
-    <!-- Cargo from the PATH, else rustup's folder. -->
-    <Exec Command="cargo --version" Condition="'$(StelloCargo)' == ''" ContinueOnError="true" IgnoreExitCode="true"
-          StandardOutputImportance="low" StandardErrorImportance="low" EchoOff="true">
-      <Output TaskParameter="ExitCode" PropertyName="_StelloCargoOnPath" />
-    </Exec>
-    <PropertyGroup Condition="'$(StelloCargo)' == ''">
-      <_StelloRustupCargo Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(USERPROFILE)\.cargo\bin\cargo.exe</_StelloRustupCargo>
-      <_StelloRustupCargo Condition="!$([MSBuild]::IsOSPlatform('Windows'))">$(HOME)/.cargo/bin/cargo</_StelloRustupCargo>
-      <StelloCargo Condition="'$(_StelloCargoOnPath)' == '0'">cargo</StelloCargo>
-      <StelloCargo Condition="'$(StelloCargo)' == '' and Exists('$(_StelloRustupCargo)')">"$(_StelloRustupCargo)"</StelloCargo>
-    </PropertyGroup>
-    <Error Condition="'$(StelloCargo)' == ''"
-           Text="Stello.Engine builds its search engine in Rust (Stello.Rust), but Cargo was not found on the PATH or in ~/.cargo/bin. Install Rust with rustup (https://rustup.rs). On Windows its default toolchain, x86_64-pc-windows-msvc, also needs Visual Studio's C++ build tools (the 'Desktop development with C++' workload, or 'MSVC v143 build tools' and a Windows SDK in the Visual Studio Installer). Then build again (restart Visual Studio so that it sees the new PATH), or set the MSBuild property StelloCargo to cargo's path." />
+          Inputs="@(StelloCppSource)" Outputs="$(StelloNativePath)">
+    <Message Importance="high" Text="Stello.Engine: building the C++ engine (Stello.Cpp, stello_engine -> $(StelloCppBuildDir))" />
 
-    <PropertyGroup>
-      <_StelloCargoArguments>build --release -p stello-ffi --target-dir "$(StelloCargoTargetDir.TrimEnd('\/'))"</_StelloCargoArguments>
-      <_StelloCargoArguments Condition="'$(StelloCargoTarget)' != ''">$(_StelloCargoArguments) --target $(StelloCargoTarget)</_StelloCargoArguments>
-    </PropertyGroup>
-    <Message Importance="high" Text="Stello.Engine: building the Rust engine ($(StelloCargo) $(_StelloCargoArguments))" />
-    <!-- Incremental builds fail on some shared folders, and a release build does not use them anyway. -->
-    <Exec Command="$(StelloCargo) $(_StelloCargoArguments)" WorkingDirectory="$(StelloRustDir)" EnvironmentVariables="CARGO_INCREMENTAL=0"
-          ContinueOnError="true" IgnoreExitCode="true" CustomErrorRegularExpression="^error(\[E\d+\])?:">
-      <Output TaskParameter="ExitCode" PropertyName="_StelloCargoExit" />
+    <!-- Windows: build_ffi.cmd initializes vcvars64 (CMake, Ninja, Windows SDK CRT) and prepends LLVM clang++. -->
+    <Exec Condition="$([MSBuild]::IsOSPlatform('Windows'))"
+          Command="call &quot;$(StelloCppDir)cmake\build_ffi.cmd&quot; &quot;$(StelloCppDir.TrimEnd('\/'))&quot; &quot;$(StelloCppBuildDir)&quot;"
+          WorkingDirectory="$(StelloCppDir)"
+          EnvironmentVariables="STELLO_LLVM_BIN=$(StelloLlvmBin)"
+          ContinueOnError="true" IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="_StelloCppExit" />
     </Exec>
-    <Error Condition="'$(_StelloCargoExit)' != '0'"
-           Text="Cargo could not build the Rust engine (Stello.Rust, stello-ffi; exit code $(_StelloCargoExit)); see Cargo's messages above. On Windows the toolchain x86_64-pc-windows-msvc needs Visual Studio's C++ build tools (link.exe): install the 'Desktop development with C++' workload in the Visual Studio Installer. 'rustup show' shows the installed toolchains." />
-    <Error Condition="!Exists('$(StelloNativePath)')" Text="Cargo finished, but $(StelloNativePath) is missing." />
-    <!-- Cargo leaves an up-to-date library alone; the new time stamp keeps this target from running again. -->
+
+    <!-- POSIX (Linux / macOS): configure and build stello_engine via CMake + Ninja + Clang. -->
+    <PropertyGroup Condition="!$([MSBuild]::IsOSPlatform('Windows'))">
+      <_StelloPosixLinkerFlags Condition="'$(StelloNativeOS)' != 'macos'">-DCMAKE_AR=llvm-ar -DCMAKE_RANLIB=llvm-ranlib "-DCMAKE_SHARED_LINKER_FLAGS_RELEASE=-flto -fuse-ld=lld"</_StelloPosixLinkerFlags>
+      <_StelloPosixLinkerFlags Condition="'$(StelloNativeOS)' == 'macos'">"-DCMAKE_SHARED_LINKER_FLAGS_RELEASE=-flto"</_StelloPosixLinkerFlags>
+      <_StelloPosixBuildCmd>cmake -S "$(StelloCppDir.TrimEnd('\/'))" -B "$(StelloCppBuildDir)" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++ $(_StelloPosixLinkerFlags) "-DCMAKE_CXX_FLAGS_RELEASE=-O3 -DNDEBUG -flto" -DSTELLO_ABORT_EXCEPTIONS=ON -DSTELLO_BUILD_SHARED=ON -DSTELLO_BUILD_TESTS=OFF &amp;&amp; cmake --build "$(StelloCppBuildDir)" --target stello_engine</_StelloPosixBuildCmd>
+    </PropertyGroup>
+    <Exec Condition="!$([MSBuild]::IsOSPlatform('Windows'))"
+          Command="$(_StelloPosixBuildCmd)"
+          WorkingDirectory="$(StelloCppDir)"
+          ContinueOnError="true" IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="_StelloCppExit" />
+    </Exec>
+
+    <Error Condition="'$(_StelloCppExit)' != '0'"
+           Text="CMake/Clang could not build the C++ engine (Stello.Cpp, target stello_engine; exit code $(_StelloCppExit)); see the build messages above. Windows requires LLVM (clang++, llvm-ar, lld-link) and Visual Studio C++ build tools (CMake, Ninja, Windows SDK); Linux/macOS requires cmake, ninja, clang++ (and lld/llvm-ar on Linux)." />
+    <Error Condition="!Exists('$(StelloNativePath)')" Text="The C++ build finished, but $(StelloNativePath) is missing." />
+    <!-- Keep timestamps newer than sources so incremental .NET builds skip rebuilding. -->
     <Touch Files="$(StelloNativePath)" />
   </Target>
 
