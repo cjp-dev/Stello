@@ -128,8 +128,8 @@ public sealed class BoardAndHelpTests
         MainWindow.UserGuideCommand.Execute(null, window);
         MainWindow.DocumentationCommand.Execute(null, window);
         Assert.Equal(
-            ["https://polite-sky-0e9899910.3.azurestaticapps.net/docs/15-gui-and-settings",
-             "https://polite-sky-0e9899910.3.azurestaticapps.net/docs/"],
+            ["https://othello.clauspedersen.net/docs/15-gui-and-settings",
+             "https://othello.clauspedersen.net/docs"],
             opened.Select(uri => uri.AbsoluteUri));
         var menu = (Menu)((DockPanel)window.Content).Children[0];
         var help = menu.Items.OfType<MenuItem>().Single(item => (string)item.Header == "_Help");

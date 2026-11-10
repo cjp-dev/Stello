@@ -310,7 +310,7 @@ In the web app the letter shortcuts are Ctrl+letter (or Cmd+letter on a Mac); Ga
 
 ## The desktop app
 
-The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs the same view model with the engine on a background task (chapter 14). Its menus, side panels, board styles and sound follow the web app. Help menu items and their shortcuts open the live site's `/docs/15-gui-and-settings` and `/docs/` pages in the default browser.
+The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs the same view model with the engine on a background task (chapter 14). Its menus, side panels, board styles and sound follow the web app. Help menu items and their shortcuts open the live site's `/docs/15-gui-and-settings` and `/docs` pages in the default browser.
 
 | Menu | Items |
 |---|---|

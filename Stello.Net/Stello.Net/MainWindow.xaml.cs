@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Windows;
@@ -15,8 +15,8 @@ public partial class MainWindow : Window
 {
     public static RoutedUICommand UserGuideCommand { get; } = new("User guide", nameof(UserGuideCommand), typeof(MainWindow));
     public static RoutedUICommand DocumentationCommand { get; } = new("Rules & Documentation", nameof(DocumentationCommand), typeof(MainWindow));
-    internal static Uri UserGuideUri { get; } = new("https://polite-sky-0e9899910.3.azurestaticapps.net/docs/15-gui-and-settings");
-    internal static Uri DocumentationUri { get; } = new("https://polite-sky-0e9899910.3.azurestaticapps.net/docs/");
+    internal static Uri UserGuideUri { get; } = new("https://othello.clauspedersen.net/docs/15-gui-and-settings");
+    internal static Uri DocumentationUri { get; } = new("https://othello.clauspedersen.net/docs");
 
     private readonly MainViewModel _viewModel;
     private readonly Action<Uri> _openBrowser;
