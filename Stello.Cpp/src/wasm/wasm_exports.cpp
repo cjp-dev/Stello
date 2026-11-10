@@ -64,17 +64,21 @@ struct ProgressPoster {
     double last_at_ms{0.0};
     int32_t last_depth{0};
     int32_t last_best_move{-1};
+    stello::ScoreKind last_kind{stello::ScoreKind::None};
 
     void report(const stello::SearchInfo& info) {
         const double now = stello_js_performance_now_ms();
         const int32_t best_sq = info.best_move.has_value() ? static_cast<int32_t>(info.best_move->index()) : -1;
-        if (has_last && last_depth == info.depth && last_best_move == best_sq && (now - last_at_ms) < kProgressIntervalMs) {
+        if (has_last && last_depth == info.depth && last_best_move == best_sq && last_kind == info.kind
+            && (now - last_at_ms) < kProgressIntervalMs)
+        {
             return;
         }
         has_last = true;
         last_at_ms = now;
         last_depth = info.depth;
         last_best_move = best_sq;
+        last_kind = info.kind;
 
         const std::string json = stello::wasm::write_progress(info);
         stello_js_progress(json.data(), json.size());

@@ -132,6 +132,59 @@ public class EndgameTests
         Assert.True(board.IsLegal(Player.Black, result.Move.Square!.Value));
     }
 
+    [Fact]
+    public void Solve_MoveNowAfterWldDrawReportsHeuristicEstimate()
+    {
+        // FFO #41 (draw, 22 empty): stopping mid-WLD after a drawing move is found reports ScoreKind.Heuristic with the midgame depth and 0 score.
+        Board board = Board.Parse("-OOOOO----OOOOX--OOOOOO-XXXXXOO--XXOOX--OOXOXX----OXXO---OOO--O-");
+        using var moveNow = new CancellationTokenSource();
+        var engine = new SearchEngine(hashBits: 16);
+        var stopped = false;
+        var progress = new SyncProgress<SearchInfo>(info =>
+        {
+            if (!stopped && info.Depth == board.EmptyCount && info.Kind == ScoreKind.WinLossDraw && info.Score == 0)
+            {
+                stopped = true;
+                moveNow.Cancel();
+            }
+        });
+
+        SearchResult result = engine.Search(board, Player.Black, SearchLimits.Solve, progress, moveNowToken: moveNow.Token);
+
+        Assert.True(stopped);
+        Assert.Equal(ScoreKind.Heuristic, result.Kind);
+        Assert.Equal(0, result.Score);
+        Assert.Equal(4, result.Depth);
+        Assert.True(board.IsLegal(Player.Black, result.Move.Square!.Value));
+    }
+
+    [Fact]
+    public void Solve_MoveNowInExactPassKeepsImprovedBestMove()
+    {
+        // FFO #40 (20 empty): WLD finds c1 (+30) first, then Exact discovers a2 (+38); stopping mid-Exact keeps a2.
+        Board board = Board.Parse("O--OOOOX-OOOOOOXOOXXOOOXOOXOOOXXOOOOOOXX---OOOOX----O--X--------");
+        using var moveNow = new CancellationTokenSource();
+        var engine = new SearchEngine(hashBits: 16);
+        var stopped = false;
+        Square a2 = Square.Parse("a2");
+        var progress = new SyncProgress<SearchInfo>(info =>
+        {
+            if (!stopped && info.Depth == board.EmptyCount && info.Kind == ScoreKind.Exact && info.BestMove == a2)
+            {
+                stopped = true;
+                moveNow.Cancel();
+            }
+        });
+
+        SearchResult result = engine.Search(board, Player.Black, SearchLimits.Solve, progress, moveNowToken: moveNow.Token);
+
+        Assert.True(stopped);
+        Assert.Equal(ScoreKind.WinLossDraw, result.Kind);
+        Assert.True(result.Score > 0);
+        Assert.Equal(board.EmptyCount, result.Depth);
+        Assert.Equal("a2", result.Move.ToString());
+    }
+
     // Plain negamax to the end of the game; empty squares go to the winner.
     private static int Minimax(Board board, Player player)
     {

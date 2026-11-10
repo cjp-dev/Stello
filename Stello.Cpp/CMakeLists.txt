@@ -145,6 +145,7 @@ if(EMSCRIPTEN AND STELLO_BUILD_WASM)
             -fwasm-exceptions
             -sSTANDALONE_WASM=1
             --no-entry
+            -sSTACK_SIZE=2MB
             -sALLOW_MEMORY_GROWTH=1
             -sMAXIMUM_MEMORY=2GB
             -sINITIAL_MEMORY=32MB
@@ -160,6 +161,7 @@ if(EMSCRIPTEN AND STELLO_BUILD_WASM)
             -fwasm-exceptions
             -sSTANDALONE_WASM=1
             --no-entry
+            -sSTACK_SIZE=2MB
             -sALLOW_MEMORY_GROWTH=1
             -sMAXIMUM_MEMORY=2GB
             -sINITIAL_MEMORY=16MB

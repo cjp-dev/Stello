@@ -42,6 +42,17 @@ function request({ black, white, player }, { mode = 0, depth = 0, timeMs = 0, ha
 
 const kinds = ['None', 'Heuristic', 'WinLossDraw', 'Exact', 'Book'];
 const squareName = square => square < 0 ? 'pass' : String.fromCharCode(97 + square % 8) + (Math.floor(square / 8) + 1);
+const parseSquare = name => (name.charCodeAt(1) - 49) * 8 + (name.charCodeAt(0) - 97);
+
+function boardPosition(squares, player) {
+    let black = 0n;
+    let white = 0n;
+    [...squares].forEach((c, i) => {
+        if (c === 'X') black |= 1n << BigInt(i);
+        if (c === 'O') white |= 1n << BigInt(i);
+    });
+    return { black, white, player };
+}
 const run = (text, host = { progress() {}, signal: () => 0 }) => JSON.parse(engine.search(text, host));
 const signatures = readFileSync(`${repository}Stello.Net/Stello.Engine.Tests/Data/stello-v3-signatures.txt`, 'utf8')
     .split(/\r?\n/).filter(line => line !== '' && !line.startsWith('#'));
@@ -95,7 +106,7 @@ test('progress is posted for new depths and best moves, otherwise at most every 
     assert.ok(reports.length > 3, `${reports.length} reports`);
     for (let i = 1; i < reports.length; i++) {
         const [last, report] = [reports[i - 1], reports[i]];
-        const changed = report.Depth !== last.Depth || report.BestMove !== last.BestMove;
+        const changed = report.Depth !== last.Depth || report.BestMove !== last.BestMove || report.Kind !== last.Kind;
         // A little slack: the engine and this test read the clock at slightly different moments.
         assert.ok(changed || report.at - last.at >= 99, `report ${i} after ${report.at - last.at} ms`);
         assert.ok(report.Nodes >= last.Nodes);
@@ -160,4 +171,85 @@ test('the evaluation file passed as bytes searches like the built-in one', () =>
     const result = run(request(positions('midgame.txt').get('g01e48'), { depth: 10 }));
     assert.equal(result.Nodes, 37459);
     engine.init(undefined, 19);
+});
+
+test('endgame progress posts score kind transitions without throttling WinLossDraw to Exact', () => {
+    engine.init(undefined, 16);
+    const position = boardPosition('XXXXX---XXXXX-O-XXOOX-OOXXXXXXOXXOOOXXO-XXOOOXOOX-OOOO-O--O--XO-', 0);
+    const reports = [];
+    const result = run(request(position, { mode: 3, hashBits: 16 }), {
+        progress: json => reports.push(JSON.parse(json)),
+        signal: () => 0,
+    });
+    assert.equal(result.Depth, 14);
+    assert.equal(kinds[result.Kind], 'Exact');
+    assert.equal(result.Score, 40);
+    assert.equal(squareName(result.Square), 'h2');
+    assert.ok(reports.some(r => r.Depth === 14 && kinds[r.Kind] === 'WinLossDraw'), 'expected a WinLossDraw progress report');
+    assert.ok(reports.some(r => r.Depth === 14 && kinds[r.Kind] === 'Exact'), 'expected an Exact progress report');
+    engine.init(undefined, 19);
+});
+
+test('Move Now in Exact keeps an improved best move, and after a WLD draw reports a heuristic estimate', () => {
+    const ffo = positions('ffo-40-59.txt');
+
+    // FFO #40 (20 empty): WLD finds c1 (+30) first, then Exact discovers a2 (+38); stopping mid-Exact keeps a2.
+    engine.init(undefined, 16);
+    const a2 = parseSquare('a2');
+    let stopped40 = false;
+    const res40 = run(request(ffo.get('40'), { mode: 3, hashBits: 16 }), {
+        progress: json => {
+            const p = JSON.parse(json);
+            if (!stopped40 && p.Depth === 20 && kinds[p.Kind] === 'Exact' && p.BestMove === a2) {
+                stopped40 = true;
+            }
+        },
+        signal: () => (stopped40 ? 1 : 0),
+    });
+    assert.ok(stopped40);
+    assert.equal(kinds[res40.Kind], 'WinLossDraw');
+    assert.ok(res40.Score > 0);
+    assert.equal(res40.Depth, 20);
+    assert.equal(squareName(res40.Square), 'a2');
+
+    // FFO #41 (draw, 22 empty): stopping mid-WLD after a drawing move reports ScoreKind.Heuristic with the midgame depth and 0 score.
+    engine.init(undefined, 16);
+    let stopped41 = false;
+    const pos41 = ffo.get('41');
+    const res41 = run(request(pos41, { mode: 3, hashBits: 16 }), {
+        progress: json => {
+            const p = JSON.parse(json);
+            if (!stopped41 && p.Depth === 22 && kinds[p.Kind] === 'WinLossDraw' && p.Score === 0) {
+                stopped41 = true;
+            }
+        },
+        signal: () => (stopped41 ? 1 : 0),
+    });
+    assert.ok(stopped41);
+    assert.equal(kinds[res41.Kind], 'Heuristic');
+    assert.equal(res41.Score, 0);
+    assert.equal(res41.Depth, 4);
+    assert.equal(((pos41.black | pos41.white) & (1n << BigInt(res41.Square))), 0n);
+
+    engine.init(undefined, 19);
+});
+
+test('deep endgame solves (> 64 KiB stack) complete without trapping or corrupting state', () => {
+    const ffo = positions('ffo-40-59.txt');
+    const pos59 = ffo.get('59');
+    engine.init(undefined, 19);
+    const res59 = run(request(pos59, { mode: 3 }), stopAfter(250, 1));
+    assert.ok(res59.Square >= 0);
+    assert.equal(((pos59.black | pos59.white) & (1n << BigInt(res59.Square))), 0n);
+
+    // 58-empty position after 1.d3 c5: descends deep down to terminal leaves (> 100 KiB stack).
+    const m3 = {
+        black: (1n << 19n) | (1n << 27n) | (1n << 28n),
+        white: (1n << 34n) | (1n << 35n) | (1n << 36n),
+        player: 0,
+    };
+    engine.init(undefined, 19);
+    const resM3 = run(request(m3, { mode: 3 }), stopAfter(250, 1));
+    assert.ok(resM3.Square >= 0);
+    assert.equal(((m3.black | m3.white) & (1n << BigInt(resM3.Square))), 0n);
 });

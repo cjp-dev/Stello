@@ -127,3 +127,31 @@ test(`with ${THREADS} threads, Move Now and cancel answer at once`, options, () 
     engine.init(undefined, 19);
     assert.equal(run(request(positions('midgame.txt').get('g01e36'), { depth: 6, threads: THREADS })).Depth, 6);
 });
+
+test(`with ${THREADS} threads, deep endgame solves (> 64 KiB main and worker stacks) do not trap`, options, () => {
+    const ffo = positions('ffo-40-59.txt');
+    // FFO #59 (34 empty), 58-empty opening after 1.d3 c5, and 29-empty position after 31 plies (M32):
+    const deepPositions = [
+        ffo.get('59'),
+        {
+            black: (1n << 19n) | (1n << 27n) | (1n << 28n),
+            white: (1n << 34n) | (1n << 35n) | (1n << 36n),
+            player: 0,
+        },
+        {
+            // --h2 at move 31 (29 empty, White to move)
+            black: 0x7c9cccb4fcfc8000n,
+            white: 0x0020304800000000n,
+            player: 1,
+        },
+    ];
+    for (const pos of deepPositions) {
+        engine.init(undefined, 19);
+        const deadline = performance.now() + 250;
+        const res = run(request(pos, { mode: 3, threads: THREADS }), {
+            progress() {},
+            signal: () => (performance.now() >= deadline ? 1 : 0),
+        });
+        assert.ok(legal(pos, res.Square));
+    }
+});

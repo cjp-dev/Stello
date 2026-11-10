@@ -81,7 +81,8 @@ function makeImports(module, memory) {
                 } catch {
                     canBlock = 0;
                 }
-                ref.exports._emscripten_thread_init(tb, 0, 1, canBlock, 65536, 0);
+                // Match -sSTACK_SIZE=2MB in CMakeLists.txt so the main thread stack limits cover deep solves.
+                ref.exports._emscripten_thread_init(tb, 0, 1, canBlock, 2097152, 0);
                 ref.exports._emscripten_tls_init();
             },
             _emscripten_thread_mailbox_await() {},

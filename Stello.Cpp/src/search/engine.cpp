@@ -943,6 +943,9 @@ AbortResult<ScoreMove> Searcher::solve_root(
                 best = Best{mv, score, kind, empties};
             } else if (kind == ScoreKind::WinLossDraw && score == 0) {
                 best = Best{mv, score, ScoreKind::Heuristic, best.depth};
+            } else if (kind == ScoreKind::Exact && best.kind == ScoreKind::WinLossDraw) {
+                // Keep WinLossDraw/empties until all moves finish, while retaining any strictly higher Exact move.
+                best.mv = mv;
             }
         }
 

@@ -812,14 +812,33 @@ STELLO_TEST(stopped_solve_score_kinds) {
     }
 
     {
+        const auto [board, player] = find_bench_pos("ffo-40-59.txt", "40");
+        const int32_t empties = static_cast<int32_t>(board.empty_count());
+        const SearchResult res = solve_with_move_now_at(
+            board,
+            player,
+            [&](const SearchInfo& info) {
+                return info.depth == empties
+                    && info.kind == ScoreKind::Exact
+                    && info.best_move.has_value()
+                    && info.best_move->to_string() == "a2";
+            });
+        STELLO_CHECK(res.kind == ScoreKind::WinLossDraw);
+        STELLO_CHECK(res.score > 0);
+        STELLO_CHECK_EQ(res.depth, empties);
+        STELLO_CHECK_EQ(res.mv.to_string(), std::string("a2"));
+    }
+
+    {
         const auto [board, player] = find_bench_pos("ffo-40-59.txt", "41");
         const int32_t empties = static_cast<int32_t>(board.empty_count());
         const SearchResult res = solve_with_move_now_at(
             board, player, [&](const SearchInfo& info) {
                 return info.depth == empties && info.kind == ScoreKind::WinLossDraw && info.score == 0;
             });
-        STELLO_CHECK(res.kind != ScoreKind::Exact);
-        STELLO_CHECK(res.kind != ScoreKind::WinLossDraw);
+        STELLO_CHECK(res.kind == ScoreKind::Heuristic);
+        STELLO_CHECK_EQ(res.score, 0);
+        STELLO_CHECK_EQ(res.depth, 4);
         STELLO_CHECK(res.mv.square.has_value());
         STELLO_CHECK((board.legal_moves(player) & res.mv.square->bit()) != 0);
     }
