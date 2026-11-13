@@ -33,6 +33,10 @@ inline std::filesystem::path repo_root() {
     return std::filesystem::path(STELLO_REPO_ROOT);
 }
 
+inline std::filesystem::path parity_data_dir() {
+    return std::filesystem::path(STELLO_PARITY_DATA_DIR);
+}
+
 inline void check_true(bool ok, const char* file, int line, const char* expr) {
     if (!ok) {
         std::ostringstream oss;

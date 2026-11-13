@@ -144,9 +144,10 @@ internal static class MatchCommands
 
     /// <summary>
     /// A side such as <c>time-ms=100</c>, <c>depth=8</c>, <c>game-s=60,hash-bits=20,name=new,opt=ybwc=off</c> or
-    /// <c>engine=egaroucid,time-ms=100,book=on</c>. The engines are <c>stello</c> (the current C++ 4.0 engine, the
-    /// default), <c>stello-v3</c> (Stello 3.1 in Rust, preserved), <c>stello-v2</c> (Stello 2.0's C# engine, frozen),
-    /// <c>stello-v1</c> (Stello 1, frozen), <c>stello-lib</c> (a separate native library) and <c>egaroucid</c> (the port).
+    /// <c>engine=egaroucid,time-ms=100,book=on</c>. The engines are <c>stello</c> (the current C++ engine, the
+    /// default), <c>stello-v4</c> (Stello 4.0 in C++, preserved), <c>stello-v3</c> (Stello 3.1 in Rust, preserved),
+    /// <c>stello-v2</c> (Stello 2.0's C# engine, frozen), <c>stello-v1</c> (Stello 1, frozen), <c>stello-lib</c> (a
+    /// separate native library) and <c>egaroucid</c> (the port).
     /// </summary>
     /// <exception cref="ArgumentException">The text is not a valid side.</exception>
     public static MatchSide ParseSide(string text, bool allowLibrary = true)
@@ -190,9 +191,10 @@ internal static class MatchCommands
                         "stello-v1" => EngineKind.StelloV1,
                         "stello-v2" => EngineKind.StelloV2,
                         "stello-v3" => EngineKind.StelloV3,
+                        "stello-v4" => EngineKind.StelloV4,
                         "stello-lib" => EngineKind.StelloLibrary,
                         "egaroucid" => EngineKind.Egaroucid,
-                        _ => throw new ArgumentException($"engine must be stello, stello-v3, stello-v2, stello-v1, stello-lib or egaroucid in the side \"{text}\"."),
+                        _ => throw new ArgumentException($"engine must be stello, stello-v4, stello-v3, stello-v2, stello-v1, stello-lib or egaroucid in the side \"{text}\"."),
                     };
                     break;
                 case "lib":
@@ -272,7 +274,7 @@ internal static class MatchCommands
 
         bool egaroucid = engine == EngineKind.Egaroucid;
         bool library = engine == EngineKind.StelloLibrary;
-        bool nativeRef = engine is EngineKind.StelloLibrary or EngineKind.StelloV3;
+        bool nativeRef = engine is EngineKind.StelloLibrary or EngineKind.StelloV3 or EngineKind.StelloV4;
         if (mode is null)
         {
             throw new ArgumentException($"The side \"{text}\" needs time-ms, game-s, {(egaroucid ? "level" : "depth")}.");
@@ -285,7 +287,12 @@ internal static class MatchCommands
 
         if (nativeRef)
         {
-            string label = engine == EngineKind.StelloV3 ? "stello-v3" : "stello-lib";
+            string label = engine switch
+            {
+                EngineKind.StelloV3 => "stello-v3",
+                EngineKind.StelloV4 => "stello-v4",
+                _ => "stello-lib",
+            };
             string? unsupported = new[] { "book-file", "book-acc", "seed", "time-strict", "eval", "soft-pct", "mpc", "selective", "ybwc", "opt" }
                 .FirstOrDefault(keys.Contains);
             if (unsupported is not null || useBook)
@@ -304,9 +311,9 @@ internal static class MatchCommands
         }
 
         // Only native engines search with threads; the frozen C# engines and Egaroucid port use 1.
-        if (keys.Contains("threads") && engine is not (EngineKind.Stello or EngineKind.StelloLibrary or EngineKind.StelloV3))
+        if (keys.Contains("threads") && engine is not (EngineKind.Stello or EngineKind.StelloLibrary or EngineKind.StelloV3 or EngineKind.StelloV4))
         {
-            throw new ArgumentException($"threads is only for engine=stello, stello-v3 or stello-lib (side \"{text}\").");
+            throw new ArgumentException($"threads is only for engine=stello, stello-v4, stello-v3 or stello-lib (side \"{text}\").");
         }
 
         if (keys.Contains("ybwc") && engine != EngineKind.Stello)
@@ -359,7 +366,8 @@ internal static class MatchCommands
             {
                 EngineKind.StelloV1 => new MatchSide(name ?? text, limits, bits, CreatePlayer: () => new V1MatchPlayer(bits, book), Description: $"Stello 1, {description}"),
                 EngineKind.StelloV2 => new MatchSide(name ?? text, limits, bits, CreatePlayer: () => new Stello.Engine.V2.V2MatchPlayer(bits, book), Description: $"Stello 2.0 (C#), {description}"),
-                EngineKind.StelloV3 => StelloV3Side(name ?? text, limits, bits, description),
+                EngineKind.StelloV3 => ResolvedNativeSide(name ?? text, limits, bits, description, "Rust", StelloLibrary.ResolveV3()),
+                EngineKind.StelloV4 => ResolvedNativeSide(name ?? text, limits, bits, description, "C++", StelloLibrary.ResolveV4()),
                 EngineKind.StelloLibrary => StelloLibrarySide(name ?? text, limits, bits, description, libraryFile!, librarySha256!),
                 _ => StelloSide(name ?? text, limits, bits, book, description, evalFile, softTimePercent, probCutPercent, selective, ybwc),
             };
@@ -432,13 +440,11 @@ internal static class MatchCommands
         _ => throw new ArgumentException($"{key} must be on or off in the side \"{side}\"."),
     };
 
-    private static MatchSide StelloV3Side(string name, SearchLimits limits, int bits, string description)
-    {
-        (string fullPath, string hash, string versionText) = StelloLibrary.ResolveV3();
-        return new MatchSide(name, limits, bits,
-            CreatePlayer: () => new StelloLibraryMatchPlayer(fullPath, hash, bits),
-            Description: $"Stello {versionText} (Rust), {description}, SHA-256 {hash}");
-    }
+    private static MatchSide ResolvedNativeSide(string name, SearchLimits limits, int bits, string description,
+        string language, (string FullPath, string Hash, string VersionText) resolved) =>
+        new(name, limits, bits,
+            CreatePlayer: () => new StelloLibraryMatchPlayer(resolved.FullPath, resolved.Hash, bits),
+            Description: $"Stello {resolved.VersionText} ({language}), {description}, SHA-256 {resolved.Hash}");
 
     private static MatchSide StelloLibrarySide(string name, SearchLimits limits, int bits, string description, string path, string sha256)
     {
@@ -562,6 +568,9 @@ internal enum EngineKind
 
     /// <summary>Stello.Rust 3.1 (<c>stello_engine_v3</c>), preserved as the 3.1 baseline.</summary>
     StelloV3,
+
+    /// <summary>Stello.Cpp 4.0 (<c>stello_engine_v4</c>), preserved as the 4.0 baseline.</summary>
+    StelloV4,
 
     /// <summary>A separately loaded Stello native library.</summary>
     StelloLibrary,

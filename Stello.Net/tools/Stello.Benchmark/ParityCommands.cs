@@ -12,7 +12,7 @@ using Stello.Engine.V2.Evaluation;
 namespace Stello.Benchmark;
 
 /// <summary>
-/// parity-data: the fixtures that the Rust port of Stello 2.0 (Stello.Rust/stello-core) is checked against, and the
+/// parity-data: the fixtures that the C++ engine (Stello.Cpp) is checked against, and the
 /// checksum of the evaluation over the trainer's test split (Plans/making-stello-3-plan.md, phase 1).
 /// </summary>
 internal static class ParityCommands
@@ -58,7 +58,7 @@ internal static class ParityCommands
         }
 
         string folder = options.Text("out")
-            ?? Path.Combine(Program.RepositoryFolder(), "Stello.Rust", "stello-core", "tests", "data");
+            ?? Path.Combine(Program.RepositoryFolder(), "Stello.Cpp", "tests", "data");
         int games = options.Number("games", 30, 0, 100_000);
         int seed = options.Number("seed", 1, 0, int.MaxValue);
         Directory.CreateDirectory(folder);

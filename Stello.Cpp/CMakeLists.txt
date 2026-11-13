@@ -28,6 +28,8 @@ if(WIN32)
 endif()
 
 get_filename_component(STELLO_REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
+set(STELLO_PARITY_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tests/data" CACHE PATH "Path to C++ parity fixture data directory")
+get_filename_component(_stello_parity_data_dir "${STELLO_PARITY_DATA_DIR}" ABSOLUTE)
 set(STELLO_EVAL_BIN "${STELLO_REPO_ROOT}/Stello.Net/Book/stello-eval.bin" CACHE FILEPATH "Path to embedded stello-eval.bin")
 if(NOT EXISTS "${STELLO_EVAL_BIN}")
     message(FATAL_ERROR "Cannot find embedded evaluation weights at: ${STELLO_EVAL_BIN}")
@@ -212,6 +214,7 @@ if(STELLO_BUILD_TESTS AND NOT EMSCRIPTEN)
     target_link_libraries(stello_tests PRIVATE stello_core stello_warnings)
     target_compile_definitions(stello_tests PRIVATE
         STELLO_REPO_ROOT="${STELLO_REPO_ROOT}"
+        STELLO_PARITY_DATA_DIR="${_stello_parity_data_dir}"
     )
     if(TARGET stello_engine)
         target_sources(stello_tests PRIVATE tests/ffi_tests.cpp)

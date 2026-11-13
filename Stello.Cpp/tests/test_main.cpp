@@ -20,7 +20,7 @@ STELLO_TEST(phase0_version_and_embedded_eval_smoke) {
     STELLO_CHECK_EQ(eval_bytes[0], uint8_t{0x1f});
     STELLO_CHECK_EQ(eval_bytes[1], uint8_t{0x8b});
 
-    STELLO_CHECK(std::filesystem::exists(repo_root() / "Stello.Rust" / "stello-core" / "tests" / "data" / "positions.txt"));
+    STELLO_CHECK(std::filesystem::exists(parity_data_dir() / "positions.txt"));
     STELLO_CHECK(std::filesystem::exists(repo_root() / "Stello.Net" / "Stello.Engine.Tests" / "Data" / "stello-v3-signatures.txt"));
 }
 

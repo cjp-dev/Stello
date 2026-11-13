@@ -56,33 +56,75 @@ internal sealed class StelloLibrary : IDisposable
     /// <summary>Locates the preserved Stello 3.1 Rust native library (<c>stello_engine_v3</c>), verifies its version and computes its SHA-256.</summary>
     public static (string Path, string Sha256, string VersionText) ResolveV3()
     {
-        string os = OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "macos" : "linux";
-        string file = OperatingSystem.IsWindows()
-            ? "stello_engine_v3.dll"
-            : OperatingSystem.IsMacOS() ? "libstello_engine_v3.dylib" : "libstello_engine_v3.so";
+        string os = CurrentOs();
+        string file = SharedLibraryName("stello_engine_v3");
+        string repo = Program.RepositoryFolder();
+        return ResolveVersionedLibrary(
+            envVar: "STELLO_V3_LIBRARY",
+            file: file,
+            candidates:
+            [
+                System.IO.Path.Combine(AppContext.BaseDirectory, file),
+                System.IO.Path.Combine(repo, "Stello.Rust", "target", $"{os}-v3", "release", file),
+                System.IO.Path.Combine(repo, "Stello.Rust", "target", os, "release", file),
+            ],
+            minVersion: 30_100,
+            maxVersionExclusive: 30_200,
+            expectedLabel: "Stello 3.1 (301xx)",
+            missingHint: $"Could not find {file} for engine=stello-v3. Build Stello.Rust/stello-ffi with Cargo into " +
+                         $"Stello.Rust/target/{os}-v3/release/{file} (or set STELLO_V3_LIBRARY).");
+    }
 
-        string? envPath = Environment.GetEnvironmentVariable("STELLO_V3_LIBRARY");
+    /// <summary>Locates the preserved Stello 4.0 C++ native library (<c>stello_engine_v4</c>), verifies its version and computes its SHA-256.</summary>
+    public static (string Path, string Sha256, string VersionText) ResolveV4()
+    {
+        string file = SharedLibraryName("stello_engine_v4");
+        string repo = Program.RepositoryFolder();
+        return ResolveVersionedLibrary(
+            envVar: "STELLO_V4_LIBRARY",
+            file: file,
+            candidates:
+            [
+                System.IO.Path.Combine(AppContext.BaseDirectory, file),
+                System.IO.Path.Combine(repo, "Stello.Cpp", "ref", file),
+            ],
+            minVersion: 40_000,
+            maxVersionExclusive: 40_100,
+            expectedLabel: "Stello 4.0 (400xx)",
+            missingHint: $"Could not find {file} for engine=stello-v4. Copy the Stello 4.0 release native library into " +
+                         $"Stello.Cpp/ref/{file} (or set STELLO_V4_LIBRARY).");
+    }
+
+    private static string CurrentOs() =>
+        OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "macos" : "linux";
+
+    private static string SharedLibraryName(string stem) =>
+        OperatingSystem.IsWindows()
+            ? $"{stem}.dll"
+            : OperatingSystem.IsMacOS() ? $"lib{stem}.dylib" : $"lib{stem}.so";
+
+    private static (string Path, string Sha256, string VersionText) ResolveVersionedLibrary(
+        string envVar,
+        string file,
+        string[] candidates,
+        uint minVersion,
+        uint maxVersionExclusive,
+        string expectedLabel,
+        string missingHint)
+    {
+        string? envPath = Environment.GetEnvironmentVariable(envVar);
         string? found = null;
         if (!string.IsNullOrWhiteSpace(envPath))
         {
             string fullEnv = System.IO.Path.GetFullPath(envPath);
             found = File.Exists(fullEnv)
                 ? fullEnv
-                : throw new ArgumentException($"STELLO_V3_LIBRARY points to a missing file: {fullEnv}");
+                : throw new ArgumentException($"{envVar} points to a missing file: {fullEnv}");
         }
         else
         {
-            string repo = Program.RepositoryFolder();
-            string[] candidates =
-            [
-                System.IO.Path.Combine(AppContext.BaseDirectory, file),
-                System.IO.Path.Combine(repo, "Stello.Rust", "target", $"{os}-v3", "release", file),
-                System.IO.Path.Combine(repo, "Stello.Rust", "target", os, "release", file),
-            ];
             found = candidates.FirstOrDefault(File.Exists)
-                ?? throw new ArgumentException(
-                    $"Could not find {file} for engine=stello-v3. Build Stello.Rust/stello-ffi with Cargo into " +
-                    $"Stello.Rust/target/{os}-v3/release/{file} (or set STELLO_V3_LIBRARY).");
+                ?? throw new ArgumentException(missingHint);
         }
 
         string hash;
@@ -92,9 +134,9 @@ internal sealed class StelloLibrary : IDisposable
         }
 
         using StelloLibrary library = Open(found, hash);
-        if (library.Version is < 30_100 or >= 30_200)
+        if (library.Version < minVersion || library.Version >= maxVersionExclusive)
         {
-            throw new ArgumentException($"Expected Stello 3.1 (301xx) at {found}, found {library.VersionText} ({library.Version}).");
+            throw new ArgumentException($"Expected {expectedLabel} at {found}, found {library.VersionText} ({library.Version}).");
         }
 
         return (library.Path, library.Sha256, library.VersionText);

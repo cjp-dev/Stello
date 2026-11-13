@@ -386,7 +386,8 @@ Training data
 Stello.Rust/target/
 Stello.Rust/**/pkg/
 
-# C++ engine build output (Stello.Cpp): never committed
+# C++ engine build output & preserved reference binaries (Stello.Cpp): never committed
 Stello.Cpp/build/
 Stello.Cpp/out/
+Stello.Cpp/ref/
 

@@ -134,8 +134,8 @@ dotnet build Stello.Net/Stello.Net.slnx -c Release
 dotnet build Stello.Net/Stello.Net.slnx -c Release -p:StelloWasmEngine=false   # skip Emscripten WASM
 dotnet test Stello.Net/Stello.Net.slnx -c Release --no-build
 
-# WASM Node tests (currently in Stello.Rust/stello-wasm/tests/; Phase 0 of 5.0 moves them to Stello.Cpp/tests/wasm/)
-node --test Stello.Rust/stello-wasm/tests/engine.test.mjs Stello.Rust/stello-wasm/tests/engine-mt.test.mjs
+# WASM Node tests (Stello.Cpp/tests/wasm/)
+node --test Stello.Cpp/tests/wasm/engine.test.mjs Stello.Cpp/tests/wasm/engine-mt.test.mjs
 
 # Benchmarks & matches (run from repo root or built bin dir)
 dotnet run --project Stello.Net/tools/Stello.Benchmark -c Release -- mid-bench --depth 14 --passes 3

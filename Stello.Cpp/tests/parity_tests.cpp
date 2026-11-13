@@ -83,7 +83,7 @@ std::vector<std::string> split_char(std::string_view s, char delim) {
 }
 
 std::vector<std::string> read_data_lines(const char* name) {
-    const auto path = repo_root() / "Stello.Rust" / "stello-core" / "tests" / "data" / name;
+    const auto path = parity_data_dir() / name;
     std::ifstream in(path);
     STELLO_CHECK_MSG(static_cast<bool>(in), path.string());
     std::vector<std::string> out;

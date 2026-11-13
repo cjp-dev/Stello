@@ -20,6 +20,8 @@ public sealed class StelloLibraryMatchTests(ReferenceLibraryFixture fixture) : I
     [InlineData("depth=1,lib=ignored", "only for engine=stello-lib")]
     [InlineData("engine=stello-lib,depth=1,lib=ignored,sha256=ignored,book=on", "no book or search switches")]
     [InlineData("engine=stello-lib,depth=1,lib=ignored,sha256=ignored,opt=ybwc=off", "no book or search switches")]
+    [InlineData("engine=stello-v4,depth=1,book=on", "no book or search switches")]
+    [InlineData("engine=stello-v4,depth=1,opt=ybwc=off", "no book or search switches")]
     [InlineData("engine=stello-lib,depth=1,lib=a,lib=b,sha256=ignored", "given more than once")]
     [InlineData("engine=stello-lib,depth=1,lib=ignored,sha256=a,sha256=b", "given more than once")]
     public void ParseSide_RejectsInvalidLibraryOptions(string text, string message)
@@ -27,6 +29,25 @@ public sealed class StelloLibraryMatchTests(ReferenceLibraryFixture fixture) : I
         ArgumentException exception = Assert.Throws<ArgumentException>(() => MatchCommands.ParseSide(text));
 
         Assert.Contains(message, exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void StelloV4_SearchesWhenReferenceLibraryIsPresent()
+    {
+        string repoRef = System.IO.Path.Combine(Program.RepositoryFolder(), "Stello.Cpp", "ref",
+            OperatingSystem.IsWindows() ? "stello_engine_v4.dll" : OperatingSystem.IsMacOS() ? "libstello_engine_v4.dylib" : "libstello_engine_v4.so");
+        if (!File.Exists(repoRef))
+        {
+            return;
+        }
+
+        MatchSide side = MatchCommands.ParseSide("engine=stello-v4,depth=4,name=v4");
+        using var player = (StelloLibraryMatchPlayer)side.NewPlayer();
+        player.NewGame();
+        EngineSearchResult result = player.ChooseMove(EngineBoard.Initial, Player.Black, SearchLimits.FixedDepth(4, useOpeningBook: false), CancellationToken.None);
+
+        Assert.Equal(4, result.Depth);
+        Assert.True(result.Nodes > 0);
     }
 
     [Fact]
