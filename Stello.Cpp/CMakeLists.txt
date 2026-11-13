@@ -69,6 +69,8 @@ add_library(stello_core STATIC
     src/endgame/stable.cpp
     src/search/engine.cpp
     src/search/ordering.cpp
+    src/search/search_portable.cpp
+    src/search/search_v3.cpp
     src/search/table.cpp
     src/search/ybwc.cpp
 )
@@ -78,10 +80,19 @@ set_target_properties(stello_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_definitions(stello_core PUBLIC
     STELLO_ABORT_EXCEPTIONS=$<BOOL:${STELLO_ABORT_EXCEPTIONS}>
 )
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU" AND NOT EMSCRIPTEN)
-    set_source_files_properties(src/eval/patterns_bmi2.cpp PROPERTIES
-        COMPILE_OPTIONS "-mbmi2"
-    )
+if(NOT EMSCRIPTEN AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64|X86_64)$")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        set_source_files_properties(src/eval/patterns_bmi2.cpp PROPERTIES
+            COMPILE_OPTIONS "-mbmi2"
+        )
+        set_source_files_properties(src/search/search_v3.cpp PROPERTIES
+            COMPILE_OPTIONS "-mavx2;-mbmi;-mbmi2;-mpopcnt;-mlzcnt;-mno-avx512f"
+        )
+    elseif(MSVC)
+        set_source_files_properties(src/search/search_v3.cpp PROPERTIES
+            COMPILE_OPTIONS "/arch:AVX2"
+        )
+    endif()
 endif()
 if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64" AND NOT EMSCRIPTEN)
     # MSVC <atomic> tags _Atomic_storage with gnu::target("cx16"); without -mcx16 Clang keeps
@@ -203,6 +214,7 @@ enable_testing()
 if(STELLO_BUILD_TESTS AND NOT EMSCRIPTEN)
     add_executable(stello_tests
         tests/test_main.cpp
+        tests/bits_avx2_tests.cpp
         tests/parity_tests.cpp
         tests/search_tests.cpp
         tests/threads_tests.cpp
@@ -210,6 +222,17 @@ if(STELLO_BUILD_TESTS AND NOT EMSCRIPTEN)
         src/wasm/protocol.cpp
         src/cli/bench.cpp
     )
+    if(NOT EMSCRIPTEN AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64|X86_64)$")
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            set_source_files_properties(tests/bits_avx2_tests.cpp PROPERTIES
+                COMPILE_OPTIONS "-mavx2;-mbmi;-mbmi2;-mpopcnt;-mlzcnt;-mno-avx512f"
+            )
+        elseif(MSVC)
+            set_source_files_properties(tests/bits_avx2_tests.cpp PROPERTIES
+                COMPILE_OPTIONS "/arch:AVX2"
+            )
+        endif()
+    endif()
     target_include_directories(stello_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(stello_tests PRIVATE stello_core stello_warnings)
     target_compile_definitions(stello_tests PRIVATE

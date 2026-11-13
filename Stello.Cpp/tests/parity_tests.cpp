@@ -185,8 +185,10 @@ STELLO_TEST(cpu_vendor_and_fast_pext) {
     // Portable toggle works deterministically and restores auto detection.
     cpu::set_portable_only(true);
     STELLO_CHECK(!cpu::fast_pext());
+    STELLO_CHECK(!cpu::has_avx2_bmi2());
     cpu::set_portable_only(false);
     STELLO_CHECK(cpu::fast_pext()); // Ryzen 7 7800X3D (Zen 4) supports fast BMI2 pext.
+    STELLO_CHECK(cpu::has_avx2_bmi2());
 }
 
 STELLO_TEST(endgame_bits_and_symmetry_unit) {

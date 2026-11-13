@@ -5,6 +5,9 @@ namespace stello::cpu {
 /// Whether the evaluation may use BMI2 `pext` (always `false` off x86-64 or in portable mode).
 bool fast_pext() noexcept;
 
+/// Whether the search may use x86-64-v3 (`AVX2 + BMI1 + BMI2 + POPCNT + LZCNT`, fast `pext`, not portable-only).
+bool has_avx2_bmi2() noexcept;
+
 /// `true` keeps every search on the portable code path; `false` re-enables processor fast paths.
 void set_portable_only(bool portable) noexcept;
 

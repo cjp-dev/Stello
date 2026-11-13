@@ -68,3 +68,57 @@ All FFO #40–#49 and 500 `endgame-random-14-24` scores and moves verified exact
   - `Stello.Engine.Tests`: `499 passed, 0 failed, 0 skipped`.
   - `Egaroucid.Engine.Tests`: `100 passed, 0 failed, 8 skipped` (all 8 skipped are `TaggedV30_*` reference DLL tests requiring an unbuilt `stello_engine_v3.dll`; `StelloV4_SearchesWhenReferenceLibraryIsPresent` passed).
   - `Stello.Net.Tests`: `116 passed, 0 failed, 0 skipped`.
+
+### 5. WebAssembly 4.0 Baseline (`scratch/wasm_bench.mjs`)
+
+- **Artifact sizes (raw / gzip / brotli):**
+  - `Stello.Web/wwwroot/engine/stello_wasm.js`: `10,423` / `2,730` / `2,433` B
+  - `Stello.Web/wwwroot/engine/stello_wasm_bg.wasm`: `1,174,483` / `1,062,276` / `1,048,577` B
+  - `Stello.Web/wwwroot/engine-mt/stello_wasm_bg.wasm`: `1,203,142` / `1,074,555` / `1,058,149` B
+- **Node benchmarks (`ST 1t` / `MT 1t` / `MT 4t`):**
+  - `ST 1t`: `mid-d10` `3,716,389` nodes (`779.2/788.1 ms`, `4.72M` nps); `mid-d12` `10,579,515` nodes (`2190.3/2203.9 ms`, `4.80M` nps); `ffo-40-44` `93,697,164` nodes (`2415.5/2430.5 ms`, `38.55M` nps).
+  - `MT 1t`: `mid-d10` (`780.3/786.6 ms`, `4.72M` nps); `mid-d12` (`2194.8/2216.8 ms`, `4.77M` nps); `ffo-40-44` (`2391.1/2405.6 ms`, `38.95M` nps).
+  - `MT 4t`: `mid-d10` `7,425,697` nodes (`484.0/537.1 ms`, `13.83M` nps); `mid-d12` `19,442,514` nodes (`1192.7/1324.2 ms`, `14.68M` nps); `ffo-40-44` `110,478,042` nodes (`982.0/1020.5 ms`, `108.26M` nps).
+
+---
+
+## Phase 1 — Speed (No Change in Nodes)
+
+### Step 1.1: Runtime `x86-64-v3` Dispatch & Explicit AVX2 `flips` / `legal_moves`
+
+- **Implementation:**
+  - Extended `stello::cpu` (`cpu.hpp`, `cpu.cpp`) with `has_avx2_bmi2()` (`AVX2 + BMI1 + BMI2 + POPCNT + LZCNT`) and `--cpu portable` override.
+  - Added 256-bit AVX2 `flips_avx2` and `legal_moves_avx2` (`Stello.Cpp/src/endgame/bits_avx2.hpp`) with unit tests in `Stello.Cpp/tests/bits_avx2_tests.cpp` and parity assertions in `parity_tests.cpp`.
+  - Isolated `Kernel<true>` (`Stello.Cpp/src/search/search_v3.cpp`, compiled with `-mavx2 -mbmi -mbmi2 -mpopcnt -mlzcnt -mno-avx512f` on Clang/GCC, `/arch:AVX2` on MSVC) from `Kernel<false>` (`Stello.Cpp/src/search/search_portable.cpp`).
+  - **ODR / LTO note:** Baseline TUs (`engine.cpp`, `endgame/search.cpp`, `endgame/last.cpp`, `search/ybwc.cpp`) previously included `*_impl.hpp` and emitted non-AVX2 `linkonce_odr` COMDAT copies of `Kernel<true>`, which LTO selected over `search_v3.cpp` everywhere except `last4..1`. Moving `#ifdef __AVX2__` out of `kernel.hpp` into explicit specializations in `search_v3.cpp` and restricting baseline TUs to `#include "search/kernel.hpp"` (`extern template struct Kernel<false>` / `Kernel<true>`) resolved this cleanly.
+- **Disassembly check (`llvm-objdump -d` on `clang-release`):**
+  - `stello-cpp.exe`: `zmm=0`, `ymm=2257`, `vpsllvq=91`, `vpsrlvq=184`, `popcnt=66`, `tzcnt=75`, `lzcnt=0`, `blsr=22`, `shlx=23`.
+  - `stello_engine.dll`: `zmm=0`, `ymm=2245`, `vpsllvq=91`, `vpsrlvq=184`, `popcnt=66`, `tzcnt=73`, `lzcnt=0`, `blsr=22`, `shlx=23`.
+- **Verification (0 compiler warnings across all builds):**
+  - `clang-release`: 2/2 CTest (`stello_tests` `33.75 s`, `stello_cli_version` `1.10 s`).
+  - `msvc-release`: 2/2 CTest (`stello_tests` `29.71 s`, `stello_cli_version` `1.04 s`).
+  - `clang-native`: 2/2 CTest (`stello_tests` `26.73 s`, `stello_cli_version` `0.56 s`).
+  - `clang-sanitized`: 2/2 CTest (`stello_tests` `62.28 s`, `stello_cli_version` `0.53 s`, 0 ASan/UBSan findings).
+  - `msvc-native`: 2/2 CTest (`stello_tests` `27.58 s`, `stello_cli_version` `8.60 s`).
+  - `.NET` Release (`-p:StelloWasmEngine=false`): `0 Warning(s), 0 Error(s)`; `Stello.Engine.Tests` `499 passed, 0 failed`; `Stello.Net.Tests` `116 passed, 0 failed`; `Egaroucid.Engine.Tests` `100 passed, 8 skipped` (`TaggedV30_*`).
+- **1-thread parity & speed (`Stello.Benchmark --compare v4.0-ref`, 100% identical nodes/move/score on every position):**
+
+| Benchmark | Positions | Nodes | v4.0 Time | Step 1.1 Time | Step 1.1 Speed | Gain |
+|---|---:|---:|---:|---:|---:|---:|
+| `midgame-depth10` | 100 | 3,716,389 | 0.353 s | 0.313 s | 11.88M nps | +12.8 % |
+| `midgame-depth12` | 100 | 10,579,515 | 0.979 s | 0.897 s | 11.80M nps | +9.2 % |
+| `midgame-depth14` | 100 | 29,779,568 | 2.740 s | 2.478 s | 12.02M nps | +10.6 % |
+| `midgame-depth16` | 100 | 77,867,024 | 7.206 s | 6.401 s | 12.17M nps | +12.6 % |
+| `midgame-random-depth8` | 1,000 | 9,620,457 | 0.875 s | 0.789 s | 12.19M nps | +10.8 % |
+| `midgame-handover-depth12` | 300 | 321,027,249 | 6.488 s | 5.132 s | 62.56M nps | +26.4 % |
+| `ffo-40-49` | 10 | 1,115,666,701 | 23.552 s | 17.5 s | 63.79M nps | +34.7 % |
+| `endgame-random-14-24` | 500 | 27,900,685,006 | 489.2 s | 361.7 s | 77.13M nps | +35.2 % |
+
+- **4-thread comparison (`stello` vs `stello-v4`, `hash-bits=19`):**
+  - `midgame-depth12` (3 passes): `stello-v4` `16,655,987` nodes `0.533 s` (`31.23M` nps) vs `stello` `16,491,580` nodes `0.472 s` (`34.95M` nps).
+  - `midgame-depth14` (3 passes): `stello-v4` `46,015,720` nodes `1.398 s` (`32.92M` nps) vs `stello` `45,812,696` nodes `1.250 s` (`36.64M` nps).
+  - `midgame-depth16` (3 passes): `stello-v4` `113,189,215` nodes `3.255 s` (`34.78M` nps) vs `stello` `110,157,524` nodes `2.888 s` (`38.15M` nps).
+  - `ffo-40-49` (1 pass): `stello-v4` `1,633,549,190` nodes `11.0 s` (`148.96M` nps) vs `stello` `1,642,317,511` nodes `7.928 s` (`207.16M` nps, `+39.1 %` nps).
+- **`stello-cpp` `--cpu portable` vs `--cpu auto` (exact JSON node/score/move parity):**
+  - `mid-bench d12`: `portable` `10,579,515` nodes `1.446 s` (`7.32M` nps) vs `auto` `10,579,515` nodes `0.860 s` (`12.30M` nps).
+  - `solve-bench` FFO #40–49: `portable` `1,115,666,701` nodes `23.9 s` (`46.61M` nps) vs `auto` `1,115,666,701` nodes `16.8 s` (`66.31M` nps).

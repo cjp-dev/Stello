@@ -311,6 +311,9 @@ public:
     ScoreKind report_kind{ScoreKind::None};
 
 private:
+    template <bool UseAvx2>
+    friend struct Kernel;
+
     AbortVoid order_by_evaluation(std::span<int32_t> list, int32_t hash_move, const Board& board, Player player);
     STELLO_NOINLINE AbortVoid split_midgame(
         const Board& board,

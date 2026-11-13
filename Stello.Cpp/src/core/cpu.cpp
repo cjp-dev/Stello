@@ -20,8 +20,9 @@ namespace stello::cpu {
 namespace {
 
 constexpr uint8_t kUnknown = 0;
-constexpr uint8_t kPortable = 1;
-constexpr uint8_t kFastPext = 2;
+constexpr uint8_t kInitializedFlag = 1 << 0;
+constexpr uint8_t kFastPextFlag = 1 << 1;
+constexpr uint8_t kAvx2Bmi2Flag = 1 << 2;
 
 std::atomic<uint8_t> g_state{kUnknown};
 
@@ -37,6 +38,17 @@ void query_cpuid(int leaf, int subleaf, int regs[4]) noexcept {
     regs[1] = static_cast<int>(ebx);
     regs[2] = static_cast<int>(ecx);
     regs[3] = static_cast<int>(edx);
+#endif
+}
+
+uint64_t read_xcr0() noexcept {
+#if defined(_MSC_VER) && !defined(__clang__)
+    return _xgetbv(0);
+#else
+    uint32_t eax = 0;
+    uint32_t edx = 0;
+    __asm__ volatile("xgetbv" : "=a"(eax), "=d"(edx) : "c"(0));
+    return (static_cast<uint64_t>(edx) << 32) | static_cast<uint64_t>(eax);
 #endif
 }
 
@@ -62,18 +74,58 @@ uint8_t detect_features() noexcept {
     int leaf0[4]{};
     query_cpuid(0, 0, leaf0);
     if (static_cast<uint32_t>(leaf0[0]) < 7U) {
-        return kPortable;
+        return kInitializedFlag;
     }
+
     int leaf7[4]{};
     query_cpuid(7, 0, leaf7);
-    const bool has_bmi2 = (static_cast<uint32_t>(leaf7[1]) & (1U << 8)) != 0;
-    return (has_bmi2 && !slow_pext()) ? kFastPext : kPortable;
+    const uint32_t leaf7_ebx = static_cast<uint32_t>(leaf7[1]);
+    const bool has_bmi1 = (leaf7_ebx & (1U << 3)) != 0;
+    const bool has_avx2 = (leaf7_ebx & (1U << 5)) != 0;
+    const bool has_bmi2 = (leaf7_ebx & (1U << 8)) != 0;
+    const bool fast_pext_hw = has_bmi2 && !slow_pext();
+
+    uint8_t flags = kInitializedFlag;
+    if (fast_pext_hw) {
+        flags = static_cast<uint8_t>(flags | kFastPextFlag);
+    }
+    if (!fast_pext_hw || !has_bmi1 || !has_avx2) {
+        return flags;
+    }
+
+    int leaf1[4]{};
+    query_cpuid(1, 0, leaf1);
+    const uint32_t leaf1_ecx = static_cast<uint32_t>(leaf1[2]);
+    const bool has_popcnt = (leaf1_ecx & (1U << 23)) != 0;
+    const bool has_osxsave = (leaf1_ecx & (1U << 27)) != 0;
+    const bool has_avx = (leaf1_ecx & (1U << 28)) != 0;
+    if (!has_popcnt || !has_osxsave || !has_avx) {
+        return flags;
+    }
+
+    if ((read_xcr0() & 0x6ULL) != 0x6ULL) {
+        return flags;
+    }
+
+    int ext0[4]{};
+    query_cpuid(static_cast<int>(0x8000'0000U), 0, ext0);
+    if (static_cast<uint32_t>(ext0[0]) < 0x8000'0001U) {
+        return flags;
+    }
+
+    int ext1[4]{};
+    query_cpuid(static_cast<int>(0x8000'0001U), 0, ext1);
+    const bool has_lzcnt = (static_cast<uint32_t>(ext1[2]) & (1U << 5)) != 0;
+    if (has_lzcnt) {
+        flags = static_cast<uint8_t>(flags | kAvx2Bmi2Flag);
+    }
+    return flags;
 }
 
 #else
 
 uint8_t detect_features() noexcept {
-    return kPortable;
+    return kInitializedFlag;
 }
 
 #endif
@@ -84,18 +136,26 @@ STELLO_NOINLINE uint8_t detect() noexcept {
     return state;
 }
 
+uint8_t feature_flags() noexcept {
+    const uint8_t state = g_state.load(std::memory_order_relaxed);
+    if (state == kUnknown) {
+        return detect();
+    }
+    return state;
+}
+
 } // namespace
 
 bool fast_pext() noexcept {
-    const uint8_t state = g_state.load(std::memory_order_relaxed);
-    if (state == kUnknown) {
-        return detect() == kFastPext;
-    }
-    return state == kFastPext;
+    return (feature_flags() & kFastPextFlag) != 0;
+}
+
+bool has_avx2_bmi2() noexcept {
+    return (feature_flags() & kAvx2Bmi2Flag) != 0;
 }
 
 void set_portable_only(bool portable) noexcept {
-    g_state.store(portable ? kPortable : detect_features(), std::memory_order_relaxed);
+    g_state.store(portable ? kInitializedFlag : detect_features(), std::memory_order_relaxed);
 }
 
 } // namespace stello::cpu
