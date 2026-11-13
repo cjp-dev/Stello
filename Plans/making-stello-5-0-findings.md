@@ -201,3 +201,22 @@ All FFO #40–#49 and 500 `endgame-random-14-24` scores and moves verified exact
   - `mid-bench --depth 12 --passes 1`: `10,579,515` nodes, `0.737 s` vs `0.979 s` (`+32.8 %`).
   - `solve-bench --from 40 --to 49 --passes 1`: `1,115,666,701` nodes, `17.2 s` vs `23.6 s` (`+37.1 %`).
 - **.NET Release build & sequential `--no-build` tests (`-p:StelloWasmEngine=false`):** `0 Warning(s), 0 Error(s)`; `Stello.Engine.Tests` `499 passed, 0 failed`; `Egaroucid.Engine.Tests` `100 passed, 0 failed, 8 skipped` (`TaggedV30_*`); `Stello.Net.Tests` `116 passed, 0 failed`.
+
+### Pre-Phase-2 Cross-TU Disassembly Optimizations (After Gate P1)
+
+- **1. Inline `TranspositionTable` (`Stello.Cpp/src/search/table.hpp`, `Stello.Cpp/src/search/table.cpp`):**
+  - **Root cause:** `table.cpp` compiles without `-mpopcnt`, so LLVM LTO could not inline `get_at_root`, `store_at_root`, or `prefetch` into `Kernel<true>` (`search_v3.cpp`, compiled with AVX2/BMI2/`-mpopcnt`), forcing cross-TU calls and a 12-instruction SWAR `popcount` in `Entry::empty_count()`.
+  - **Change:** Moved `Entry::pack`, `Entry::unpack`, `TranspositionTable::slot_index`, `get_at_root`, `store_at_root`, and `prefetch` (plus `detail` bit-packing and seqlock helpers) inline into `table.hpp`, keeping `AlignedDeleter`, constructor, and `clear` in `table.cpp`. `Kernel<true>` inlines TT access with hardware `popcntq`, while `Kernel<false>` (`search_portable.cpp`) stays baseline-safe (`--cpu portable`).
+  - **Disassembly (`stello_engine.dll` `clang-release`):** `popcnt` instructions increased `66 -> 69` and `0x5555555555555555` SWAR constants dropped `53 -> 50`.
+- **2. Remove TLS guard & SEH frame from `endgame::stable::of` (`Stello.Cpp/src/endgame/stable.hpp`, `Stello.Cpp/src/endgame/stable.cpp`):**
+  - **Root cause:** `stable::init()` and `stable::of()` lacked `noexcept`, and `edges()` returned `static const EdgeTables` (`std::vector<uint64_t>`), emitting a `%gs:0x58` TLS init check and Windows SEH unwind frame on every call.
+  - **Change:** Marked `init()` and `of()` `noexcept`; replaced function-local `static const EdgeTables` with `.bss` `std::array<uint64_t, 65536>` tables (`g_row_tables`, `g_column_tables`), a lock-free 3-state `std::atomic<uint8_t> g_edges_state` (`0/1/2`) `acquire` fast path, and `STELLO_NOINLINE void build_edges_slow() noexcept` (preserving zero `.rdata`/`.wasm` binary bloat and thread safety when unit tests call `stable::of` without constructing `Engine`).
+  - **Disassembly & binary sizes:** `gs:0x58` TLS guards dropped `12 -> 10` (`stello_engine.dll` `1,463,808` B); WASM raw sizes slightly decreased (`engine/stello_wasm_bg.wasm` `1,204,118 -> 1,203,295` B; `engine-mt/stello_wasm_bg.wasm` `1,233,820 -> 1,232,838` B).
+- **Benchmark impact (`Stello.Benchmark` `v4.0-ref`, 100% node/move/score parity):**
+  - `mid-bench --depth 12 --passes 3`: `0.731 s` (`14.47M` nps, `+33.9 %` vs `v4.0-ref`) -> `0.706 s` (`14.98M` nps after Item 1) -> `0.703 s` (`15.05M` nps, `+39.3 %` vs `v4.0-ref` after Items 1+2, ~`+4.0 %` midgame throughput).
+  - `solve-bench --from 40 --to 49 --passes 1`: `17.3 s` (`64.60M` nps) -> `17.4 s` (`64.20M` nps, `+35.5 %` vs `v4.0-ref`; within single-pass timing noise).
+- **Full verification (after both optimizations, 0 warnings):**
+  - All 5 C++ presets 2/2 CTest (`clang-release` `33.72 s`, `clang-native` `26.71 s`, `msvc-release` `36.62 s`, `msvc-native` `35.61 s`, `clang-sanitized` `64.40 s` with 0 ASan/UBSan findings).
+  - `stello-cpp.exe mid-bench --depth 10 --passes 1`: `--cpu portable` (`11.02M` nps) and `--cpu auto` (`14.13M` nps) matched at `3,716,389` nodes.
+  - `.NET` Release (`Stello.Net.slnx`, `-p:StelloWasmEngine=false` and `Stello.Web` WASM build): `0 Warning(s), 0 Error(s)`; `Stello.Engine.Tests` `499 passed, 0 failed`; `Egaroucid.Engine.Tests` `100 passed, 0 failed, 8 skipped` (`TaggedV30_*`); `Stello.Net.Tests` `116 passed, 0 failed`.
+  - WASM Node tests: `19 passed, 0 failed, 0 skipped` (`2978.2 ms`).

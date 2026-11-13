@@ -1,7 +1,12 @@
 #include "endgame/stable.hpp"
 
+#include "core/compiler.hpp"
+
+#include <array>
+#include <atomic>
 #include <bit>
 #include <cstdint>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -9,10 +14,13 @@ namespace stello::endgame::stable {
 
 namespace {
 
-struct EdgeTables {
-    std::vector<uint64_t> row;
-    std::vector<uint64_t> column;
-};
+constexpr uint8_t STATE_UNINIT = 0;
+constexpr uint8_t STATE_BUILDING = 1;
+constexpr uint8_t STATE_READY = 2;
+
+alignas(64) std::array<uint64_t, 256U * 256U> g_row_tables{};
+alignas(64) std::array<uint64_t, 256U * 256U> g_column_tables{};
+std::atomic<uint8_t> g_edges_state{STATE_UNINIT};
 
 std::pair<int32_t, int32_t> play_on_line(int32_t p, int32_t o, int32_t place) noexcept {
     const uint32_t pu = static_cast<uint32_t>(p);
@@ -70,41 +78,49 @@ int32_t line_stability(int32_t b, int32_t w, std::vector<int16_t>& memo) noexcep
     return result;
 }
 
-EdgeTables build_edges() {
-    EdgeTables t;
-    t.row.assign(256U * 256U, 0);
-    t.column.assign(256U * 256U, 0);
-    std::vector<int16_t> memo(256U * 256U, -1);
+STELLO_NOINLINE void build_edges_slow() noexcept {
+    uint8_t expected = STATE_UNINIT;
+    if (g_edges_state.compare_exchange_strong(
+            expected, STATE_BUILDING, std::memory_order_acq_rel, std::memory_order_acquire))
+    {
+        std::vector<int16_t> memo(256U * 256U, -1);
 
-    for (size_t b = 0; b < 256U; ++b) {
-        for (size_t w = b; w < 256U; ++w) {
-            if ((b & w) != 0) {
-                continue;
-            }
-
-            const int32_t st = line_stability(static_cast<int32_t>(b), static_cast<int32_t>(w), memo);
-            uint64_t r = 0;
-            uint64_t c = 0;
-            for (int place = 0; place < 8; ++place) {
-                if (((st >> place) & 1) != 0) {
-                    r |= uint64_t{1} << place;
-                    c |= uint64_t{1} << (place * 8);
+        for (size_t b = 0; b < 256U; ++b) {
+            for (size_t w = b; w < 256U; ++w) {
+                if ((b & w) != 0) {
+                    continue;
                 }
-            }
 
-            t.row[b * 256U + w] = r;
-            t.row[w * 256U + b] = r;
-            t.column[b * 256U + w] = c;
-            t.column[w * 256U + b] = c;
+                const int32_t st = line_stability(static_cast<int32_t>(b), static_cast<int32_t>(w), memo);
+                uint64_t r = 0;
+                uint64_t c = 0;
+                for (int place = 0; place < 8; ++place) {
+                    if (((st >> place) & 1) != 0) {
+                        r |= uint64_t{1} << place;
+                        c |= uint64_t{1} << (place * 8);
+                    }
+                }
+
+                g_row_tables[b * 256U + w] = r;
+                g_row_tables[w * 256U + b] = r;
+                g_column_tables[b * 256U + w] = c;
+                g_column_tables[w * 256U + b] = c;
+            }
         }
+
+        g_edges_state.store(STATE_READY, std::memory_order_release);
+        return;
     }
 
-    return t;
+    while (g_edges_state.load(std::memory_order_acquire) != STATE_READY) {
+        std::this_thread::yield();
+    }
 }
 
-const EdgeTables& edges() {
-    static const EdgeTables tables = build_edges();
-    return tables;
+inline void ensure_edges() noexcept {
+    if (g_edges_state.load(std::memory_order_acquire) != STATE_READY) [[unlikely]] {
+        build_edges_slow();
+    }
 }
 
 inline size_t column(uint64_t x, uint32_t c) noexcept {
@@ -149,19 +165,19 @@ inline std::pair<uint64_t, uint64_t> full_diagonals(uint64_t full) noexcept {
 
 } // namespace
 
-void init() {
-    (void)edges();
+void init() noexcept {
+    ensure_edges();
 }
 
-uint64_t of(uint64_t own, uint64_t opponent) {
-    const EdgeTables& tables = edges();
+uint64_t of(uint64_t own, uint64_t opponent) noexcept {
+    ensure_edges();
     uint64_t stable_mask = 0;
     const uint64_t inner = own & 0x007E'7E7E'7E7E'7E00ULL;
 
-    uint64_t found = tables.row[(own & 0xFFULL) * 256U + (opponent & 0xFFULL)];
-    found |= tables.row[(own >> 56) * 256U + (opponent >> 56)] << 56;
-    found |= tables.column[column(own, 0) * 256U + column(opponent, 0)];
-    found |= tables.column[column(own, 7) * 256U + column(opponent, 7)] << 7;
+    uint64_t found = g_row_tables[(own & 0xFFULL) * 256U + (opponent & 0xFFULL)];
+    found |= g_row_tables[(own >> 56) * 256U + (opponent >> 56)] << 56;
+    found |= g_column_tables[column(own, 0) * 256U + column(opponent, 0)];
+    found |= g_column_tables[column(own, 7) * 256U + column(opponent, 7)] << 7;
 
     const uint64_t discs = own | opponent;
     const uint64_t full_h = full_rows(discs);

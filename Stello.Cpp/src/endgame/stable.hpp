@@ -5,9 +5,9 @@
 namespace stello::endgame::stable {
 
 /// Builds the edge stability tables eagerly rather than during the first search.
-void init();
+void init() noexcept;
 
 /// The stable discs of `own` (Egaroucid `calc_stability`). C#: `StableDiscs.Of`.
-uint64_t of(uint64_t own, uint64_t opponent);
+uint64_t of(uint64_t own, uint64_t opponent) noexcept;
 
 } // namespace stello::endgame::stable
