@@ -134,7 +134,8 @@ if(EMSCRIPTEN AND STELLO_BUILD_WASM)
         SUFFIX ".wasm"
     )
     target_link_libraries(stello_wasm PRIVATE stello_core stello_warnings)
-    target_compile_options(stello_core PUBLIC -fwasm-exceptions)
+    target_compile_options(stello_core PUBLIC -fwasm-exceptions -msimd128)
+    target_compile_options(stello_wasm PRIVATE -msimd128)
 
     set(_stello_wasm_exports
         "-Wl,--export=_initialize"
@@ -156,6 +157,7 @@ if(EMSCRIPTEN AND STELLO_BUILD_WASM)
         target_link_options(stello_wasm PRIVATE
             -pthread
             -fwasm-exceptions
+            -msimd128
             -sSTANDALONE_WASM=1
             --no-entry
             -sSTACK_SIZE=2MB
@@ -172,6 +174,7 @@ if(EMSCRIPTEN AND STELLO_BUILD_WASM)
     else()
         target_link_options(stello_wasm PRIVATE
             -fwasm-exceptions
+            -msimd128
             -sSTANDALONE_WASM=1
             --no-entry
             -sSTACK_SIZE=2MB

@@ -11,6 +11,10 @@
 #include <map>
 #include <unordered_set>
 
+#ifdef __wasm_simd128__
+#include <wasm_simd128.h>
+#endif
+
 namespace stello::eval {
 namespace {
 
@@ -685,6 +689,54 @@ void PatternSet::advance_state(
     uint32_t square,
     uint64_t flips
 ) const noexcept {
+#ifdef __wasm_simd128__
+    const uint16_t* const m_in = mover_is_black ? cur.black.data() : cur.white.data();
+    const uint16_t* const o_in = mover_is_black ? cur.white.data() : cur.black.data();
+    uint16_t* const m_out = mover_is_black ? next.black.data() : next.white.data();
+    uint16_t* const o_out = mover_is_black ? next.white.data() : next.black.data();
+
+    v128_t f0 = wasm_i16x8_splat(0);
+    v128_t f1 = wasm_i16x8_splat(0);
+    v128_t f2 = wasm_i16x8_splat(0);
+    v128_t f3 = wasm_i16x8_splat(0);
+    v128_t f4 = wasm_i16x8_splat(0);
+    v128_t f5 = wasm_i16x8_splat(0);
+    v128_t f6 = wasm_i16x8_splat(0);
+    v128_t f7 = wasm_i16x8_splat(0);
+    uint64_t rem = flips;
+    while (rem != 0) {
+        const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
+        rem &= rem - 1U;
+        const uint16_t* const d = square_deltas_[bit].data();
+        f0 = wasm_i16x8_add(f0, wasm_v128_load(d + 0));
+        f1 = wasm_i16x8_add(f1, wasm_v128_load(d + 8));
+        f2 = wasm_i16x8_add(f2, wasm_v128_load(d + 16));
+        f3 = wasm_i16x8_add(f3, wasm_v128_load(d + 24));
+        f4 = wasm_i16x8_add(f4, wasm_v128_load(d + 32));
+        f5 = wasm_i16x8_add(f5, wasm_v128_load(d + 40));
+        f6 = wasm_i16x8_add(f6, wasm_v128_load(d + 48));
+        f7 = wasm_i16x8_add(f7, wasm_v128_load(d + 56));
+    }
+
+    const uint16_t* const sq = square_deltas_[square].data();
+    wasm_v128_store(m_out + 0, wasm_i16x8_add(wasm_v128_load(m_in + 0), wasm_i16x8_add(wasm_v128_load(sq + 0), f0)));
+    wasm_v128_store(m_out + 8, wasm_i16x8_add(wasm_v128_load(m_in + 8), wasm_i16x8_add(wasm_v128_load(sq + 8), f1)));
+    wasm_v128_store(m_out + 16, wasm_i16x8_add(wasm_v128_load(m_in + 16), wasm_i16x8_add(wasm_v128_load(sq + 16), f2)));
+    wasm_v128_store(m_out + 24, wasm_i16x8_add(wasm_v128_load(m_in + 24), wasm_i16x8_add(wasm_v128_load(sq + 24), f3)));
+    wasm_v128_store(m_out + 32, wasm_i16x8_add(wasm_v128_load(m_in + 32), wasm_i16x8_add(wasm_v128_load(sq + 32), f4)));
+    wasm_v128_store(m_out + 40, wasm_i16x8_add(wasm_v128_load(m_in + 40), wasm_i16x8_add(wasm_v128_load(sq + 40), f5)));
+    wasm_v128_store(m_out + 48, wasm_i16x8_add(wasm_v128_load(m_in + 48), wasm_i16x8_add(wasm_v128_load(sq + 48), f6)));
+    wasm_v128_store(m_out + 56, wasm_i16x8_add(wasm_v128_load(m_in + 56), wasm_i16x8_add(wasm_v128_load(sq + 56), f7)));
+
+    wasm_v128_store(o_out + 0, wasm_i16x8_sub(wasm_v128_load(o_in + 0), f0));
+    wasm_v128_store(o_out + 8, wasm_i16x8_sub(wasm_v128_load(o_in + 8), f1));
+    wasm_v128_store(o_out + 16, wasm_i16x8_sub(wasm_v128_load(o_in + 16), f2));
+    wasm_v128_store(o_out + 24, wasm_i16x8_sub(wasm_v128_load(o_in + 24), f3));
+    wasm_v128_store(o_out + 32, wasm_i16x8_sub(wasm_v128_load(o_in + 32), f4));
+    wasm_v128_store(o_out + 40, wasm_i16x8_sub(wasm_v128_load(o_in + 40), f5));
+    wasm_v128_store(o_out + 48, wasm_i16x8_sub(wasm_v128_load(o_in + 48), f6));
+    wasm_v128_store(o_out + 56, wasm_i16x8_sub(wasm_v128_load(o_in + 56), f7));
+#else
     next = cur;
     uint16_t* const mover = mover_is_black ? next.black.data() : next.white.data();
     uint16_t* const other = mover_is_black ? next.white.data() : next.black.data();
@@ -701,6 +753,7 @@ void PatternSet::advance_state(
             other[entry.feature] = static_cast<uint16_t>(other[entry.feature] - entry.delta);
         }
     }
+#endif
 }
 
 void PatternSet::build_base(
@@ -710,13 +763,63 @@ void PatternSet::build_base(
 ) const noexcept {
     const uint16_t* const own = next_own_is_black ? state.black.data() : state.white.data();
     const uint16_t* const opp = next_own_is_black ? state.white.data() : state.black.data();
+#ifdef __wasm_simd128__
+    for (size_t f = 0; f < MAX_PATTERN_FEATURES; f += 8U) {
+        const v128_t v_own = wasm_v128_load(own + f);
+        const v128_t v_opp = wasm_v128_load(opp + f);
+        wasm_v128_store(out.data() + f, wasm_i16x8_add(wasm_i16x8_add(v_opp, v_opp), v_own));
+    }
+#else
     const size_t n = features_.size();
     for (size_t f = 0; f < n; ++f) {
         out[f] = static_cast<uint16_t>(own[f] + 2U * opp[f]);
     }
+#endif
 }
 
 namespace {
+
+#ifdef __wasm_simd128__
+
+STELLO_FORCEINLINE int32_t sum_local_wasm(
+    size_t n_features,
+    const uint32_t* offsets,
+    v128_t l0, v128_t l1, v128_t l2, v128_t l3,
+    v128_t l4, v128_t l5, v128_t l6, v128_t l7,
+    const int16_t* w
+) noexcept {
+    alignas(16) uint32_t indices[MAX_PATTERN_FEATURES];
+    auto add_chunk = [&](size_t base, v128_t vec) noexcept {
+        wasm_v128_store(indices + base, wasm_i32x4_add(wasm_v128_load(offsets + base), wasm_u32x4_extend_low_u16x8(vec)));
+        wasm_v128_store(indices + base + 4U, wasm_i32x4_add(wasm_v128_load(offsets + base + 4U), wasm_u32x4_extend_high_u16x8(vec)));
+    };
+    add_chunk(0, l0);
+    add_chunk(8, l1);
+    add_chunk(16, l2);
+    add_chunk(24, l3);
+    add_chunk(32, l4);
+    add_chunk(40, l5);
+    add_chunk(48, l6);
+    add_chunk(56, l7);
+
+    int32_t s0 = 0;
+    int32_t s1 = 0;
+    int32_t s2 = 0;
+    int32_t s3 = 0;
+    size_t f = 0;
+    for (; f + 4U <= n_features; f += 4U) {
+        s0 += w[indices[f]];
+        s1 += w[indices[f + 1U]];
+        s2 += w[indices[f + 2U]];
+        s3 += w[indices[f + 3U]];
+    }
+    for (; f < n_features; ++f) {
+        s0 += w[indices[f]];
+    }
+    return s0 + s1 + s2 + s3;
+}
+
+#else
 
 int32_t sum_local_indices(
     size_t n_features,
@@ -741,6 +844,8 @@ int32_t sum_local_indices(
     return s0 + s1 + s2 + s3;
 }
 
+#endif
+
 } // namespace
 
 int32_t PatternSet::sum_weights_from_state(
@@ -754,6 +859,19 @@ int32_t PatternSet::sum_weights_from_state(
     const size_t n = features_.size();
     const uint32_t* const off = feature_offsets_.data();
     const int16_t* const w = weights.data();
+#ifdef __wasm_simd128__
+    auto make_local = [&](size_t f) noexcept {
+        const v128_t v_own = wasm_v128_load(own + f);
+        const v128_t v_opp = wasm_v128_load(opp + f);
+        return wasm_i16x8_add(wasm_i16x8_add(v_opp, v_opp), v_own);
+    };
+    return sum_local_wasm(
+        n,
+        off,
+        make_local(0), make_local(8), make_local(16), make_local(24),
+        make_local(32), make_local(40), make_local(48), make_local(56),
+        w);
+#else
     int32_t s0 = 0;
     int32_t s1 = 0;
     int32_t s2 = 0;
@@ -769,6 +887,7 @@ int32_t PatternSet::sum_weights_from_state(
         s0 += w[off[f] + own[f] + 2U * opp[f]];
     }
     return s0 + s1 + s2 + s3;
+#endif
 }
 
 int32_t PatternSet::sum_weights_after_move(
@@ -778,6 +897,42 @@ int32_t PatternSet::sum_weights_after_move(
     std::span<const int16_t> weights
 ) const noexcept {
     assert(weights.size() == raw_size_);
+#ifdef __wasm_simd128__
+    const uint16_t* const base = parent_base.data();
+    const uint16_t* const sq = square_deltas_[square].data();
+    auto init_lane = [&](size_t f) noexcept {
+        const v128_t s = wasm_v128_load(sq + f);
+        return wasm_i16x8_add(wasm_v128_load(base + f), wasm_i16x8_add(s, s));
+    };
+    v128_t l0 = init_lane(0);
+    v128_t l1 = init_lane(8);
+    v128_t l2 = init_lane(16);
+    v128_t l3 = init_lane(24);
+    v128_t l4 = init_lane(32);
+    v128_t l5 = init_lane(40);
+    v128_t l6 = init_lane(48);
+    v128_t l7 = init_lane(56);
+
+    uint64_t rem = flips;
+    while (rem != 0) {
+        const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
+        rem &= rem - 1U;
+        const uint16_t* const d = square_deltas_[bit].data();
+        l0 = wasm_i16x8_add(l0, wasm_v128_load(d + 0));
+        l1 = wasm_i16x8_add(l1, wasm_v128_load(d + 8));
+        l2 = wasm_i16x8_add(l2, wasm_v128_load(d + 16));
+        l3 = wasm_i16x8_add(l3, wasm_v128_load(d + 24));
+        l4 = wasm_i16x8_add(l4, wasm_v128_load(d + 32));
+        l5 = wasm_i16x8_add(l5, wasm_v128_load(d + 40));
+        l6 = wasm_i16x8_add(l6, wasm_v128_load(d + 48));
+        l7 = wasm_i16x8_add(l7, wasm_v128_load(d + 56));
+    }
+    return sum_local_wasm(
+        features_.size(),
+        feature_offsets_.data(),
+        l0, l1, l2, l3, l4, l5, l6, l7,
+        weights.data());
+#else
     std::array<uint16_t, MAX_PATTERN_FEATURES> local = parent_base;
     for (const auto& entry : square_sparse_deltas(square)) {
         local[entry.feature] = static_cast<uint16_t>(local[entry.feature] + 2U * entry.delta);
@@ -791,6 +946,7 @@ int32_t PatternSet::sum_weights_after_move(
         }
     }
     return sum_local_indices(features_.size(), feature_offsets_.data(), local.data(), weights.data());
+#endif
 }
 
 int32_t PatternSet::sum_weights(uint64_t own, uint64_t opponent, std::span<const int16_t> weights) const noexcept {

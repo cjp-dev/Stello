@@ -4,6 +4,10 @@
 #include <bit>
 #include <cstdint>
 
+#ifdef __wasm_simd128__
+#include <wasm_simd128.h>
+#endif
+
 namespace stello::endgame::bits {
 
 /// A value no legal-move set can have (the four centre squares), for "not computed yet".
@@ -109,7 +113,52 @@ constexpr std::array<std::array<uint64_t, 8>, 64> create_rays() noexcept {
 inline constexpr auto ALL_NEIGHBOURS = detail::create_all_neighbours();
 inline constexpr auto RAYS = detail::create_rays();
 
+#ifdef __wasm_simd128__
+namespace detail {
+
+struct alignas(16) UpperRays128 {
+    uint64_t r0, r1, r2, r3;
+};
+
+constexpr std::array<UpperRays128, 64> create_upper_rays_128() noexcept {
+    std::array<UpperRays128, 64> out{};
+    for (size_t sq = 0; sq < 64; ++sq) {
+        out[sq] = UpperRays128{RAYS[sq][0], RAYS[sq][1], RAYS[sq][2], RAYS[sq][3]};
+    }
+    return out;
+}
+
+inline constexpr auto UPPER_RAYS_128 = create_upper_rays_128();
+
+} // namespace detail
+#endif
+
 inline uint64_t flips(uint64_t own, uint64_t opponent, uint32_t square) noexcept {
+#ifdef __wasm_simd128__
+    const v128_t pp = wasm_i64x2_splat(static_cast<int64_t>(own));
+    const v128_t oo = wasm_i64x2_splat(static_cast<int64_t>(opponent));
+    const v128_t neg1 = wasm_i64x2_splat(-1);
+    const auto& ur = detail::UPPER_RAYS_128[static_cast<size_t>(square)];
+    auto eval_upper = [&](const uint64_t* pair) noexcept -> v128_t {
+        const v128_t mask = wasm_v128_load(pair);
+        v128_t lo = wasm_v128_andnot(mask, oo);
+        lo = wasm_v128_and(wasm_v128_xor(wasm_i64x2_add(lo, neg1), lo), mask);
+        const v128_t lf = wasm_v128_andnot(lo, pp);
+        return wasm_v128_andnot(lf, wasm_i64x2_eq(lf, lo));
+    };
+    const v128_t f_up = wasm_v128_or(eval_upper(&ur.r0), eval_upper(&ur.r2));
+    uint64_t flipped = static_cast<uint64_t>(wasm_i64x2_extract_lane(f_up, 0))
+                     | static_cast<uint64_t>(wasm_i64x2_extract_lane(f_up, 1));
+    const uint64_t not_opponent = ~opponent;
+    const auto& rays = RAYS[static_cast<size_t>(square)];
+    for (size_t d = 4; d < 8; ++d) {
+        const uint64_t ray = rays[d];
+        const uint64_t top = 0x8000'0000'0000'0000ULL >> std::countl_zero((ray & not_opponent) | 1ULL);
+        const uint64_t outflanked = 0ULL - static_cast<uint64_t>((top & ray & own) != 0);
+        flipped |= ray & ((0ULL - top) << 1) & outflanked;
+    }
+    return flipped;
+#else
     uint64_t flipped = 0;
     const uint64_t not_opponent = ~opponent;
     const auto& rays = RAYS[static_cast<size_t>(square)];
@@ -143,6 +192,7 @@ inline uint64_t flips(uint64_t own, uint64_t opponent, uint32_t square) noexcept
 #endif
     }
     return flipped;
+#endif
 }
 
 inline uint64_t legal_moves(uint64_t p, uint64_t o) noexcept {

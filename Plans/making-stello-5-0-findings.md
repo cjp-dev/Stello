@@ -158,3 +158,46 @@ All FFO #40–#49 and 500 `endgame-random-14-24` scores and moves verified exact
   - `msvc-native`: 2/2 CTest (`stello_tests` `26.97 s`, `stello_cli_version` `0.49 s`).
   - `clang-sanitized`: 2/2 CTest (`stello_tests` `48.40 s`, `stello_cli_version` `0.35 s`, 0 ASan/UBSan findings).
   - `.NET` Release (`-p:StelloWasmEngine=false`): `0 Warning(s), 0 Error(s)`; `Stello.Engine.Tests` `499 passed, 0 failed`; `Egaroucid.Engine.Tests` `100 passed, 0 failed, 8 skipped` (`TaggedV30_*`); `Stello.Net.Tests` `116 passed, 0 failed`.
+
+### Step 1.3: WebAssembly `-msimd128` & Abort-Mode Check
+
+- **Implementation:**
+  - Enabled `-msimd128` in `Stello.Cpp/CMakeLists.txt` under `if(EMSCRIPTEN AND STELLO_BUILD_WASM)` (`stello_core PUBLIC`, `stello_wasm PRIVATE`, and both single-thread / pthreaded link options).
+  - Added `<wasm_simd128.h>` 128-bit vector paths under `#ifdef __wasm_simd128__` in `Stello.Cpp/src/eval/patterns.cpp` (`advance_state`, `build_base`, `sum_local_wasm`, `sum_weights_from_state`, `sum_weights_after_move` using 8× `wasm_i16x8` + `wasm_u32x4_extend_*_u16x8` + `wasm_i32x4_add` + 4-way scalar L1 weight loads).
+  - Added `<wasm_simd128.h>` 2-lane vector upper-ray `flips` (`detail::UPPER_RAYS_128`, 4 upper rays in 2 `v128_t` ops without shifts, keeping `std::countl_zero` scalar lower rays) in `Stello.Cpp/src/endgame/bits.hpp`.
+  - Tested a 2-lane bit-reversed (`rbit_u64x2`) SIMD `legal_moves`; benchmarked slower than scalar Kogge-Stone (`ST 1t ffo-40-44` `2344.6 ms` / `39.96M` nps vs scalar `2257.2 ms` / `41.51M` nps, and `+8 KiB` raw wasm size) and reverted it.
+- **`STELLO_ABORT_EXCEPTIONS=ON` vs `OFF` (`-msimd128` active in both):**
+  - `ON` matched `OFF` on ST midgame (`398.6` / `1124.6 ms` vs `397.9` / `1115.2 ms`), beat `OFF` on `ST 1t ffo-40-44` (`2257.2 ms` / `41.51M` vs `2332.4 ms` / `40.17M`, `+3.3 %`), beat `OFF` across all `MT 1t` benchmarks (`400.1` / `1135.2` / `2257.0 ms` vs `447.4` / `1210.4` / `2517.2 ms`, `+6.6–11.8 %`), and beat `OFF` on `MT 4t ffo-40-44` (`959.2 ms` vs `1039.5 ms`) with smaller binaries (`1,204,118` vs `1,207,819` B ST). Kept `STELLO_ABORT_EXCEPTIONS=ON` for WASM.
+- **Final WebAssembly (`STELLO_ABORT_EXCEPTIONS=ON`, `-msimd128`) vs Step 1.2 scalar WASM & 4.0 WASM baseline (`scratch/wasm_bench.mjs`):**
+  - **Artifact sizes (raw / gzip / brotli):**
+    - `engine/stello_wasm_bg.wasm`: `1,204,118` / `1,068,747` / `1,053,785` B (vs 4.0: `1,174,483` / `1,062,276` / `1,048,577` B)
+    - `engine-mt/stello_wasm_bg.wasm`: `1,233,820` / `1,080,982` / `1,063,717` B (vs 4.0: `1,203,142` / `1,074,555` / `1,058,149` B)
+
+| Suite | Nodes (1t) | 4.0 WASM Mean | Step 1.2 Scalar Mean | Step 1.3 SIMD128 Mean | Step 1.3 Speed | Gain vs 4.0 |
+|---|---:|---:|---:|---:|---:|---:|
+| `ST 1t mid-d10` | 3,716,389 | 788.1 ms | 553.7 ms | 393.8 ms | 9.44M nps | +100.1 % |
+| `ST 1t mid-d12` | 10,579,515 | 2203.9 ms | 1535.0 ms | 1110.4 ms | 9.53M nps | +98.5 % |
+| `ST 1t ffo-40-44` | 93,697,164 | 2430.5 ms | 2392.6 ms | 2257.5 ms | 41.51M nps | +7.7 % |
+| `MT 1t mid-d10` | 3,716,389 | 786.6 ms | 555.9 ms | 404.9 ms | 9.18M nps | +94.3 % |
+| `MT 1t mid-d12` | 10,579,515 | 2216.8 ms | 1550.2 ms | 1141.2 ms | 9.27M nps | +94.3 % |
+| `MT 1t ffo-40-44` | 93,697,164 | 2405.6 ms | 2378.1 ms | 2252.3 ms | 41.60M nps | +6.8 % |
+| `MT 4t mid-d10` | — | 537.1 ms | 381.6 ms | 286.2 ms (7,659,257 n) | 26.76M nps | +87.7 % |
+| `MT 4t mid-d12` | — | 1324.2 ms | 963.2 ms | 691.1 ms (19,511,833 n) | 28.23M nps | +91.6 % |
+| `MT 4t ffo-40-44` | — | 1020.5 ms | 1021.9 ms | 988.4 ms (105,521,717 n) | 106.76M nps | +3.2 % |
+
+### Gate P1 Verification (Final Phase 1 State, 0 Warnings)
+
+- **C++ presets (`ctest --preset <P> --output-on-failure`):**
+  - `clang-release`: 2/2 (`stello_tests` `41.11 s`, `stello_cli_version` `2.53 s`).
+  - `clang-native`: 2/2 (`stello_tests` `40.37 s`, `stello_cli_version` `0.58 s`).
+  - `msvc-release`: 2/2 (`stello_tests` `43.58 s`, `stello_cli_version` `8.36 s`).
+  - `msvc-native`: 2/2 (`stello_tests` `28.01 s`, `stello_cli_version` `0.64 s`).
+  - `clang-sanitized`: 2/2 (`stello_tests` `53.06 s`, `stello_cli_version` `1.18 s`, 0 ASan/UBSan findings).
+- **WASM Node tests (`node --test Stello.Cpp/tests/wasm/engine.test.mjs Stello.Cpp/tests/wasm/engine-mt.test.mjs`):** `19 passed, 0 failed, 0 skipped` (`2971.2 ms`).
+- **Native `--cpu portable` vs `--cpu auto` (`stello-cpp.exe` `clang-release` JSON exact match):**
+  - `mid-bench d12`: `100` positions exact (`10,579,515` nodes; `auto` `0.740 s` / `14.30M` nps vs `portable` `0.937 s` / `11.29M` nps).
+  - `solve-bench` FFO #40–49: `10` positions exact (`1,115,666,701` nodes; `auto` `17.0 s` / `65.71M` nps vs `portable` `24.0 s` / `46.48M` nps).
+- **`Stello.Benchmark --compare v4.0-ref` (100% node/move/score identical):**
+  - `mid-bench --depth 12 --passes 1`: `10,579,515` nodes, `0.737 s` vs `0.979 s` (`+32.8 %`).
+  - `solve-bench --from 40 --to 49 --passes 1`: `1,115,666,701` nodes, `17.2 s` vs `23.6 s` (`+37.1 %`).
+- **.NET Release build & sequential `--no-build` tests (`-p:StelloWasmEngine=false`):** `0 Warning(s), 0 Error(s)`; `Stello.Engine.Tests` `499 passed, 0 failed`; `Egaroucid.Engine.Tests` `100 passed, 0 failed, 8 skipped` (`TaggedV30_*`); `Stello.Net.Tests` `116 passed, 0 failed`.
