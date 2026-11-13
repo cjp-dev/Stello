@@ -546,6 +546,41 @@ PatternSet::PatternSet(std::string name, std::vector<PatternShape> shapes)
     symmetries_.erase(std::unique(symmetries_.begin(), symmetries_.end()), symmetries_.end());
 
     direct_ = detail::Direct::build(shapes_, features_);
+
+    assert(features_.size() <= MAX_PATTERN_FEATURES);
+    for (size_t f = 0; f < features_.size(); ++f) {
+        const auto& feat = features_[f];
+        feature_offsets_[f] = feat.offset;
+        const auto shape_squares = shapes_[feat.shape].squares();
+        uint32_t power = 1U;
+        for (size_t pos = 0; pos < shape_squares.size(); ++pos) {
+            const uint32_t target = shape_squares[pos];
+            uint32_t original_sq = 64U;
+            for (uint32_t q = 0; q < 64U; ++q) {
+                if (symmetry::map_square(q, feat.symmetry) == target) {
+                    original_sq = q;
+                    break;
+                }
+            }
+            assert(original_sq < 64U);
+            assert(square_deltas_[original_sq][f] == 0);
+            square_deltas_[original_sq][f] = static_cast<uint16_t>(power);
+            power *= 3U;
+        }
+    }
+
+    uint16_t sparse_pos = 0;
+    for (uint32_t sq = 0; sq < 64U; ++sq) {
+        square_sparse_offsets_[sq] = sparse_pos;
+        for (size_t f = 0; f < features_.size(); ++f) {
+            const uint16_t d = square_deltas_[sq][f];
+            if (d != 0) {
+                square_sparse_deltas_.push_back(SquareFeatureDelta{static_cast<uint16_t>(f), d});
+                ++sparse_pos;
+            }
+        }
+    }
+    square_sparse_offsets_[64] = sparse_pos;
 }
 
 const PatternSet& PatternSet::classic11() {
@@ -615,6 +650,147 @@ void PatternSet::indices(uint64_t own, uint64_t opponent, std::span<uint32_t> ou
         }
         out[f] = sum;
     }
+}
+
+PatternState PatternSet::state_of(uint64_t black, uint64_t white) const noexcept {
+    std::array<uint64_t, symmetry::COUNT> turned_black{};
+    std::array<uint64_t, symmetry::COUNT> turned_white{};
+    for (size_t s : symmetries_) {
+        turned_black[s] = symmetry::apply(black, s);
+        turned_white[s] = symmetry::apply(white, s);
+    }
+
+    PatternState out{};
+    for (size_t f = 0; f < features_.size(); ++f) {
+        const auto& feat = features_[f];
+        const uint64_t tb = turned_black[feat.symmetry];
+        const uint64_t tw = turned_white[feat.symmetry];
+        uint32_t b_sum = 0;
+        uint32_t w_sum = 0;
+        for (size_t i = feat.part_begin; i < feat.part_end; ++i) {
+            const auto& part = parts_[i];
+            b_sum += static_cast<uint32_t>(part.digits[part.extract(tb)]);
+            w_sum += static_cast<uint32_t>(part.digits[part.extract(tw)]);
+        }
+        out.black[f] = static_cast<uint16_t>(b_sum);
+        out.white[f] = static_cast<uint16_t>(w_sum);
+    }
+    return out;
+}
+
+void PatternSet::advance_state(
+    PatternState& next,
+    const PatternState& cur,
+    bool mover_is_black,
+    uint32_t square,
+    uint64_t flips
+) const noexcept {
+    next = cur;
+    uint16_t* const mover = mover_is_black ? next.black.data() : next.white.data();
+    uint16_t* const other = mover_is_black ? next.white.data() : next.black.data();
+
+    for (const auto& entry : square_sparse_deltas(square)) {
+        mover[entry.feature] = static_cast<uint16_t>(mover[entry.feature] + entry.delta);
+    }
+    uint64_t rem = flips;
+    while (rem != 0) {
+        const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
+        rem &= rem - 1U;
+        for (const auto& entry : square_sparse_deltas(bit)) {
+            mover[entry.feature] = static_cast<uint16_t>(mover[entry.feature] + entry.delta);
+            other[entry.feature] = static_cast<uint16_t>(other[entry.feature] - entry.delta);
+        }
+    }
+}
+
+void PatternSet::build_base(
+    const PatternState& state,
+    bool next_own_is_black,
+    std::array<uint16_t, MAX_PATTERN_FEATURES>& out
+) const noexcept {
+    const uint16_t* const own = next_own_is_black ? state.black.data() : state.white.data();
+    const uint16_t* const opp = next_own_is_black ? state.white.data() : state.black.data();
+    const size_t n = features_.size();
+    for (size_t f = 0; f < n; ++f) {
+        out[f] = static_cast<uint16_t>(own[f] + 2U * opp[f]);
+    }
+}
+
+namespace {
+
+int32_t sum_local_indices(
+    size_t n_features,
+    const uint32_t* offsets,
+    const uint16_t* local,
+    const int16_t* w
+) noexcept {
+    int32_t s0 = 0;
+    int32_t s1 = 0;
+    int32_t s2 = 0;
+    int32_t s3 = 0;
+    size_t f = 0;
+    for (; f + 4U <= n_features; f += 4U) {
+        s0 += w[offsets[f] + local[f]];
+        s1 += w[offsets[f + 1U] + local[f + 1U]];
+        s2 += w[offsets[f + 2U] + local[f + 2U]];
+        s3 += w[offsets[f + 3U] + local[f + 3U]];
+    }
+    for (; f < n_features; ++f) {
+        s0 += w[offsets[f] + local[f]];
+    }
+    return s0 + s1 + s2 + s3;
+}
+
+} // namespace
+
+int32_t PatternSet::sum_weights_from_state(
+    const PatternState& state,
+    bool own_is_black,
+    std::span<const int16_t> weights
+) const noexcept {
+    assert(weights.size() == raw_size_);
+    const uint16_t* const own = own_is_black ? state.black.data() : state.white.data();
+    const uint16_t* const opp = own_is_black ? state.white.data() : state.black.data();
+    const size_t n = features_.size();
+    const uint32_t* const off = feature_offsets_.data();
+    const int16_t* const w = weights.data();
+    int32_t s0 = 0;
+    int32_t s1 = 0;
+    int32_t s2 = 0;
+    int32_t s3 = 0;
+    size_t f = 0;
+    for (; f + 4U <= n; f += 4U) {
+        s0 += w[off[f] + own[f] + 2U * opp[f]];
+        s1 += w[off[f + 1U] + own[f + 1U] + 2U * opp[f + 1U]];
+        s2 += w[off[f + 2U] + own[f + 2U] + 2U * opp[f + 2U]];
+        s3 += w[off[f + 3U] + own[f + 3U] + 2U * opp[f + 3U]];
+    }
+    for (; f < n; ++f) {
+        s0 += w[off[f] + own[f] + 2U * opp[f]];
+    }
+    return s0 + s1 + s2 + s3;
+}
+
+int32_t PatternSet::sum_weights_after_move(
+    const std::array<uint16_t, MAX_PATTERN_FEATURES>& parent_base,
+    uint32_t square,
+    uint64_t flips,
+    std::span<const int16_t> weights
+) const noexcept {
+    assert(weights.size() == raw_size_);
+    std::array<uint16_t, MAX_PATTERN_FEATURES> local = parent_base;
+    for (const auto& entry : square_sparse_deltas(square)) {
+        local[entry.feature] = static_cast<uint16_t>(local[entry.feature] + 2U * entry.delta);
+    }
+    uint64_t rem = flips;
+    while (rem != 0) {
+        const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
+        rem &= rem - 1U;
+        for (const auto& entry : square_sparse_deltas(bit)) {
+            local[entry.feature] = static_cast<uint16_t>(local[entry.feature] + entry.delta);
+        }
+    }
+    return sum_local_indices(features_.size(), feature_offsets_.data(), local.data(), weights.data());
 }
 
 int32_t PatternSet::sum_weights(uint64_t own, uint64_t opponent, std::span<const int16_t> weights) const noexcept {

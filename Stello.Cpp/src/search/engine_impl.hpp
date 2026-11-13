@@ -383,6 +383,16 @@ AbortVoid Kernel<UseAvx2>::search_root(
     Best& best
 ) {
     const Player opp = opponent(player);
+    const auto& set = s.pattern->set();
+    const eval::PatternState root_eval = set.state_of(board.black(), board.white());
+    alignas(32) std::array<uint16_t, eval::MAX_PATTERN_FEATURES> root_base{};
+    const int16_t* child_w = nullptr;
+    if (look == 0) {
+        build_eval_base(set, root_eval, opp, root_base);
+        const uint32_t child_discs = 64U - board.empty_count() + 1U;
+        child_w = s.pattern->stage_weights(s.pattern->stage_of(child_discs)).data();
+    }
+
     int32_t alpha = -detail::midgame::ROOT_WINDOW;
     const int32_t beta = detail::midgame::ROOT_WINDOW;
     int32_t best_score = -INFINITY_SCORE;
@@ -398,24 +408,35 @@ AbortVoid Kernel<UseAvx2>::search_root(
         s.report_score = (best_move >= 0) ? best_score : best.score;
         s.report_kind = ScoreKind::Heuristic;
 
-        const Board child = play_unchecked(board, player, static_cast<uint32_t>(mv));
+        const uint64_t f = flips(board.discs(player), board.discs(opp), static_cast<uint32_t>(mv));
         int32_t score = 0;
 
         if (look == 0) {
-            STELLO_TRY_ASSIGN_IN_STATUS(const int32_t leaf, evaluate_leaf(s, child, opp));
-            score = -leaf;
+            STELLO_TRY_VOID_IN_STATUS(s.count_node());
+            s.evaluations += 1;
+            const int32_t raw = sum_eval_after_move(set, root_base, static_cast<uint32_t>(mv), f, child_w);
+            score = -eval::clamp_pattern_score(*s.pattern, raw);
         } else {
+            const Board child = board.play_flips(player, static_cast<uint32_t>(mv), f);
+            eval::PatternState child_eval;
+            advance_eval_state(set, child_eval, root_eval, player, static_cast<uint32_t>(mv), f);
             const int32_t child_look = look - 1;
             int32_t reply = -1;
 
             if (i == 0 || look <= 2) {
-                STELLO_TRY_ASSIGN_IN_STATUS(const ScoreMove res, search(s, child, opp, child_look, 1, mv, -beta, -alpha));
+                STELLO_TRY_ASSIGN_IN_STATUS(
+                    const ScoreMove res,
+                    search_inc(s, child, opp, child_look, 1, mv, -beta, -alpha, child_eval));
                 score = -res.score;
                 reply = res.mv;
             } else {
-                STELLO_TRY_ASSIGN_IN_STATUS(const ScoreMove res, search(s, child, opp, child_look, 1, mv, -alpha - 1, -alpha));
+                STELLO_TRY_ASSIGN_IN_STATUS(
+                    const ScoreMove res,
+                    search_inc(s, child, opp, child_look, 1, mv, -alpha - 1, -alpha, child_eval));
                 if (-res.score > alpha && -res.score < beta) {
-                    STELLO_TRY_ASSIGN_IN_STATUS(const ScoreMove full, search(s, child, opp, child_look, 1, mv, -beta, -alpha));
+                    STELLO_TRY_ASSIGN_IN_STATUS(
+                        const ScoreMove full,
+                        search_inc(s, child, opp, child_look, 1, mv, -beta, -alpha, child_eval));
                     score = -full.score;
                     reply = full.mv;
                 } else {
@@ -456,6 +477,22 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::search(
     int32_t alpha,
     int32_t beta
 ) {
+    const eval::PatternState eval_state = s.pattern->set().state_of(board.black(), board.white());
+    return search_inc(s, board, player, look, ply, previous_move, alpha, beta, eval_state);
+}
+
+template <bool UseAvx2>
+AbortResult<ScoreMove> Kernel<UseAvx2>::search_inc(
+    Searcher& s,
+    const Board& board,
+    Player player,
+    int32_t look,
+    int32_t ply,
+    int32_t previous_move,
+    int32_t alpha,
+    int32_t beta,
+    const eval::PatternState& eval_state
+) {
     using namespace detail::midgame;
 
     STELLO_TRY_VOID_R(ScoreMove, s.count_node());
@@ -471,7 +508,10 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::search(
             STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{game_over_score(own, other), -1}));
         }
 
-        STELLO_TRY_ASSIGN_R(ScoreMove, const ScoreMove passed, search(s, board, opp, look, ply, -1, -beta, -alpha));
+        STELLO_TRY_ASSIGN_R(
+            ScoreMove,
+            const ScoreMove passed,
+            search_inc(s, board, opp, look, ply, -1, -beta, -alpha, eval_state));
         STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{-passed.score, -1}));
     }
 
@@ -505,7 +545,10 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::search(
     }
 
     if (s.probcut_errors != nullptr && look >= PROBCUT_MIN_LOOK && !s.in_probcut) {
-        STELLO_TRY_ASSIGN_R(ScoreMove, const auto cut, try_probcut(s, board, player, look, ply, previous_move, alpha, beta));
+        STELLO_TRY_ASSIGN_R(
+            ScoreMove,
+            const auto cut,
+            try_probcut_inc(s, board, player, look, ply, previous_move, alpha, beta, eval_state));
         if (cut.has_value()) {
             STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{*cut, -1}));
         }
@@ -539,9 +582,18 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::search(
     }
 
     if (look >= EVALUATION_ORDER_MIN_LOOK) {
-        STELLO_TRY_VOID_R(ScoreMove, order_by_evaluation(s, list, hash_move, board, player));
+        STELLO_TRY_VOID_R(ScoreMove, order_by_evaluation(s, list, hash_move, board, player, eval_state));
     } else {
         s.ordering->order(list, hash_move, previous_move, player, board);
+    }
+
+    const auto& set = s.pattern->set();
+    alignas(32) std::array<uint16_t, eval::MAX_PATTERN_FEATURES> parent_base{};
+    const int16_t* child_w = nullptr;
+    if (look == 0) {
+        build_eval_base(set, eval_state, opp, parent_base);
+        const uint32_t child_discs = 64U - board.empty_count() + 1U;
+        child_w = s.pattern->stage_weights(s.pattern->stage_of(child_discs)).data();
     }
 
     int32_t best = -INFINITY_SCORE;
@@ -565,23 +617,39 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::search(
         }
 
         const int32_t mv = list[index];
-        const Board child = play_unchecked(board, player, static_cast<uint32_t>(mv));
+        const uint64_t f = flips(own, other, static_cast<uint32_t>(mv));
         int32_t score = 0;
 
         if (look == 0) {
-            STELLO_TRY_ASSIGN_R(ScoreMove, const int32_t leaf, evaluate_leaf(s, child, opp));
-            score = -leaf;
-        } else if (best == -INFINITY_SCORE || beta - alpha == 1) {
-            STELLO_TRY_ASSIGN_R(ScoreMove, const ScoreMove res, search(s, child, opp, look - 1, ply + 1, mv, -beta, -alpha));
-            score = -res.score;
-            s.ordering->record_response(opp, mv, res.mv, score <= alpha);
+            STELLO_TRY_VOID_R(ScoreMove, s.count_node());
+            s.evaluations += 1;
+            const int32_t raw = sum_eval_after_move(set, parent_base, static_cast<uint32_t>(mv), f, child_w);
+            score = -eval::clamp_pattern_score(*s.pattern, raw);
         } else {
-            STELLO_TRY_ASSIGN_R(ScoreMove, ScoreMove res, search(s, child, opp, look - 1, ply + 1, mv, -alpha - 1, -alpha));
-            if (-res.score > alpha && -res.score < beta) {
-                STELLO_TRY_ASSIGN_EXISTING_R(ScoreMove, res, search(s, child, opp, look - 1, ply + 1, mv, -beta, -alpha));
+            const Board child = board.play_flips(player, static_cast<uint32_t>(mv), f);
+            eval::PatternState child_eval;
+            advance_eval_state(set, child_eval, eval_state, player, static_cast<uint32_t>(mv), f);
+            if (best == -INFINITY_SCORE || beta - alpha == 1) {
+                STELLO_TRY_ASSIGN_R(
+                    ScoreMove,
+                    const ScoreMove res,
+                    search_inc(s, child, opp, look - 1, ply + 1, mv, -beta, -alpha, child_eval));
+                score = -res.score;
+                s.ordering->record_response(opp, mv, res.mv, score <= alpha);
+            } else {
+                STELLO_TRY_ASSIGN_R(
+                    ScoreMove,
+                    ScoreMove res,
+                    search_inc(s, child, opp, look - 1, ply + 1, mv, -alpha - 1, -alpha, child_eval));
+                if (-res.score > alpha && -res.score < beta) {
+                    STELLO_TRY_ASSIGN_EXISTING_R(
+                        ScoreMove,
+                        res,
+                        search_inc(s, child, opp, look - 1, ply + 1, mv, -beta, -alpha, child_eval));
+                }
+                score = -res.score;
+                s.ordering->record_response(opp, mv, res.mv, score <= alpha);
             }
-            score = -res.score;
-            s.ordering->record_response(opp, mv, res.mv, score <= alpha);
         }
 
         if (score > best) {
@@ -618,8 +686,27 @@ AbortVoid Kernel<UseAvx2>::order_by_evaluation(
     const Board& board,
     Player player
 ) {
+    const eval::PatternState eval_state = s.pattern->set().state_of(board.black(), board.white());
+    return order_by_evaluation(s, list, hash_move, board, player, eval_state);
+}
+
+template <bool UseAvx2>
+AbortVoid Kernel<UseAvx2>::order_by_evaluation(
+    Searcher& s,
+    std::span<int32_t> list,
+    int32_t hash_move,
+    const Board& board,
+    Player player,
+    const eval::PatternState& eval_state
+) {
     const Player opp = opponent(player);
-    const uint64_t empty = ~(board.discs(player) | board.discs(opp));
+    const uint64_t own = board.discs(player);
+    const uint64_t other = board.discs(opp);
+    const uint64_t empty = ~(own | other);
+    const auto& set = s.pattern->set();
+    alignas(32) std::array<uint16_t, eval::MAX_PATTERN_FEATURES> parent_base{};
+    build_eval_base(set, eval_state, opp, parent_base);
+    const int16_t* const child_w = s.pattern->stage_weights(s.pattern->stage_of(64U - board.empty_count() + 1U)).data();
     std::array<int32_t, MAX_MOVES> keys{};
 
     for (size_t idx = 0; idx < list.size(); ++idx) {
@@ -629,12 +716,15 @@ AbortVoid Kernel<UseAvx2>::order_by_evaluation(
             continue;
         }
 
-        const Board child = play_unchecked(board, player, static_cast<uint32_t>(mv));
-        const uint64_t child_own = child.discs(opp);
-        const uint64_t child_other = child.discs(player);
+        const uint64_t f = flips(own, other, static_cast<uint32_t>(mv));
+        const uint64_t child_own = other & ~f;
+        const uint64_t child_other = own | f | (uint64_t{1} << mv);
         const int32_t replies = endgame::bits::weighted_moves(legal_moves(child_own, child_other));
         const int32_t potential = endgame::bits::potential_mobility(child_other, empty & ~(uint64_t{1} << mv));
-        STELLO_TRY_ASSIGN_IN_STATUS(const int32_t value, evaluate_leaf(s, child, opp));
+        STELLO_TRY_VOID_IN_STATUS(s.count_node());
+        s.evaluations += 1;
+        const int32_t raw = sum_eval_after_move(set, parent_base, static_cast<uint32_t>(mv), f, child_w);
+        const int32_t value = eval::clamp_pattern_score(*s.pattern, raw);
         keys[idx] = (ORDER_OFFSET - replies) * ORDER_MOBILITY
                   + (ORDER_OFFSET - potential) * ORDER_POTENTIAL_MOBILITY
                   - value * ORDER_VALUE / eval::PATTERN_UNITS_PER_DISC;
@@ -683,18 +773,38 @@ AbortResult<std::optional<int32_t>> Kernel<UseAvx2>::try_probcut(
     int32_t alpha,
     int32_t beta
 ) {
+    const eval::PatternState eval_state = s.pattern->set().state_of(board.black(), board.white());
+    return try_probcut_inc(s, board, player, look, ply, previous_move, alpha, beta, eval_state);
+}
+
+template <bool UseAvx2>
+AbortResult<std::optional<int32_t>> Kernel<UseAvx2>::try_probcut_inc(
+    Searcher& s,
+    const Board& board,
+    Player player,
+    int32_t look,
+    int32_t ply,
+    int32_t previous_move,
+    int32_t alpha,
+    int32_t beta,
+    const eval::PatternState& eval_state
+) {
     const int32_t depth = look + 1;
     const int32_t shallow_look = detail::probcut_shallow_depth(depth) - 1;
     assert(s.probcut_errors != nullptr && "Multi-ProbCut is on");
     const int32_t error = (*s.probcut_errors)[64U - board.empty_count()][static_cast<size_t>(depth)];
     const int32_t error0 = (std::max)(eval::PATTERN_UNITS_PER_DISC, error - detail::midgame::PROBCUT_PRE_CHECK_OFFSET);
-    STELLO_TRY_ASSIGN_R(std::optional<int32_t>, const int32_t static0, evaluate_leaf(s, board, player));
+    STELLO_TRY_VOID_R(std::optional<int32_t>, s.count_node());
+    s.evaluations += 1;
+    const uint32_t discs = 64U - board.empty_count();
+    const int16_t* const w = s.pattern->stage_weights(s.pattern->stage_of(discs)).data();
+    const int32_t static0 = eval::clamp_pattern_score(*s.pattern, sum_eval_state(s.pattern->set(), eval_state, player, w));
 
     ProbCutGuard guard(s.in_probcut);
     STELLO_TRY_ASSIGN_R(
         std::optional<int32_t>,
         const auto cut,
-        probcut_searches(s, board, player, shallow_look, ply, previous_move, alpha, beta, error, error0, static0));
+        probcut_searches_inc(s, board, player, shallow_look, ply, previous_move, alpha, beta, error, error0, static0, eval_state));
     STELLO_RETURN_OK_R(std::optional<int32_t>, cut);
 }
 
@@ -712,6 +822,25 @@ AbortResult<std::optional<int32_t>> Kernel<UseAvx2>::probcut_searches(
     int32_t error0,
     int32_t static0
 ) {
+    const eval::PatternState eval_state = s.pattern->set().state_of(board.black(), board.white());
+    return probcut_searches_inc(s, board, player, shallow_look, ply, previous_move, alpha, beta, error, error0, static0, eval_state);
+}
+
+template <bool UseAvx2>
+AbortResult<std::optional<int32_t>> Kernel<UseAvx2>::probcut_searches_inc(
+    Searcher& s,
+    const Board& board,
+    Player player,
+    int32_t shallow_look,
+    int32_t ply,
+    int32_t previous_move,
+    int32_t alpha,
+    int32_t beta,
+    int32_t error,
+    int32_t error0,
+    int32_t static0,
+    const eval::PatternState& eval_state
+) {
     using detail::midgame::PROBCUT_SCORE_LIMIT;
 
     if (static0 >= beta + error0 && beta + error < PROBCUT_SCORE_LIMIT) {
@@ -719,7 +848,7 @@ AbortResult<std::optional<int32_t>> Kernel<UseAvx2>::probcut_searches(
         STELLO_TRY_ASSIGN_R(
             std::optional<int32_t>,
             const ScoreMove high,
-            search(s, board, player, shallow_look, ply, previous_move, pc_beta - 1, pc_beta));
+            search_inc(s, board, player, shallow_look, ply, previous_move, pc_beta - 1, pc_beta, eval_state));
         if (high.score >= pc_beta) {
             STELLO_RETURN_OK_R(std::optional<int32_t>, std::optional<int32_t>(beta));
         }
@@ -730,7 +859,7 @@ AbortResult<std::optional<int32_t>> Kernel<UseAvx2>::probcut_searches(
         STELLO_TRY_ASSIGN_R(
             std::optional<int32_t>,
             const ScoreMove low,
-            search(s, board, player, shallow_look, ply, previous_move, pc_alpha, pc_alpha + 1));
+            search_inc(s, board, player, shallow_look, ply, previous_move, pc_alpha, pc_alpha + 1, eval_state));
         if (low.score <= pc_alpha) {
             STELLO_RETURN_OK_R(std::optional<int32_t>, std::optional<int32_t>(alpha));
         }

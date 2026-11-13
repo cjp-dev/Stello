@@ -103,6 +103,18 @@ private:
 
 } // namespace detail
 
+inline constexpr size_t MAX_PATTERN_FEATURES = 64;
+
+struct SquareFeatureDelta {
+    uint16_t feature{0};
+    uint16_t delta{0};
+};
+
+struct alignas(32) PatternState {
+    std::array<uint16_t, MAX_PATTERN_FEATURES> black{};
+    std::array<uint16_t, MAX_PATTERN_FEATURES> white{};
+};
+
 class PatternSet {
 public:
     PatternSet(std::string name, std::vector<PatternShape> shapes);
@@ -115,12 +127,45 @@ public:
     const PatternShape& shape_of(size_t feature) const noexcept { return shapes_[features_[feature].shape]; }
     size_t symmetry_of(size_t feature) const noexcept { return features_[feature].symmetry; }
 
+    const uint16_t* square_deltas(uint32_t square) const noexcept { return square_deltas_[square].data(); }
+    const uint32_t* feature_offsets() const noexcept { return feature_offsets_.data(); }
+    std::span<const SquareFeatureDelta> square_sparse_deltas(uint32_t square) const noexcept {
+        const size_t begin = square_sparse_offsets_[square];
+        const size_t end = square_sparse_offsets_[square + 1U];
+        return {square_sparse_deltas_.data() + begin, end - begin};
+    }
+
     static const PatternSet& classic11();
     static const PatternSet& plus15();
     static const PatternSet& egaroucid16();
     static const PatternSet* by_name(std::string_view name) noexcept;
 
     void indices(uint64_t own, uint64_t opponent, std::span<uint32_t> out) const noexcept;
+    PatternState state_of(uint64_t black, uint64_t white) const noexcept;
+    void advance_state(
+        PatternState& next,
+        const PatternState& cur,
+        bool mover_is_black,
+        uint32_t square,
+        uint64_t flips
+    ) const noexcept;
+    void build_base(
+        const PatternState& state,
+        bool next_own_is_black,
+        std::array<uint16_t, MAX_PATTERN_FEATURES>& out
+    ) const noexcept;
+    int32_t sum_weights_from_state(
+        const PatternState& state,
+        bool own_is_black,
+        std::span<const int16_t> weights
+    ) const noexcept;
+    int32_t sum_weights_after_move(
+        const std::array<uint16_t, MAX_PATTERN_FEATURES>& parent_base,
+        uint32_t square,
+        uint64_t flips,
+        std::span<const int16_t> weights
+    ) const noexcept;
+
     int32_t sum_weights(uint64_t own, uint64_t opponent, std::span<const int16_t> weights) const noexcept;
     int32_t sum_weights_portable(uint64_t own, uint64_t opponent, std::span<const int16_t> weights) const noexcept;
     int32_t sum_weights_pext(uint64_t own, uint64_t opponent, std::span<const int16_t> weights) const noexcept;
@@ -134,6 +179,10 @@ private:
     std::vector<size_t> symmetries_;
     std::vector<PatternShape::Part> parts_;
     detail::Direct direct_;
+    alignas(32) std::array<std::array<uint16_t, MAX_PATTERN_FEATURES>, 64> square_deltas_{};
+    alignas(32) std::array<uint32_t, MAX_PATTERN_FEATURES> feature_offsets_{};
+    std::array<uint16_t, 65> square_sparse_offsets_{};
+    std::vector<SquareFeatureDelta> square_sparse_deltas_;
 };
 
 } // namespace stello::eval

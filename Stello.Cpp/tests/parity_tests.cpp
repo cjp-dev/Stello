@@ -10,6 +10,7 @@
 #include "eval/patterns.hpp"
 #include "eval/symmetry.hpp"
 #include "eval/weights.hpp"
+#include "search/kernel.hpp"
 
 #include <algorithm>
 #include <array>
@@ -516,6 +517,157 @@ STELLO_TEST(parity_perft) {
         const uint32_t depth = static_cast<uint32_t>(parse_i32(fields[4]));
         const uint64_t leaves = parse_u64(fields[5]);
         STELLO_CHECK_EQ_MSG(stello::perft(pos.board, pos.player, depth), leaves, pos.id);
+    }
+}
+
+} // namespace stello::tests
+
+#if STELLO_HAS_X86_64_V3
+namespace stello::search::detail {
+void advance_eval_v3_for_test(
+    const eval::PatternSet& set,
+    eval::PatternState& next,
+    const eval::PatternState& cur,
+    Player mover,
+    uint32_t square,
+    uint64_t flips
+) noexcept;
+void build_eval_base_v3_for_test(
+    const eval::PatternSet& set,
+    const eval::PatternState& cur,
+    Player next_own,
+    std::array<uint16_t, eval::MAX_PATTERN_FEATURES>& out
+) noexcept;
+int32_t sum_eval_state_v3_for_test(
+    const eval::PatternSet& set,
+    const eval::PatternState& cur,
+    Player own,
+    const int16_t* weights
+) noexcept;
+int32_t sum_eval_after_move_v3_for_test(
+    const eval::PatternSet& set,
+    const std::array<uint16_t, eval::MAX_PATTERN_FEATURES>& parent_base,
+    uint32_t square,
+    uint64_t flips,
+    const int16_t* weights
+) noexcept;
+} // namespace stello::search::detail
+#endif
+
+namespace stello::tests {
+
+STELLO_TEST(parity_incremental_eval) {
+    using namespace eval;
+
+    const auto lines = read_data_lines("positions.txt");
+    STELLO_CHECK(lines.size() > 5000);
+
+    struct LoadedFixture {
+        std::string id;
+        Board board;
+        Player player;
+        std::vector<std::pair<uint32_t, uint64_t>> moves;
+    };
+    std::vector<LoadedFixture> fixtures;
+    fixtures.reserve(lines.size());
+    size_t total_moves = 0;
+    for (const auto& line : lines) {
+        const auto fields = split_char(line, ' ');
+        const auto pos = parse_fixture(fields);
+        LoadedFixture fx{pos.id, pos.board, pos.player, {}};
+        for (size_t m = 15; m < fields.size(); ++m) {
+            const auto parts = split_char(fields[m], ':');
+            fx.moves.emplace_back(static_cast<uint32_t>(parse_i32(parts[0])), parse_hex(parts[1]));
+            ++total_moves;
+        }
+        fixtures.push_back(std::move(fx));
+    }
+    STELLO_CHECK(total_moves > 30000);
+
+    const auto make_synthetic_weights = [](const PatternSet& set) -> EvalWeights {
+        const std::array<uint8_t, 65> stages = EvalWeights::even_stages(1);
+        std::vector<int16_t> tbl(set.raw_size());
+        for (size_t i = 0; i < tbl.size(); ++i) {
+            tbl[i] = static_cast<int16_t>(static_cast<int32_t>((i * 17U + 13U) % 101U) - 50);
+        }
+        std::vector<std::vector<int16_t>> all_stages;
+        all_stages.push_back(std::move(tbl));
+        auto created = EvalWeights::create(&set, stages, 100, all_stages);
+        STELLO_CHECK(created.has_value());
+        return std::move(*created);
+    };
+
+    const EvalWeights& built_in = EvalWeights::built_in();
+    const EvalWeights w_classic = make_synthetic_weights(PatternSet::classic11());
+    const EvalWeights w_plus = make_synthetic_weights(PatternSet::plus15());
+    const EvalWeights w_eg = make_synthetic_weights(PatternSet::egaroucid16());
+    const std::array<const EvalWeights*, 4> targets = {&built_in, &w_classic, &w_plus, &w_eg};
+    const bool check_v3 = cpu::has_avx2_bmi2();
+
+    for (const EvalWeights* ew : targets) {
+        const PatternSet& set = ew->set();
+        for (const auto& fx : fixtures) {
+            const uint64_t own = fx.board.discs(fx.player);
+            const uint64_t opp = fx.board.discs(opponent(fx.player));
+            const int32_t expected_pos = ew->evaluate(own, opp);
+            const uint32_t discs = static_cast<uint32_t>(std::popcount(own | opp));
+            const auto w = ew->stage_weights(ew->stage_of(discs));
+
+            const PatternState st = set.state_of(fx.board.black(), fx.board.white());
+            STELLO_CHECK_EQ_MSG(set.sum_weights_from_state(st, fx.player == Player::Black, w), expected_pos, fx.id);
+#if STELLO_HAS_X86_64_V3
+            if (check_v3) {
+                STELLO_CHECK_EQ_MSG(
+                    search::detail::sum_eval_state_v3_for_test(set, st, fx.player, w.data()),
+                    expected_pos,
+                    fx.id);
+            }
+#endif
+
+            const Player child_player = opponent(fx.player);
+            const auto child_w = ew->stage_weights(ew->stage_of(discs + 1U));
+            alignas(32) std::array<uint16_t, MAX_PATTERN_FEATURES> base{};
+            set.build_base(st, child_player == Player::Black, base);
+#if STELLO_HAS_X86_64_V3
+            alignas(32) std::array<uint16_t, MAX_PATTERN_FEATURES> base_v3{};
+            if (check_v3) {
+                search::detail::build_eval_base_v3_for_test(set, st, child_player, base_v3);
+                STELLO_CHECK(base == base_v3);
+            }
+#endif
+
+            for (const auto& [sq, f] : fx.moves) {
+                const Board child = fx.board.play_flips(fx.player, sq, f);
+                const int32_t expected_child = ew->evaluate(child.discs(child_player), child.discs(fx.player));
+
+                PatternState next{};
+                set.advance_state(next, st, fx.player == Player::Black, sq, f);
+                STELLO_CHECK_EQ_MSG(
+                    set.sum_weights_from_state(next, child_player == Player::Black, child_w),
+                    expected_child,
+                    fx.id);
+                STELLO_CHECK_EQ_MSG(
+                    set.sum_weights_after_move(base, sq, f, child_w),
+                    expected_child,
+                    fx.id);
+#if STELLO_HAS_X86_64_V3
+                if (check_v3) {
+                    PatternState next_v3{};
+                    search::detail::advance_eval_v3_for_test(set, next_v3, st, fx.player, sq, f);
+                    STELLO_CHECK(next_v3.black == next.black);
+                    STELLO_CHECK(next_v3.white == next.white);
+                    STELLO_CHECK_EQ_MSG(
+                        search::detail::sum_eval_state_v3_for_test(set, next_v3, child_player, child_w.data()),
+                        expected_child,
+                        fx.id);
+                    STELLO_CHECK_EQ_MSG(
+                        search::detail::sum_eval_after_move_v3_for_test(set, base_v3, sq, f, child_w.data()),
+                        expected_child,
+                        fx.id);
+                }
+#endif
+            }
+        }
     }
 }
 

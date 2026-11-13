@@ -4,9 +4,12 @@
 #include "core/compiler.hpp"
 #include "core/cpu.hpp"
 #include "endgame/bits.hpp"
+#include "eval/eval.hpp"
+#include "eval/patterns.hpp"
 #include "search/engine.hpp"
 #include "search/ybwc.hpp"
 
+#include <array>
 #include <atomic>
 #include <cstdint>
 #include <optional>
@@ -33,6 +36,34 @@ struct Kernel {
     static STELLO_FORCEINLINE uint64_t flips(uint64_t own, uint64_t opponent, uint32_t square) noexcept;
     static STELLO_FORCEINLINE uint64_t legal_moves(uint64_t own, uint64_t opponent) noexcept;
     static STELLO_FORCEINLINE Board play_unchecked(const Board& board, Player player, uint32_t square) noexcept;
+
+    static STELLO_FORCEINLINE void advance_eval_state(
+        const eval::PatternSet& set,
+        eval::PatternState& next,
+        const eval::PatternState& cur,
+        Player mover,
+        uint32_t square,
+        uint64_t flips
+    ) noexcept;
+    static STELLO_FORCEINLINE void build_eval_base(
+        const eval::PatternSet& set,
+        const eval::PatternState& cur,
+        Player next_own,
+        std::array<uint16_t, eval::MAX_PATTERN_FEATURES>& out
+    ) noexcept;
+    static STELLO_FORCEINLINE int32_t sum_eval_state(
+        const eval::PatternSet& set,
+        const eval::PatternState& cur,
+        Player own,
+        const int16_t* weights
+    ) noexcept;
+    static STELLO_FORCEINLINE int32_t sum_eval_after_move(
+        const eval::PatternSet& set,
+        const std::array<uint16_t, eval::MAX_PATTERN_FEATURES>& parent_base,
+        uint32_t square,
+        uint64_t flips,
+        const int16_t* weights
+    ) noexcept;
 
     // Midgame & top-level driver (search/engine_impl.hpp)
     static SearchOutcome run(
@@ -78,6 +109,17 @@ struct Kernel {
         int32_t alpha,
         int32_t beta
     );
+    static AbortResult<ScoreMove> search_inc(
+        Searcher& s,
+        const Board& board,
+        Player player,
+        int32_t look,
+        int32_t ply,
+        int32_t previous_move,
+        int32_t alpha,
+        int32_t beta,
+        const eval::PatternState& eval_state
+    );
     static AbortResult<ScoreMove> solve_root(
         Searcher& s,
         const Board& board,
@@ -94,6 +136,14 @@ struct Kernel {
         int32_t hash_move,
         const Board& board,
         Player player
+    );
+    static AbortVoid order_by_evaluation(
+        Searcher& s,
+        std::span<int32_t> list,
+        int32_t hash_move,
+        const Board& board,
+        Player player,
+        const eval::PatternState& eval_state
     );
     static AbortVoid split_midgame(
         Searcher& s,
@@ -117,6 +167,17 @@ struct Kernel {
         int32_t alpha,
         int32_t beta
     );
+    static AbortResult<std::optional<int32_t>> try_probcut_inc(
+        Searcher& s,
+        const Board& board,
+        Player player,
+        int32_t look,
+        int32_t ply,
+        int32_t previous_move,
+        int32_t alpha,
+        int32_t beta,
+        const eval::PatternState& eval_state
+    );
     static AbortResult<std::optional<int32_t>> probcut_searches(
         Searcher& s,
         const Board& board,
@@ -129,6 +190,20 @@ struct Kernel {
         int32_t error,
         int32_t error0,
         int32_t static0
+    );
+    static AbortResult<std::optional<int32_t>> probcut_searches_inc(
+        Searcher& s,
+        const Board& board,
+        Player player,
+        int32_t shallow_look,
+        int32_t ply,
+        int32_t previous_move,
+        int32_t alpha,
+        int32_t beta,
+        int32_t error,
+        int32_t error0,
+        int32_t static0,
+        const eval::PatternState& eval_state
     );
     static AbortResult<int32_t> evaluate_leaf(Searcher& s, const Board& board, Player player);
     static AbortResult<bool> lazy_smp_midgame(
@@ -327,6 +402,37 @@ template <>
 uint64_t Kernel<true>::flips(uint64_t own, uint64_t opponent, uint32_t square) noexcept;
 template <>
 uint64_t Kernel<true>::legal_moves(uint64_t own, uint64_t opponent) noexcept;
+template <>
+void Kernel<true>::advance_eval_state(
+    const eval::PatternSet& set,
+    eval::PatternState& next,
+    const eval::PatternState& cur,
+    Player mover,
+    uint32_t square,
+    uint64_t flips
+) noexcept;
+template <>
+void Kernel<true>::build_eval_base(
+    const eval::PatternSet& set,
+    const eval::PatternState& cur,
+    Player next_own,
+    std::array<uint16_t, eval::MAX_PATTERN_FEATURES>& out
+) noexcept;
+template <>
+int32_t Kernel<true>::sum_eval_state(
+    const eval::PatternSet& set,
+    const eval::PatternState& cur,
+    Player own,
+    const int16_t* weights
+) noexcept;
+template <>
+int32_t Kernel<true>::sum_eval_after_move(
+    const eval::PatternSet& set,
+    const std::array<uint16_t, eval::MAX_PATTERN_FEATURES>& parent_base,
+    uint32_t square,
+    uint64_t flips,
+    const int16_t* weights
+) noexcept;
 
 extern template struct Kernel<true>;
 extern template AbortVoid Kernel<true>::split<MidgameChild>(

@@ -122,3 +122,39 @@ All FFO #40–#49 and 500 `endgame-random-14-24` scores and moves verified exact
 - **`stello-cpp` `--cpu portable` vs `--cpu auto` (exact JSON node/score/move parity):**
   - `mid-bench d12`: `portable` `10,579,515` nodes `1.446 s` (`7.32M` nps) vs `auto` `10,579,515` nodes `0.860 s` (`12.30M` nps).
   - `solve-bench` FFO #40–49: `portable` `1,115,666,701` nodes `23.9 s` (`46.61M` nps) vs `auto` `1,115,666,701` nodes `16.8 s` (`66.31M` nps).
+
+## Phase 1.2: Incremental Pattern Indices in Midgame Search
+
+- **Design:** Added `eval::PatternState` (`alignas(32) uint16_t black[64], white[64]`) and incremental feature-index algebra to `Stello.Cpp/src/eval/patterns.hpp`, `src/eval/patterns.cpp`, `src/eval/eval.hpp`, `src/search/kernel.hpp`, `src/search/kernel_impl.hpp`, `src/search/search_v3.cpp`, `src/search/ybwc_impl.hpp`, `src/search/engine_impl.hpp`, and `tests/parity_tests.cpp` (`EvalWeights::evaluate` left untouched).
+  - Precomputes dense `square_deltas_[64][64]`, sparse `(feature, delta)` slices per square (`square_sparse_offsets_`, `square_sparse_deltas_`), and dense `feature_offsets_[64]`.
+  - Child local index satisfies `other + 2 * own + 2 * delta(square) + sum(delta(flipped))`, giving 0-cost passes and single-vector leaf (`look == 0`) & move-ordering (`order_by_evaluation`) evaluations without copying `Board` or calling `play_flips` at `look == 0`.
+  - `Kernel<true>` (`search_v3.cpp`) specializes `advance_eval_state`, `build_eval_base`, `sum_eval_state`, and `sum_eval_after_move` with 256-bit AVX2 intrinsics; YBWC (`ybwc_impl.hpp`) initializes `PatternState` once on task entry.
+- **L1 scalar weight loads vs AVX2 gather (`_mm256_i32gather_epi32`):**
+  - Tested both in `search_v3.cpp` (`STELLO_V3_USE_GATHER=0` vs `1`). Scalar 4-way unrolled `weights[indices[f]]` after AVX2 index computation beat microcoded AVX2 gather on every benchmark (and avoids 2-byte unaligned `int*` UB on odd-length stage tables such as `plus15`/`classic11`/`egaroucid16`), so `STELLO_V3_USE_GATHER=0` is kept:
+    - `midgame-depth12` (3 passes): `0.718 s` (`14.74M` nps) vs gather `0.734 s` (`14.41M` nps).
+    - `midgame-depth14` (3 passes): `2.007 s` (`14.84M` nps) vs gather `2.024 s` (`14.71M` nps).
+    - `midgame-depth16` (3 passes): `5.268 s` (`14.78M` nps) vs gather `5.313 s` (`14.66M` nps).
+    - `midgame-random-depth8`: `0.630 s` (`15.26M` nps) vs gather `0.634 s` (`15.18M` nps).
+- **1-thread parity & speed (`Stello.Benchmark --compare v4.0-ref`, 100% identical nodes/move/score on every position):**
+
+| Benchmark | Positions | Nodes | v4.0 Time | Step 1.2 Time | Step 1.2 Speed | Gain vs v4.0 |
+|---|---:|---:|---:|---:|---:|---:|
+| `midgame-depth10` | 100 | 3,716,389 | 0.353 s | 0.261 s | 14.23M nps | +35.1 % |
+| `midgame-depth12` | 100 | 10,579,515 | 0.979 s | 0.718 s | 14.74M nps | +36.4 % |
+| `midgame-depth14` | 100 | 29,779,568 | 2.740 s | 2.007 s | 14.84M nps | +36.5 % |
+| `midgame-depth16` | 100 | 77,867,024 | 7.206 s | 5.268 s | 14.78M nps | +36.8 % |
+| `midgame-random-depth8` | 1,000 | 9,620,457 | 0.875 s | 0.630 s | 15.26M nps | +38.8 % |
+| `midgame-handover-depth12` | 300 | 321,027,249 | 6.488 s | 4.787 s | 67.07M nps | +35.5 % |
+| `ffo-40-49` | 10 | 1,115,666,701 | 23.552 s | 17.2 s | 64.69M nps | +36.6 % |
+
+- **`stello-cpp` `--cpu portable` vs `--cpu auto` (`mid-bench d12`, exact JSON node/score/move parity):**
+  - `portable`: `10,579,515` nodes `0.910 s` (`11.62M` nps, up from `7.32M` nps in Step 1.1).
+  - `auto`: `10,579,515` nodes `0.709 s` (`14.92M` nps).
+- **Toolchains & Tests (final Step 1.2 code, 0 warnings):**
+  - `parity_incremental_eval`: bit-exact parity across all 6,214 `positions.txt` positions and `> 30,000` legal moves (`built_in`, `classic11`, `plus15`, `egaroucid16`).
+  - `clang-release`: 2/2 CTest (`stello_tests` `25.72 s`, `stello_cli_version` `0.49 s`).
+  - `clang-native`: 2/2 CTest (`stello_tests` `24.61 s`, `stello_cli_version` `0.40 s`).
+  - `msvc-release`: 2/2 CTest (`stello_tests` `27.90 s`, `stello_cli_version` `0.52 s`).
+  - `msvc-native`: 2/2 CTest (`stello_tests` `26.97 s`, `stello_cli_version` `0.49 s`).
+  - `clang-sanitized`: 2/2 CTest (`stello_tests` `48.40 s`, `stello_cli_version` `0.35 s`, 0 ASan/UBSan findings).
+  - `.NET` Release (`-p:StelloWasmEngine=false`): `0 Warning(s), 0 Error(s)`; `Stello.Engine.Tests` `499 passed, 0 failed`; `Egaroucid.Engine.Tests` `100 passed, 0 failed, 8 skipped` (`TaggedV30_*`); `Stello.Net.Tests` `116 passed, 0 failed`.

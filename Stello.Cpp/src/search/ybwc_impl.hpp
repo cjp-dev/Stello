@@ -53,7 +53,10 @@ AbortResult<int32_t> Kernel<UseAvx2>::child_null_window(
     const MidgameChild& child,
     int32_t alpha
 ) {
-    STELLO_TRY_ASSIGN_I32(const ScoreMove res, search(searcher, child.board, child.player, child.look, child.ply, child.mv, -alpha - 1, -alpha));
+    const eval::PatternState child_eval = searcher.pattern->set().state_of(child.board.black(), child.board.white());
+    STELLO_TRY_ASSIGN_I32(
+        const ScoreMove res,
+        search_inc(searcher, child.board, child.player, child.look, child.ply, child.mv, -alpha - 1, -alpha, child_eval));
     searcher.ordering->record_response(child.player, child.mv, res.mv, -res.score <= alpha);
     STELLO_RETURN_OK_R(int32_t, -res.score);
 }
@@ -67,7 +70,10 @@ AbortResult<int32_t> Kernel<UseAvx2>::child_window(
     int32_t /*null_score*/
 ) {
     // Principal variation re-search matches single-threaded `Searcher::search`: window starts from `alpha`.
-    STELLO_TRY_ASSIGN_I32(const ScoreMove res, search(searcher, child.board, child.player, child.look, child.ply, child.mv, -beta, -alpha));
+    const eval::PatternState child_eval = searcher.pattern->set().state_of(child.board.black(), child.board.white());
+    STELLO_TRY_ASSIGN_I32(
+        const ScoreMove res,
+        search_inc(searcher, child.board, child.player, child.look, child.ply, child.mv, -beta, -alpha, child_eval));
     searcher.ordering->record_response(child.player, child.mv, res.mv, -res.score <= alpha);
     STELLO_RETURN_OK_R(int32_t, -res.score);
 }
