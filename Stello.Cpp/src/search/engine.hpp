@@ -21,7 +21,6 @@
 #include <memory>
 #include <optional>
 #include <span>
-#include <string_view>
 
 namespace stello::search {
 
@@ -37,7 +36,7 @@ inline constexpr int32_t END_LOCAL_EMPTIES = 13;
 inline constexpr int32_t END_ETC_MIN_EMPTIES = 12;
 inline constexpr int32_t SOLVE_ORDERING_LOOKS = 4;
 inline constexpr int32_t YBWC_MID_MIN_DEPTH = 6;
-inline constexpr int32_t YBWC_END_MIN_EMPTIES = 16;
+inline constexpr int32_t YBWC_END_MIN_EMPTIES = 14;
 
 inline constexpr int32_t ORDER_OFFSET = 38;
 inline constexpr int32_t ORDER_MOBILITY = 35;
@@ -260,6 +259,7 @@ public:
     }
 
     STELLO_NOINLINE AbortVoid check_abort();
+    void maybe_report_heartbeat();
     void flush_nodes() noexcept;
 
     bool may_split() const noexcept { return helpers.has_value() && ybwc; }

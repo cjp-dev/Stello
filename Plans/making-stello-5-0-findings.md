@@ -220,3 +220,51 @@ All FFO #40–#49 and 500 `endgame-random-14-24` scores and moves verified exact
   - `stello-cpp.exe mid-bench --depth 10 --passes 1`: `--cpu portable` (`11.02M` nps) and `--cpu auto` (`14.13M` nps) matched at `3,716,389` nodes.
   - `.NET` Release (`Stello.Net.slnx`, `-p:StelloWasmEngine=false` and `Stello.Web` WASM build): `0 Warning(s), 0 Error(s)`; `Stello.Engine.Tests` `499 passed, 0 failed`; `Egaroucid.Engine.Tests` `100 passed, 0 failed, 8 skipped` (`TaggedV30_*`); `Stello.Net.Tests` `116 passed, 0 failed`.
   - WASM Node tests: `19 passed, 0 failed, 0 skipped` (`2978.2 ms`).
+
+---
+
+## Phase 2 — Threads
+
+Phase 2 completed and passed **Gate P2**.
+
+### 1. Implementation & Tuned Defaults
+
+- **Root splitting (`Stello.Cpp/src/search/engine_impl.hpp`):** Enabled YBWC splits after the first root move in `search_root` (`look >= YBWC_MID_MIN_DEPTH`) and `solve_root` (`empties > YBWC_END_MIN_EMPTIES`).
+- **Brother cut (`Stello.Cpp/src/search/engine.cpp`, `src/search/ybwc_impl.hpp`):** Attached the active `SplitPoint` (`s.split_point = &point`) while the splitting thread searches brothers sequentially so `Searcher::check_abort()` interrupts superseded local brothers immediately when a helper fails high. Propagated external aborts out of the `#if STELLO_ABORT_EXCEPTIONS` catch block via `std::optional<Abort> abort_caught` + `STELLO_RETURN_ABORT_IN_STATUS(*abort_caught)` outside the catch block to avoid a bare `throw;` crash in `VCRUNTIME140.dll` under Win64 Clang ASan.
+- **Split-wait progress heartbeats (`Stello.Cpp/src/search/engine.cpp`, `src/search/ybwc_impl.hpp`):** Extracted `Searcher::maybe_report_heartbeat()` and invoked it from `scope_polling`'s `poll` callback so waiting threads continue reporting every ~100 ms during long root/deep splits.
+- **Tuned permanent parameters (temporary switches removed before Gate P2):**
+  - `YBWC_MID_MIN_DEPTH = 6` (`mid-bench d16` confirmed `6` remains optimal at both `8t` and `16t`).
+  - `YBWC_END_MIN_EMPTIES = 14` (reduced from `16`; `FFO #40–49` 3 passes improved from `3.889 s` -> `3.695 s` @ `8t` and `3.212 s` -> `3.103 s` @ `16t`; 500 `endgame-random-14-24` 2 passes improved from `86.3 s` -> `78.2 s` (`-9.4 %`) @ `8t` and `76.7 s` -> `68.8 s` (`-10.3 %`) @ `16t`).
+  - Pure YBWC in `solve` (`0` Lazy SMP solve helpers when `s.ybwc` is active; `0` helpers beat `1/2/3` on `FFO #40–49`: `3.824 s` vs `4.166 s` / `4.604 s` / `5.247 s` @ `8t`).
+  - Scaled midgame Lazy SMP helpers: `lazy_smp_helpers(workers) = (workers + 2U) / 4U` (`2` at `8t`, `4` at `15t`/`16t`). Flat `lazy-cap=2` gained `+23 Elo` at `8t`, but made `15t` (`1.767 s`) and `16t` (`1.823 s`) slower than `8t` (`1.737 s`) on `mid-bench d16`, whereas `4` at `15t`/`16t` ran `1.649 s` / `1.617 s`.
+  - Kept `ThreadCounts.ForThisProcess()` at `ProcessorCount - 1` (`15` on the 7800X3D) in `Stello.Net/Stello.App/Models/ThreadCounts.cs` after `15t` (`cap=4`) tied `8t` (`cap=2`) within statistical noise at 500 ms (`-2 Elo`, `-15 to +12`) while solving `+0.2` empties earlier.
+- **Tests:** Added `phase2_root_split_brother_cut_and_split_heartbeats` in `Stello.Cpp/tests/threads_tests.cpp` covering 8-thread `FFO #40–#44` parity, 8-thread 19–21 empty brother-cut recovery, and `<= 250 ms` split-wait heartbeat cadence (`<= 600 ms` under ASan). Kept generic `opt=` key=value support in `MatchCommands.cs` (covered by `MatchAdapterTests` and `StelloLibraryMatchTests`).
+
+### 2. Reference Library & Gate P2 Matches (`--workers 1`, `hash-bits=19`, no book)
+
+- Preserved Phase 1 baseline (`0ef7526`, `clang-release`) as `Stello.Cpp/ref/stello_engine_p1.dll` (`SHA-256 4ADB15E26874C52D43ECBA35EDA2387448D24152C1D3F0BF7DEAD765444C242F`).
+
+| Match | Games | Side A | Side B | B Score (95 % CI) | Elo (95 % CI) | LOS | Discs | Depth (A / B) | First Solve (A / B) | File |
+|---|---:|---|---|---:|---:|---:|---:|---:|---:|---|
+| `p2-auto-15t-vs-8t-500ms` | 1,180 | `8t, cap=4` | `15t, cap=4` | **52.1 %** (50.1–54.1 %) | **+15** (+1 to +29) | 98.1 % | +0.2 ± 0.2 | 22.60 / 23.03 | 26.2 / 26.4 | [match_p2-auto-15t-vs-8t-500ms.md](benchmark-results/match_p2-auto-15t-vs-8t-500ms.md) |
+| `p2-lazy-cap-2-vs-4-500ms` | 600 | `8t, cap=4` | `8t, cap=2` | **53.3 %** (50.6–56.1 %) | **+23** (+4 to +42) | 99.2 % | +0.2 ± 0.2 | 22.60 / 22.95 | 26.1 / 26.2 | [match_p2-lazy-cap-2-vs-4-500ms.md](benchmark-results/match_p2-lazy-cap-2-vs-4-500ms.md) |
+| `v5p2-gate-500ms` | 1,180 | `P1 8t` | `P2 8t (cap=2)` | **51.1 %** (49.3–53.0 %) | **+8** (−5 to +21) | 88.3 % | +0.2 ± 0.2 | 22.34 / 22.80 | 26.0 / 26.2 | [match_v5p2-gate-500ms.md](benchmark-results/match_v5p2-gate-500ms.md) |
+| `v5p2-gate-2s` | 600 | `P1 8t` | `P2 8t (cap=2)` | **54.3 %** (51.7–57.0 %) | **+30** (+12 to +49) | 99.9 % | +0.3 ± 0.2 | 24.94 / 25.37 | 27.8 / 28.0 | [match_v5p2-gate-2s.md](benchmark-results/match_v5p2-gate-2s.md) |
+| `v5p2-auto-15t-vs-8t-500ms` | 1,180 | `P2 8t (cap=2)` | `P2 15t (cap=4)` | **49.7 %** (47.8–51.7 %) | **−2** (−15 to +12) | 39.7 % | −0.1 ± 0.2 | 22.91 / 22.90 | 26.2 / 26.4 | [match_v5p2-auto-15t-vs-8t-500ms.md](benchmark-results/match_v5p2-auto-15t-vs-8t-500ms.md) |
+
+### 3. Gate P2 Verification (Final Phase 2 Code, Switches Removed, 0 Warnings)
+
+- **C++ presets (`ctest --preset <P> --output-on-failure`):**
+  - `clang-release`: 2/2 (`stello_tests` `28.20 s`, `stello_cli_version` `0.50 s`).
+  - `clang-native`: 2/2 (`stello_tests` `26.81 s`, `stello_cli_version` `0.89 s`).
+  - `msvc-release`: 2/2 (`stello_tests` `29.05 s`, `stello_cli_version` `0.58 s`).
+  - `msvc-native`: 2/2 (`stello_tests` `27.62 s`, `stello_cli_version` `0.46 s`).
+  - `clang-sanitized`: 2/2 (`stello_tests` `53.20 s`, `stello_cli_version` `8.72 s`, 0 ASan/UBSan findings).
+- **.NET Release build & sequential `--no-build` tests (`-p:StelloWasmEngine=false`):** `0 Warning(s), 0 Error(s)`; `Stello.Engine.Tests` `499 passed, 0 failed, 0 skipped`; `Egaroucid.Engine.Tests` `100 passed, 0 failed, 8 skipped` (`TaggedV30_*`); `Stello.Net.Tests` `116 passed, 0 failed, 0 skipped`.
+- **`Stello.Web` Release WASM build & Node tests:** `0 Warning(s), 0 Error(s)`; `node --test Stello.Cpp/tests/wasm/engine.test.mjs Stello.Cpp/tests/wasm/engine-mt.test.mjs`: `19 passed, 0 failed, 0 skipped` (`2924.3 ms`).
+- **Final idle-CPU benchmarks (`Stello.Benchmark`, `hash-bits=19`, 100 % exact moves and scores):**
+  - `solve-bench --from 40 --to 49 --threads 1 --passes 1`: `1,115,666,701` nodes, `17.3 s`, `64.65M` nps.
+  - `solve-bench --from 40 --to 49 --threads 8 --passes 3`: `1,416,798,042` nodes, `3.542 s`, `399.98M` nps (`4.88×` vs `1t`; up from `4.425 s` pre-Phase-2).
+  - `solve-bench --from 40 --to 49 --threads 15 --passes 3`: `1,539,037,740` nodes, `3.127 s`, `492.19M` nps (`5.53×` vs `1t`).
+  - `solve-bench --from 40 --to 49 --threads 16 --passes 3`: `1,529,375,402` nodes, `3.042 s`, `502.70M` nps (`5.69×` vs `1t`; up from `3.830 s` pre-Phase-2).
+  - `mid-bench --depth 16 --passes 4`: `8t` `105,106,044` nodes `1.645 s` (`63.89M` nps); `15t` `124,361,114` nodes `1.552 s` (`80.15M` nps); `16t` `126,928,671` nodes `1.588 s` (`79.93M` nps, `-3.5 %` faster than `8t`).

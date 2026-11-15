@@ -8,6 +8,7 @@
 #include <cassert>
 #include <chrono>
 #include <limits>
+#include <optional>
 
 namespace stello::search {
 
@@ -126,7 +127,14 @@ AbortVoid Kernel<UseAvx2>::split(
         const int32_t window_alpha = alpha;
 
         SplitPoint point;
-        point.parent = s.split_point;
+        const SplitPoint* const prev_split = s.split_point;
+        point.parent = prev_split;
+
+        struct RestoreSplit {
+            Searcher& s;
+            const SplitPoint* prev;
+            ~RestoreSplit() noexcept { s.split_point = prev; }
+        };
 
         std::array<std::atomic<int32_t>, MAX_MOVES> results{};
         for (size_t i = 0; i < children.size(); ++i) {
@@ -196,7 +204,48 @@ AbortVoid Kernel<UseAvx2>::split(
                     }
                 }
 
-                STELLO_TRY_ASSIGN_IN_STATUS(const int32_t score, child_null_window(s, child, window_alpha));
+                int32_t score = 0;
+#if STELLO_ABORT_EXCEPTIONS
+                std::optional<Abort> abort_caught;
+                try {
+                    RestoreSplit restore{s, prev_split};
+                    s.split_point = &point;
+                    score = child_null_window(s, child, window_alpha);
+                } catch (Abort a) {
+                    const bool external_stop = (a == Abort::Cancelled)
+                        || caller_stop->is_cancelled()
+                        || caller_stop->is_move_now()
+                        || (prev_split != nullptr && prev_split->stopped())
+                        || (s.elapsed_ms() >= setup.hard_limit_ms);
+                    if (!external_stop && point.cut.load(std::memory_order_relaxed)) {
+                        break;
+                    }
+                    abort_caught = a;
+                }
+                if (abort_caught.has_value()) {
+                    STELLO_RETURN_ABORT_IN_STATUS(*abort_caught);
+                }
+#else
+                AbortResult<int32_t> local_res{};
+                {
+                    RestoreSplit restore{s, prev_split};
+                    s.split_point = &point;
+                    local_res = child_null_window(s, child, window_alpha);
+                }
+                if (local_res.is_err()) {
+                    const Abort a = local_res.abort_reason();
+                    const bool external_stop = (a == Abort::Cancelled)
+                        || caller_stop->is_cancelled()
+                        || caller_stop->is_move_now()
+                        || (prev_split != nullptr && prev_split->stopped())
+                        || (s.elapsed_ms() >= setup.hard_limit_ms);
+                    if (!external_stop && point.cut.load(std::memory_order_relaxed)) {
+                        break;
+                    }
+                    return make_abort<AbortStatus>(a);
+                }
+                score = local_res.value;
+#endif
                 pending &= ~bit;
                 if (score > window_alpha) {
                     fail_highs |= bit;
@@ -216,15 +265,20 @@ AbortVoid Kernel<UseAvx2>::split(
             STELLO_RETURN_OK_VOID();
         };
 
-        const auto poll = [&]() noexcept {
+        const auto poll = [&]() {
             if (!point.stop.load(std::memory_order_relaxed)) {
                 const Duration now = caller_clock();
                 const Duration el = (now > setup.start) ? (now - setup.start) : Duration::zero();
                 const int64_t elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(el).count();
-                if (caller_stop->is_cancelled() || caller_stop->is_move_now() || elapsed_ms >= setup.hard_limit_ms) {
+                if (caller_stop->is_cancelled()
+                    || caller_stop->is_move_now()
+                    || (prev_split != nullptr && prev_split->stopped())
+                    || elapsed_ms >= setup.hard_limit_ms)
+                {
                     point.stop.store(true, std::memory_order_relaxed);
                 }
             }
+            s.maybe_report_heartbeat();
         };
 
 #if STELLO_ABORT_EXCEPTIONS
@@ -232,6 +286,10 @@ AbortVoid Kernel<UseAvx2>::split(
 #else
         STELLO_TRY_VOID_IN_STATUS(split_helpers.pool->scope_polling(body, poll));
 #endif
+
+        if (caller_stop->is_cancelled()) {
+            STELLO_RETURN_ABORT_IN_STATUS(Abort::Cancelled);
+        }
 
         bool missing = false;
         uint64_t tasks = spawned;

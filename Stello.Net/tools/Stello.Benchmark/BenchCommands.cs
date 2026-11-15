@@ -24,7 +24,7 @@ internal static class BenchCommands
 
     public static int SolveBench(Options options)
     {
-        options.Allow("positions", "from", "to", "passes", "hash-bits", "out", "compare", "engine", "eval", "threads");
+        options.Allow("positions", "from", "to", "passes", "hash-bits", "out", "compare", "engine", "eval", "side", "threads");
         List<BenchmarkPosition> all = BenchmarkPosition.Load(options.Text("positions") ?? Program.DataFile("ffo-40-59.txt"));
         int from = options.Number("from", 40, 0, int.MaxValue);
         int to = options.Number("to", 44, 0, int.MaxValue);

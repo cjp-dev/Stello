@@ -407,17 +407,24 @@ bool Searcher::stop_iterating(const SearchLimits& limits, time::TimeBudget budge
     }
 }
 
-STELLO_NOINLINE AbortVoid Searcher::check_abort() {
-    flush_nodes();
+void Searcher::maybe_report_heartbeat() {
     if (progress && report_move >= 0 && elapsed_ms() - last_heartbeat_ms >= 100) {
         report(report_depth, report_move, report_best_move, report_score, report_kind);
     }
+}
+
+STELLO_NOINLINE AbortVoid Searcher::check_abort() {
+    flush_nodes();
+    maybe_report_heartbeat();
 
     if (stop->is_cancelled()) {
         STELLO_RETURN_ABORT_IN_STATUS(Abort::Cancelled);
     }
 
-    if (stop->is_move_now() || elapsed_ms() >= hard_limit_ms) {
+    if (stop->is_move_now()
+        || (split_point != nullptr && split_point->stopped())
+        || elapsed_ms() >= hard_limit_ms)
+    {
         STELLO_RETURN_ABORT_IN_STATUS(Abort::Stop);
     }
 

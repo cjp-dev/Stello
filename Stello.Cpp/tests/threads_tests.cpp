@@ -638,4 +638,74 @@ STELLO_TEST(several_threads_handover_few_empties_splits_and_lazy_smp) {
     }
 }
 
+STELLO_TEST(phase2_root_split_brother_cut_and_split_heartbeats) {
+    // Root splitting and brother cut produce exact scores on FFO #40-#44 and random 19-21 empty positions.
+    const auto ffo = load_bench_file("ffo-40-59.txt");
+    {
+        search::SearchEngine engine(19);
+        for (const auto& pos : ffo) {
+            if (pos.id != "40" && pos.id != "41" && pos.id != "42" && pos.id != "43" && pos.id != "44") {
+                continue;
+            }
+            engine.clear_hash();
+            const auto outcome = engine.search(
+                pos.board, pos.player, with_threads(SearchLimits::solve(), 8));
+            STELLO_CHECK_MSG(outcome.ok, pos.id);
+            STELLO_CHECK(pos.score.has_value());
+            STELLO_CHECK_EQ_MSG(outcome.result.score, *pos.score, pos.id);
+            STELLO_CHECK(outcome.result.kind == ScoreKind::Exact);
+            STELLO_CHECK(outcome.result.mv.square.has_value());
+            const Board after = pos.board.play_unchecked(pos.player, outcome.result.mv.square->index());
+            STELLO_CHECK_EQ_MSG(score_for(after, pos.player), *pos.score, pos.id);
+        }
+    }
+
+    // Brother cut recovers cleanly without surfacing SearchError on 19-21 empty solves with 8 threads.
+    {
+        search::SearchEngine single(18);
+        search::SearchEngine threaded(18);
+        uint64_t seed = 0x6A09'E667'F3BC'C909ULL;
+        uint32_t checked = 0;
+        while (checked < 8) {
+            const auto pos = random_position(seed, 19U + (checked % 3U));
+            if (!pos.has_value()) {
+                continue;
+            }
+            single.clear_hash();
+            threaded.clear_hash();
+            const SearchResult expected = single.search_simple(pos->first, pos->second, SearchLimits::solve());
+            const auto outcome = threaded.search(pos->first, pos->second, with_threads(SearchLimits::solve(), 8));
+            STELLO_CHECK(outcome.ok);
+            STELLO_CHECK_EQ(outcome.result.score, expected.score);
+            STELLO_CHECK(outcome.result.kind == expected.kind);
+            ++checked;
+        }
+    }
+
+    // Waiting at a root split continues emitting heartbeat progress callbacks at ~100 ms intervals.
+    {
+        const auto midgame = load_bench_file("midgame.txt");
+        search::SearchEngine engine(18);
+        (void)engine.search_simple(Board::initial(), Player::Black, with_threads(SearchLimits::fixed_depth(4), 8));
+
+        std::vector<int64_t> report_times_ms;
+        const auto outcome = engine.search(
+            midgame[0].board,
+            midgame[0].player,
+            with_threads(SearchLimits::time_per_move_ms(550), 8),
+            [&](const SearchInfo& info) {
+                report_times_ms.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(info.elapsed).count());
+            });
+        STELLO_CHECK(outcome.ok);
+        const int64_t total_ms = std::chrono::duration_cast<std::chrono::milliseconds>(outcome.result.elapsed).count();
+        STELLO_CHECK(total_ms >= 350);
+        STELLO_CHECK_MSG(report_times_ms.size() >= 3U, "reports=" + std::to_string(report_times_ms.size()));
+        const int64_t max_gap_ms = STELLO_TESTS_ASAN ? 600 : 250;
+        for (size_t i = 1; i < report_times_ms.size(); ++i) {
+            const int64_t gap = report_times_ms[i] - report_times_ms[i - 1];
+            STELLO_CHECK_MSG(gap <= max_gap_ms, "gap=" + std::to_string(gap) + "ms");
+        }
+    }
+}
+
 } // namespace stello::tests

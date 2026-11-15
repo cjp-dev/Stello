@@ -24,7 +24,18 @@ inline constexpr int32_t MIDGAME_ETC_MIN_LOOK = 4;
 inline constexpr size_t SOLVE_HELPERS = 3;
 
 inline size_t lazy_smp_helpers(size_t workers) noexcept {
-    return (workers + 1U) / 2U;
+    return (workers + 2U) / 4U;
+}
+
+inline void apply_solve_best(ScoreKind kind, int32_t empties, int32_t mv, int32_t score, Best& best) noexcept {
+    if (kind == ScoreKind::WinLossDraw && score > 0) {
+        best = Best{mv, score, kind, empties};
+    } else if (kind == ScoreKind::WinLossDraw && score == 0) {
+        best = Best{mv, score, ScoreKind::Heuristic, best.depth};
+    } else if (kind == ScoreKind::Exact && best.kind == ScoreKind::WinLossDraw) {
+        // Keep WinLossDraw/empties until all moves finish, while retaining any strictly higher Exact move.
+        best.mv = mv;
+    }
 }
 
 class FlagStop final : public StopSignal {
@@ -185,7 +196,9 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::solve_iteration(
 ) {
     using namespace detail::midgame;
 
-    if (!s.helpers.has_value() || s.ybwc) {
+    const size_t helper_count =
+        (s.helpers.has_value() && !s.ybwc) ? (std::min)(s.helpers->count, SOLVE_HELPERS) : 0;
+    if (helper_count == 0) {
         return solve_root(s, board, player, alpha, beta, kind, root_moves, best);
     }
 
@@ -198,7 +211,6 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::solve_iteration(
     std::copy_n(root_moves.data(), count, order.data());
 
     return active_helpers.pool->scope([&](const Scope<ThreadState>& scope) -> AbortResult<ScoreMove> {
-        const size_t helper_count = (std::min)(active_helpers.count, SOLVE_HELPERS);
         for (size_t i = 0; i < helper_count; ++i) {
             const bool started = scope.try_spawn(
                 [active_helpers, &stop_flag, board_copy, player, alpha, beta, kind, order, count, start_best, i](
@@ -401,6 +413,50 @@ AbortVoid Kernel<UseAvx2>::search_root(
     size_t improved = 0;
 
     for (size_t i = 0; i < root_moves.size(); ++i) {
+        if (i == 1 && look >= YBWC_MID_MIN_DEPTH && s.may_split()) {
+            const std::span<const int32_t> tail = root_moves.subspan(1);
+            std::array<MidgameChild, MAX_MOVES> children{};
+            for (size_t c = 0; c < tail.size(); ++c) {
+                const int32_t cmv = tail[c];
+                children[c] = MidgameChild{
+                    play_unchecked(board, player, static_cast<uint32_t>(cmv)),
+                    opp,
+                    look - 1,
+                    1,
+                    cmv,
+                };
+            }
+
+            s.report_depth = look + 1;
+            s.report_move = tail[0];
+            s.report_best_move = best_move;
+            s.report_score = best_score;
+            s.report_kind = ScoreKind::Heuristic;
+
+            const int32_t score_after_first = best_score;
+            struct CommitMidBest {
+                Best& best;
+                int32_t& best_move;
+                int32_t& best_score;
+                int32_t threshold;
+                int32_t depth;
+                ~CommitMidBest() noexcept {
+                    if (best_score > threshold && best_move >= 0) {
+                        best = Best{best_move, best_score, ScoreKind::Heuristic, depth};
+                    }
+                }
+            } commit{best, best_move, best_score, score_after_first, look + 1};
+
+            STELLO_TRY_VOID_IN_STATUS(
+                s.split(std::span<const MidgameChild>(children.data(), tail.size()), alpha, beta, best_score, best_move));
+            if (best_score > score_after_first && best_move != root_moves[0]) {
+                improvements[improved] = best_move;
+                ++improved;
+            }
+            s.report(look + 1, tail.back(), best_move, best_score, ScoreKind::Heuristic);
+            break;
+        }
+
         const int32_t mv = root_moves[i];
         s.report_depth = look + 1;
         s.report_move = mv;
@@ -460,6 +516,9 @@ AbortVoid Kernel<UseAvx2>::search_root(
         }
 
         s.report(look + 1, mv, best_move, best_score, ScoreKind::Heuristic);
+        if (best_score >= beta) {
+            break;
+        }
     }
 
     detail::move_to_front(root_moves, std::span<const int32_t>(improvements.data(), improved));
@@ -888,6 +947,54 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::solve_root(
     size_t improved = 0;
 
     for (size_t i = 0; i < root_moves.size(); ++i) {
+        if (i == 1 && empties > YBWC_END_MIN_EMPTIES && s.may_split()) {
+            const std::span<const int32_t> tail = root_moves.subspan(1);
+            std::array<EndgameChild, MAX_MOVES> children{};
+            for (size_t c = 0; c < tail.size(); ++c) {
+                const int32_t cmv = tail[c];
+                const uint64_t cf = flips(own, opp, static_cast<uint32_t>(cmv));
+                children[c] = EndgameChild{
+                    opp & ~cf,
+                    own | cf | (uint64_t{1} << cmv),
+                    empties - 1,
+                    endgame::bits::LEGAL_UNDEFINED,
+                    cmv,
+                };
+            }
+
+            const bool has_solved_move = (best_move >= 0 || best.kind == ScoreKind::WinLossDraw || best.kind == ScoreKind::Exact);
+            s.report_depth = has_solved_move ? empties : best.depth;
+            s.report_move = tail[0];
+            s.report_best_move = (best_move >= 0) ? best_move : best.mv;
+            s.report_score = (best_move >= 0) ? best_score : best.score;
+            s.report_kind = (best_move >= 0) ? kind : best.kind;
+
+            const int32_t score_after_first = best_score;
+            struct CommitSolveBest {
+                Best& best;
+                ScoreKind kind;
+                int32_t empties;
+                int32_t& best_move;
+                int32_t& best_score;
+                int32_t threshold;
+                ~CommitSolveBest() noexcept {
+                    if (best_score > threshold && best_move >= 0) {
+                        detail::midgame::apply_solve_best(kind, empties, best_move, best_score, best);
+                    }
+                }
+            } commit{best, kind, empties, best_move, best_score, score_after_first};
+
+            STELLO_TRY_VOID_R(
+                ScoreMove,
+                s.split(std::span<const EndgameChild>(children.data(), tail.size()), alpha, beta, best_score, best_move));
+            if (best_score > score_after_first && best_move != root_moves[0]) {
+                improvements[improved] = best_move;
+                ++improved;
+            }
+            s.report(empties, tail.back(), best_move, best_score, kind);
+            break;
+        }
+
         const int32_t mv = root_moves[i];
         const bool has_solved_move = (best_move >= 0 || best.kind == ScoreKind::WinLossDraw || best.kind == ScoreKind::Exact);
         s.report_depth = has_solved_move ? empties : best.depth;
@@ -923,15 +1030,7 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::solve_root(
             }
             improvements[improved] = mv;
             ++improved;
-
-            if (kind == ScoreKind::WinLossDraw && score > 0) {
-                best = Best{mv, score, kind, empties};
-            } else if (kind == ScoreKind::WinLossDraw && score == 0) {
-                best = Best{mv, score, ScoreKind::Heuristic, best.depth};
-            } else if (kind == ScoreKind::Exact && best.kind == ScoreKind::WinLossDraw) {
-                // Keep WinLossDraw/empties until all moves finish, while retaining any strictly higher Exact move.
-                best.mv = mv;
-            }
+            detail::midgame::apply_solve_best(kind, empties, mv, score, best);
         }
 
         s.report(empties, mv, best_move, best_score, kind);
