@@ -27,7 +27,7 @@ internal static class MpcCommand
         int perDiscs = options.Number("per-discs", 100, 1, 100_000);
         int maxDepth = options.Number("max-depth", 12, 1, 20);
         int workers = options.Number("workers", Environment.ProcessorCount, 1, 256);
-        string output = options.Text("out") ?? Path.Combine(TrainerProgram.RepositoryFolder(), "Traning data", "mpc-values.csv");
+        string output = options.Text("out") ?? Path.Combine(TrainerProgram.RepositoryFolder(), "Training data", "mpc-values.csv");
 
         // --fit <csv>: only fit an existing file.
         if (options.Text("fit") is { } existing)
@@ -108,7 +108,7 @@ internal static class MpcCommand
         int perDiscs = options.Number("per-discs", 100, 1, 100_000);
         int maxDepth = options.Number("max-depth", 10, 1, 20);
         int workers = options.Number("workers", Environment.ProcessorCount, 1, 256);
-        string output = options.Text("out") ?? Path.Combine(TrainerProgram.RepositoryFolder(), "Traning data", "mpc-end-values.csv");
+        string output = options.Text("out") ?? Path.Combine(TrainerProgram.RepositoryFolder(), "Training data", "mpc-end-values.csv");
 
         if (options.Text("fit") is { } existing)
         {
@@ -415,6 +415,45 @@ internal static class MpcCommand
             $"Relative error: {total / weights.Sum():P1} on average, {worst:P1} at worst, over {features.Count} cells."));
         Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
             $"Mean of deep − shallow over all cells: {Enumerable.Range(0, buckets).Sum(b => Enumerable.Range(2, maxDepth - 1).Sum(d => sum[b, ShallowDepth(d), d])) / Enumerable.Range(0, buckets).Sum(b => Enumerable.Range(2, maxDepth - 1).Sum(d => count[b, ShallowDepth(d), d])):0.00} discs"));
+
+        Console.WriteLine();
+        Console.WriteLine("Per-(shallow, deep) linear fits: σ ≈ a + b x  (x = discs / 64, d >= 2)");
+        for (int d = 2; d <= maxDepth; d++)
+        {
+            int s = ShallowDepth(d);
+            var pairFeatures = new List<double[]>();
+            var pairTargets = new List<double>();
+            var pairWeights = new List<double>();
+            for (int b = 0; b < buckets; b++)
+            {
+                if (count[b, s, d] >= 20)
+                {
+                    double x = (b * BucketDiscs + BucketDiscs / 2.0) / 64.0;
+                    pairFeatures.Add([1, x]);
+                    pairTargets.Add(Sigma(b, s, d));
+                    pairWeights.Add(count[b, s, d]);
+                }
+            }
+
+            if (pairFeatures.Count < 2)
+            {
+                continue;
+            }
+
+            double[] pc = LeastSquares(pairFeatures, pairTargets, pairWeights);
+            double pairTotal = 0;
+            double pairWorst = 0;
+            for (int i = 0; i < pairFeatures.Count; i++)
+            {
+                double predicted = pc[0] + pc[1] * pairFeatures[i][1];
+                double relative = Math.Abs(predicted - pairTargets[i]) / pairTargets[i];
+                pairWorst = Math.Max(pairWorst, relative);
+                pairTotal += relative * pairWeights[i];
+            }
+
+            Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                $"  d={d,2} ({s,2}→{d,2}): a = {pc[0]:0.0000}, b = {pc[1]:0.0000}  (avg {pairTotal / pairWeights.Sum():P1}, worst {pairWorst:P1}, {pairFeatures.Count} cells)"));
+        }
     }
 
     private static double[] LeastSquares(List<double[]> features, List<double> targets, List<double> weights)

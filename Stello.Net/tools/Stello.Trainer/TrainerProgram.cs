@@ -14,9 +14,9 @@ internal static class TrainerProgram
         Usage: Stello.Trainer <command> [options]
 
           convert [--data <folder>] [--out <folder>] [--cap 10000000] [--workers N] [--max-files N]
-                                    Convert Egaroucid's training data (default: Traning data) into binary files of
+                                    Convert Egaroucid's training data (default: Training data) into binary files of
                                     positions with final scores, split into training, validation and test
-                                    (default: Traning data/stello-bin). Never commit or share the result.
+                                    (default: Training data/stello-bin). Never commit or share the result.
           train --out <file> [--set classic11] [--stages 15] [--data <folder>] [--max-per-discs 2000000] [--smooth 2]
                 [--loops 1000] [--rate 0.05] [--patience 20] [--units 32] [--prior 1] [--min-appear 0]
                 [--workers N] [--only-stage S]

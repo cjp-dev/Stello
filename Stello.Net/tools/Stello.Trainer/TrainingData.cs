@@ -41,7 +41,7 @@ internal static class TrainingData
     public const int MinDiscs = 4;
     public const int MaxDiscs = 64;
 
-    public static string DefaultFolder() => Path.Combine(TrainerProgram.RepositoryFolder(), "Traning data", "stello-bin");
+    public static string DefaultFolder() => Path.Combine(TrainerProgram.RepositoryFolder(), "Training data", "stello-bin");
 
     public static string FileName(Split split, int discs) => $"{split.ToString().ToLowerInvariant()}-d{discs:00}.bin";
 

@@ -289,3 +289,39 @@ Additional `Egaroucid 7.8.2` observations on the same 7800X3D (`FFO #40–49`, 3
   - **8-core scaling (`1t -> 8t`):** Stello reaches **`4.88×`** vs Egaroucid **`5.27×`** (and **`5.08×`** using Egaroucid's single-pass `9.841 / 1.936`), nearly closing the physical-core scaling gap from Stello 4.0 (`3.67×`).
   - **Where the remaining `1.9–2.2×` wall-time gap comes from:** Primarily **`1t` endgame pruning & move ordering** (`1,115.7M` vs `505.4M` nodes, `2.21×` — Phase 3/4 scope), plus lower parallel search-overhead inflation (`+27–38 %` extra nodes on `4–16t` in Stello vs `+6–17 %` on best passes in Egaroucid, alongside Egaroucid's Lazy SMP + YBWC scaling beyond `8` threads: `1.859 s -> 1.384 s` vs `3.542 s -> 3.042 s`).
 
+---
+
+## Phase 3 — Search: Item 1 (Multi-ProbCut, Rejected at Gate P3)
+
+### 1. Error Model Refit (`Training data/mpc-values.csv`, 11,639 Clean Positions)
+
+- Fixed the `"Traning data"` -> `"Training data"` default folder typo across `Stello.Trainer` (`ConvertCommand.cs`, `MpcCommand.cs`, `TrainerProgram.cs`, `TrainingData.cs`) and `Stello.Benchmark` (`EvalCommands.cs`, `ParityCommands.cs`, `Program.cs`), and added per-`(shallow, deep)` linear fit reporting to `Stello.Trainer mpc --fit`.
+- Dropping the `61` single-legal-move all-zero rows from `Training data/mpc-values.csv` (`11,639` valid rows across `14..52` discs, depths `0..13`) exposed why the legacy fit collapsed at high search depths (`d >= 17`):
+
+| Model | Formula ($x = \text{discs}/64$, $s = \text{shallow}$) | Fit Error (Clean Cells) | Deep Behavior ($x = 34/64$) |
+|---|---|---|---|
+| `old` (current default) | $1.8871 + 2.9543x + 0.0660x^2 - 0.6749s + 0.2778d$ | 9.0 % avg, 32.9 % worst | Linear negative slope collapses $\sigma$ at $d \ge 17$ ($2.12$ at $d=17$, $1.64$ at $d=25$) |
+| `refit` (`mpc --fit`) | $1.4547 + 4.0093x - 1.6181x^2 - 0.4457s + 0.2048d$ | 5.0 % avg, 20.7 % worst (117 cells) | $d=20 \to 2.77$; still drifts down linearly at extreme $d$ |
+| `powergap` ($d \ge 3$ fit) | $-0.0860 + 3.8174x - 1.3981x^2 + 2.1578\sqrt{\frac{d-s}{s+1}} - 0.2540\sqrt{d-s}$ | 4.6 % avg, 19.1 % worst | Captures $4k+2$ parity step ($d=14 \to 3.14$), levels out around $2.76$–$2.80$ for $d \ge 16$ |
+| `pair` | Per-pair $a_d + b_d x$ for $d = 2..13$, `powergap` for $d \ge 14$ | 2.1 %–5.3 % avg per depth ($d=2..13$) | Exact empirical $d \le 13$ + `powergap` for $d \ge 14$ |
+
+### 2. Match Evaluation (`8,340` Games, `1t` `--workers 8`, `hash-bits=19`)
+
+Temporary `SearchOptions` / `opt=` switches (`mpc-model=`, `mpc-early=`, `mpc-late=`, linear disc ramp across `16..48` discs) were tested across `10` matches (`500 ms/move` and `2,000 ms/move`):
+
+| Match | Games | Side A | Side B | Score (B, 95 % CI) | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | Wall Time |
+|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|
+| `p3-pair-vs-old-500ms` | 1,180 | `old` (`500 ms`) | `pair` (`500 ms`) | 50.3 % (48.4–52.3 %) | +2 (−11 to +16) | 63.6 % | +0.1 ± 0.2 | 19.21 / 19.10 | 23.6 / 23.6 | [30m 53s](benchmark-results/match_p3-pair-vs-old-500ms.md) |
+| `p3-powergap-vs-old-500ms` | 600 | `old` (`500 ms`) | `powergap` (`500 ms`) | 52.0 % (49.5–54.5 %) | +14 (−4 to +32) | 93.8 % | +0.3 ± 0.3 | 19.21 / 19.11 | 23.5 / 23.6 | [15m 43s](benchmark-results/match_p3-powergap-vs-old-500ms.md) |
+| `p3-powergap-mpc85-vs-100-500ms` | 600 | `powergap t=1.00` | `powergap t=0.85` | 49.5 % (46.7–52.3 %) | −3 (−23 to +16) | 36.2 % | −0.1 ± 0.3 | 19.14 / 19.39 | 23.6 / 23.6 | [15m 41s](benchmark-results/match_p3-powergap-mpc85-vs-100-500ms.md) |
+| `p3-powergap-mpc90-vs-100-500ms` | 600 | `powergap t=1.00` | `powergap t=0.90` | 49.1 % (46.3–51.8 %) | −6 (−25 to +13) | 25.6 % | −0.1 ± 0.3 | 19.12 / 19.29 | 23.7 / 23.7 | [15m 39s](benchmark-results/match_p3-powergap-mpc90-vs-100-500ms.md) |
+| `p3-powergap-mpc110-vs-100-500ms` | 600 | `powergap t=1.00` | `powergap t=1.10` | 48.0 % (45.3–50.7 %) | −14 (−33 to +5) | 7.5 % | −0.2 ± 0.3 | 19.07 / 18.90 | 23.6 / 23.6 | [15m 42s](benchmark-results/match_p3-powergap-mpc110-vs-100-500ms.md) |
+| `p3-powergap-early85-late115-500ms` | 600 | `powergap 100/100` | `powergap 85/115` | 50.4 % (47.6–53.3 %) | +3 (−17 to +23) | 61.3 % | +0.1 ± 0.3 | 19.14 / 19.17 | 23.7 / 23.7 | [15m 40s](benchmark-results/match_p3-powergap-early85-late115-500ms.md) |
+| `p3-powergap-early115-late85-500ms` | 600 | `powergap 100/100` | `powergap 115/85` | 47.7 % (44.9–50.4 %) | −16 (−35 to +3) | 4.8 % | −0.1 ± 0.3 | 19.05 / 19.03 | 23.6 / 23.6 | [15m 41s](benchmark-results/match_p3-powergap-early115-late85-500ms.md) |
+| `p3-powergap-early90-late110-500ms` | 600 | `powergap 100/100` | `powergap 90/110` | 49.9 % (47.2–52.7 %) | −1 (−20 to +18) | 47.6 % | +0.1 ± 0.3 | 19.53 / 19.55 | 23.9 / 23.9 | [15m 34s](benchmark-results/match_p3-powergap-early90-late110-500ms.md) |
+| `p3-powergap-vs-old-1180-500ms` | 1,180 | `old` (`500 ms`) | `powergap` (`500 ms`) | 51.6 % (49.7–53.5 %) | +11 (−2 to +24) | 95.3 % | +0.1 ± 0.2 | 19.70 / 19.58 | 24.0 / 24.0 | [30m 22s](benchmark-results/match_p3-powergap-vs-old-1180-500ms.md) |
+| `p3-powergap-vs-old-2s` | 1,180 | `old` (`2,000 ms`) | `powergap` (`2,000 ms`) | 50.1 % (48.4–51.8 %) | +1 (−11 to +13) | 55.8 % | +0.1 ± 0.2 | 22.20 / 22.00 | 25.8 / 25.8 | [1h 52m](benchmark-results/match_p3-powergap-vs-old-2s.md) |
+
+- **Decision (Gate P3):** Rejected. Although `powergap` reached `51.6 %` (`+11` Elo, `95.3 %` LOS) at `500 ms`, its lower bound stayed at `49.7 %` and at `2,000 ms` its wider deep thresholds cost `−0.20` plies (`22.00` vs `22.20`), yielding `50.1 %` (`+1` Elo). Default `t = 1.00` outperformed tighter (`0.85`, `0.90`) and wider (`1.10`) thresholds, and phase-tilting `t(discs)` did not beat uniform `100/100` (while loosening late midgame `115/85` hurt at `47.7 %`, LOS `4.8 %`). Temporary `probcut_model` / `mpc-early` / `mpc-late` switches were reverted cleanly; the `"Training data"` path fixes and `MpcCommand` per-pair output were kept.
+
+

@@ -40,7 +40,7 @@ internal static class EvalCommands
     {
         options.Allow("data", "files", "per-empties", "name");
         string folder = options.Text("data") ?? Path.Combine(
-            Program.RepositoryFolder(), "Traning data", "Egaroucid_Train_Data", "0001_egaroucid_7_5_1_lv17");
+            Program.RepositoryFolder(), "Training data", "Egaroucid_Train_Data", "0001_egaroucid_7_5_1_lv17");
         if (!Directory.Exists(folder))
         {
             throw new ArgumentException($"The training data folder {folder} does not exist (give it with --data).");

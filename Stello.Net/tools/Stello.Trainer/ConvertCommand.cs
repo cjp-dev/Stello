@@ -32,7 +32,7 @@ internal static class ConvertCommand
     public static int Run(Options options)
     {
         options.Allow("data", "out", "cap", "workers", "max-files");
-        string data = options.Text("data") ?? Path.Combine(TrainerProgram.RepositoryFolder(), "Traning data");
+        string data = options.Text("data") ?? Path.Combine(TrainerProgram.RepositoryFolder(), "Training data");
         string output = options.Text("out") ?? TrainingData.DefaultFolder();
         int cap = options.Number("cap", 10_000_000, 1000, 100_000_000);
         int workers = options.Number("workers", Environment.ProcessorCount, 1, 256);

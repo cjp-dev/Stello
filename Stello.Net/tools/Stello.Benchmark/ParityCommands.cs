@@ -53,7 +53,7 @@ internal static class ParityCommands
                 : long.TryParse(maxText, NumberStyles.None, CultureInfo.InvariantCulture, out long m) && m >= 1
                     ? m
                     : throw new ArgumentException("--max-per-discs must be a whole number from 1, or all.");
-            EvalSplit(weights, split == "default" ? Path.Combine(Program.RepositoryFolder(), "Traning data", "stello-bin") : split, max);
+            EvalSplit(weights, split == "default" ? Path.Combine(Program.RepositoryFolder(), "Training data", "stello-bin") : split, max);
             return 0;
         }
 

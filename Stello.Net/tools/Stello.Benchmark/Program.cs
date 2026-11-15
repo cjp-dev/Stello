@@ -36,7 +36,7 @@ internal static class Program
                                     --threads (both benches, stello only, 1-256, default 1): threads sharing the hash tables; with more than 1 the nodes vary.
           eval-compare [--data <folder>] [--files N] [--per-empties 5000] [--name <name>]
                                     Both evaluations against the final scores of Egaroucid's training games (not in the
-                                    repository: Traning data/Egaroucid_Train_Data/0001_egaroucid_7_5_1_lv17 by default).
+                                    repository: Training data/Egaroucid_Train_Data/0001_egaroucid_7_5_1_lv17 by default).
           make-exact [--starts <file>] [--from 20] [--games 100] [--depth 6] [--empties 28,26,24] [--workers N] [--out <file>]
                                     Write positions from Stello's games with every move solved exactly by the Egaroucid port
                                     (Data/midgame-exact.txt). An existing file is continued.
@@ -57,7 +57,7 @@ internal static class Program
                                     position with --min-empties to --max-empties empty squares and two legal moves, until there
                                     are --count; with --pass-within N, only where the game has a pass within N plies.
           parity-data --split <folder>|default [--max-per-discs 20000|all] [--eval <file>]
-                                    Stello 2.0's evaluation over the trainer's test split (default: Traning data/stello-bin):
+                                    Stello 2.0's evaluation over the trainer's test split (default: Training data/stello-bin):
                                     the count and FNV-1a checksums to compare with `stello eval-split`, and the speed.
           make-positions [--starts <file>] [--games 20] [--depth 6] [--empties 48,42,36,30,26] [--out <file>]
                                     Write the midgame positions for mid-bench from games the engine plays against itself.
