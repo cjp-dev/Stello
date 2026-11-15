@@ -264,7 +264,28 @@ Phase 2 completed and passed **Gate P2**.
 - **`Stello.Web` Release WASM build & Node tests:** `0 Warning(s), 0 Error(s)`; `node --test Stello.Cpp/tests/wasm/engine.test.mjs Stello.Cpp/tests/wasm/engine-mt.test.mjs`: `19 passed, 0 failed, 0 skipped` (`2924.3 ms`).
 - **Final idle-CPU benchmarks (`Stello.Benchmark`, `hash-bits=19`, 100 % exact moves and scores):**
   - `solve-bench --from 40 --to 49 --threads 1 --passes 1`: `1,115,666,701` nodes, `17.3 s`, `64.65M` nps.
+  - `solve-bench --from 40 --to 49 --threads 4 --passes 3`: `1,429,365,105` nodes, `6.540 s`, `218.57M` nps (`2.65×` vs `1t`).
   - `solve-bench --from 40 --to 49 --threads 8 --passes 3`: `1,416,798,042` nodes, `3.542 s`, `399.98M` nps (`4.88×` vs `1t`; up from `4.425 s` pre-Phase-2).
   - `solve-bench --from 40 --to 49 --threads 15 --passes 3`: `1,539,037,740` nodes, `3.127 s`, `492.19M` nps (`5.53×` vs `1t`).
   - `solve-bench --from 40 --to 49 --threads 16 --passes 3`: `1,529,375,402` nodes, `3.042 s`, `502.70M` nps (`5.69×` vs `1t`; up from `3.830 s` pre-Phase-2).
   - `mid-bench --depth 16 --passes 4`: `8t` `105,106,044` nodes `1.645 s` (`63.89M` nps); `15t` `124,361,114` nodes `1.552 s` (`80.15M` nps); `16t` `126,928,671` nodes `1.588 s` (`79.93M` nps, `-3.5 %` faster than `8t`).
+
+### 4. Endgame Thread Scaling vs Egaroucid C++ (Ryzen 7 7800X3D)
+
+Same-machine comparison on FFO `#40–49` (10 positions, no book, 100 % exact moves and scores). Historical `Stello 3.0` (`docs/08-endgame-solver.md`, earlier CPU) and `Stello 4.0` (`docs/28-stello-4-0-the-engine-in-cpp.md`, 7800X3D) rows are included alongside live same-day measurements of `Stello 5.0 P2` (`clang-release`, `hash-bits=19`) and `Egaroucid 7.8.2` (`Egaroucid-main`, built in scratch with Clang 23.1.5 `-O2 -march=native -mtune=native`, `-l 60 -hash 21 -nobook`, aggregated by best per-position time across 3 passes to match `Stello.Benchmark solve-bench`).
+
+| Threads | Stello 3.0 (prev CPU) | Stello 4.0 (7800X3D) | Stello 5.0 P2 (7800X3D) | Stello 5.0 Nodes / NPS | Egaroucid 7.8.2 Clang `-hash 21` (7800X3D) | Egaroucid Nodes / NPS |
+|---:|---:|---:|---:|---:|---:|---:|
+| `1` | 25.6 s (`1.00×`) | 22.488 s (`1.00×`) | **17.3 s** (`1.00×`) | 1,115.7M / **64.65M** | **9.788 s** (`1.00×`) | 505.4M / 51.63M |
+| `4` | 12.9 s (`1.98×`) | — | **6.540 s** (`2.65×`) | 1,429.4M / **218.57M** | **3.156 s** (`3.10×`) | 537.0M / 170.16M |
+| `8` | 7.8 s (`3.29×`) | 6.132 s (`3.67×`) | **3.542 s** (`4.88×`) | 1,416.8M / **399.98M** | **1.859 s** (`5.27×`) | 556.4M / 299.29M |
+| `15` | — | — | **3.127 s** (`5.53×`) | 1,539.0M / **492.19M** | **1.492 s** (`6.56×`) | 589.4M / 395.03M |
+| `16` | 6.45 s (`3.97×`) | 5.307 s (`4.24×`) | **3.042 s** (`5.69×`) | 1,529.4M / **502.70M** | **1.384 s** (`7.07×`) | 549.6M / 397.09M |
+
+Additional `Egaroucid 7.8.2` observations on the same 7800X3D (`FFO #40–49`, 3 passes):
+- Single-pass fastest / all-3-pass totals (`Clang -hash 21`): `1t` `9.841 s` (`9.869 / 9.841 / 10.080 s`), `4t` `3.170 s` (`4.251 / 3.170 / 4.290 s`), `8t` `1.936 s` (`2.400 / 2.432 / 1.936 s`), `15t` `1.515 s` (`1.914 / 1.515 / 1.575 s`), `16t` `1.445 s` (`1.445 / 1.486 / 1.446 s`). (MSVC 19.44 `/O2 /arch:AVX2` at `8t -hash 21` ran `2.178 s` fastest pass; Clang `-hash 25` at `8t` ran `1.873 s` fastest pass.)
+- **Where Stello 5.0 stands vs Egaroucid:**
+  - **Raw throughput (NPS):** Stello is **`+25–34 %` faster per node** at every thread count (`64.65M` vs `51.63M` at `1t`, `399.98M` vs `299.29M` at `8t`, `502.70M` vs `397.09M` at `16t`).
+  - **8-core scaling (`1t -> 8t`):** Stello reaches **`4.88×`** vs Egaroucid **`5.27×`** (and **`5.08×`** using Egaroucid's single-pass `9.841 / 1.936`), nearly closing the physical-core scaling gap from Stello 4.0 (`3.67×`).
+  - **Where the remaining `1.9–2.2×` wall-time gap comes from:** Primarily **`1t` endgame pruning & move ordering** (`1,115.7M` vs `505.4M` nodes, `2.21×` — Phase 3/4 scope), plus lower parallel search-overhead inflation (`+27–38 %` extra nodes on `4–16t` in Stello vs `+6–17 %` on best passes in Egaroucid, alongside Egaroucid's Lazy SMP + YBWC scaling beyond `8` threads: `1.859 s -> 1.384 s` vs `3.542 s -> 3.042 s`).
+
