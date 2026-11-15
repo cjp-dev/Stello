@@ -324,4 +324,23 @@ Temporary `SearchOptions` / `opt=` switches (`mpc-model=`, `mpc-early=`, `mpc-la
 
 - **Decision (Gate P3):** Rejected. Although `powergap` reached `51.6 %` (`+11` Elo, `95.3 %` LOS) at `500 ms`, its lower bound stayed at `49.7 %` and at `2,000 ms` its wider deep thresholds cost `−0.20` plies (`22.00` vs `22.20`), yielding `50.1 %` (`+1` Elo). Default `t = 1.00` outperformed tighter (`0.85`, `0.90`) and wider (`1.10`) thresholds, and phase-tilting `t(discs)` did not beat uniform `100/100` (while loosening late midgame `115/85` hurt at `47.7 %`, LOS `4.8 %`). Temporary `probcut_model` / `mpc-early` / `mpc-late` switches were reverted cleanly; the `"Training data"` path fixes and `MpcCommand` per-pair output were kept.
 
+---
+
+## Phase 3 — Search: Item 2 (Second-Best Move in the Transposition Table, Rejected at Gate P3)
+
+- **Setup:** Added `Entry::mv2` (default `-1`, packed into unused 7 bits `26..31` and `39` of the existing 64-byte `Slot`), preserving the previous matching entry's `mv` in `mv2` on equal-or-deeper `store_at_root` writes without letting shallow results modify deeper entries. Gated behind a temporary `opt=second-move=off|mid|both` switch (`mid`: midgame `search_inc` + `order_by_evaluation`; `both`: midgame + endgame `end_window` / `end_deep`).
+- **Speed probes (`off` baseline vs `mid` / `both`, `hash-bits=19`, `1t`):**
+  - `mid-bench --depth 14 --passes 3`: `29,307,358` nodes in `2.026 s` (`14.46M` nps) vs `29,779,568` in `2.032 s` (`14.65M` nps) — `−1.59 %` nodes, `−0.3 %` time.
+  - `mid-bench --depth 16 --passes 1`: `78,015,279` nodes in `5.691 s` (`13.71M` nps) vs `77,867,024` in `5.445 s` (`14.30M` nps) — `+0.19 %` nodes, `+4.5 %` time.
+  - `solve-bench --from 40 --to 49 --threads 1 --passes 1` (`both`): `1,115,665,034` nodes in `17.1 s` (`65.09M` nps) vs `1,115,666,701` in `17.2 s` (`64.83M` nps) — `−1,667` nodes (`−0.00015 %`).
+- **Match evaluation (`2,960` games, `1t` `--workers 8`, `hash-bits=19`):**
+
+| Match | Games | Side A | Side B | Score (B, 95 % CI) | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | Wall Time |
+|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|
+| `p32_secondmove_mid_500ms_1180g` | 1,180 | `off` (`500 ms`) | `mid` (`500 ms`) | 50.7 % (48.9–52.5 %) | +5 (−8 to +17) | 77.1 % | +0.1 ± 0.2 | 19.68 / 19.68 | 24.0 / 24.0 | [30m 22s](benchmark-results/match_p32_secondmove_mid_500ms_1180g.md) |
+| `p32_secondmove_both_500ms_1180g` | 1,180 | `off` (`500 ms`) | `both` (`500 ms`) | 51.4 % (49.5–53.2 %) | +9 (−4 to +23) | 92.0 % | +0.1 ± 0.2 | 19.70 / 19.69 | 24.0 / 24.0 | [30m 19s](benchmark-results/match_p32_secondmove_both_500ms_1180g.md) |
+| `p32_secondmove_both_2000ms_600g` | 600 | `off` (`2,000 ms`) | `both` (`2,000 ms`) | 48.7 % (46.6–50.7 %) | −9 (−24 to +5) | 10.1 % | −0.1 ± 0.2 | 22.18 / 22.16 | 25.8 / 25.8 | [57m 19s](benchmark-results/match_p32_secondmove_both_2000ms_600g.md) |
+
+- **Decision (Gate P3):** Rejected. Neither `mid` (`48.9 %` lower bound) nor `both` (`49.5 %` lower bound) cleared Gate P3 at `500 ms`, and confirming `both` at `2,000 ms` dropped to `48.7 %` (`−9` Elo, `10.1 %` LOS) with `−0.02` plies depth (`22.16` vs `22.18`) and `−0.7 %` nps (`23.47M` vs `23.63M`). Because `order_by_evaluation` and `ordering_value` already rank non-hash moves well, forcing an older `mv2` ahead of them adds no depth while paying a small TT slot-load/NPS cost. All `second-move` changes were reverted cleanly.
+
 
