@@ -343,4 +343,20 @@ Temporary `SearchOptions` / `opt=` switches (`mpc-model=`, `mpc-early=`, `mpc-la
 
 - **Decision (Gate P3):** Rejected. Neither `mid` (`48.9 %` lower bound) nor `both` (`49.5 %` lower bound) cleared Gate P3 at `500 ms`, and confirming `both` at `2,000 ms` dropped to `48.7 %` (`−9` Elo, `10.1 %` LOS) with `−0.02` plies depth (`22.16` vs `22.18`) and `−0.7 %` nps (`23.47M` vs `23.63M`). Because `order_by_evaluation` and `ordering_value` already rank non-hash moves well, forcing an older `mv2` ahead of them adds no depth while paying a small TT slot-load/NPS cost. All `second-move` changes were reverted cleanly.
 
+---
+
+## Phase 3 — Search: Item 3 (Soft Time Limit `soft-pct=`, Rejected at Gate P3)
+
+- **Setup:** Used the existing `soft-pct=` (`SearchOptions.SoftTimePercent`) switch to test higher soft midgame time caps (`80 %`, `90 %`, `100 %` of move budget) against the default `2/3` (`66.7 %`) rule, where Stello 5.0 averaged `261 / 501 ms` (`52 %`) per searched move at `500 ms/move`.
+- **Match evaluation (`3,540` games, `500 ms/move`, `1t` `--workers 8`, `hash-bits=19`):**
+
+| Match | Games | Side A | Side B | Score (B, 95 % CI) | Elo (95 % CI) | LOS | Avg Depth (A / B) | First Solve (A / B) | Move Time (A / B) | Wall Time |
+|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|
+| `p33_soft80_500ms_1180g` | 1,180 | `soft67` (`67 %`) | `soft80` (`80 %`) | 50.0 % (48.5–51.6 %) | 0 (−10 to +11) | 52.1 % | 19.75 / 19.86 | 24.0 / 24.0 | 261 / 275 ms | [31m 11s](benchmark-results/match_p33_soft80_500ms_1180g.md) |
+| `p33_soft90_500ms_1180g` | 1,180 | `soft67` (`67 %`) | `soft90` (`90 %`) | 51.2 % (49.5–52.9 %) | +9 (−3 to +20) | 92.0 % | 19.73 / 19.88 | 24.0 / 24.1 | 261 / 281 ms | [31m 28s](benchmark-results/match_p33_soft90_500ms_1180g.md) |
+| `p33_soft100_500ms_1180g` | 1,180 | `soft67` (`67 %`) | `soft100` (`100 %`) | 50.0 % (48.2–51.8 %) | 0 (−12 to +12) | 50.0 % | 19.70 / 19.85 | 24.0 / 24.0 | 261 / 282 ms | [31m 36s](benchmark-results/match_p33_soft100_500ms_1180g.md) |
+
+- **Decision (Gate P3):** Rejected. Raising `soft-pct` to `80–100 %` increased average move time by `+14–21 ms` (`+5–8 %`) and average midgame depth by `+0.11–0.15` plies, but none cleared the `50 %` lower-bound gate (`soft80` `50.0 %`, `soft90` `51.2 %` CI `49.5–52.9 %`, `soft100` `50.0 %`). Default `2/3` (`66.7 %`) stays.
+
+
 
