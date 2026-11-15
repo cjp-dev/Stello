@@ -36,7 +36,8 @@ template AbortVoid Kernel<false>::split<MidgameChild>(
     int32_t,
     int32_t,
     int32_t&,
-    int32_t&
+    int32_t&,
+    bool
 );
 
 template AbortVoid Kernel<false>::split<EndgameChild>(
@@ -45,7 +46,8 @@ template AbortVoid Kernel<false>::split<EndgameChild>(
     int32_t,
     int32_t,
     int32_t&,
-    int32_t&
+    int32_t&,
+    bool
 );
 
 } // namespace stello::search

@@ -111,12 +111,24 @@ AbortVoid Kernel<UseAvx2>::split(
     int32_t alpha,
     int32_t beta,
     int32_t& best,
-    int32_t& best_move
+    int32_t& best_move,
+    bool is_root
 ) {
     using namespace detail::ybwc_impl;
 
     assert(s.helpers.has_value() && "only a search with helpers splits");
     assert(children.size() <= MAX_MOVES);
+
+    const auto update_best = [&](int32_t score, int32_t mv) noexcept {
+        if (score > best) {
+            best = score;
+            best_move = mv;
+            if (is_root) {
+                s.report_best_move = best_move;
+                s.report_score = best;
+            }
+        }
+    };
 
     const Helpers split_helpers = *s.helpers;
     uint64_t pending = (children.size() == 64) ? ~uint64_t{0} : ((uint64_t{1} << children.size()) - 1ULL);
@@ -255,10 +267,7 @@ AbortVoid Kernel<UseAvx2>::split(
                     break;
                 }
 
-                if (score > best) {
-                    best = score;
-                    best_move = child.square();
-                }
+                update_best(score, child.square());
             }
 
             guard.finish();
@@ -306,9 +315,8 @@ AbortVoid Kernel<UseAvx2>::split(
             if (score > window_alpha) {
                 fail_highs |= (uint64_t{1} << i);
                 scores[i] = score;
-            } else if (score > best) {
-                best = score;
-                best_move = children[i].square();
+            } else {
+                update_best(score, children[i].square());
             }
         }
 
@@ -323,10 +331,7 @@ AbortVoid Kernel<UseAvx2>::split(
             const size_t i = static_cast<size_t>(std::countr_zero(highs));
             highs &= (highs - 1ULL);
             if (scores[i] >= beta) {
-                if (scores[i] > best) {
-                    best = scores[i];
-                    best_move = children[i].square();
-                }
+                update_best(scores[i], children[i].square());
                 STELLO_RETURN_OK_VOID();
             }
         }
@@ -339,12 +344,9 @@ AbortVoid Kernel<UseAvx2>::split(
             STELLO_TRY_ASSIGN_IN_STATUS(
                 const int32_t score,
                 child_window(s, children[i], (std::max)(alpha, best), beta, scores[i]));
-            if (score > best) {
-                best = score;
-                best_move = children[i].square();
-                if (best >= beta) {
-                    STELLO_RETURN_OK_VOID();
-                }
+            update_best(score, children[i].square());
+            if (best >= beta) {
+                STELLO_RETURN_OK_VOID();
             }
         }
     }

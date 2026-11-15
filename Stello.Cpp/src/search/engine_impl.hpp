@@ -448,7 +448,7 @@ AbortVoid Kernel<UseAvx2>::search_root(
             } commit{best, best_move, best_score, score_after_first, look + 1};
 
             STELLO_TRY_VOID_IN_STATUS(
-                s.split(std::span<const MidgameChild>(children.data(), tail.size()), alpha, beta, best_score, best_move));
+                s.split(std::span<const MidgameChild>(children.data(), tail.size()), alpha, beta, best_score, best_move, true));
             if (best_score > score_after_first && best_move != root_moves[0]) {
                 improvements[improved] = best_move;
                 ++improved;
@@ -986,7 +986,7 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::solve_root(
 
             STELLO_TRY_VOID_R(
                 ScoreMove,
-                s.split(std::span<const EndgameChild>(children.data(), tail.size()), alpha, beta, best_score, best_move));
+                s.split(std::span<const EndgameChild>(children.data(), tail.size()), alpha, beta, best_score, best_move, true));
             if (best_score > score_after_first && best_move != root_moves[0]) {
                 improvements[improved] = best_move;
                 ++improved;

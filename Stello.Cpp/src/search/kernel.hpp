@@ -359,7 +359,8 @@ struct Kernel {
         int32_t alpha,
         int32_t beta,
         int32_t& best,
-        int32_t& best_move
+        int32_t& best_move,
+        bool is_root = false
     );
     static AbortResult<int32_t> child_null_window(Searcher& searcher, const MidgameChild& child, int32_t alpha);
     static AbortResult<int32_t> child_window(
@@ -386,7 +387,8 @@ extern template AbortVoid Kernel<false>::split<MidgameChild>(
     int32_t,
     int32_t,
     int32_t&,
-    int32_t&
+    int32_t&,
+    bool
 );
 extern template AbortVoid Kernel<false>::split<EndgameChild>(
     Searcher&,
@@ -394,7 +396,8 @@ extern template AbortVoid Kernel<false>::split<EndgameChild>(
     int32_t,
     int32_t,
     int32_t&,
-    int32_t&
+    int32_t&,
+    bool
 );
 
 #if STELLO_HAS_X86_64_V3
@@ -441,7 +444,8 @@ extern template AbortVoid Kernel<true>::split<MidgameChild>(
     int32_t,
     int32_t,
     int32_t&,
-    int32_t&
+    int32_t&,
+    bool
 );
 extern template AbortVoid Kernel<true>::split<EndgameChild>(
     Searcher&,
@@ -449,7 +453,8 @@ extern template AbortVoid Kernel<true>::split<EndgameChild>(
     int32_t,
     int32_t,
     int32_t&,
-    int32_t&
+    int32_t&,
+    bool
 );
 #endif
 

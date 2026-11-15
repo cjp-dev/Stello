@@ -270,7 +270,8 @@ public:
         int32_t alpha,
         int32_t beta,
         int32_t& best,
-        int32_t& best_move
+        int32_t& best_move,
+        bool is_root = false
     );
 
     void split_task(const Helpers& h, const SplitPoint* point, const TaskSetup& setup) noexcept;

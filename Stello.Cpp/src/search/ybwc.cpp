@@ -64,14 +64,15 @@ AbortVoid Searcher::split(
     int32_t alpha,
     int32_t beta,
     int32_t& best,
-    int32_t& best_move
+    int32_t& best_move,
+    bool is_root
 ) {
 #if STELLO_HAS_X86_64_V3
     if (dispatch_v3()) {
-        return Kernel<true>::split(*this, children, alpha, beta, best, best_move);
+        return Kernel<true>::split(*this, children, alpha, beta, best, best_move, is_root);
     }
 #endif
-    return Kernel<false>::split(*this, children, alpha, beta, best, best_move);
+    return Kernel<false>::split(*this, children, alpha, beta, best, best_move, is_root);
 }
 
 template AbortVoid Searcher::split<MidgameChild>(
@@ -79,7 +80,8 @@ template AbortVoid Searcher::split<MidgameChild>(
     int32_t,
     int32_t,
     int32_t&,
-    int32_t&
+    int32_t&,
+    bool
 );
 
 template AbortVoid Searcher::split<EndgameChild>(
@@ -87,7 +89,8 @@ template AbortVoid Searcher::split<EndgameChild>(
     int32_t,
     int32_t,
     int32_t&,
-    int32_t&
+    int32_t&,
+    bool
 );
 
 } // namespace stello::search

@@ -688,12 +688,16 @@ STELLO_TEST(phase2_root_split_brother_cut_and_split_heartbeats) {
         search::SearchEngine engine(18);
         (void)engine.search_simple(Board::initial(), Player::Black, with_threads(SearchLimits::fixed_depth(4), 8));
 
+        const uint64_t root_legal = midgame[0].board.legal_moves(midgame[0].player);
         std::vector<int64_t> report_times_ms;
         const auto outcome = engine.search(
             midgame[0].board,
             midgame[0].player,
             with_threads(SearchLimits::time_per_move_ms(550), 8),
             [&](const SearchInfo& info) {
+                if (info.best_move.has_value()) {
+                    STELLO_CHECK_MSG((root_legal & info.best_move->bit()) != 0ULL, "heartbeat best_move must be root-legal");
+                }
                 report_times_ms.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(info.elapsed).count());
             });
         STELLO_CHECK(outcome.ok);
