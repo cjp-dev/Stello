@@ -389,5 +389,21 @@ Temporary `SearchOptions` / `opt=` switches (`mpc-model=`, `mpc-early=`, `mpc-la
 
 - **Decision (Gate P3):** Rejected (`hash-bits=19` stays default). Even at `2 s/move` with `8` threads, increasing the TT from `64 MB` (`hash-bits=19`) to `256 MB` (`hash-bits=21`) reduced NPS by `−9.3 %` (`186.72M` vs `205.94M`), reduced average midgame depth by `−0.39` plies (`25.09` vs `25.48`), and scored `49.0 %` (`−7` Elo, LOS `20.3 %`). On the 7800X3D (`96 MB` L3 V-Cache), `64 MB` fits in L3 while `256 MB` spills to DRAM.
 
+---
+
+## Phase 3 — Search: Item 6 (Root Clog Search, Rejected at Gate P3)
+
+- **Setup:** Implemented a pure-bitboard root clog search behind temporary `opt=clog=<N>` (`0 = off`, `1..16` max plies; capped on timed searches to `1/8` of remaining hard budget; ascending opponent-mobility ordering, immediate `flips == opponent` `+64` wipeout, lazy `endgame::stable::of` `beta` bound, excluding solved clog moves from midgame iterations and seeding `alpha` / `best_move` with `WIN_SCORE` scaling or immediate `ScoreKind::Exact` if all moves or `+64` are solved).
+- **Speed probes (`mid-bench --passes 1`, `hash-bits=19`, `1t`):**
+  - `d=14`: `off` `29,779,568` (`1.998 s`), `clog=4` `31,467,681` (`2.023 s`, `+0.25 ms/pos`), `clog=5` `49,677,844` (`2.141 s`, `+1.43 ms/pos`).
+  - `d=16`: `off` `77,867,024` (`5.235 s`), `clog=5` `97,765,300` (`5.481 s`, `+2.46 ms/pos`).
+- **Match evaluation (`1,180` games, `500 ms/move`, `1t` `--workers 8`, `hash-bits=19`):**
+
+| Match | Games | Side A | Side B | Score (B, 95 % CI) | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | Wall Time |
+|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|
+| `p36_clog5_500ms_1180g` | 1,180 | `clog_off` (`500 ms`) | `clog_5` (`clog=5`) | 49.2 % (47.7–50.6 %) | −6 (−16 to +4) | 12.1 % | −0.1 ± 0.2 | 19.73 / 19.71 | 24.1 / 24.1 | [30m 20s](benchmark-results/match_p36_clog5_500ms_1180g.md) |
+
+- **Decision (Gate P3):** Rejected. With no selective endgame and exact solves already starting around `24.1` empties on average (`~19.7` plies midgame depth), pre-searching `5` plies at the root pays a small depth tax (`−0.02` plies) and scores `49.2 %` (`−6` Elo, LOS `12.1 %`), failing Gate P3 (`lower bound > 50 %`). All temporary `clog` changes were reverted cleanly.
+
 
 
