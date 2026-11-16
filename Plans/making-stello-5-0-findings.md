@@ -376,5 +376,18 @@ Temporary `SearchOptions` / `opt=` switches (`mpc-model=`, `mpc-early=`, `mpc-la
 
 - **Decision (Gate P3):** Rejected. Narrow aspiration windows (`±1` to `±1.5` discs) *increased* `mid-bench` nodes at depth 16 (`+4.04 %` and `+1.46 %`) due to odd/even parity and Multi-ProbCut score swings causing re-searches. Wider windows (`±2` and `±4` discs) cut only `0.4–2.1 %` of `mid-bench` nodes at depths 16–18 and produced `50.3 %` (`+2` Elo) in both `1,180`-game `500 ms` matches with zero effective depth gain (`19.74` vs `19.74`; `19.72` vs `19.76`), failing Gate P3 (`lower bound > 50 %`). All temporary `aspiration` changes were reverted cleanly.
 
+---
+
+## Phase 3 — Search: Item 5 (Transposition Table Size at 2 s with 8 Threads, Rejected)
+
+- **Setup:** Tested doubling the transposition table capacity by 4× (`hash-bits=21`, `256 MB`: `2 × 2^21 × 64 B` slots) against the default (`hash-bits=19`, `64 MB`: `2 × 2^19 × 64 B` slots) at `2,000 ms/move` with `8` threads (`--workers 1`, `600` games).
+- **Match evaluation (`600` games, `2,000 ms/move`, `8t` `--workers 1`):**
+
+| Match | Games | Side A | Side B | Score (B, 95 % CI) | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | NPS (A / B) | Wall Time |
+|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `p35_hash21_vs_19_2000ms_8t_600g` | 600 | `hash19` (`64 MB`) | `hash21` (`256 MB`) | 49.0 % (46.6–51.4 %) | −7 (−23 to +9) | 20.3 % | 0.0 ± 0.2 | 25.48 / 25.09 | 27.8 / 27.7 | 205.94M / 186.72M | [6h 07m + 41m](benchmark-results/match_p35_hash21_vs_19_2000ms_8t_600g.md) |
+
+- **Decision (Gate P3):** Rejected (`hash-bits=19` stays default). Even at `2 s/move` with `8` threads, increasing the TT from `64 MB` (`hash-bits=19`) to `256 MB` (`hash-bits=21`) reduced NPS by `−9.3 %` (`186.72M` vs `205.94M`), reduced average midgame depth by `−0.39` plies (`25.09` vs `25.48`), and scored `49.0 %` (`−7` Elo, LOS `20.3 %`). On the 7800X3D (`96 MB` L3 V-Cache), `64 MB` fits in L3 while `256 MB` spills to DRAM.
+
 
 
