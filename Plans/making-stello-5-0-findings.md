@@ -405,5 +405,27 @@ Temporary `SearchOptions` / `opt=` switches (`mpc-model=`, `mpc-early=`, `mpc-la
 
 - **Decision (Gate P3):** Rejected. With no selective endgame and exact solves already starting around `24.1` empties on average (`~19.7` plies midgame depth), pre-searching `5` plies at the root pays a small depth tax (`−0.02` plies) and scores `49.2 %` (`−6` Elo, LOS `12.1 %`), failing Gate P3 (`lower bound > 50 %`). All temporary `clog` changes were reverted cleanly.
 
+---
+
+## Phase 4 — Endgame & Transition: Item 1 (`end_local` Pattern Move Ordering, Rejected at Gate P4)
+
+- **Setup:** Added a `4`-pattern endgame feature set `end4` (`edge+2x`, `triangle`, `corner+block`, `cross`, `16` features across `4 × 59,049` raw indices) and disc-range filtering (`--min-discs`, `--max-discs`) in `Stello.Trainer`. Trained `1` stage (`--min-discs 52 --max-discs 54 --smooth 1 --max-per-discs 2000000 --units 16 --min-appear 15`) on `10,000,000` positions from `Training data/stello-bin` (`44 s`: train MAE `5.556`, validation MAE `5.610`, RMSE `7.161`, `92,691` bytes gzip as `stello-end-local.bin`). Implemented incremental `16`-feature `LocalPatternState` (portable, BMI2 `state_pext`, single-`YMM` AVX2 update) for `end_local` at `11–13` empties behind temporary `opt=end-local=<N>` (`0 = off`, weighted mobility + pattern disc estimate).
+- **Speed probes (`solve-bench`, `hash-bits=19`, `100 %` exact moves and scores):**
+  - Weight sweep on `FFO #40–49` (`1t`, `1` pass, before `state_pext`): baseline `off` `1,115,666,701` nodes in `17.3 s` (`64.35M` nps); `w=8` minimized time/nodes at `913.8M` / `15.9 s` (while `12–13` empties only at `w=8` was slower at `970,691,078` / `16.4 s`).
+  - `FFO #40–49`, `1t` (`3` passes, with `state_pext`, `w=8`): `913,845,572` nodes (`−18.1 %`) in `15.7 s` (`−9.6 %`), `58.32M` vs `64.35M` nps.
+  - `FFO #40–49`, `8t` (`3` passes, `w=8`): `1,178,186,120` nodes (`−20.9 %` vs `1,489,727,223`) in `3.348 s` (`−11.1 %` vs `3.767 s`), `351.88M` vs `395.44M` nps.
+  - `FFO #40–59`, `8t` (`1` pass, `w=8`): `27,227,038,461` nodes (`−16.3 %` vs `32,523,926,257`) in `84.3 s` (`−5.2 %` vs `88.9 s`), `323.09M` vs `365.78M` nps.
+- **Match evaluation (`1,180` games, `500 ms/move`, `1t` `--workers 8`, `hash-bits=19`):**
+
+| Match | Games | Side A | Side B | Score (B, 95 % CI) | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | NPS (A / B) | Wall Time |
+|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `p41_endlocal8_500ms_1180g` | 1,180 | `endlocal_off` (`500 ms`) | `endlocal_8` (`end-local=8`) | 48.3 % (46.8–49.8 %) | −12 (−22 to −1) | 1.4 % | −0.1 ± 0.2 | 19.71 / 19.72 | 24.0 / 24.1 | 21.67M / 20.17M | [30m 18s](benchmark-results/match_p41_endlocal8_500ms_1180g.md) |
+
+- **Technical diagnosis:**
+  - `end_local` is never called during midgame or Multi-ProbCut (`midgame_iterations -> search_root -> search_inc / try_probcut_inc`); it runs solely inside `solve_iteration` (`solve_root -> end_window / end_deep -> end_null` at `empties <= 13`).
+  - Match `NodesPerSecond` (`20.17M` vs `21.67M`, `−6.9 %`) blends midgame (`~15M` nps) and solver (`~58–64M` nps). Because `end_local` enters from `end_deep` with `eval_state == nullptr` at `13` empties and computes `state_of_local(own, opponent)` from scratch, pattern-state extraction/evaluation overhead eats roughly half of the `−18.1 %` node reduction (`58.32M` vs `64.35M` nps, `−9.6 %` wall time on `FFO #40–49`). Searching `~18 %` fewer `60M`-nps solver nodes (at `58.3M` vs `64.4M` nps during `24–27`-empty WLD/exact solves, including partial WLD solves that hit the `500 ms` hard cap) reduces the solver share of total game nodes, pulling blended whole-game NPS down.
+  - Because each additional empty square multiplies the endgame solver tree by `~2.7×`, a `9.6 %` (`1.10×`) FFO speedup shifts the solve horizon by only `log_{2.7}(1.10) ≈ +0.1` empties (`24.0 -> 24.1`), yielding no Elo gain at `500 ms` (`48.3 %`, `−12` Elo, `95 % CI 46.8–49.8 %`) while adding a second embedded weights file (`stello-end-local.bin`, hurting WebAssembly bundle size) and `~400` lines of plumbing across `19` files. By contrast, Phase 4, Item 2 (`mpc-end` selective endgame + estimated solve-time handover) directly targets the `25–30`-empty transition zone where full WLD solves time out.
+- **Decision (Gate P4):** Rejected. All engine, book, and benchmark `end_local` changes were reverted cleanly; `--min-discs` / `--max-discs` support in `Stello.Trainer` was kept.
+
 
 

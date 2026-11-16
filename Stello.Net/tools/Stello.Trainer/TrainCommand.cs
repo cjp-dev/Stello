@@ -24,13 +24,15 @@ internal static class TrainCommand
 
     public static int Run(Options options)
     {
-        options.Allow("out", "set", "stages", "data", "max-per-discs", "smooth", "loops", "rate", "patience", "workers",
+        options.Allow("out", "set", "stages", "data", "max-per-discs", "min-discs", "max-discs", "smooth", "loops", "rate", "patience", "workers",
             "only-stage", "units", "prior", "min-appear");
         string output = options.Text("out") ?? throw new ArgumentException("train needs --out <file>.");
         PatternSet set = PatternSet.ByName(options.Text("set") ?? "classic11");
         int stages = options.Number("stages", 15, 1, 61);
         string data = options.Text("data") ?? TrainingData.DefaultFolder();
         int maxPerDiscs = options.Number("max-per-discs", 2_000_000, 1000, 100_000_000);
+        int minDiscs = options.Number("min-discs", TrainingData.MinDiscs, TrainingData.MinDiscs, TrainingData.MaxDiscs);
+        int maxDiscs = options.Number("max-discs", TrainingData.MaxDiscs, minDiscs, TrainingData.MaxDiscs);
         int smooth = options.Number("smooth", 2, 0, 20);
         int loops = options.Number("loops", 1000, 1, 100_000);
         double rate = Fraction(options, "rate", 0.05);
@@ -60,7 +62,12 @@ internal static class TrainCommand
                 continue;
             }
 
-            int[] own = Enumerable.Range(TrainingData.MinDiscs, TrainingData.MaxDiscs - TrainingData.MinDiscs + 1).Where(d => stageOf[d] == stage).ToArray();
+            int[] own = Enumerable.Range(minDiscs, maxDiscs - minDiscs + 1).Where(d => stageOf[d] == stage).ToArray();
+            if (own.Length == 0)
+            {
+                summary.Add($"| {stage} | — | 0 | — | — | — | skipped |");
+                continue;
+            }
             int[] trainDiscs = Enumerable.Range(own[0] - smooth, own[^1] - own[0] + 1 + 2 * smooth)
                 .Where(d => d is >= TrainingData.MinDiscs and <= TrainingData.MaxDiscs).ToArray();
             Encoded train = Encode(folded, trainDiscs.SelectMany(d => TrainingData.Load(data, Split.Train, d, maxPerDiscs)).ToArray(), workers);
