@@ -358,5 +358,23 @@ Temporary `SearchOptions` / `opt=` switches (`mpc-model=`, `mpc-early=`, `mpc-la
 
 - **Decision (Gate P3):** Rejected. Raising `soft-pct` to `80–100 %` increased average move time by `+14–21 ms` (`+5–8 %`) and average midgame depth by `+0.11–0.15` plies, but none cleared the `50 %` lower-bound gate (`soft80` `50.0 %`, `soft90` `51.2 %` CI `49.5–52.9 %`, `soft100` `50.0 %`). Default `2/3` (`66.7 %`) stays.
 
+---
+
+## Phase 3 — Search: Item 4 (Aspiration Windows, Rejected at Gate P3)
+
+- **Setup:** Gated behind a temporary `opt=aspiration=<N>` (`0 = off`, `<N>` = half-width in `1/100` disc units starting from `look >= 3` / `depth >= 4`, doubling on fail-low/fail-high up to `1600` before falling back to `[-ROOT_WINDOW, +ROOT_WINDOW]` with fail-low `best`/`improvements`/`split` preservation).
+- **Speed probes (`mid-bench --passes 1`, `hash-bits=19`, `1t`):**
+  - `d=14`: `off` `29,779,568` (`2.017 s`), `100` (`±1d`) `30,312,539` (`+1.79 %`), `150` (`±1.5d`) `29,398,598` (`−1.28 %`), `200` (`±2d`) `29,543,148` (`−0.79 %`), `300` (`±3d`) `29,517,484` (`−0.88 %`).
+  - `d=16`: `off` `77,867,024` (`5.319 s`), `100` `81,009,359` (`+4.04 %`), `150` `79,000,875` (`+1.46 %`), `200` `77,571,337` (`−0.38 %`), `300` `77,518,185` (`−0.45 %`), `400` (`±4d`) `76,239,011` (`−2.09 %`, `5.135 s`), `500` (`±5d`) `77,126,721` (`−0.95 %`, `5.376 s`).
+  - `d=18`: `off` `212,290,236` (`14.5 s`), `200` `208,938,543` (`−1.58 %`, `14.1 s`), `300` `212,577,991` (`+0.14 %`, `14.3 s`), `400` `209,112,936` (`−1.50 %`, `14.1 s`).
+- **Match evaluation (`2,360` games, `500 ms/move`, `1t` `--workers 8`, `hash-bits=19`):**
+
+| Match | Games | Side A | Side B | Score (B, 95 % CI) | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | Wall Time |
+|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|
+| `p34_asp400_500ms_1180g` | 1,180 | `asp_off` (`500 ms`) | `asp_400` (`±4d`) | 50.3 % (48.7–52.0 %) | +2 (−9 to +14) | 65.7 % | 0.0 ± 0.2 | 19.74 / 19.74 | 24.0 / 24.0 | [30m 22s](benchmark-results/match_p34_asp400_500ms_1180g.md) |
+| `p34_asp200_500ms_1180g` | 1,180 | `asp_off` (`500 ms`) | `asp_200` (`±2d`) | 50.3 % (48.5–52.2 %) | +2 (−10 to +15) | 64.1 % | +0.1 ± 0.2 | 19.76 / 19.72 | 24.1 / 24.1 | [30m 17s](benchmark-results/match_p34_asp200_500ms_1180g.md) |
+
+- **Decision (Gate P3):** Rejected. Narrow aspiration windows (`±1` to `±1.5` discs) *increased* `mid-bench` nodes at depth 16 (`+4.04 %` and `+1.46 %`) due to odd/even parity and Multi-ProbCut score swings causing re-searches. Wider windows (`±2` and `±4` discs) cut only `0.4–2.1 %` of `mid-bench` nodes at depths 16–18 and produced `50.3 %` (`+2` Elo) in both `1,180`-game `500 ms` matches with zero effective depth gain (`19.74` vs `19.74`; `19.72` vs `19.76`), failing Gate P3 (`lower bound > 50 %`). All temporary `aspiration` changes were reverted cleanly.
+
 
 
