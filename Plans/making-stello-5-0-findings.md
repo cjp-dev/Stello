@@ -427,5 +427,26 @@ Temporary `SearchOptions` / `opt=` switches (`mpc-model=`, `mpc-early=`, `mpc-la
   - Because each additional empty square multiplies the endgame solver tree by `~2.7×`, a `9.6 %` (`1.10×`) FFO speedup shifts the solve horizon by only `log_{2.7}(1.10) ≈ +0.1` empties (`24.0 -> 24.1`), yielding no Elo gain at `500 ms` (`48.3 %`, `−12` Elo, `95 % CI 46.8–49.8 %`) while adding a second embedded weights file (`stello-end-local.bin`, hurting WebAssembly bundle size) and `~400` lines of plumbing across `19` files. By contrast, Phase 4, Item 2 (`mpc-end` selective endgame + estimated solve-time handover) directly targets the `25–30`-empty transition zone where full WLD solves time out.
 - **Decision (Gate P4):** Rejected. All engine, book, and benchmark `end_local` changes were reverted cleanly; `--min-discs` / `--max-discs` support in `Stello.Trainer` was kept.
 
+---
+
+## Phase 4 — Endgame & Transition: Item 2 (Selective Endgame `mpc-end` & Solve Handover, Accepted)
+
+- **Error model (`Stello.Trainer mpc-end` on `plus15`):** Solved `1,040` positions (`38–50` discs, `80`/disc count, `15 s` solve cap -> `972` solved in `3m 46s`). Restricted to Egaroucid's same-parity shallow depth `s = ((empties / 3) & ~1) + (empties & 1)`, the RMSE of `exact − shallow` is `5.43` discs at `14` empties (`s = 4`) down to `4.20` at `26` empties (`s = 8`), fitted linearly by `σ_end = max(2.0, 1.0376 + 5.4960·x − 0.0378·s)` (`x = discs / 64`).
+- **Implementation:**
+  - Added `try_end_probcut` inside `end_window` / `end_deep` (`empties >= 16`) in [search_impl.hpp](../../Stello.Cpp/src/endgame/search_impl.hpp), probing `search_inc` (`in_probcut = true`, `look = s - 1`, `WIN_SCORE` terminal scores normalized to disc units) against precomputed `EndProbCutErrors` (`stages 1..6`: `74 % / 1.13`, `88 % / 1.55`, `93 % / 1.81`, `98 % / 2.32`, `99 % / 2.57`, `99.9 % / 3.29`). Selective entries store `depth = stage` (`1..6`) in `endgame_table`, while exact solves store `depth = empties` (`>= 7`), so ascending stages share `hash_move` and never corrupt or overwrite exact entries. `TimeControlMode::Solve` stays 100 % exact (`end_mpc_stage = 0`).
+  - After midgame reaches `empties - 8` (`TimePerMove` and `TimePerGame` when `selective` is enabled and `empties >= 16`), `iterate()` runs `3` full-window `[-64, +64]` selective stages (`74 % -> 88 % -> 98 %`) within the midgame soft budget before entering exact `WLD -> Exact`; if the soft budget expires during selective passes it returns the last completed stage's disc-maximizing `Heuristic` move cleanly. Live `ScoreKind::Heuristic` progress callbacks in `solve_root` / `Kernel::split` are scaled by `PATTERN_UNITS_PER_DISC` (`100`). In `TimePerGame`, `for_solver` (`rest / 2`) is also guarded by `estimate_wld_ms` so long-clock games do not burn half the remaining clock on unsolvable `30+`-empty exact solves.
+- **`mid-quality` ablations (`midgame-exact.txt`, `28`/`26`/`24` empties):**
+  - `500 ms` (`300` positions): `hybrid` (`74 -> 88 -> 98 %`) cut disc loss from `0.52 ± 0.16` (`84.3 %` best move) to `0.33 ± 0.12` (`89.0 %` best move; paired `base − hybrid = +0.19 ± 0.12`), driven by `24` empties dropping from `0.68 ± 0.35` (`82.0 %` best, `WLD` `+2` vs `+18` cutoff) to `0.08 ± 0.10` (`97.0 %` best). Skipping `mpc-end` via `solve-est` (`smart`, `smart2`, `mpc_est`) reverted part of that gain by jumping straight into `[-1, +1]` WLD too early.
+  - `2,000 ms` (`150` positions): `hybrid` halved disc loss from `0.27 ± 0.17` (`92.7 %` best move, `1,744 ms`) to `0.13 ± 0.13` (`96.7 %` best move, `1,606 ms`; paired `+0.13 ± 0.12`), cutting `26`-empty loss `9×` (`0.04 ± 0.08`, `98.0 %` best vs `0.36 ± 0.33`, `90.0 %`) while keeping `24` empties at `92 %` solved (`0.04` vs `0.08`).
+- **Match evaluation (`2,960` games, `1t` `--workers 8`, `hash-bits=19`):**
+
+| Match | Games | Side A | Side B | Score (B, 95 % CI) | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | Wall Time |
+|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|
+| `p42_hybrid_500ms_1180g` | 1,180 | `mpcend_off` (`500 ms`) | `mpcend_hybrid` (`500 ms`) | 51.5 % (49.9–53.0 %) | +10 (0 to +21) | 97.1 % | +0.5 ± 0.2 | 19.68 / 20.25 | 23.9 / 22.9 | [30m 37s](benchmark-results/match_p42_hybrid_500ms_1180g.md) |
+| `p42_smart_500ms_1180g` | 1,180 | `mpcend_off` (`500 ms`) | `mpcend_smart` (`500 ms`) | 50.3 % (48.9–51.8 %) | +2 (−8 to +12) | 67.9 % | +0.1 ± 0.2 | 19.68 / 19.72 | 24.0 / 23.9 | [30m 22s](benchmark-results/match_p42_smart_500ms_1180g.md) |
+| `p42_hybrid_2000ms_600g` | 600 | `mpcend_off` (`2,000 ms`) | `mpcend_hybrid` (`2,000 ms`) | 53.2 % (51.5–54.8 %) | +22 (+11 to +34) | 100.0 % | +0.5 ± 0.1 | 22.17 / 23.00 | 25.7 / 25.1 | [57m 45s](benchmark-results/match_p42_hybrid_2000ms_600g.md) |
+
+- **Decision (Gate P4):** Accepted. `mpcend_hybrid` (`74 -> 88 -> 98 %` selective endgame + `TimePerGame` `for_solver` guard) improved `500 ms` (`51.5 %`, `+10` Elo, `LOS 97.1 %`, `+0.5 ± 0.2` discs/g; winning `30–5` on equal-`FirstSolve` pairs) and decisively passed `2,000 ms` (`53.2 %`, `95 % CI 51.5–54.8 %`, `+22` Elo, `LOS 100.0 %`, `+0.5 ± 0.1` discs/g), while leaving exact `Solve` (`FFO #40–59`) untouched. Temporary `opt=mpc-end=`, `opt=end-dist=`, and `opt=solve-est=` switches were removed cleanly.
+
 
 

@@ -283,6 +283,14 @@ struct Kernel {
         int32_t alpha,
         int32_t beta
     );
+    static AbortResult<std::optional<int32_t>> try_end_probcut(
+        Searcher& s,
+        uint64_t own,
+        uint64_t opponent,
+        int32_t alpha,
+        int32_t beta,
+        int32_t empties
+    );
     static AbortResult<int32_t> end_local(
         Searcher& s,
         uint64_t own,

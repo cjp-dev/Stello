@@ -48,6 +48,24 @@ std::unique_ptr<ProbCutErrors> make_probcut_errors(double t) {
     return errors;
 }
 
+std::unique_ptr<EndProbCutErrors> make_end_probcut_errors() {
+    static constexpr std::array<double, END_MPC_STAGES + 1> kSelectivityT = {
+        0.0, 1.13, 1.55, 1.81, 2.32, 2.57, 3.29,
+    };
+    auto errors = std::make_unique<EndProbCutErrors>();
+    for (size_t stage = 1; stage <= END_MPC_STAGES; ++stage) {
+        const double t = kSelectivityT[stage];
+        for (int32_t empties = 0; empties <= 64; ++empties) {
+            const int32_t shallow = ((empties / 3) & ~1) + (empties & 1);
+            const double x = static_cast<double>(64 - empties) / 64.0;
+            const double sigma = (std::max)(2.0, 1.0376 + 5.4960 * x - 0.0378 * static_cast<double>(shallow));
+            (*errors)[stage][static_cast<size_t>(empties)] = static_cast<int32_t>(
+                std::ceil(t * sigma * static_cast<double>(eval::PATTERN_UNITS_PER_DISC)));
+        }
+    }
+    return errors;
+}
+
 void move_to_front(std::span<int32_t> moves, std::span<const int32_t> improvements) noexcept {
     for (const int32_t mv : improvements) {
         size_t index = 0;
@@ -65,6 +83,7 @@ void move_to_front(std::span<int32_t> moves, std::span<const int32_t> improvemen
 SearchContext SearchContext::create(
     const SearchOptions& options,
     const ProbCutErrors* probcut_errors,
+    const EndProbCutErrors* end_probcut_errors,
     const TranspositionTable& midgame_table,
     const TranspositionTable& endgame_table,
     Clock clock,
@@ -73,6 +92,7 @@ SearchContext SearchContext::create(
     SearchContext ctx;
     ctx.pattern = options.pattern ? options.pattern.get() : &eval::EvalWeights::built_in();
     ctx.probcut_errors = probcut_errors;
+    ctx.end_probcut_errors = end_probcut_errors;
     ctx.midgame_table = &midgame_table;
     ctx.endgame_table = &endgame_table;
     ctx.clock = clock;
@@ -90,6 +110,7 @@ SearchEngine::SearchEngine(uint32_t hash_bits, SearchOptions options)
               ? detail::make_probcut_errors(
                     static_cast<double>(options_.probcut_percent.value_or(DEFAULT_PROBCUT_PERCENT)) / 100.0)
               : nullptr),
+      end_probcut_errors_(options_.selective ? detail::make_end_probcut_errors() : nullptr),
       midgame_table_(hash_bits),
       endgame_table_(hash_bits) {
     assert(hash_bits >= 10 && hash_bits <= 26 && "hash bits must be 10-26");
@@ -111,7 +132,7 @@ Searcher SearchEngine::searcher(
     uint32_t root_empties
 ) {
     const SearchContext ctx = SearchContext::create(
-        options_, probcut_errors_.get(), midgame_table_, endgame_table_, clock_, root_empties);
+        options_, probcut_errors_.get(), end_probcut_errors_.get(), midgame_table_, endgame_table_, clock_, root_empties);
     Searcher s(ctx, main_, stop);
     s.progress = std::move(progress);
     s.iteration_done = iteration_done_ ? &iteration_done_ : nullptr;
@@ -151,7 +172,7 @@ SearchOutcome SearchEngine::search(
     }
 
     const SearchContext context = SearchContext::create(
-        options_, probcut_errors_.get(), midgame_table_, endgame_table_, clock_, root_empties);
+        options_, probcut_errors_.get(), end_probcut_errors_.get(), midgame_table_, endgame_table_, clock_, root_empties);
     pool_->for_each_state([](ThreadState& state) { state.ordering.clear_responses(); });
 
     std::atomic<uint64_t> nodes{0};
@@ -180,6 +201,7 @@ SearchResult SearchEngine::search_simple(const Board& board, Player player, cons
 Searcher::Searcher(const SearchContext& context, ThreadState& thread, const StopSignal& stop_signal)
     : pattern(context.pattern),
       probcut_errors(context.probcut_errors),
+      end_probcut_errors(context.end_probcut_errors),
       midgame_table(context.midgame_table),
       endgame_table(context.endgame_table),
       endgame(&thread.endgame),

@@ -7,6 +7,7 @@
 #include <array>
 #include <bit>
 #include <cassert>
+#include <cmath>
 #include <limits>
 #include <optional>
 
@@ -58,6 +59,36 @@ struct StopHelpers {
     StopHelpers(const StopHelpers&) = delete;
     StopHelpers& operator=(const StopHelpers&) = delete;
 };
+
+struct ResetEndMpcStage {
+    int32_t& stage;
+    ~ResetEndMpcStage() noexcept { stage = 0; }
+};
+
+inline uint64_t current_total_nodes(const Searcher& s) noexcept {
+    return s.nodes + (s.node_source != nullptr ? s.node_source->load(std::memory_order_relaxed) : 0ULL);
+}
+
+inline int64_t estimate_wld_ms(
+    int32_t empties,
+    int32_t depth_done,
+    uint64_t last_iter_nodes,
+    int64_t mid_elapsed_ms,
+    uint64_t total_nodes
+) noexcept {
+    if (empties <= 14) {
+        return 1;
+    }
+    const double mid_nps = static_cast<double>((std::max)(total_nodes, uint64_t{10'000}))
+                         / static_cast<double>((std::max<int64_t>)(mid_elapsed_ms, 1));
+    // Calibrated on midgame-exact (24-28 empties): ~48x iter_nodes at 24 empties, scaling ~1.35x/empty.
+    const double baseline_depth = static_cast<double>((std::max)(empties - 8, 1));
+    const double scale = 48.0 * std::pow(1.35, static_cast<double>(empties - 24))
+                       / std::pow(2.0, static_cast<double>(depth_done) - baseline_depth);
+    const double est_nodes = static_cast<double>((std::max)(last_iter_nodes, uint64_t{1})) * scale;
+    const double est_ms = est_nodes / (mid_nps * 3.5);
+    return static_cast<int64_t>((std::min)(est_ms, 1e12));
+}
 
 } // namespace detail::midgame
 
@@ -130,6 +161,7 @@ AbortVoid Kernel<UseAvx2>::iterate(
     const int32_t empties = static_cast<int32_t>(board.empty_count());
     time::TimeBudget budget = time::for_midgame(limits, empties).with_soft_percent(s.soft_time_percent, 0);
     s.hard_limit_ms = budget.hard_ms;
+    s.end_mpc_stage = 0;
 
     if (limits.mode() != TimeControlMode::Solve) {
         bool done = false;
@@ -153,6 +185,54 @@ AbortVoid Kernel<UseAvx2>::iterate(
             s.hash_put_height = look;
             STELLO_TRY_VOID_IN_STATUS(search_root(s, board, player, look, root_moves, best));
             ++look;
+        }
+    }
+
+    if (limits.mode() != TimeControlMode::Solve
+        && limits.mode() != TimeControlMode::FixedDepth
+        && s.end_probcut_errors != nullptr
+        && empties >= END_MPC_MIN_EMPTIES)
+    {
+        static constexpr std::array<int32_t, 3> kSelectiveStages = {1, 2, 4};
+        ResetEndMpcStage reset_stage{s.end_mpc_stage};
+        bool finished_all_stages = true;
+        for (const int32_t stage : kSelectiveStages) {
+            if (s.stop_iterating(limits, budget, 0)) {
+                finished_all_stages = false;
+                break;
+            }
+            s.end_mpc_stage = stage;
+            s.hash_get_height = 64;
+            s.hash_put_height = 64;
+            Best stage_best = best;
+            STELLO_TRY_ASSIGN_IN_STATUS(
+                const ScoreMove stage_res,
+                solve_iteration(s, board, player, -64, 64, ScoreKind::Heuristic, root_moves, stage_best));
+            best = Best{
+                stage_res.mv,
+                stage_res.score * eval::PATTERN_UNITS_PER_DISC,
+                ScoreKind::Heuristic,
+                empties,
+            };
+        }
+        s.end_mpc_stage = 0;
+
+        if (!finished_all_stages) {
+            STELLO_RETURN_OK_VOID();
+        }
+        if (limits.mode() == TimeControlMode::TimePerGame && best.depth > 0) {
+            const time::TimeBudget est_budget = time::for_solver(limits, budget, s.elapsed_ms(), s.soft_time_percent);
+            const int64_t rem_solve_ms = est_budget.hard_ms - s.elapsed_ms();
+            const int64_t capped_rem_ms = (std::min)(rem_solve_ms, budget.hard_ms * 4);
+            const int64_t est_ms = estimate_wld_ms(
+                empties,
+                empties - 8,
+                s.last_iter_nodes,
+                (std::max<int64_t>)(s.elapsed_ms(), 1),
+                current_total_nodes(s));
+            if (est_ms > capped_rem_ms * 3 / 2) {
+                STELLO_RETURN_OK_VOID();
+            }
         }
     }
 
@@ -371,9 +451,11 @@ AbortResult<bool> Kernel<UseAvx2>::midgame_iterations(
         if (main_look != nullptr) {
             main_look->store(look, std::memory_order_relaxed);
         }
+        const uint64_t iter_nodes_start = detail::midgame::current_total_nodes(s);
         s.hash_get_height = look - 1;
         s.hash_put_height = look;
         STELLO_TRY_VOID_R(bool, search_root(s, board, player, look, root_moves, best));
+        s.last_iter_nodes = detail::midgame::current_total_nodes(s) - iter_nodes_start;
         if (s.iteration_done != nullptr && *s.iteration_done) {
             (*s.iteration_done)(look + 1, best.score);
         }
@@ -941,6 +1023,7 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::solve_root(
     const uint64_t own = board.discs(player);
     const uint64_t opp = board.discs(opponent(player));
     const int32_t empties = static_cast<int32_t>(board.empty_count());
+    const int32_t report_scale = (kind == ScoreKind::Heuristic) ? eval::PATTERN_UNITS_PER_DISC : 1;
     int32_t best_score = -INFINITY_SCORE;
     int32_t best_move = -1;
     std::array<int32_t, MAX_MOVES> improvements{};
@@ -966,7 +1049,7 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::solve_root(
             s.report_depth = has_solved_move ? empties : best.depth;
             s.report_move = tail[0];
             s.report_best_move = (best_move >= 0) ? best_move : best.mv;
-            s.report_score = (best_move >= 0) ? best_score : best.score;
+            s.report_score = (best_move >= 0) ? (best_score * report_scale) : best.score;
             s.report_kind = (best_move >= 0) ? kind : best.kind;
 
             const int32_t score_after_first = best_score;
@@ -991,7 +1074,7 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::solve_root(
                 improvements[improved] = best_move;
                 ++improved;
             }
-            s.report(empties, tail.back(), best_move, best_score, kind);
+            s.report(empties, tail.back(), best_move, best_score * report_scale, kind);
             break;
         }
 
@@ -1000,7 +1083,7 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::solve_root(
         s.report_depth = has_solved_move ? empties : best.depth;
         s.report_move = mv;
         s.report_best_move = (best_move >= 0) ? best_move : best.mv;
-        s.report_score = (best_move >= 0) ? best_score : best.score;
+        s.report_score = (best_move >= 0) ? (best_score * report_scale) : best.score;
         s.report_kind = (best_move >= 0) ? kind : best.kind;
 
         const uint64_t f = flips(own, opp, static_cast<uint32_t>(mv));
@@ -1033,7 +1116,7 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::solve_root(
             detail::midgame::apply_solve_best(kind, empties, mv, score, best);
         }
 
-        s.report(empties, mv, best_move, best_score, kind);
+        s.report(empties, mv, best_move, best_score * report_scale, kind);
         if (best_score >= beta) {
             break;
         }

@@ -58,6 +58,7 @@ struct TaskSetup {
     int32_t hash_get_height{0};
     int32_t hash_put_height{0};
     bool in_probcut{false};
+    int32_t end_mpc_stage{0};
     Duration start{Duration::zero()};
     int64_t hard_limit_ms{0};
 };

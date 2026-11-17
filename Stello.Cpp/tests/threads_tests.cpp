@@ -325,7 +325,7 @@ STELLO_TEST(threads_solving_different_positions_on_one_table_get_exact_scores) {
     });
     const auto probcut = search::detail::make_probcut_errors(static_cast<double>(search::DEFAULT_PROBCUT_PERCENT) / 100.0);
     const search::SearchContext context = search::SearchContext::create(
-        opts, probcut.get(), engine.midgame_table(), engine.endgame_table(), &search::system_clock, 64);
+        opts, probcut.get(), nullptr, engine.midgame_table(), engine.endgame_table(), &search::system_clock, 64);
 
     auto solve_bucket = [&](size_t thread_idx, search::ThreadState& state) {
         std::vector<std::pair<size_t, int32_t>> scores;

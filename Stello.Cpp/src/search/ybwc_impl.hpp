@@ -125,7 +125,7 @@ AbortVoid Kernel<UseAvx2>::split(
             best_move = mv;
             if (is_root) {
                 s.report_best_move = best_move;
-                s.report_score = best;
+                s.report_score = (s.end_mpc_stage > 0) ? (best * eval::PATTERN_UNITS_PER_DISC) : best;
             }
         }
     };
@@ -157,6 +157,7 @@ AbortVoid Kernel<UseAvx2>::split(
             s.hash_get_height,
             s.hash_put_height,
             s.in_probcut,
+            s.end_mpc_stage,
             s.start,
             s.hard_limit_ms,
         };

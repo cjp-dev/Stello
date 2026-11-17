@@ -34,6 +34,8 @@ inline constexpr int32_t END_FAST_EMPTIES = 6;
 inline constexpr int32_t END_SIMPLE_EMPTIES = 10;
 inline constexpr int32_t END_LOCAL_EMPTIES = 13;
 inline constexpr int32_t END_ETC_MIN_EMPTIES = 12;
+inline constexpr int32_t END_MPC_STAGES = 6;
+inline constexpr int32_t END_MPC_MIN_EMPTIES = 16;
 inline constexpr int32_t SOLVE_ORDERING_LOOKS = 4;
 inline constexpr int32_t YBWC_MID_MIN_DEPTH = 6;
 inline constexpr int32_t YBWC_END_MIN_EMPTIES = 14;
@@ -53,6 +55,8 @@ inline constexpr int32_t ORDER_HASH_MOVE = 10'000'000;
 
 /// t * sigma in 1/100 disc by disc count (0-64) and depth (1-60).
 using ProbCutErrors = std::array<std::array<int32_t, 61>, 65>;
+/// t * sigma_end in 1/100 disc by selective stage (1-6) and empty squares (0-64).
+using EndProbCutErrors = std::array<std::array<int32_t, 65>, END_MPC_STAGES + 1>;
 
 using Clock = Duration (*)();
 Duration system_clock();
@@ -144,6 +148,7 @@ struct Best {
 struct SearchContext {
     const eval::EvalWeights* pattern{nullptr};
     const ProbCutErrors* probcut_errors{nullptr};
+    const EndProbCutErrors* end_probcut_errors{nullptr};
     const TranspositionTable* midgame_table{nullptr};
     const TranspositionTable* endgame_table{nullptr};
     Clock clock{system_clock};
@@ -154,6 +159,7 @@ struct SearchContext {
     static SearchContext create(
         const SearchOptions& options,
         const ProbCutErrors* probcut_errors,
+        const EndProbCutErrors* end_probcut_errors,
         const TranspositionTable& midgame_table,
         const TranspositionTable& endgame_table,
         Clock clock,
@@ -279,6 +285,7 @@ public:
     // Fields readable by search modules and unit tests
     const eval::EvalWeights* pattern{nullptr};
     const ProbCutErrors* probcut_errors{nullptr};
+    const EndProbCutErrors* end_probcut_errors{nullptr};
     const TranspositionTable* midgame_table{nullptr};
     const TranspositionTable* endgame_table{nullptr};
     EndgameState* endgame{nullptr};
@@ -290,6 +297,7 @@ public:
     Duration start{Duration::zero()};
     std::optional<int32_t> soft_time_percent;
     bool ybwc{true};
+    int32_t end_mpc_stage{0};
     uint32_t root_empties{64};
     const SplitPoint* split_point{nullptr};
     std::optional<Helpers> helpers;
@@ -298,6 +306,7 @@ public:
     uint64_t flushed_nodes{0};
 
     uint64_t nodes{0};
+    uint64_t last_iter_nodes{0};
     uint64_t evaluations{0};
     uint64_t next_abort_check{1024};
     int64_t hard_limit_ms{(std::numeric_limits<int64_t>::max)()};
@@ -431,6 +440,7 @@ private:
     uint32_t hash_bits_;
     SearchOptions options_;
     std::unique_ptr<ProbCutErrors> probcut_errors_;
+    std::unique_ptr<EndProbCutErrors> end_probcut_errors_;
     TranspositionTable midgame_table_;
     TranspositionTable endgame_table_;
     ThreadState main_;
@@ -481,6 +491,7 @@ namespace detail {
 
 int32_t probcut_shallow_depth(int32_t depth) noexcept;
 std::unique_ptr<ProbCutErrors> make_probcut_errors(double t);
+std::unique_ptr<EndProbCutErrors> make_end_probcut_errors();
 void move_to_front(std::span<int32_t> moves, std::span<const int32_t> improvements) noexcept;
 int32_t last_flip_count_for_test(uint64_t own, uint32_t square) noexcept;
 bool fill_end_moves_for_test(uint64_t own, uint64_t opponent, uint64_t legal, std::span<EndMove> moves) noexcept;

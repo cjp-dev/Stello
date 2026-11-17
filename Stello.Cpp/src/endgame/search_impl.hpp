@@ -177,27 +177,37 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_window(
     }
 
     int32_t hash_move = -1;
+    const int32_t required_depth = (s.end_mpc_stage > 0) ? s.end_mpc_stage : empties;
     if (const auto entry = s.endgame_table->get_at_root(own, opponent, 0, s.root_empties)) {
-        const int32_t value = static_cast<int32_t>(entry->value);
-        switch (entry->bound) {
-            case Bound::Exact:
-                STELLO_RETURN_OK_R(int32_t, value);
-            case Bound::Lower:
-                if (value > alpha) {
-                    alpha = value;
-                }
-                break;
-            default:
-                if (value < beta) {
-                    beta = value;
-                }
-                break;
-        }
+        if (static_cast<int32_t>(entry->depth) >= required_depth) {
+            const int32_t value = static_cast<int32_t>(entry->value);
+            switch (entry->bound) {
+                case Bound::Exact:
+                    STELLO_RETURN_OK_R(int32_t, value);
+                case Bound::Lower:
+                    if (value > alpha) {
+                        alpha = value;
+                    }
+                    break;
+                default:
+                    if (value < beta) {
+                        beta = value;
+                    }
+                    break;
+            }
 
-        if (alpha >= beta) {
-            STELLO_RETURN_OK_R(int32_t, value);
+            if (alpha >= beta) {
+                STELLO_RETURN_OK_R(int32_t, value);
+            }
         }
         hash_move = static_cast<int32_t>(entry->mv);
+    }
+
+    if (!passed && empties >= END_MPC_MIN_EMPTIES && s.end_mpc_stage > 0 && !s.in_probcut && s.end_probcut_errors != nullptr) {
+        STELLO_TRY_ASSIGN_I32(const auto cut, try_end_probcut(s, own, opponent, alpha, beta, empties));
+        if (cut.has_value()) {
+            STELLO_RETURN_OK_R(int32_t, *cut);
+        }
     }
 
     const size_t count = static_cast<size_t>(std::popcount(legal));
@@ -208,10 +218,14 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_window(
     }
 
     if (empties >= END_ETC_MIN_EMPTIES) {
+        const int32_t required_child_depth = (s.end_mpc_stage > 0) ? s.end_mpc_stage : (empties - 1);
         for (const auto& mv : moves) {
             const auto [child_own, child_opponent] = child_pos(own, opponent, mv);
             if (const auto entry = s.endgame_table->get_at_root(child_own, child_opponent, 0, s.root_empties)) {
-                if (entry->bound != Bound::Lower && -static_cast<int32_t>(entry->value) >= beta) {
+                if (static_cast<int32_t>(entry->depth) >= required_child_depth
+                    && entry->bound != Bound::Lower
+                    && -static_cast<int32_t>(entry->value) >= beta)
+                {
                     STELLO_RETURN_OK_R(int32_t, -static_cast<int32_t>(entry->value));
                 }
             }
@@ -282,7 +296,8 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_window(
     }
 
     const Bound bound = (best >= beta) ? Bound::Lower : ((best > alpha_start) ? Bound::Exact : Bound::Upper);
-    s.endgame_table->store_at_root(own, opponent, 0, empties, bound, best, best_move, s.root_empties);
+    const int32_t store_depth = (s.end_mpc_stage > 0) ? s.end_mpc_stage : empties;
+    s.endgame_table->store_at_root(own, opponent, 0, store_depth, bound, best, best_move, s.root_empties);
     STELLO_RETURN_OK_R(int32_t, best);
 }
 
@@ -323,15 +338,25 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_deep(
     }
 
     int32_t hash_move = -1;
+    const int32_t required_depth = (s.end_mpc_stage > 0) ? s.end_mpc_stage : empties;
     if (const auto entry = s.endgame_table->get_at_root(own, opponent, 0, s.root_empties)) {
-        const int32_t value = static_cast<int32_t>(entry->value);
-        if (entry->bound != Bound::Upper && value > alpha) {
-            STELLO_RETURN_OK_R(int32_t, value);
-        }
-        if (entry->bound != Bound::Lower && value <= alpha) {
-            STELLO_RETURN_OK_R(int32_t, value);
+        if (static_cast<int32_t>(entry->depth) >= required_depth) {
+            const int32_t value = static_cast<int32_t>(entry->value);
+            if (entry->bound != Bound::Upper && value > alpha) {
+                STELLO_RETURN_OK_R(int32_t, value);
+            }
+            if (entry->bound != Bound::Lower && value <= alpha) {
+                STELLO_RETURN_OK_R(int32_t, value);
+            }
         }
         hash_move = static_cast<int32_t>(entry->mv);
+    }
+
+    if (!passed && empties >= END_MPC_MIN_EMPTIES && s.end_mpc_stage > 0 && !s.in_probcut && s.end_probcut_errors != nullptr) {
+        STELLO_TRY_ASSIGN_I32(const auto cut, try_end_probcut(s, own, opponent, alpha, alpha + 1, empties));
+        if (cut.has_value()) {
+            STELLO_RETURN_OK_R(int32_t, *cut);
+        }
     }
 
     const size_t count = static_cast<size_t>(std::popcount(legal));
@@ -347,10 +372,11 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_deep(
     bool hash_move_searched = false;
 
     if (empties >= END_ETC_MIN_EMPTIES) {
+        const int32_t required_child_depth = (s.end_mpc_stage > 0) ? s.end_mpc_stage : (empties - 1);
         for (const auto& mv : moves) {
             const auto [child_own, child_opponent] = child_pos(own, opponent, mv);
             const auto entry = s.endgame_table->get_at_root(child_own, child_opponent, 0, s.root_empties);
-            if (!entry.has_value()) {
+            if (!entry.has_value() || static_cast<int32_t>(entry->depth) < required_child_depth) {
                 continue;
             }
             const int32_t value = -static_cast<int32_t>(entry->value);
@@ -435,8 +461,79 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_deep(
     }
 
     const Bound bound = (best > alpha) ? Bound::Lower : Bound::Upper;
-    s.endgame_table->store_at_root(own, opponent, 0, empties, bound, best, best_move, s.root_empties);
+    const int32_t store_depth = (s.end_mpc_stage > 0) ? s.end_mpc_stage : empties;
+    s.endgame_table->store_at_root(own, opponent, 0, store_depth, bound, best, best_move, s.root_empties);
     STELLO_RETURN_OK_R(int32_t, best);
+}
+
+template <bool UseAvx2>
+AbortResult<std::optional<int32_t>> Kernel<UseAvx2>::try_end_probcut(
+    Searcher& s,
+    uint64_t own,
+    uint64_t opponent,
+    int32_t alpha,
+    int32_t beta,
+    int32_t empties
+) {
+    assert(s.end_probcut_errors != nullptr && s.end_mpc_stage > 0 && s.end_mpc_stage <= END_MPC_STAGES);
+    const int32_t shallow_depth = ((empties / 3) & ~1) + (empties & 1);
+    if (shallow_depth < 1) {
+        STELLO_RETURN_OK_R(std::optional<int32_t>, std::nullopt);
+    }
+
+    const int32_t error = (*s.end_probcut_errors)[static_cast<size_t>(s.end_mpc_stage)][static_cast<size_t>(empties)];
+    const int32_t error0 = (std::max)(eval::PATTERN_UNITS_PER_DISC, error - 4 * eval::PATTERN_UNITS_PER_DISC);
+
+    STELLO_TRY_VOID_R(std::optional<int32_t>, s.count_node());
+    s.evaluations += 1;
+
+    const eval::PatternState eval_state = s.pattern->set().state_of(own, opponent);
+    const uint32_t discs = 64U - static_cast<uint32_t>(empties);
+    const int16_t* const w = s.pattern->stage_weights(s.pattern->stage_of(discs)).data();
+    const int32_t static0 = eval::clamp_pattern_score(*s.pattern, sum_eval_state(s.pattern->set(), eval_state, Player::Black, w));
+
+    const auto normalize_score = [](int32_t sc) noexcept -> int32_t {
+        if (sc >= WIN_SCORE - 64) {
+            return (sc - WIN_SCORE) * eval::PATTERN_UNITS_PER_DISC;
+        }
+        if (sc <= -WIN_SCORE + 64) {
+            return (sc + WIN_SCORE) * eval::PATTERN_UNITS_PER_DISC;
+        }
+        return sc;
+    };
+
+    ProbCutGuard guard(s.in_probcut);
+    const Board pc_board(own, opponent);
+
+    if (beta <= 64) {
+        const int32_t beta_units = beta * eval::PATTERN_UNITS_PER_DISC;
+        const int32_t pc_beta = beta_units + error;
+        if (static0 >= beta_units + error0 && pc_beta <= 64 * eval::PATTERN_UNITS_PER_DISC) {
+            STELLO_TRY_ASSIGN_R(
+                std::optional<int32_t>,
+                const ScoreMove high,
+                search_inc(s, pc_board, Player::Black, shallow_depth - 1, 1, -1, pc_beta - 1, pc_beta, eval_state));
+            if (normalize_score(high.score) >= pc_beta) {
+                STELLO_RETURN_OK_R(std::optional<int32_t>, std::optional<int32_t>(beta));
+            }
+        }
+    }
+
+    if (alpha >= -64) {
+        const int32_t alpha_units = alpha * eval::PATTERN_UNITS_PER_DISC;
+        const int32_t pc_alpha = alpha_units - error;
+        if (static0 <= alpha_units - error0 && pc_alpha >= -64 * eval::PATTERN_UNITS_PER_DISC) {
+            STELLO_TRY_ASSIGN_R(
+                std::optional<int32_t>,
+                const ScoreMove low,
+                search_inc(s, pc_board, Player::Black, shallow_depth - 1, 1, -1, pc_alpha, pc_alpha + 1, eval_state));
+            if (normalize_score(low.score) <= pc_alpha) {
+                STELLO_RETURN_OK_R(std::optional<int32_t>, std::optional<int32_t>(alpha));
+            }
+        }
+    }
+
+    STELLO_RETURN_OK_R(std::optional<int32_t>, std::nullopt);
 }
 
 template <bool UseAvx2>

@@ -7,6 +7,7 @@
 #include "endgame/bits.hpp"
 #include "endgame/local.hpp"
 #include "endgame/stable.hpp"
+#include "eval/eval.hpp"
 #include "eval/weights.hpp"
 #include "search/abort.hpp"
 #include "search/engine.hpp"
@@ -1091,6 +1092,47 @@ STELLO_TEST(progress_and_time_limit_tests) {
             STELLO_CHECK(outcome.result.mv.square.has_value());
             STELLO_CHECK((board.legal_moves(player) & outcome.result.mv.square->bit()) != 0);
         }
+    }
+}
+
+STELLO_TEST(selective_endgame_progress_and_time_per_game_tests) {
+    // Selective endgame stages in TimePerMove report Heuristic scores scaled by PATTERN_UNITS_PER_DISC (100).
+    {
+        const auto [board, player] = find_bench_pos("ffo-40-59.txt", "40");
+        const int32_t empties = static_cast<int32_t>(board.empty_count());
+        for (const uint32_t threads : {uint32_t{1}, uint32_t{4}}) {
+            search::SearchEngine engine(16);
+            std::vector<SearchInfo> end_reports;
+            const auto limits = *SearchLimits::time_per_move_ms(2000).with_threads(threads);
+            const auto outcome = engine.search(board, player, limits, [&](const SearchInfo& info) {
+                if (info.depth == empties && info.kind == ScoreKind::Heuristic) {
+                    end_reports.push_back(info);
+                }
+            });
+            STELLO_CHECK(outcome.ok);
+            STELLO_CHECK(!end_reports.empty());
+            bool saw_nonzero_scaled = false;
+            for (const auto& info : end_reports) {
+                STELLO_CHECK_EQ(info.score % eval::PATTERN_UNITS_PER_DISC, 0);
+                STELLO_CHECK(info.score >= -64 * eval::PATTERN_UNITS_PER_DISC && info.score <= 64 * eval::PATTERN_UNITS_PER_DISC);
+                if (info.score != 0) {
+                    saw_nonzero_scaled = true;
+                    STELLO_CHECK(std::abs(info.score) >= eval::PATTERN_UNITS_PER_DISC);
+                }
+            }
+            STELLO_CHECK(saw_nonzero_scaled);
+        }
+    }
+
+    // TimePerGame (2 min remaining) at 30 empties respects move budget instead of burning rest/2 (60 s).
+    {
+        const auto [board, player] = find_bench_pos("midgame.txt", "g01e30");
+        search::SearchEngine engine(16);
+        const auto outcome = engine.search(board, player, SearchLimits::time_per_game_ms(120'000));
+        STELLO_CHECK(outcome.ok);
+        STELLO_CHECK(outcome.result.elapsed < std::chrono::seconds(20));
+        STELLO_CHECK(outcome.result.mv.square.has_value());
+        STELLO_CHECK((board.legal_moves(player) & outcome.result.mv.square->bit()) != 0);
     }
 }
 
