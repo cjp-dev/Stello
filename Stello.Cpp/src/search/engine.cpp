@@ -32,15 +32,17 @@ int32_t probcut_shallow_depth(int32_t depth) noexcept {
     return ((depth / 2) & ~1) + (depth & 1);
 }
 
-std::unique_ptr<ProbCutErrors> make_probcut_errors(double t) {
+std::unique_ptr<ProbCutErrors> make_probcut_errors(double t, bool egaroucid16) {
     auto errors = std::make_unique<ProbCutErrors>();
     for (size_t discs = 0; discs < 65; ++discs) {
         const double x = static_cast<double>(discs) / 64.0;
         for (int32_t depth = 1; depth <= 60; ++depth) {
             const int32_t shallow = probcut_shallow_depth(depth);
-            const double sigma = 1.8871 + 2.9543 * x + 0.0660 * x * x
-                               - 0.6749 * static_cast<double>(shallow)
-                               + 0.2778 * static_cast<double>(depth);
+            const double s = static_cast<double>(shallow);
+            const double d = static_cast<double>(depth);
+            const double sigma = egaroucid16
+                ? (0.9172 + 5.0552 * x - 2.4951 * x * x - 0.5569 * s + 0.2567 * d)
+                : (1.8871 + 2.9543 * x + 0.0660 * x * x - 0.6749 * s + 0.2778 * d);
             (*errors)[discs][static_cast<size_t>(depth)] = static_cast<int32_t>(
                 std::ceil(t * (std::max)(sigma, 0.5) * static_cast<double>(eval::PATTERN_UNITS_PER_DISC)));
         }
@@ -48,7 +50,7 @@ std::unique_ptr<ProbCutErrors> make_probcut_errors(double t) {
     return errors;
 }
 
-std::unique_ptr<EndProbCutErrors> make_end_probcut_errors() {
+std::unique_ptr<EndProbCutErrors> make_end_probcut_errors(bool egaroucid16) {
     static constexpr std::array<double, END_MPC_STAGES + 1> kSelectivityT = {
         0.0, 1.13, 1.55, 1.81, 2.32, 2.57, 3.29,
     };
@@ -58,7 +60,10 @@ std::unique_ptr<EndProbCutErrors> make_end_probcut_errors() {
         for (int32_t empties = 0; empties <= 64; ++empties) {
             const int32_t shallow = ((empties / 3) & ~1) + (empties & 1);
             const double x = static_cast<double>(64 - empties) / 64.0;
-            const double sigma = (std::max)(2.0, 1.0376 + 5.4960 * x - 0.0378 * static_cast<double>(shallow));
+            const double s = static_cast<double>(shallow);
+            const double sigma = egaroucid16
+                ? (std::max)(2.0, 6.5937 - 0.2985 * x - 0.2975 * s)
+                : (std::max)(2.0, 1.0376 + 5.4960 * x - 0.0378 * s);
             (*errors)[stage][static_cast<size_t>(empties)] = static_cast<int32_t>(
                 std::ceil(t * sigma * static_cast<double>(eval::PATTERN_UNITS_PER_DISC)));
         }
@@ -108,9 +113,14 @@ SearchEngine::SearchEngine(uint32_t hash_bits, SearchOptions options)
       probcut_errors_(
           options_.selective
               ? detail::make_probcut_errors(
-                    static_cast<double>(options_.probcut_percent.value_or(DEFAULT_PROBCUT_PERCENT)) / 100.0)
+                    static_cast<double>(options_.probcut_percent.value_or(DEFAULT_PROBCUT_PERCENT)) / 100.0,
+                    (options_.pattern ? *options_.pattern : eval::EvalWeights::built_in()).set().name() == "egaroucid16")
               : nullptr),
-      end_probcut_errors_(options_.selective ? detail::make_end_probcut_errors() : nullptr),
+      end_probcut_errors_(
+          options_.selective
+              ? detail::make_end_probcut_errors(
+                    (options_.pattern ? *options_.pattern : eval::EvalWeights::built_in()).set().name() == "egaroucid16")
+              : nullptr),
       midgame_table_(hash_bits),
       endgame_table_(hash_bits) {
     assert(hash_bits >= 10 && hash_bits <= 26 && "hash bits must be 10-26");

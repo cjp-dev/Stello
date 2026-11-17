@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Stello.BookTool;
 using Stello.Engine.Evaluation;
 
@@ -49,7 +51,7 @@ internal static class TrainCommand
 
         byte[] stageOf = EvalWeights.EvenStages(stages);
         var folded = new FoldedIndex(set);
-        var trained = new double[stages][];
+        var trained = new double[]?[stages];
         var summary = new List<string>();
         Console.WriteLine($"train: {set.Name} ({set.FeatureCount} features, {folded.Count:N0} weights per stage), {stages} stages, " +
             $"up to {maxPerDiscs:N0} positions per disc count, smooth ±{smooth}, rate {rate}, {workers} workers.");
@@ -62,28 +64,7 @@ internal static class TrainCommand
                 continue;
             }
 
-            int[] own = Enumerable.Range(minDiscs, maxDiscs - minDiscs + 1).Where(d => stageOf[d] == stage).ToArray();
-            if (own.Length == 0)
-            {
-                summary.Add($"| {stage} | — | 0 | — | — | — | skipped |");
-                continue;
-            }
-            int[] trainDiscs = Enumerable.Range(own[0] - smooth, own[^1] - own[0] + 1 + 2 * smooth)
-                .Where(d => d is >= TrainingData.MinDiscs and <= TrainingData.MaxDiscs).ToArray();
-            Encoded train = Encode(folded, trainDiscs.SelectMany(d => TrainingData.Load(data, Split.Train, d, maxPerDiscs)).ToArray(), workers);
-            Encoded validation = Encode(folded, own.SelectMany(d => TrainingData.Load(data, Split.Validation, d, maxPerDiscs)).ToArray(), workers);
-            if (train.Count < 1000 || validation.Count < 100)
-            {
-                Console.WriteLine($"stage {stage} (discs {own[0]}–{own[^1]}): too few positions ({train.Count:N0}), filled from a neighbour.");
-                summary.Add($"| {stage} | {own[0]}–{own[^1]} | {train.Count:N0} | — | — | — | filled from a neighbour |");
-                continue;
-            }
-
-            (double[] weights, Fit fit) = Fit1(folded, train, validation, loops, rate, prior, patience, workers, minAppear);
-            trained[stage] = weights;
-            Console.WriteLine($"stage {stage} (discs {own[0]}–{own[^1]}): {train.Count:N0} train, {validation.Count:N0} validation, " +
-                $"{fit.Loops} loops, train MAE {fit.TrainMae:0.000}, validation MAE {fit.ValidationMae:0.000} (RMSE {Math.Sqrt(fit.ValidationMse):0.000}), {clock.Elapsed:h\\:mm\\:ss}");
-            summary.Add($"| {stage} | {own[0]}–{own[^1]} | {train.Count:N0} | {fit.Loops} | {fit.TrainMae:0.000} | {fit.ValidationMae:0.000} | {Math.Sqrt(fit.ValidationMse):0.000} |");
+            trained[stage] = TrainStage(stage, stageOf, minDiscs, maxDiscs, smooth, data, maxPerDiscs, folded, loops, rate, prior, patience, workers, minAppear, clock, summary);
         }
 
         // Stages without data take the weights of the nearest stage that has them.
@@ -97,7 +78,7 @@ internal static class TrainCommand
         for (int stage = 0; stage < stages; stage++)
         {
             int source = done.MinBy(s => Math.Abs(s - stage));
-            weightsByStage[stage] = folded.Expand(trained[source], units);
+            weightsByStage[stage] = folded.Expand(trained[source]!, units);
         }
 
         var model = new EvalWeights(set, stageOf, units, weightsByStage);
@@ -115,6 +96,49 @@ internal static class TrainCommand
         Console.WriteLine();
         Console.WriteLine($"Wrote {output}: {size:N0} bytes (gzip), {stages} stages × {folded.Count:N0} weights, {clock.Elapsed:h\\:mm\\:ss}.");
         return 0;
+    }
+
+    private static double[]? TrainStage(
+        int stage,
+        byte[] stageOf,
+        int minDiscs,
+        int maxDiscs,
+        int smooth,
+        string data,
+        int maxPerDiscs,
+        FoldedIndex folded,
+        int loops,
+        double rate,
+        double prior,
+        int patience,
+        int workers,
+        int minAppear,
+        Stopwatch clock,
+        List<string> summary)
+    {
+        int[] own = Enumerable.Range(minDiscs, maxDiscs - minDiscs + 1).Where(d => stageOf[d] == stage).ToArray();
+        if (own.Length == 0)
+        {
+            summary.Add($"| {stage} | — | 0 | — | — | — | skipped |");
+            return null;
+        }
+
+        int[] trainDiscs = Enumerable.Range(own[0] - smooth, own[^1] - own[0] + 1 + 2 * smooth)
+            .Where(d => d is >= TrainingData.MinDiscs and <= TrainingData.MaxDiscs).ToArray();
+        Encoded train = Encode(folded, trainDiscs.SelectMany(d => TrainingData.Load(data, Split.Train, d, maxPerDiscs)).ToArray(), workers);
+        Encoded validation = Encode(folded, own.SelectMany(d => TrainingData.Load(data, Split.Validation, d, maxPerDiscs)).ToArray(), workers);
+        if (train.Count < 1000 || validation.Count < 100)
+        {
+            Console.WriteLine($"stage {stage} (discs {own[0]}–{own[^1]}): too few positions ({train.Count:N0}), filled from a neighbour.");
+            summary.Add($"| {stage} | {own[0]}–{own[^1]} | {train.Count:N0} | — | — | — | filled from a neighbour |");
+            return null;
+        }
+
+        (double[] weights, Fit fit) = Fit1(folded, train, validation, loops, rate, prior, patience, workers, minAppear);
+        Console.WriteLine($"stage {stage} (discs {own[0]}–{own[^1]}): {train.Count:N0} train, {validation.Count:N0} validation, " +
+            $"{fit.Loops} loops, train MAE {fit.TrainMae:0.000}, validation MAE {fit.ValidationMae:0.000} (RMSE {Math.Sqrt(fit.ValidationMse):0.000}), {clock.Elapsed:h\\:mm\\:ss}");
+        summary.Add($"| {stage} | {own[0]}–{own[^1]} | {train.Count:N0} | {fit.Loops} | {fit.TrainMae:0.000} | {fit.ValidationMae:0.000} | {Math.Sqrt(fit.ValidationMse):0.000} |");
+        return weights;
     }
 
     private static double Fraction(Options options, string name, double defaultValue)
@@ -157,6 +181,10 @@ internal static class TrainCommand
         public int[] FeatureBase { get; }
 
         public float[] Scores { get; }
+
+        public int BlockSize => BlockRows;
+
+        public ushort[][] Blocks => _blocks;
 
         /// <summary>The relative numbers of position <paramref name="i"/>, one per feature.</summary>
         public Span<ushort> Row(int i) => _blocks[i / BlockRows].AsSpan(i % BlockRows * Features, Features);
@@ -226,22 +254,67 @@ internal static class TrainCommand
                 double absolute = 0;
                 int first = (int)((long)train.Count * worker / workers);
                 int last = (int)((long)train.Count * (worker + 1) / workers);
-                for (int i = first; i < last; i++)
+                int features = train.Features;
+                Span<int> indices = stackalloc int[features];
+                ref int baseRef = ref MemoryMarshal.GetArrayDataReference(featureBase);
+                ref double wRef = ref MemoryMarshal.GetArrayDataReference(weights);
+                ref double sRef = ref MemoryMarshal.GetArrayDataReference(sum);
+                ref float scoreRef = ref MemoryMarshal.GetArrayDataReference(train.Scores);
+                ref int idxRef = ref MemoryMarshal.GetReference(indices);
+
+                int blockSize = train.BlockSize;
+                for (int i = first; i < last;)
                 {
-                    ReadOnlySpan<ushort> row = train.Row(i);
-                    double predicted = 0;
-                    for (int f = 0; f < row.Length; f++)
+                    int b = i / blockSize;
+                    int rowInBlock = i - b * blockSize;
+                    int blockEnd = Math.Min(last, (b + 1) * blockSize);
+                    int n = blockEnd - i;
+                    ref ushort rowPtr = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(train.Blocks[b]), rowInBlock * features);
+
+                    for (int k = 0; k < n; k++)
                     {
-                        predicted += weights[featureBase[f] + row[f]];
+                        double predicted = 0;
+                        int f = 0;
+                        for (; f + 4 <= features; f += 4)
+                        {
+                            int i0 = Unsafe.Add(ref baseRef, f) + Unsafe.Add(ref rowPtr, f);
+                            int i1 = Unsafe.Add(ref baseRef, f + 1) + Unsafe.Add(ref rowPtr, f + 1);
+                            int i2 = Unsafe.Add(ref baseRef, f + 2) + Unsafe.Add(ref rowPtr, f + 2);
+                            int i3 = Unsafe.Add(ref baseRef, f + 3) + Unsafe.Add(ref rowPtr, f + 3);
+                            Unsafe.Add(ref idxRef, f) = i0;
+                            Unsafe.Add(ref idxRef, f + 1) = i1;
+                            Unsafe.Add(ref idxRef, f + 2) = i2;
+                            Unsafe.Add(ref idxRef, f + 3) = i3;
+                            predicted += Unsafe.Add(ref wRef, i0) + Unsafe.Add(ref wRef, i1)
+                                       + Unsafe.Add(ref wRef, i2) + Unsafe.Add(ref wRef, i3);
+                        }
+                        for (; f < features; f++)
+                        {
+                            int idx = Unsafe.Add(ref baseRef, f) + Unsafe.Add(ref rowPtr, f);
+                            Unsafe.Add(ref idxRef, f) = idx;
+                            predicted += Unsafe.Add(ref wRef, idx);
+                        }
+
+                        double residual = Unsafe.Add(ref scoreRef, i + k) - predicted;
+                        squared += residual * residual;
+                        absolute += Math.Abs(residual);
+                        f = 0;
+                        for (; f + 4 <= features; f += 4)
+                        {
+                            Unsafe.Add(ref sRef, Unsafe.Add(ref idxRef, f)) += residual;
+                            Unsafe.Add(ref sRef, Unsafe.Add(ref idxRef, f + 1)) += residual;
+                            Unsafe.Add(ref sRef, Unsafe.Add(ref idxRef, f + 2)) += residual;
+                            Unsafe.Add(ref sRef, Unsafe.Add(ref idxRef, f + 3)) += residual;
+                        }
+                        for (; f < features; f++)
+                        {
+                            Unsafe.Add(ref sRef, Unsafe.Add(ref idxRef, f)) += residual;
+                        }
+
+                        rowPtr = ref Unsafe.Add(ref rowPtr, features);
                     }
 
-                    double residual = train.Scores[i] - predicted;
-                    squared += residual * residual;
-                    absolute += Math.Abs(residual);
-                    for (int f = 0; f < row.Length; f++)
-                    {
-                        sum[featureBase[f] + row[f]] += residual;
-                    }
+                    i = blockEnd;
                 }
 
                 errors[2 * worker] = squared;
@@ -277,7 +350,7 @@ internal static class TrainCommand
                 }
             });
 
-            (double mse, double mae) = Error(weights, validation);
+            (double mse, double mae) = Error(weights, validation, workers, errors);
             if (mse < bestMse)
             {
                 bestMse = mse;
@@ -305,32 +378,75 @@ internal static class TrainCommand
                 }
             }
 
-            (bestMse, bestMae) = Error(best, validation);
+            (bestMse, bestMae) = Error(best, validation, workers, errors);
         }
 
         return (best, new Fit(loop - 1, bestTrainMae, bestMae, bestMse));
     }
 
-    private static (double Mse, double Mae) Error(double[] weights, Encoded data)
+    private static (double Mse, double Mae) Error(double[] weights, Encoded data, int workers, double[] errors)
     {
-        double squared = 0;
-        double absolute = 0;
-        int[] featureBase = data.FeatureBase;
-        for (int i = 0; i < data.Count; i++)
+        int activeWorkers = data.Count >= 10_000 ? workers : 1;
+        Array.Clear(errors, 0, activeWorkers * 2);
+        Parallel.For(0, activeWorkers, new ParallelOptions { MaxDegreeOfParallelism = activeWorkers }, worker =>
         {
-            ReadOnlySpan<ushort> row = data.Row(i);
-            double predicted = 0;
-            for (int f = 0; f < row.Length; f++)
+            double squared = 0;
+            double absolute = 0;
+            int first = (int)((long)data.Count * worker / activeWorkers);
+            int last = (int)((long)data.Count * (worker + 1) / activeWorkers);
+            int features = data.Features;
+            int[] featureBase = data.FeatureBase;
+            ref int baseRef = ref MemoryMarshal.GetArrayDataReference(featureBase);
+            ref double wRef = ref MemoryMarshal.GetArrayDataReference(weights);
+            ref float scoreRef = ref MemoryMarshal.GetArrayDataReference(data.Scores);
+            int blockSize = data.BlockSize;
+
+            for (int i = first; i < last;)
             {
-                predicted += weights[featureBase[f] + row[f]];
+                int b = i / blockSize;
+                int rowInBlock = i - b * blockSize;
+                int blockEnd = Math.Min(last, (b + 1) * blockSize);
+                int n = blockEnd - i;
+                ref ushort rowPtr = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(data.Blocks[b]), rowInBlock * features);
+
+                for (int k = 0; k < n; k++)
+                {
+                    double predicted = 0;
+                    int f = 0;
+                    for (; f + 4 <= features; f += 4)
+                    {
+                        predicted += Unsafe.Add(ref wRef, Unsafe.Add(ref baseRef, f) + Unsafe.Add(ref rowPtr, f))
+                                   + Unsafe.Add(ref wRef, Unsafe.Add(ref baseRef, f + 1) + Unsafe.Add(ref rowPtr, f + 1))
+                                   + Unsafe.Add(ref wRef, Unsafe.Add(ref baseRef, f + 2) + Unsafe.Add(ref rowPtr, f + 2))
+                                   + Unsafe.Add(ref wRef, Unsafe.Add(ref baseRef, f + 3) + Unsafe.Add(ref rowPtr, f + 3));
+                    }
+                    for (; f < features; f++)
+                    {
+                        predicted += Unsafe.Add(ref wRef, Unsafe.Add(ref baseRef, f) + Unsafe.Add(ref rowPtr, f));
+                    }
+
+                    double residual = Unsafe.Add(ref scoreRef, i + k) - predicted;
+                    squared += residual * residual;
+                    absolute += Math.Abs(residual);
+                    rowPtr = ref Unsafe.Add(ref rowPtr, features);
+                }
+
+                i = blockEnd;
             }
 
-            double residual = data.Scores[i] - predicted;
-            squared += residual * residual;
-            absolute += Math.Abs(residual);
+            errors[2 * worker] = squared;
+            errors[2 * worker + 1] = absolute;
+        });
+
+        double totalSq = 0;
+        double totalAbs = 0;
+        for (int w = 0; w < activeWorkers; w++)
+        {
+            totalSq += errors[2 * w];
+            totalAbs += errors[2 * w + 1];
         }
 
-        return (squared / data.Count, absolute / data.Count);
+        return (totalSq / data.Count, totalAbs / data.Count);
     }
 }
 

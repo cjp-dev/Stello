@@ -283,7 +283,7 @@ STELLO_TEST(patterns_fast_and_direct_match_slow) {
 STELLO_TEST(eval_weights_and_gzip_errors) {
     using namespace eval;
     const auto& weights = EvalWeights::built_in();
-    STELLO_CHECK_EQ(weights.set().name(), std::string("plus15"));
+    STELLO_CHECK_EQ(weights.set().name(), std::string("egaroucid16"));
     STELLO_CHECK(weights.stages() >= 1);
     STELLO_CHECK(weights.units_per_disc() >= 1);
 

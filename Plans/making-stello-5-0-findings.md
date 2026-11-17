@@ -448,5 +448,31 @@ Temporary `SearchOptions` / `opt=` switches (`mpc-model=`, `mpc-early=`, `mpc-la
 
 - **Decision (Gate P4):** Accepted. `mpcend_hybrid` (`74 -> 88 -> 98 %` selective endgame + `TimePerGame` `for_solver` guard) improved `500 ms` (`51.5 %`, `+10` Elo, `LOS 97.1 %`, `+0.5 ± 0.2` discs/g; winning `30–5` on equal-`FirstSolve` pairs) and decisively passed `2,000 ms` (`53.2 %`, `95 % CI 51.5–54.8 %`, `+22` Elo, `LOS 100.0 %`, `+0.5 ± 0.1` discs/g), while leaving exact `Solve` (`FFO #40–59`) untouched. Temporary `opt=mpc-end=`, `opt=end-dist=`, and `opt=solve-est=` switches were removed cleanly.
 
+---
+
+## Phase 5 — Evaluation: Item 1 (`egaroucid16 × 60`, `10 M`, Unified Desktop & WASM Model, Accepted)
+
+- **Trainer & smoothing findings (`Stello.Trainer`):**
+  - Scoped stage arrays inside `TrainStage` (`TrainCommand.cs`) to release each stage's `~6.4 GB` encoded data before loading the next stage, eliminated block-modulo and bounds-check overhead in `Fit1`, and parallelized `Error(validation)`.
+  - On `60` single-disc stages, smoothing across adjacent disc counts mixes opposite Othello parity: on stage 30 (`35` discs, `209,214` validation positions), `--smooth 2` (`50 M` rows) scored `5.445` MAE / `7.125` RMSE and `--smooth 1` (`30 M` rows, `67 %` opposite parity) scored `5.635` / `7.324`, whereas `--smooth 0` (`10 M` exact-disc rows, `--rate 0.15 --patience 15`) reached **`5.359` MAE / `7.051` RMSE** in `0:02:05`.
+  - Trained all `60` stages (`egaroucid16`, `64` features, `320,193` folded weights/stage) in `0:31:12` (`--min-discs 12 --smooth 0 --rate 0.15 --patience 15 --loops 1000 --units 16 --min-appear 10`) -> `8,885,734` bytes gzip ([eval-p5-e16-s60-10m.md](benchmark-results/eval-p5-e16-s60-10m.md)).
+  - **Test split (`1,040,276` positions):** **MAE `5.07`, RMSE `6.87`** (vs `plus15 × 10` `5.47` / `7.31` and Egaroucid `5.05` / `6.90` in [v2-p2-eval-p15-s10-m30-u8.md](benchmark-results/v2-p2-eval-p15-s10-m30-u8.md)).
+- **MPC & MPC-end fits (`Stello.Trainer --model`, `engine.cpp`):**
+  - Midgame (`3,900` positions, `14–52` discs, depths `0–12`): $\sigma = 0.9172 + 5.0552x - 2.4951x^2 - 0.5569s + 0.2567d$ (`6.0 %` avg relative error).
+  - Endgame (`967/1,040` solved, `38–50` discs, `15 s` cap, linear fit on `EndShallowDepth`): $\sigma_{\text{end}} = \max(2.0,\; 6.5937 - 0.2985x - 0.2975s)$.
+  - Dispatched in `SearchEngine` (`Stello.Cpp/src/search/engine.cpp`) automatically by `PatternSet` (`"egaroucid16"` vs `"plus15"`).
+- **Native & WASM speed / bundle measurements:**
+  - `clang-release` `mid-bench --depth 12` (`100` pos): `9,496,154` nodes (`−10.2 %`) in `0.664 s` (`14.30M` nps) vs `10,579,515` nodes in `0.684 s` (`15.48M` nps); `mid-bench --depth 10`: `3,144,099` nodes (`−15.4 %`) in `0.245 s` (`12.83M` nps); `solve-bench` (`FFO #40–49`): `1,057,623,116` nodes (`−5.2 %`) in `15.9 s` (`66.35M` nps).
+  - WebAssembly bundles (`Stello.Web/wwwroot`): `engine` `9,121,683` B raw / `8,966,487` B gzip / `8,948,321` B brotli (vs `1,210,594` / `1,070,418` / `1,054,760` B); `engine-mt` `9,152,030` B raw / `8,978,382` B gzip / `8,957,898` B brotli. In Node `v24.19.0` (ST WASM, `hash=19`), `init(19)` took `390.2 ms` (vs `68.3 ms`), linear memory was `221.3 MiB` (vs `94.8 MiB`), `mid-d12` ran `8,541,092` nodes in `0.970 s` (`8.81M` nps vs `10.54M` nps in `0.996 s`), and `FFO #40–44` ran `95,540,217` nodes in `2.361 s` (`40.46M` nps).
+- **Timed matches (`1t`, `--workers 8`, `hash-bits=19`, vs `plus15 × 10`):**
+
+| Match | Games | Side A | Side B | Score (B, 95 % CI) | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | NPS (A / B) | Wall Time |
+|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---|
+| `p51_e16_500ms_1180g` | 1,180 | `p15_base` (`500 ms`) | `e16_10m` (`500 ms`) | **52.9 %** (50.8–55.0 %) | **+20** (+6 to +35) | **99.7 %** | +0.3 ± 0.2 | 20.25 / 20.34 | 23.0 / 23.0 | 21.21M / 20.40M | [30m 35s](benchmark-results/match_p51_e16_500ms_1180g.md) |
+| `p51_e16_2000ms_1180g` | 1,180 | `p15_base` (`2,000 ms`) | `e16_10m` (`2,000 ms`) | **52.0 %** (50.1–53.9 %) | **+14** (+1 to +27) | **98.2 %** | +0.3 ± 0.2 | 22.94 / 22.93 | 25.1 / 25.1 | 21.96M / 21.20M | [56m 04s](benchmark-results/match_p51_e16_2000ms_1180g.md) |
+
+- **Decision & landing (Gate P5 Item 1):** Landed `e16-s60-10m.bin` as the single unified [stello-eval.bin](../../Stello.Net/Book/stello-eval.bin) across desktop C++, `.NET`, and WebAssembly (`engine` + `engine-mt`). Updated parity fixtures (`Stello.Cpp/tests/data/`), `test_main.cpp`, `parity_tests.cpp`, `search_tests.cpp` (`1,846,697` nodes), `stello-v3-signatures.txt`, `engine.test.mjs`, `NativeEngineTests.cs` (`24,670` nodes and shared-model parity vs frozen `V2`), and `BookLearnerTests.cs`. Verified `clang-release` CTest (`2/2`, `29.48 s`), `msvc-release` CTest (`2/2`, `32.71 s`), WASM Node tests (`19/19`), `Stello.Engine.Tests` (`499/499`), `Stello.Net.Tests` (`116/116`), and `Egaroucid.Engine.Tests` (`100 passed, 8 skipped`).
+
+
 
 

@@ -33,9 +33,9 @@ public class NativeEngineTests
     {
         (SearchOptions options, V2.Search.SearchOptions v2Options) = option switch
         {
-            "selective off" => (SearchOptions.Default with { Selective = false }, V2.Search.SearchOptions.Default with { Selective = false }),
-            "probcut 150" => (SearchOptions.Default with { ProbCutPercent = 150 }, V2.Search.SearchOptions.Default with { ProbCutPercent = 150 }),
-            "soft 50" => (SearchOptions.Default with { SoftTimePercent = 50 }, V2.Search.SearchOptions.Default with { SoftTimePercent = 50 }),
+            "selective off" => WithBase(WrittenModel(), static (a, b) => (a with { Selective = false }, b with { Selective = false })),
+            "probcut 150" => WithBase(WrittenModel(), static (a, b) => (a with { ProbCutPercent = 150 }, b with { ProbCutPercent = 150 })),
+            "soft 50" => WithBase(WrittenModel(), static (a, b) => (a with { SoftTimePercent = 50 }, b with { SoftTimePercent = 50 })),
             "written model" => WrittenModel(),
             _ => LoadedModel(),
         };
@@ -59,14 +59,15 @@ public class NativeEngineTests
             Path.Combine(AppContext.BaseDirectory, "Data", "Benchmark", "midgame.txt")).Single(p => p.Id == "g01e48");
         SearchLimits limits = SearchLimits.FixedDepth(10);
         SearchResult result = new SearchEngine().Search(position.Board, position.Player, limits);
-        Assert.Equal(37459, result.Nodes);
+        Assert.Equal(24670, result.Nodes);
     }
 
     [Fact]
     public void ProgressAndIterations_PreserveMovesAndScores()
     {
-        var engine = new SearchEngine(16);
-        var v2 = new V2.SearchEngine(16);
+        (SearchOptions options, V2.Search.SearchOptions v2Options) = WrittenModel();
+        var engine = new SearchEngine(16, options);
+        var v2 = new V2.SearchEngine(16, v2Options);
         foreach ((Board board, Player player) in TestPositions.RandomPositions(seed: 33, count: 5, plies: 20))
         {
             var reports = new List<string>();
@@ -285,11 +286,18 @@ public class NativeEngineTests
         return (new SearchOptions { Pattern = model }, new V2.Search.SearchOptions { Pattern = V2.Evaluation.EvalWeights.Read(stream) });
     }
 
+    private static (SearchOptions, V2.Search.SearchOptions) WithBase(
+        (SearchOptions, V2.Search.SearchOptions) pair,
+        Func<SearchOptions, V2.Search.SearchOptions, (SearchOptions, V2.Search.SearchOptions)> update) =>
+        update(pair.Item1, pair.Item2);
+
     private static (SearchOptions, V2.Search.SearchOptions) LoadedModel()
     {
-        // The shipped file loaded as another model: the wrapper passes the file's bytes.
+        // The shipped file loaded as another model: the wrapper passes the file's bytes (selective off since V2 uses plus15 MPC).
         string path = Path.Combine(AppContext.BaseDirectory, "Data", "stello-eval.bin");
-        return (new SearchOptions { Pattern = EvalWeights.Load(path) }, new V2.Search.SearchOptions { Pattern = V2.Evaluation.EvalWeights.Load(path) });
+        return (
+            new SearchOptions { Pattern = EvalWeights.Load(path), Selective = false },
+            new V2.Search.SearchOptions { Pattern = V2.Evaluation.EvalWeights.Load(path), Selective = false });
     }
 
     private static string Signature(SearchResult result) =>

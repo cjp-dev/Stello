@@ -20,7 +20,7 @@ internal static class MpcCommand
 
     public static int Run(Options options)
     {
-        options.Allow("data", "from", "to", "per-discs", "max-depth", "workers", "out", "fit");
+        options.Allow("data", "from", "to", "per-discs", "max-depth", "workers", "out", "fit", "model");
         string data = options.Text("data") ?? TrainingData.DefaultFolder();
         int from = options.Number("from", 14, 8, 56);
         int to = options.Number("to", 52, from, 56);
@@ -28,6 +28,7 @@ internal static class MpcCommand
         int maxDepth = options.Number("max-depth", 12, 1, 20);
         int workers = options.Number("workers", Environment.ProcessorCount, 1, 256);
         string output = options.Text("out") ?? Path.Combine(TrainerProgram.RepositoryFolder(), "Training data", "mpc-values.csv");
+        string? modelPath = options.Text("model");
 
         // --fit <csv>: only fit an existing file.
         if (options.Text("fit") is { } existing)
@@ -50,8 +51,8 @@ internal static class MpcCommand
         var values = new int[positions.Count][];
         var clock = Stopwatch.StartNew();
         int done = 0;
-        var options2 = SearchOptions.Default with { Selective = false };
-        EvalWeights weights = TrainerProgram.DefaultEvaluation();
+        EvalWeights weights = modelPath is null ? TrainerProgram.DefaultEvaluation() : EvalWeights.Load(modelPath);
+        var options2 = SearchOptions.Default with { Selective = false, Pattern = modelPath is null ? null : weights };
         Parallel.For(0, positions.Count, new ParallelOptions { MaxDegreeOfParallelism = workers },
             () => new SearchEngine(18, options2),
             (i, _, engine) =>
@@ -100,7 +101,7 @@ internal static class MpcCommand
     /// </summary>
     public static int RunEnd(Options options)
     {
-        options.Allow("data", "from", "to", "per-discs", "max-depth", "workers", "out", "fit", "solve-s");
+        options.Allow("data", "from", "to", "per-discs", "max-depth", "workers", "out", "fit", "solve-s", "model");
         string data = options.Text("data") ?? TrainingData.DefaultFolder();
         int solveSeconds = options.Number("solve-s", 60, 1, 86_400);
         int from = options.Number("from", 38, 30, 50);
@@ -109,6 +110,7 @@ internal static class MpcCommand
         int maxDepth = options.Number("max-depth", 10, 1, 20);
         int workers = options.Number("workers", Environment.ProcessorCount, 1, 256);
         string output = options.Text("out") ?? Path.Combine(TrainerProgram.RepositoryFolder(), "Training data", "mpc-end-values.csv");
+        string? modelPath = options.Text("model");
 
         if (options.Text("fit") is { } existing)
         {
@@ -131,8 +133,8 @@ internal static class MpcCommand
         var clock = Stopwatch.StartNew();
         int done = 0;
         int skipped = 0;
-        var plain = SearchOptions.Default with { Selective = false };
-        EvalWeights weights = TrainerProgram.DefaultEvaluation();
+        EvalWeights weights = modelPath is null ? TrainerProgram.DefaultEvaluation() : EvalWeights.Load(modelPath);
+        var plain = SearchOptions.Default with { Selective = false, Pattern = modelPath is null ? null : weights };
 
         // The slowest (fewest discs) first, so the workers finish together.
         int[] order = Enumerable.Range(0, positions.Count).OrderBy(i => positions[i].Discs).ToArray();

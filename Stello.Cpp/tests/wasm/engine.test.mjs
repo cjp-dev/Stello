@@ -158,7 +158,7 @@ test('other hash bits make a new engine; requests that are not valid throw', () 
     const position = positions('midgame.txt').get('g01e48');
     const small = run(request(position, { depth: 10, hashBits: 12 }));
     const again = run(request(position, { depth: 10, hashBits: 19 }));
-    assert.equal(again.Nodes, 37459);
+    assert.equal(again.Nodes, 24670);
     assert.ok(small.Nodes > 0);
     assert.throws(() => engine.search('{"Black":1}', { progress() {}, signal: () => 0 }), /no White/);
     assert.throws(() => engine.search(request(position, { depth: 61 }), { progress() {}, signal: () => 0 }), /not valid/);
@@ -169,7 +169,7 @@ test('other hash bits make a new engine; requests that are not valid throw', () 
 test('the evaluation file passed as bytes searches like the built-in one', () => {
     engine.init(readFileSync(`${repository}Stello.Net/Book/stello-eval.bin`), 19);
     const result = run(request(positions('midgame.txt').get('g01e48'), { depth: 10 }));
-    assert.equal(result.Nodes, 37459);
+    assert.equal(result.Nodes, 24670);
     engine.init(undefined, 19);
 });
 
