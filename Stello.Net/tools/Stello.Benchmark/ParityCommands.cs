@@ -7,7 +7,7 @@ using Stello.BookTool;
 using Stello.Engine;
 using Stello.Engine.Benchmark;
 using Stello.Engine.V2.Endgame;
-using Stello.Engine.V2.Evaluation;
+using Stello.Engine.Evaluation;
 
 namespace Stello.Benchmark;
 

@@ -10,24 +10,31 @@ namespace Stello.Engine.Evaluation;
 /// </summary>
 /// <remarks>
 /// The file (made by tools/Stello.Trainer) is gzip-compressed. Inside, all numbers are little-endian:
-/// <c>"STELLOEV"</c>, version (u16, 2), pattern set name (u8 length and ASCII), number of stages (u8), the stage of
-/// every disc count 0–64 (65 × u8), units per disc (u16), then for every stage its folded weights: one i16 per
+/// <c>"STELLOEV"</c>, version (u16, 2 or 3), pattern set name (u8 length and ASCII), number of stages (u8), the stage
+/// of every disc count 0–64 (65 × u8), units per disc (u16), then for every stage its folded weights: one i16 per
 /// <see cref="PatternShape.Representatives"/> entry of every pattern, minus the same weight of the stage before (so
 /// neighbouring stages, which are alike, give small numbers), written as all low bytes and then all high bytes (the
-/// high bytes are mostly 0 or 0xFF and compress well).
+/// high bytes are mostly 0 or 0xFF and compress well). Version 3 adds 96 mobility weights per stage (48 for own legal
+/// moves, 48 for opponent legal moves) in the same delta-encoded low/high byte layout after the pattern stages.
 /// </remarks>
 internal sealed class EvalWeights
 {
+    public const int MobilitySlotsPerSide = 48;
+    public const int MobilityWeightsPerStage = 2 * MobilitySlotsPerSide;
+
     private const string Magic = "STELLOEV";
     private const int Version = 2;
+    private const int MobilityVersion = 3;
 
     private readonly short[][] _weights;
+    private readonly short[][]? _mobilityWeights;
     private readonly byte[] _stageOfDiscs;
 
-    public EvalWeights(PatternSet set, byte[] stageOfDiscs, int unitsPerDisc, short[][] weights)
+    public EvalWeights(PatternSet set, byte[] stageOfDiscs, int unitsPerDisc, short[][] weights, short[][]? mobilityWeights = null)
     {
         if (stageOfDiscs.Length != 65 || weights.Length == 0 || weights.Any(w => w.Length != set.RawSize)
-            || stageOfDiscs.Any(s => s >= weights.Length) || unitsPerDisc is < 1 or > 1024)
+            || stageOfDiscs.Any(s => s >= weights.Length) || unitsPerDisc is < 1 or > 1024
+            || (mobilityWeights is not null && (mobilityWeights.Length != weights.Length || mobilityWeights.Any(w => w.Length != MobilityWeightsPerStage))))
         {
             throw new ArgumentException("The weights do not fit the pattern set.");
         }
@@ -36,6 +43,7 @@ internal sealed class EvalWeights
         _stageOfDiscs = stageOfDiscs;
         UnitsPerDisc = unitsPerDisc;
         _weights = weights;
+        _mobilityWeights = mobilityWeights;
     }
 
     public PatternSet Set { get; }
@@ -44,10 +52,16 @@ internal sealed class EvalWeights
 
     public int UnitsPerDisc { get; }
 
+    public bool HasMobility => _mobilityWeights is not null;
+
     public int StageOf(int discs) => _stageOfDiscs[discs];
 
     /// <summary>The weights of one stage, by raw index plus the shape's offset (<see cref="PatternSet.Offsets"/>).</summary>
     public ReadOnlySpan<short> StageWeights(int stage) => _weights[stage];
+
+    /// <summary>The mobility weights of one stage (48 own + 48 opponent slots), or empty when absent.</summary>
+    public ReadOnlySpan<short> StageMobilityWeights(int stage) =>
+        _mobilityWeights is null ? ReadOnlySpan<short>.Empty : _mobilityWeights[stage];
 
     /// <summary>The evaluation for the side to move, in 1/<see cref="UnitsPerDisc"/> discs.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -55,11 +69,20 @@ internal sealed class EvalWeights
     {
         Span<int> indices = stackalloc int[Set.FeatureCount];
         Set.Indices(own, opponent, indices);
-        short[] weights = _weights[_stageOfDiscs[System.Numerics.BitOperations.PopCount(own | opponent)]];
+        int stage = _stageOfDiscs[System.Numerics.BitOperations.PopCount(own | opponent)];
+        short[] weights = _weights[stage];
         int sum = 0;
         foreach (int index in indices)
         {
             sum += weights[index];
+        }
+
+        if (_mobilityWeights is { } mobility)
+        {
+            short[] mob = mobility[stage];
+            int om = Math.Min(MobilitySlotsPerSide - 1, System.Numerics.BitOperations.PopCount(Bitboards.LegalMoves(own, opponent)));
+            int pm = Math.Min(MobilitySlotsPerSide - 1, System.Numerics.BitOperations.PopCount(Bitboards.LegalMoves(opponent, own)));
+            sum += mob[om] + mob[MobilitySlotsPerSide + pm];
         }
 
         return sum;
@@ -123,9 +146,15 @@ internal sealed class EvalWeights
         using var reader = new BinaryReader(gzip, Encoding.ASCII, leaveOpen: true);
         try
         {
-            if (Encoding.ASCII.GetString(reader.ReadBytes(Magic.Length)) != Magic || reader.ReadUInt16() != Version)
+            if (Encoding.ASCII.GetString(reader.ReadBytes(Magic.Length)) != Magic)
             {
-                throw new InvalidDataException("Not a Stello evaluation file (version 2).");
+                throw new InvalidDataException("Not a Stello evaluation file (version 2 or 3).");
+            }
+
+            int version = reader.ReadUInt16();
+            if (version != Version && version != MobilityVersion)
+            {
+                throw new InvalidDataException("Not a Stello evaluation file (version 2 or 3).");
             }
 
             PatternSet set;
@@ -172,7 +201,27 @@ internal sealed class EvalWeights
                 }
             }
 
-            return new EvalWeights(set, stageOfDiscs, unitsPerDisc, weights);
+            short[][]? mobilityWeights = null;
+            if (version == MobilityVersion)
+            {
+                mobilityWeights = new short[stages][];
+                var mobPrev = new short[MobilityWeightsPerStage];
+                for (int stage = 0; stage < stages; stage++)
+                {
+                    byte[] low = ReadExactly(reader, MobilityWeightsPerStage);
+                    byte[] high = ReadExactly(reader, MobilityWeightsPerStage);
+                    var stageMob = new short[MobilityWeightsPerStage];
+                    for (int i = 0; i < MobilityWeightsPerStage; i++)
+                    {
+                        mobPrev[i] = (short)(mobPrev[i] + (short)(low[i] | (high[i] << 8)));
+                        stageMob[i] = mobPrev[i];
+                    }
+
+                    mobilityWeights[stage] = stageMob;
+                }
+            }
+
+            return new EvalWeights(set, stageOfDiscs, unitsPerDisc, weights, mobilityWeights);
         }
         catch (EndOfStreamException exception)
         {
@@ -189,7 +238,7 @@ internal sealed class EvalWeights
         using var gzip = new GZipStream(stream, CompressionLevel.SmallestSize, leaveOpen: true);
         using var writer = new BinaryWriter(gzip, Encoding.ASCII, leaveOpen: true);
         writer.Write(Encoding.ASCII.GetBytes(Magic));
-        writer.Write((ushort)Version);
+        writer.Write((ushort)(HasMobility ? MobilityVersion : Version));
         writer.Write((byte)Set.Name.Length);
         writer.Write(Encoding.ASCII.GetBytes(Set.Name));
         writer.Write((byte)Stages);
@@ -201,16 +250,34 @@ internal sealed class EvalWeights
             short[] folded = Set.Shapes
                 .SelectMany((shape, s) => shape.Representatives.Select(representative => _weights[stage][Set.Offsets[s] + representative]))
                 .ToArray();
-            var difference = new short[folded.Length];
-            for (int i = 0; i < folded.Length; i++)
-            {
-                difference[i] = (short)(folded[i] - (previous?[i] ?? 0));
-            }
-
-            writer.Write(difference.Select(d => (byte)d).ToArray());
-            writer.Write(difference.Select(d => (byte)(d >> 8)).ToArray());
+            WriteDeltaI16(writer, folded, previous);
             previous = folded;
         }
+
+        if (_mobilityWeights is { } mobility)
+        {
+            short[]? mobPrev = null;
+            for (int stage = 0; stage < Stages; stage++)
+            {
+                WriteDeltaI16(writer, mobility[stage], mobPrev);
+                mobPrev = mobility[stage];
+            }
+        }
+    }
+
+    private static void WriteDeltaI16(BinaryWriter writer, short[] current, short[]? previous)
+    {
+        var low = new byte[current.Length];
+        var high = new byte[current.Length];
+        for (int i = 0; i < current.Length; i++)
+        {
+            short delta = (short)(current[i] - (previous?[i] ?? 0));
+            low[i] = (byte)delta;
+            high[i] = (byte)(delta >> 8);
+        }
+
+        writer.Write(low);
+        writer.Write(high);
     }
 
     private static byte[] ReadExactly(BinaryReader reader, int count)

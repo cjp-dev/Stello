@@ -489,8 +489,10 @@ AbortResult<std::optional<int32_t>> Kernel<UseAvx2>::try_end_probcut(
 
     const eval::PatternState eval_state = s.pattern->set().state_of(own, opponent);
     const uint32_t discs = 64U - static_cast<uint32_t>(empties);
-    const int16_t* const w = s.pattern->stage_weights(s.pattern->stage_of(discs)).data();
-    const int32_t static0 = eval::clamp_pattern_score(*s.pattern, sum_eval_state(s.pattern->set(), eval_state, Player::Black, w));
+    const size_t stage = s.pattern->stage_of(discs);
+    const int16_t* const w = s.pattern->stage_weights(stage).data();
+    const int32_t static0 = eval_state_score(
+        *s.pattern, eval_state, Player::Black, own, opponent, stage, w);
 
     const auto normalize_score = [](int32_t sc) noexcept -> int32_t {
         if (sc >= WIN_SCORE - 64) {

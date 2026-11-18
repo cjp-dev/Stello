@@ -490,8 +490,8 @@ inline size_t fill_moves(std::span<int32_t> list, uint64_t moves) noexcept {
 namespace detail {
 
 int32_t probcut_shallow_depth(int32_t depth) noexcept;
-std::unique_ptr<ProbCutErrors> make_probcut_errors(double t, bool egaroucid16 = false);
-std::unique_ptr<EndProbCutErrors> make_end_probcut_errors(bool egaroucid16 = false);
+std::unique_ptr<ProbCutErrors> make_probcut_errors(double t, bool egaroucid16 = false, bool has_mobility = false);
+std::unique_ptr<EndProbCutErrors> make_end_probcut_errors(bool egaroucid16 = false, bool has_mobility = false);
 void move_to_front(std::span<int32_t> moves, std::span<const int32_t> improvements) noexcept;
 int32_t last_flip_count_for_test(uint64_t own, uint32_t square) noexcept;
 bool fill_end_moves_for_test(uint64_t own, uint64_t opponent, uint64_t legal, std::span<EndMove> moves) noexcept;

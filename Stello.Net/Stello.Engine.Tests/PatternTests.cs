@@ -167,6 +167,56 @@ public class PatternTests
     }
 
     [Fact]
+    public void EvalWeights_WriteAndRead_WithMobility_GiveTheSameEvaluation()
+    {
+        PatternSet set = PatternSet.Classic11;
+        var random = new Random(19);
+        byte[] stageOf = EvalWeights.EvenStages(3);
+        var tables = new short[3][];
+        var mobTables = new short[3][];
+        for (int stage = 0; stage < 3; stage++)
+        {
+            tables[stage] = new short[set.RawSize];
+            mobTables[stage] = new short[EvalWeights.MobilityWeightsPerStage];
+            for (int i = 0; i < mobTables[stage].Length; i++)
+            {
+                mobTables[stage][i] = (short)random.Next(-200, 200);
+            }
+
+            for (int s = 0; s < set.Shapes.Count; s++)
+            {
+                PatternShape shape = set.Shapes[s];
+                var folded = new short[shape.Size];
+                foreach (int representative in shape.Representatives)
+                {
+                    folded[representative] = (short)random.Next(-500, 500);
+                }
+
+                for (int raw = 0; raw < shape.Size; raw++)
+                {
+                    tables[stage][set.Offsets[s] + raw] = folded[shape.Fold[raw]];
+                }
+            }
+        }
+
+        var written = new EvalWeights(set, stageOf, 32, tables, mobTables);
+        using var stream = new MemoryStream();
+        written.Write(stream);
+        stream.Position = 0;
+        EvalWeights read = EvalWeights.Read(stream);
+
+        Assert.True(read.HasMobility);
+        Assert.Equal(3, read.Stages);
+        Assert.Equal(32, read.UnitsPerDisc);
+        foreach ((Board board, Player player) in TestPositions.RandomPositions(seed: 17, count: 100, plies: 40))
+        {
+            ulong own = board.Discs(player);
+            ulong opponent = board.Discs(player.Opponent());
+            Assert.Equal(written.Evaluate(own, opponent), read.Evaluate(own, opponent));
+        }
+    }
+
+    [Fact]
     public void EvalWeights_Read_RejectsOtherFiles()
     {
         using var stream = new MemoryStream();

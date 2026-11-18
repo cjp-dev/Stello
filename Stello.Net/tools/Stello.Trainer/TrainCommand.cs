@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Stello.BookTool;
+using Stello.Engine;
 using Stello.Engine.Evaluation;
 
 namespace Stello.Trainer;
@@ -27,7 +29,7 @@ internal static class TrainCommand
     public static int Run(Options options)
     {
         options.Allow("out", "set", "stages", "data", "max-per-discs", "min-discs", "max-discs", "smooth", "loops", "rate", "patience", "workers",
-            "only-stage", "units", "prior", "min-appear");
+            "only-stage", "units", "prior", "min-appear", "mobility");
         string output = options.Text("out") ?? throw new ArgumentException("train needs --out <file>.");
         PatternSet set = PatternSet.ByName(options.Text("set") ?? "classic11");
         int stages = options.Number("stages", 15, 1, 61);
@@ -44,6 +46,13 @@ internal static class TrainCommand
         int units = options.Number("units", 32, 1, 1024);
         int onlyStage = options.Number("only-stage", -1, -1, stages - 1);
         int minAppear = options.Number("min-appear", 0, 0, 1_000_000);
+        string mobArg = options.Text("mobility") ?? "off";
+        bool mobility = mobArg switch
+        {
+            "on" => true,
+            "off" => false,
+            _ => throw new ArgumentException("--mobility must be on or off."),
+        };
         if (!Directory.Exists(data))
         {
             throw new ArgumentException($"The training data folder {data} does not exist (make it with convert).");
@@ -51,9 +60,11 @@ internal static class TrainCommand
 
         byte[] stageOf = EvalWeights.EvenStages(stages);
         var folded = new FoldedIndex(set);
+        int featureCount = set.FeatureCount + (mobility ? 2 : 0);
+        int weightCount = folded.Count + (mobility ? EvalWeights.MobilityWeightsPerStage : 0);
         var trained = new double[]?[stages];
         var summary = new List<string>();
-        Console.WriteLine($"train: {set.Name} ({set.FeatureCount} features, {folded.Count:N0} weights per stage), {stages} stages, " +
+        Console.WriteLine($"train: {set.Name} ({featureCount} features, {weightCount:N0} weights per stage{(mobility ? ", +mobility" : "")}), {stages} stages, " +
             $"up to {maxPerDiscs:N0} positions per disc count, smooth ±{smooth}, rate {rate}, {workers} workers.");
 
         var clock = Stopwatch.StartNew();
@@ -64,7 +75,7 @@ internal static class TrainCommand
                 continue;
             }
 
-            trained[stage] = TrainStage(stage, stageOf, minDiscs, maxDiscs, smooth, data, maxPerDiscs, folded, loops, rate, prior, patience, workers, minAppear, clock, summary);
+            trained[stage] = TrainStage(stage, stageOf, minDiscs, maxDiscs, smooth, data, maxPerDiscs, folded, mobility, loops, rate, prior, patience, workers, minAppear, clock, summary);
         }
 
         // Stages without data take the weights of the nearest stage that has them.
@@ -75,13 +86,18 @@ internal static class TrainCommand
         }
 
         var weightsByStage = new short[stages][];
+        short[][]? mobilityByStage = mobility ? new short[stages][] : null;
         for (int stage = 0; stage < stages; stage++)
         {
             int source = done.MinBy(s => Math.Abs(s - stage));
             weightsByStage[stage] = folded.Expand(trained[source]!, units);
+            if (mobilityByStage is not null)
+            {
+                mobilityByStage[stage] = ExpandMobility(trained[source]!, folded.Count, units);
+            }
         }
 
-        var model = new EvalWeights(set, stageOf, units, weightsByStage);
+        var model = new EvalWeights(set, stageOf, units, weightsByStage, mobilityByStage);
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);
         using (FileStream file = File.Create(output))
         {
@@ -107,6 +123,7 @@ internal static class TrainCommand
         string data,
         int maxPerDiscs,
         FoldedIndex folded,
+        bool mobility,
         int loops,
         double rate,
         double prior,
@@ -125,8 +142,8 @@ internal static class TrainCommand
 
         int[] trainDiscs = Enumerable.Range(own[0] - smooth, own[^1] - own[0] + 1 + 2 * smooth)
             .Where(d => d is >= TrainingData.MinDiscs and <= TrainingData.MaxDiscs).ToArray();
-        Encoded train = Encode(folded, trainDiscs.SelectMany(d => TrainingData.Load(data, Split.Train, d, maxPerDiscs)).ToArray(), workers);
-        Encoded validation = Encode(folded, own.SelectMany(d => TrainingData.Load(data, Split.Validation, d, maxPerDiscs)).ToArray(), workers);
+        Encoded train = Encode(folded, trainDiscs.SelectMany(d => TrainingData.Load(data, Split.Train, d, maxPerDiscs)).ToArray(), mobility, workers);
+        Encoded validation = Encode(folded, own.SelectMany(d => TrainingData.Load(data, Split.Validation, d, maxPerDiscs)).ToArray(), mobility, workers);
         if (train.Count < 1000 || validation.Count < 100)
         {
             Console.WriteLine($"stage {stage} (discs {own[0]}–{own[^1]}): too few positions ({train.Count:N0}), filled from a neighbour.");
@@ -134,11 +151,23 @@ internal static class TrainCommand
             return null;
         }
 
-        (double[] weights, Fit fit) = Fit1(folded, train, validation, loops, rate, prior, patience, workers, minAppear);
+        int weightCount = folded.Count + (mobility ? EvalWeights.MobilityWeightsPerStage : 0);
+        (double[] weights, Fit fit) = Fit1(weightCount, train, validation, loops, rate, prior, patience, workers, minAppear);
         Console.WriteLine($"stage {stage} (discs {own[0]}–{own[^1]}): {train.Count:N0} train, {validation.Count:N0} validation, " +
             $"{fit.Loops} loops, train MAE {fit.TrainMae:0.000}, validation MAE {fit.ValidationMae:0.000} (RMSE {Math.Sqrt(fit.ValidationMse):0.000}), {clock.Elapsed:h\\:mm\\:ss}");
         summary.Add($"| {stage} | {own[0]}–{own[^1]} | {train.Count:N0} | {fit.Loops} | {fit.TrainMae:0.000} | {fit.ValidationMae:0.000} | {Math.Sqrt(fit.ValidationMse):0.000} |");
         return weights;
+    }
+
+    private static short[] ExpandMobility(double[] weights, int offset, int units)
+    {
+        var table = new short[EvalWeights.MobilityWeightsPerStage];
+        for (int i = 0; i < table.Length; i++)
+        {
+            table[i] = (short)Math.Clamp(Math.Round(weights[offset + i] * units, MidpointRounding.AwayFromZero), short.MinValue, short.MaxValue);
+        }
+
+        return table;
     }
 
     private static double Fraction(Options options, string name, double defaultValue)
@@ -190,21 +219,31 @@ internal static class TrainCommand
         public Span<ushort> Row(int i) => _blocks[i / BlockRows].AsSpan(i % BlockRows * Features, Features);
     }
 
-    private static Encoded Encode(FoldedIndex folded, Sample[] samples, int workers)
+    private static Encoded Encode(FoldedIndex folded, Sample[] samples, bool mobility, int workers)
     {
-        int features = folded.Set.FeatureCount;
-        int[] featureBase = folded.FeatureBase;
+        int patternFeatures = folded.Set.FeatureCount;
+        int[] featureBase = mobility
+            ? [.. folded.FeatureBase, folded.Count, folded.Count + EvalWeights.MobilitySlotsPerSide]
+            : folded.FeatureBase;
         var encoded = new Encoded(samples.Length, featureBase, new float[samples.Length]);
         Parallel.For(0, workers, new ParallelOptions { MaxDegreeOfParallelism = workers }, worker =>
         {
-            Span<int> raw = stackalloc int[features];
+            Span<int> raw = stackalloc int[patternFeatures];
             for (int i = worker; i < samples.Length; i += workers)
             {
-                folded.Set.Indices(samples[i].Own, samples[i].Opponent, raw);
+                ulong own = samples[i].Own;
+                ulong opp = samples[i].Opponent;
+                folded.Set.Indices(own, opp, raw);
                 Span<ushort> row = encoded.Row(i);
-                for (int f = 0; f < features; f++)
+                for (int f = 0; f < patternFeatures; f++)
                 {
                     row[f] = (ushort)(folded.Of(raw[f]) - featureBase[f]);
+                }
+
+                if (mobility)
+                {
+                    row[patternFeatures] = (ushort)Math.Min(EvalWeights.MobilitySlotsPerSide - 1, BitOperations.PopCount(Bitboards.LegalMoves(own, opp)));
+                    row[patternFeatures + 1] = (ushort)Math.Min(EvalWeights.MobilitySlotsPerSide - 1, BitOperations.PopCount(Bitboards.LegalMoves(opp, own)));
                 }
 
                 encoded.Scores[i] = samples[i].Score;
@@ -216,10 +255,9 @@ internal static class TrainCommand
 
     private sealed record Fit(int Loops, double TrainMae, double ValidationMae, double ValidationMse);
 
-    private static (double[] Weights, Fit Fit) Fit1(FoldedIndex folded, Encoded train, Encoded validation, int loops, double rate,
+    private static (double[] Weights, Fit Fit) Fit1(int count, Encoded train, Encoded validation, int loops, double rate,
         double prior, int patience, int workers, int minAppear)
     {
-        int count = folded.Count;
         var weights = new double[count];
         var best = new double[count];
         var m = new double[count];

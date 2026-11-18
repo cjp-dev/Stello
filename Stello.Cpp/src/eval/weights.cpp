@@ -14,6 +14,7 @@ namespace {
 
 constexpr std::string_view kMagic = "STELLOEV";
 constexpr uint16_t kVersion = 2;
+constexpr uint16_t kMobilityVersion = 3;
 
 void set_error(EvalError* error, EvalErrorKind kind, std::string detail = {}) {
     if (error) {
@@ -82,7 +83,8 @@ std::optional<EvalWeights> EvalWeights::create(
     std::span<const uint8_t> stage_of_discs,
     int32_t units_per_disc,
     std::span<const std::vector<int16_t>> stage_tables,
-    EvalError* error
+    EvalError* error,
+    std::span<const std::vector<int16_t>> mobility_tables
 ) {
     if (error) *error = EvalError{};
     if (!set || stage_of_discs.size() != 65 || stage_tables.empty() || units_per_disc < 1 || units_per_disc > 1024) {
@@ -93,6 +95,18 @@ std::optional<EvalWeights> EvalWeights::create(
         if (tbl.size() != set->raw_size()) {
             set_error(error, EvalErrorKind::DoesNotFit);
             return std::nullopt;
+        }
+    }
+    if (!mobility_tables.empty()) {
+        if (mobility_tables.size() != stage_tables.size()) {
+            set_error(error, EvalErrorKind::DoesNotFit);
+            return std::nullopt;
+        }
+        for (const auto& mob : mobility_tables) {
+            if (mob.size() != MOBILITY_WEIGHTS_PER_STAGE) {
+                set_error(error, EvalErrorKind::DoesNotFit);
+                return std::nullopt;
+            }
         }
     }
     for (uint8_t s : stage_of_discs) {
@@ -110,6 +124,12 @@ std::optional<EvalWeights> EvalWeights::create(
     weights.weights_.reserve(stage_tables.size() * set->raw_size());
     for (const auto& tbl : stage_tables) {
         weights.weights_.insert(weights.weights_.end(), tbl.begin(), tbl.end());
+    }
+    if (!mobility_tables.empty()) {
+        weights.mob_weights_.reserve(mobility_tables.size() * MOBILITY_WEIGHTS_PER_STAGE);
+        for (const auto& mob : mobility_tables) {
+            weights.mob_weights_.insert(weights.mob_weights_.end(), mob.begin(), mob.end());
+        }
     }
     return weights;
 }
@@ -167,7 +187,7 @@ std::optional<EvalWeights> EvalWeights::read(std::span<const uint8_t> compressed
     if (!reader.u16(version, error)) {
         return std::nullopt;
     }
-    if (version != kVersion) {
+    if (version != kVersion && version != kMobilityVersion) {
         set_error(error, EvalErrorKind::NotAnEvaluationFile);
         return std::nullopt;
     }
@@ -230,7 +250,26 @@ std::optional<EvalWeights> EvalWeights::read(std::span<const uint8_t> compressed
         weights.push_back(std::move(table));
     }
 
-    return create(set, stage_of_discs, units_per_disc, weights, error);
+    std::vector<std::vector<int16_t>> mobility_weights;
+    if (version == kMobilityVersion) {
+        mobility_weights.reserve(stages);
+        std::vector<int16_t> mob_prev(MOBILITY_WEIGHTS_PER_STAGE, 0);
+        for (size_t stage = 0; stage < stages; ++stage) {
+            std::span<const uint8_t> low;
+            std::span<const uint8_t> high;
+            if (!reader.take(MOBILITY_WEIGHTS_PER_STAGE, low, error)
+                || !reader.take(MOBILITY_WEIGHTS_PER_STAGE, high, error)) {
+                return std::nullopt;
+            }
+            for (size_t i = 0; i < MOBILITY_WEIGHTS_PER_STAGE; ++i) {
+                const uint16_t delta_u = static_cast<uint16_t>(low[i]) | (static_cast<uint16_t>(high[i]) << 8);
+                mob_prev[i] = wrapping_add_i16(mob_prev[i], static_cast<int16_t>(delta_u));
+            }
+            mobility_weights.push_back(mob_prev);
+        }
+    }
+
+    return create(set, stage_of_discs, units_per_disc, weights, error, mobility_weights);
 }
 
 std::array<uint8_t, 65> EvalWeights::even_stages(int32_t stages) {

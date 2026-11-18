@@ -473,6 +473,35 @@ Temporary `SearchOptions` / `opt=` switches (`mpc-model=`, `mpc-early=`, `mpc-la
 
 - **Decision & landing (Gate P5 Item 1):** Landed `e16-s60-10m.bin` as the single unified [stello-eval.bin](../../Stello.Net/Book/stello-eval.bin) across desktop C++, `.NET`, and WebAssembly (`engine` + `engine-mt`). Updated parity fixtures (`Stello.Cpp/tests/data/`), `test_main.cpp`, `parity_tests.cpp`, `search_tests.cpp` (`1,846,697` nodes), `stello-v3-signatures.txt`, `engine.test.mjs`, `NativeEngineTests.cs` (`24,670` nodes and shared-model parity vs frozen `V2`), and `BookLearnerTests.cs`. Verified `clang-release` CTest (`2/2`, `29.48 s`), `msvc-release` CTest (`2/2`, `32.71 s`), WASM Node tests (`19/19`), `Stello.Engine.Tests` (`499/499`), `Stello.Net.Tests` (`116/116`), and `Egaroucid.Engine.Tests` (`100 passed, 8 skipped`).
 
+---
+
+## Phase 5 — Evaluation: Item 2 (`egaroucid16 + mobility × 60`, Format v3, Accepted)
+
+- **Ablation & leaf speed probe:**
+  - Joint Adam ablation (`10 M` train rows, `d25` / `d35` / `d45`): adding legal mobility (`+mob`) improved held-out Test MAE by `−0.106` / `−0.126` / `−0.133` (`−0.130` / `−0.159` / `−0.179` RMSE), capturing `~85–90 %` of full `+all` extra features (`+pot + quad_parity + disc_diff`).
+  - C++ `look == 0` leaf probe (`mid-bench` fixed nodes): `+mob` cost `−2.3 %` NPS at `depth 12` (`13.69M` vs `14.01M` nps) and `−0.8 %` NPS at `depth 14` (`14.07M` vs `14.19M` nps), versus `−4.3 %` at `depth 14` for `+mob+pot`.
+- **Format v3 & training (`Stello.Trainer --mobility on`):**
+  - Extended `EvalWeights` across C# ([EvalWeights.cs](../../Stello.Net/Stello.Engine/Evaluation/EvalWeights.cs)) and C++ ([weights.hpp](../../Stello.Cpp/src/eval/weights.hpp), [weights.cpp](../../Stello.Cpp/src/eval/weights.cpp)) to version `3` with `96` mobility weights per stage (`48` own + `48` opponent legal-move count slots). Wired `eval_after_move_score` / `eval_state_score` into `Kernel<UseAvx2>` ([kernel.hpp](../../Stello.Cpp/src/search/kernel.hpp)), `search_root`/`search_inc`, `order_by_evaluation` (reusing `replies_bb`), `try_probcut_inc` ([engine_impl.hpp](../../Stello.Cpp/src/search/engine_impl.hpp)), and `try_end_probcut` ([search_impl.hpp](../../Stello.Cpp/src/endgame/search_impl.hpp)).
+  - Trained `e16-mob-s60-10m.bin` (`66` features, `320,289` weights/stage, `--min-discs 12 --smooth 0 --rate 0.15 --patience 15 --loops 1000 --units 16 --min-appear 10 --mobility on`) in `1:20:54` -> `8,892,085` bytes gzip (`+6,351` B vs Item 1; [eval-p5-e16-mob-s60-10m.md](benchmark-results/eval-p5-e16-mob-s60-10m.md)).
+  - **Test split (`1,040,276` positions):** **MAE `4.97`, RMSE `6.74`** (down from `5.07 / 6.87` for Item 1, `5.47 / 7.31` for Stello 4.0 `plus15 × 10`, and `5.05 / 6.90` for Egaroucid).
+- **MPC & MPC-end fits (`engine.{hpp,cpp}`):**
+  - Midgame (`3,900` positions): $\sigma = 0.9972 + 5.1252x - 2.8746x^2 - 0.5219s + 0.2280d$ (`5.6 %` avg relative error).
+  - Endgame (`970/1,040` solved, linear on `EndShallowDepth`): $\sigma_{\text{end}} = \max(2.0,\; 8.0571 - 1.8599x - 0.3890s)$.
+  - Dispatched in `SearchEngine` ([engine.cpp](../../Stello.Cpp/src/search/engine.cpp)) by `(PatternSet, has_mobility)` (`egaroucid16 + mobility` vs plain `egaroucid16` vs `plus15`).
+  - Also fixed the `TimePerGame` `estimate_wld_ms` handover in [engine_impl.hpp](../../Stello.Cpp/src/search/engine_impl.hpp) by snapshotting `mid_elapsed_ms` and `mid_total_nodes` before `kSelectiveStages` (avoiding `3×` NPS inflation from selective endgame probes) and tightening the growth factor (`1.35 -> 1.6`, threshold `> capped_rem_ms`).
+- **Native benchmarks & WASM bundle size (`Stello.Web/wwwroot`):**
+  - `clang-release` `mid-bench --depth 12` (`100` pos): `8,201,458` nodes (`−3.5 %` vs Item 1's `8,501,049`) in `0.602 s` (`13.62M` nps vs `0.607 s` / `14.01M` nps); `mid-bench --depth 10`: `3,083,842` nodes in `0.232–0.265 s` (`11.63–13.28M` nps); `solve-bench` (`FFO #40–49`): `1,070,469,673` nodes in `16.4 s` (`65.12M` nps), all exact.
+  - WebAssembly bundles (`Stello.Web/wwwroot`): `engine` `9,146,966` B raw / `8,977,277` B gzip / `8,957,275` B brotli (`+8,954` B brotli vs Item 1); `engine-mt` `9,177,430` B raw / `8,988,280` B gzip / `8,967,037` B brotli (`+9,139` B brotli vs Item 1).
+- **Timed matches (`1t`, `--workers 8`, `hash-bits=19`, vs Item 1 `e16_item1`):**
+
+| Match | Games | Side A | Side B | Score (B, 95 % CI) | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | NPS (A / B) | Wall Time |
+|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---|
+| `p52_e16mob_500ms_1180g` | 1,180 | `e16_item1` (`500 ms`) | `e16_mob` (`500 ms`) | **51.8 %** (49.9–53.7 %) | **+13** (−1 to +26) | **96.9 %** | +0.2 ± 0.2 | 20.32 / 20.41 | 23.0 / 23.0 | 20.48M / 19.91M | [30m 42s](benchmark-results/match_p52_e16mob_vs_e16_500ms_1180g.md) |
+| `p52_e16mob_2000ms_600g` | 600 | `e16_item1` (`2,000 ms`) | `e16_mob` (`2,000 ms`) | **52.9 %** (50.3–55.6 %) | **+20** (+2 to +39) | **98.4 %** | +0.2 ± 0.2 | 22.96 / 23.13 | 25.1 / 25.1 | 21.28M / 20.72M | [57m 41s](benchmark-results/match_p52_e16mob_vs_e16_2000ms_600g.md) |
+
+- **Decision & landing (Gate P5 Item 2):** Accepted (`4.97 MAE / 6.74 RMSE` beating Item 1 `5.07 / 6.87`, Stello 4.0 `5.47 / 7.31`, and Egaroucid `5.05 / 6.90`; `+13` Elo at `500 ms` `LOS 96.9 %` and `+20` Elo at `2,000 ms` `LOS 98.4 %`; `+9 KB` WASM brotli). Landed `e16-mob-s60-10m.bin` as unified [stello-eval.bin](../../Stello.Net/Book/stello-eval.bin). Embedded Stello 2.0's frozen `plus15 × 10` [stello-eval.bin](../../Stello.Net/Stello.Engine.V2/stello-eval.bin) (`990,568` B) in [Stello.Engine.V2.csproj](../../Stello.Net/Stello.Engine.V2/Stello.Engine.V2.csproj) so frozen `V2` continues to load v2 weights cleanly on clean builds. Updated parity/test fixtures (`Stello.Cpp/tests/data/`, `test_main.cpp`, `parity_tests.cpp`, `search_tests.cpp`, `engine.test.mjs`, `ParityCommands.cs`, `PatternTests.cs`, `NativeEngineTests.cs`, `BookLearnerTests.cs`, `stello-v3-signatures.txt`). Verified `clang-release` CTest (`2/2`, `31.75 s`), `msvc-release` CTest (`2/2`, `35.14 s`), WASM Node tests (`19/19`), `Stello.Engine.Tests` (`500/500`), `Stello.Net.Tests` (`116/116`), and `Egaroucid.Engine.Tests` (`100 passed, 8 skipped`).
+
+
 
 
 

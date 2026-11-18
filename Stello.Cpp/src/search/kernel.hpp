@@ -64,6 +64,43 @@ struct Kernel {
         uint64_t flips,
         const int16_t* weights
     ) noexcept;
+    static STELLO_FORCEINLINE int32_t eval_after_move_score(
+        const eval::EvalWeights& weights,
+        const std::array<uint16_t, eval::MAX_PATTERN_FEATURES>& parent_base,
+        size_t child_stage,
+        const int16_t* child_w,
+        uint64_t own,
+        uint64_t other,
+        uint32_t square,
+        uint64_t move_flips
+    ) noexcept {
+        int32_t raw = sum_eval_after_move(weights.set(), parent_base, square, move_flips, child_w);
+        if (weights.has_mobility()) {
+            const uint64_t child_own = other ^ move_flips;
+            const uint64_t child_other = own | move_flips | (uint64_t{1} << square);
+            const uint32_t m_own = static_cast<uint32_t>(std::popcount(legal_moves(child_own, child_other)));
+            const uint32_t m_opp = static_cast<uint32_t>(std::popcount(legal_moves(child_other, child_own)));
+            raw += weights.mobility_bonus(child_stage, m_own, m_opp);
+        }
+        return eval::clamp_pattern_score(weights, raw);
+    }
+    static STELLO_FORCEINLINE int32_t eval_state_score(
+        const eval::EvalWeights& weights,
+        const eval::PatternState& cur,
+        Player own_player,
+        uint64_t own,
+        uint64_t opponent,
+        size_t stage,
+        const int16_t* stage_w
+    ) noexcept {
+        int32_t raw = sum_eval_state(weights.set(), cur, own_player, stage_w);
+        if (weights.has_mobility()) {
+            const uint32_t m_own = static_cast<uint32_t>(std::popcount(legal_moves(own, opponent)));
+            const uint32_t m_opp = static_cast<uint32_t>(std::popcount(legal_moves(opponent, own)));
+            raw += weights.mobility_bonus(stage, m_own, m_opp);
+        }
+        return eval::clamp_pattern_score(weights, raw);
+    }
 
     // Midgame & top-level driver (search/engine_impl.hpp)
     static SearchOutcome run(

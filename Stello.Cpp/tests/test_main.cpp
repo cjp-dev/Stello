@@ -16,7 +16,7 @@ STELLO_TEST(phase0_version_and_embedded_eval_smoke) {
     STELLO_CHECK_EQ(kAbiVersion, 3u);
 
     const auto eval_bytes = eval::detail::embedded_eval_bytes();
-    STELLO_CHECK_EQ(eval_bytes.size(), size_t{8885734});
+    STELLO_CHECK_EQ(eval_bytes.size(), size_t{8892085});
     STELLO_CHECK_EQ(eval_bytes[0], uint8_t{0x1f});
     STELLO_CHECK_EQ(eval_bytes[1], uint8_t{0x8b});
 

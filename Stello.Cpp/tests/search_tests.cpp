@@ -637,7 +637,7 @@ STELLO_TEST(persistent_engine_ages_full_table_across_game_positions) {
         player = opponent(player);
     }
 
-    STELLO_CHECK_EQ(total_nodes, uint64_t{1'846'697});
+    STELLO_CHECK_EQ(total_nodes, uint64_t{1'724'077});
 }
 
 // ---- Full 105-signature baseline integration test (Stello 3.1) ----
@@ -1009,23 +1009,23 @@ STELLO_TEST(progress_and_time_limit_tests) {
         const auto outcome = engine.search(
             board, player, SearchLimits::time_per_move_ms(1000),
             [&](const SearchInfo& info) {
-                if (info.depth == 7) {
+                if (info.depth == 9) {
                     g_manual_ms.store(1000, std::memory_order_relaxed);
                 }
                 reports.push_back(info);
             });
         STELLO_CHECK(outcome.ok);
-        STELLO_CHECK_EQ(outcome.result.depth, 7);
+        STELLO_CHECK_EQ(outcome.result.depth, 9);
         STELLO_CHECK(outcome.result.kind == ScoreKind::Heuristic);
-        std::vector<SearchInfo> sevens;
+        std::vector<SearchInfo> nines;
         for (const auto& r : reports) {
-            if (r.depth == 7) {
-                sevens.push_back(r);
+            if (r.depth == 9) {
+                nines.push_back(r);
             }
         }
-        STELLO_CHECK(!sevens.empty());
-        STELLO_CHECK(sevens.size() < static_cast<size_t>(std::popcount(board.legal_moves(player))));
-        STELLO_CHECK(outcome.result.mv.square == sevens.back().best_move);
+        STELLO_CHECK(!nines.empty());
+        STELLO_CHECK(nines.size() < static_cast<size_t>(std::popcount(board.legal_moves(player))));
+        STELLO_CHECK(outcome.result.mv.square == nines.back().best_move);
     }
 
     // real clock time_per_move

@@ -81,9 +81,10 @@ inline int64_t estimate_wld_ms(
     }
     const double mid_nps = static_cast<double>((std::max)(total_nodes, uint64_t{10'000}))
                          / static_cast<double>((std::max<int64_t>)(mid_elapsed_ms, 1));
-    // Calibrated on midgame-exact (24-28 empties): ~48x iter_nodes at 24 empties, scaling ~1.35x/empty.
+    // Calibrated on midgame-exact (24-28 empties): ~48x iter_nodes at 24 empties, scaling ~1.6x/empty
+    // (endgame exact WLD grows ~2.7x/empty vs ~1.7x/empty for selective midgame depth = empties - 8).
     const double baseline_depth = static_cast<double>((std::max)(empties - 8, 1));
-    const double scale = 48.0 * std::pow(1.35, static_cast<double>(empties - 24))
+    const double scale = 48.0 * std::pow(1.6, static_cast<double>(empties - 24))
                        / std::pow(2.0, static_cast<double>(depth_done) - baseline_depth);
     const double est_nodes = static_cast<double>((std::max)(last_iter_nodes, uint64_t{1})) * scale;
     const double est_ms = est_nodes / (mid_nps * 3.5);
@@ -188,6 +189,9 @@ AbortVoid Kernel<UseAvx2>::iterate(
         }
     }
 
+    const int64_t mid_elapsed_ms = (std::max<int64_t>)(s.elapsed_ms(), 1);
+    const uint64_t mid_total_nodes = current_total_nodes(s);
+
     if (limits.mode() != TimeControlMode::Solve
         && limits.mode() != TimeControlMode::FixedDepth
         && s.end_probcut_errors != nullptr
@@ -228,9 +232,9 @@ AbortVoid Kernel<UseAvx2>::iterate(
                 empties,
                 empties - 8,
                 s.last_iter_nodes,
-                (std::max<int64_t>)(s.elapsed_ms(), 1),
-                current_total_nodes(s));
-            if (est_ms > capped_rem_ms * 3 / 2) {
+                mid_elapsed_ms,
+                mid_total_nodes);
+            if (est_ms > capped_rem_ms) {
                 STELLO_RETURN_OK_VOID();
             }
         }
@@ -481,10 +485,12 @@ AbortVoid Kernel<UseAvx2>::search_root(
     const eval::PatternState root_eval = set.state_of(board.black(), board.white());
     alignas(32) std::array<uint16_t, eval::MAX_PATTERN_FEATURES> root_base{};
     const int16_t* child_w = nullptr;
+    size_t child_stage = 0;
     if (look == 0) {
         build_eval_base(set, root_eval, opp, root_base);
         const uint32_t child_discs = 64U - board.empty_count() + 1U;
-        child_w = s.pattern->stage_weights(s.pattern->stage_of(child_discs)).data();
+        child_stage = s.pattern->stage_of(child_discs);
+        child_w = s.pattern->stage_weights(child_stage).data();
     }
 
     int32_t alpha = -detail::midgame::ROOT_WINDOW;
@@ -552,8 +558,9 @@ AbortVoid Kernel<UseAvx2>::search_root(
         if (look == 0) {
             STELLO_TRY_VOID_IN_STATUS(s.count_node());
             s.evaluations += 1;
-            const int32_t raw = sum_eval_after_move(set, root_base, static_cast<uint32_t>(mv), f, child_w);
-            score = -eval::clamp_pattern_score(*s.pattern, raw);
+            score = -eval_after_move_score(
+                *s.pattern, root_base, child_stage, child_w,
+                board.discs(player), board.discs(opp), static_cast<uint32_t>(mv), f);
         } else {
             const Board child = board.play_flips(player, static_cast<uint32_t>(mv), f);
             eval::PatternState child_eval;
@@ -731,10 +738,12 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::search_inc(
     const auto& set = s.pattern->set();
     alignas(32) std::array<uint16_t, eval::MAX_PATTERN_FEATURES> parent_base{};
     const int16_t* child_w = nullptr;
+    size_t child_stage = 0;
     if (look == 0) {
         build_eval_base(set, eval_state, opp, parent_base);
         const uint32_t child_discs = 64U - board.empty_count() + 1U;
-        child_w = s.pattern->stage_weights(s.pattern->stage_of(child_discs)).data();
+        child_stage = s.pattern->stage_of(child_discs);
+        child_w = s.pattern->stage_weights(child_stage).data();
     }
 
     int32_t best = -INFINITY_SCORE;
@@ -764,8 +773,9 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::search_inc(
         if (look == 0) {
             STELLO_TRY_VOID_R(ScoreMove, s.count_node());
             s.evaluations += 1;
-            const int32_t raw = sum_eval_after_move(set, parent_base, static_cast<uint32_t>(mv), f, child_w);
-            score = -eval::clamp_pattern_score(*s.pattern, raw);
+            score = -eval_after_move_score(
+                *s.pattern, parent_base, child_stage, child_w,
+                own, other, static_cast<uint32_t>(mv), f);
         } else {
             const Board child = board.play_flips(player, static_cast<uint32_t>(mv), f);
             eval::PatternState child_eval;
@@ -847,7 +857,8 @@ AbortVoid Kernel<UseAvx2>::order_by_evaluation(
     const auto& set = s.pattern->set();
     alignas(32) std::array<uint16_t, eval::MAX_PATTERN_FEATURES> parent_base{};
     build_eval_base(set, eval_state, opp, parent_base);
-    const int16_t* const child_w = s.pattern->stage_weights(s.pattern->stage_of(64U - board.empty_count() + 1U)).data();
+    const size_t child_stage = s.pattern->stage_of(64U - board.empty_count() + 1U);
+    const int16_t* const child_w = s.pattern->stage_weights(child_stage).data();
     std::array<int32_t, MAX_MOVES> keys{};
 
     for (size_t idx = 0; idx < list.size(); ++idx) {
@@ -860,11 +871,17 @@ AbortVoid Kernel<UseAvx2>::order_by_evaluation(
         const uint64_t f = flips(own, other, static_cast<uint32_t>(mv));
         const uint64_t child_own = other & ~f;
         const uint64_t child_other = own | f | (uint64_t{1} << mv);
-        const int32_t replies = endgame::bits::weighted_moves(legal_moves(child_own, child_other));
+        const uint64_t replies_bb = legal_moves(child_own, child_other);
+        const int32_t replies = endgame::bits::weighted_moves(replies_bb);
         const int32_t potential = endgame::bits::potential_mobility(child_other, empty & ~(uint64_t{1} << mv));
         STELLO_TRY_VOID_IN_STATUS(s.count_node());
         s.evaluations += 1;
-        const int32_t raw = sum_eval_after_move(set, parent_base, static_cast<uint32_t>(mv), f, child_w);
+        int32_t raw = sum_eval_after_move(set, parent_base, static_cast<uint32_t>(mv), f, child_w);
+        if (s.pattern->has_mobility()) {
+            const uint32_t m_own = static_cast<uint32_t>(std::popcount(replies_bb));
+            const uint32_t m_opp = static_cast<uint32_t>(std::popcount(legal_moves(child_other, child_own)));
+            raw += s.pattern->mobility_bonus(child_stage, m_own, m_opp);
+        }
         const int32_t value = eval::clamp_pattern_score(*s.pattern, raw);
         keys[idx] = (ORDER_OFFSET - replies) * ORDER_MOBILITY
                   + (ORDER_OFFSET - potential) * ORDER_POTENTIAL_MOBILITY
@@ -938,8 +955,10 @@ AbortResult<std::optional<int32_t>> Kernel<UseAvx2>::try_probcut_inc(
     STELLO_TRY_VOID_R(std::optional<int32_t>, s.count_node());
     s.evaluations += 1;
     const uint32_t discs = 64U - board.empty_count();
-    const int16_t* const w = s.pattern->stage_weights(s.pattern->stage_of(discs)).data();
-    const int32_t static0 = eval::clamp_pattern_score(*s.pattern, sum_eval_state(s.pattern->set(), eval_state, player, w));
+    const size_t stage = s.pattern->stage_of(discs);
+    const int16_t* const w = s.pattern->stage_weights(stage).data();
+    const int32_t static0 = eval_state_score(
+        *s.pattern, eval_state, player, board.discs(player), board.discs(opponent(player)), stage, w);
 
     ProbCutGuard guard(s.in_probcut);
     STELLO_TRY_ASSIGN_R(

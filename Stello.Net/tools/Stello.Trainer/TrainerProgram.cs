@@ -19,7 +19,7 @@ internal static class TrainerProgram
                                     (default: Training data/stello-bin). Never commit or share the result.
           train --out <file> [--set classic11] [--stages 15] [--data <folder>] [--max-per-discs 2000000]
                 [--min-discs 4] [--max-discs 64] [--smooth 2] [--loops 1000] [--rate 0.05] [--patience 20]
-                [--units 32] [--prior 1] [--min-appear 0] [--workers N] [--only-stage S]
+                [--units 32] [--prior 1] [--min-appear 0] [--mobility off|on] [--workers N] [--only-stage S]
                                     Train pattern weights stage by stage and write an evaluation file.
           report --model <file> [--data <folder>] [--max-per-discs N] [--name <name>]
                                     The model's error on the test positions per number of empty squares, next to

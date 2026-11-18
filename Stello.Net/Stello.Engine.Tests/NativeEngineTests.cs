@@ -59,7 +59,7 @@ public class NativeEngineTests
             Path.Combine(AppContext.BaseDirectory, "Data", "Benchmark", "midgame.txt")).Single(p => p.Id == "g01e48");
         SearchLimits limits = SearchLimits.FixedDepth(10);
         SearchResult result = new SearchEngine().Search(position.Board, position.Player, limits);
-        Assert.Equal(24670, result.Nodes);
+        Assert.Equal(23519, result.Nodes);
     }
 
     [Fact]
@@ -293,11 +293,19 @@ public class NativeEngineTests
 
     private static (SearchOptions, V2.Search.SearchOptions) LoadedModel()
     {
-        // The shipped file loaded as another model: the wrapper passes the file's bytes (selective off since V2 uses plus15 MPC).
-        string path = Path.Combine(AppContext.BaseDirectory, "Data", "stello-eval.bin");
-        return (
-            new SearchOptions { Pattern = EvalWeights.Load(path), Selective = false },
-            new V2.Search.SearchOptions { Pattern = V2.Evaluation.EvalWeights.Load(path), Selective = false });
+        // A version-2 evaluation loaded from disk: the wrapper passes the file's bytes (frozen V2 only reads version 2).
+        string path = Path.Combine(Path.GetTempPath(), $"stello-v2-loaded-{Guid.NewGuid():N}.bin");
+        File.WriteAllBytes(path, WrittenModel().Item1.Pattern!.FileBytes);
+        try
+        {
+            return (
+                new SearchOptions { Pattern = EvalWeights.Load(path), Selective = false },
+                new V2.Search.SearchOptions { Pattern = V2.Evaluation.EvalWeights.Load(path), Selective = false });
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     private static string Signature(SearchResult result) =>

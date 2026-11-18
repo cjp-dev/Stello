@@ -23,8 +23,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- The same trained evaluation as Stello.Engine (EvalWeights.Default). -->
-    <EmbeddedResource Include="..\Book\stello-eval.bin" LogicalName="Stello.Engine.V2.stello-eval.bin" />
+    <!-- Stello 2.0's own frozen evaluation (EvalWeights.Default). -->
+    <EmbeddedResource Include="stello-eval.bin" LogicalName="Stello.Engine.V2.stello-eval.bin" />
   </ItemGroup>
 
 </Project>
