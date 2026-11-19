@@ -57,6 +57,197 @@ internal static class SearchCommands
         return completed ? 0 : 2;
     }
 
+    public static int Calclib(Options options)
+    {
+        options.Allow("time-s", "depth", "threshold", "max-ply", "max-adds", "workers", "save-every", "hash-bits", "fresh");
+        string path = options[0];
+        SearchLimits limits = options.Limits(SearchLimits.TimePerMove(TimeSpan.FromSeconds(60)));
+        int threshold = options.Number("threshold", 100, 0, 100_000);
+        int maxPly = options.Number("max-ply", 30, 1, 60);
+        int maxAdds = options.Number("max-adds", 3, 1, 64);
+        int workers = options.Number("workers", DefaultWorkers, 1, 256);
+        int saveEvery = options.Number("save-every", 10, 1, 100_000);
+        int hashBits = options.Number("hash-bits", 19, 10, 26);
+        bool fresh = options.Flag("fresh");
+
+        string donePath = path + ".calclib.done";
+        HashSet<BookKey> completedKeys = !fresh ? ReadBookKeys(donePath) : [];
+
+        OpeningBook before = OpeningBook.Load(path);
+        OpeningBook book = OpeningBook.Load(path);
+        var calclib = new BookCalclib(book, limits, threshold, maxPly, maxAdds, workers, hashBits, completedKeys);
+        Console.WriteLine(
+            $"{calclib.CandidatePositions:N0} positions with unbooked moves (ply <= {maxPly}); " +
+            $"{calclib.ToSearch:N0} to check ({completedKeys.Count:N0} already checked). " +
+            $"{LimitText(limits)}/probe, threshold {threshold} cp, max {maxAdds} adds/pos, {workers} workers. Ctrl+C stops and saves.");
+
+        var clock = Stopwatch.StartNew();
+        TimeSpan searching = TimeSpan.Zero;
+        int totalAdded = 0;
+        bool completed = Cancellable(token => calclib.Run(
+            progress =>
+            {
+                searching += progress.Elapsed;
+                totalAdded += progress.Added;
+                completedKeys.Add(progress.Key);
+                TimeSpan left = searching / progress.Done * (progress.Total - progress.Done) / Math.Min(workers, progress.Total);
+                string addedNote = progress.Added > 0
+                    ? $" +{progress.Added} ({progress.BestAdded}:{progress.BestAddedValue})"
+                    : "";
+                Console.WriteLine(
+                    $"[{progress.Done,5:N0}/{progress.Total:N0}] ply {progress.Ply,2} {progress.Line}{addedNote} ({progress.Elapsed.TotalSeconds:0.0} s), left {Duration(left)}");
+            },
+            () =>
+            {
+                Program.WriteText(book, path);
+                WriteBookKeys(donePath, completedKeys);
+            },
+            saveEvery,
+            token));
+
+        BookMinimax.Run(book);
+        Program.WriteText(book, path);
+
+        if (completed)
+        {
+            File.Delete(donePath);
+        }
+        else
+        {
+            WriteBookKeys(donePath, completedKeys);
+        }
+
+        BookComparison comparison = BookComparison.Of(before, book);
+        string reportPath = Path.ChangeExtension(path, ".calclib.report.txt");
+        using (var writer = new StreamWriter(reportPath))
+        {
+            comparison.Write(writer, $"Calclib {path} with {LimitText(limits)}/probe, threshold {threshold} cp ({DateTime.Now:yyyy-MM-dd HH:mm})");
+        }
+
+        Console.WriteLine(
+            $"{(completed ? "Finished" : "Stopped")} after {Duration(clock.Elapsed)}. Added moves: {totalAdded:N0}; " +
+            $"values changed: {comparison.ValuesChanged:N0}; positions with another first move: {comparison.BestMoveChanges.Count:N0}. Report: {reportPath}.");
+        Console.WriteLine("The values are backed up and sorted. Run build to update the binary book.");
+        return completed ? 0 : 2;
+    }
+
+    public static int Expand(Options options)
+    {
+        options.Allow("time-s", "depth", "omega", "max-ply", "max-positions", "iterations", "max-time-min", "workers", "save-every", "hash-bits", "fresh");
+        string path = options[0];
+        SearchLimits limits = options.Limits(SearchLimits.TimePerMove(TimeSpan.FromSeconds(60)));
+        int omega = options.Number("omega", 50, 0, 100_000);
+        int maxPly = options.Number("max-ply", 28, 1, 60);
+        int maxPositions = options.Number("max-positions", 6000, 1, 5_000_000);
+        int maxIterations = options.Number("iterations", int.MaxValue, 1, int.MaxValue);
+        TimeSpan? maxTime = options.Text("max-time-min") is not null
+            ? TimeSpan.FromMinutes(options.Number("max-time-min", 60, 1, 100_000))
+            : null;
+        int workers = options.Number("workers", DefaultWorkers, 1, 256);
+        int saveEvery = options.Number("save-every", 10, 1, 100_000);
+        int hashBits = options.Number("hash-bits", 19, 10, 26);
+        bool fresh = options.Flag("fresh");
+
+        string pendingPath = path + ".expand.pending";
+        HashSet<BookKey> pendingKeys = !fresh ? ReadBookKeys(pendingPath) : [];
+
+        OpeningBook before = OpeningBook.Load(path);
+        OpeningBook book = OpeningBook.Load(path);
+        var expander = new BookExpander(
+            book, limits, omega, maxPly, maxPositions, maxIterations, maxTime, workers, hashBits, pendingKeys);
+        Console.WriteLine(
+            $"Start: {book.PositionCount:N0} positions, target {maxPositions:N0}, omega {omega}, max-ply {maxPly}, " +
+            $"{LimitText(limits)}/step, {workers} workers ({pendingKeys.Count:N0} pending lazy deviations). Ctrl+C stops and saves.");
+
+        var clock = Stopwatch.StartNew();
+        int leaves = 0, deviations = 0;
+        bool completed = Cancellable(token => expander.Run(
+            progress =>
+            {
+                if (progress.Kind == ExpandStepKind.Leaf) leaves++;
+                else deviations++;
+                string kindText = progress.Kind == ExpandStepKind.Leaf ? "leaf" : "dev ";
+                string moveText = progress.Move?.ToString() ?? "--";
+                Console.WriteLine(
+                    $"[{progress.Positions,5:N0}/{progress.MaxPositions:N0}] {kindText} ply {progress.Ply,2} prio {progress.Priority,4} " +
+                    $"{progress.Line} ({moveText}:{progress.Value} {progress.Origin}) ({progress.Elapsed.TotalSeconds:0.0} s)");
+            },
+            () =>
+            {
+                Program.WriteText(book, path);
+                WriteBookKeys(pendingPath, expander.PendingDeviations);
+            },
+            saveEvery,
+            token));
+
+        BookMinimax.Run(book);
+        Program.WriteText(book, path);
+
+        if (completed && expander.PendingDeviations.Count == 0)
+        {
+            File.Delete(pendingPath);
+        }
+        else
+        {
+            WriteBookKeys(pendingPath, expander.PendingDeviations);
+        }
+
+        BookComparison comparison = BookComparison.Of(before, book);
+        string reportPath = Path.ChangeExtension(path, ".expand.report.txt");
+        using (var writer = new StreamWriter(reportPath))
+        {
+            comparison.Write(writer, $"Expanded {path} with {LimitText(limits)}/step, omega {omega}, max-ply {maxPly} ({DateTime.Now:yyyy-MM-dd HH:mm})");
+        }
+
+        Console.WriteLine(
+            $"{(completed ? "Finished" : "Stopped")} after {Duration(clock.Elapsed)}: {book.PositionCount:N0} positions " +
+            $"({leaves:N0} leaves, {deviations:N0} deviations), values changed: {comparison.ValuesChanged:N0}, " +
+            $"first moves changed: {comparison.BestMoveChanges.Count:N0}. Report: {reportPath}.");
+        Console.WriteLine("The values are backed up and sorted. Run build to update the binary book.");
+        return completed ? 0 : 2;
+    }
+
+    private static HashSet<BookKey> ReadBookKeys(string path)
+    {
+        var keys = new HashSet<BookKey>();
+        if (!File.Exists(path))
+        {
+            return keys;
+        }
+
+        foreach (string line in File.ReadLines(path))
+        {
+            string[] parts = line.Split(':');
+            if (parts.Length == 3
+                && ulong.TryParse(parts[0], System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out ulong b)
+                && ulong.TryParse(parts[1], System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out ulong w)
+                && Enum.TryParse(parts[2], out Player p))
+            {
+                keys.Add(new BookKey(b, w, p));
+            }
+        }
+
+        return keys;
+    }
+
+    private static void WriteBookKeys(string path, IReadOnlyCollection<BookKey> keys)
+    {
+        if (keys.Count == 0)
+        {
+            File.Delete(path);
+            return;
+        }
+
+        Program.WriteAtomically(path, stream =>
+        {
+            using var writer = new StreamWriter(stream);
+            foreach (BookKey key in keys)
+            {
+                writer.WriteLine($"{key.Black:x16}:{key.White:x16}:{key.ToMove}");
+            }
+        });
+    }
+
     public static int Match(Options options)
     {
         options.Allow("starts", "starts-ply", "max-starts", "time-s", "depth", "workers", "threads", "hash-bits");

@@ -19,6 +19,10 @@ internal static class Program
                                            Prune unreachable branches and over-deep tails from the book.
           recalc <book.txt> [--time-s 60 | --depth N] [--workers N] [--save-every 10] [--hash-bits 19]
                                            Search the leaves again; writes <book>.report.txt.
+          calclib <book.txt> [--time-s 60 | --depth N] [--threshold 100] [--max-ply 30] [--max-adds 3] [--workers N] [--save-every 10] [--hash-bits 19] [--fresh]
+                                           Search unbooked legal moves (`onlyMoves`) and add moves within threshold.
+          expand <book.txt> [--time-s 60 | --depth N] [--omega 50] [--max-ply 28] [--max-positions 6000] [--iterations N] [--max-time-min M] [--workers N] [--save-every 10] [--hash-bits 19] [--fresh]
+                                           Expand promising leaves with Lincke Drop-Out Expansion (DOE).
           compare <old book> <new book> [--out <report.txt>]
                                            Report the values and first moves that changed.
           match <book A> <book B> (--starts <report.txt> | --starts-ply N) [--max-starts N]
@@ -40,9 +44,14 @@ internal static class Program
 
         try
         {
-            string[] flags = args[0] == "trim" ? ["dry-run"] : [];
+            string[] flags = args[0] switch
+            {
+                "trim" => ["dry-run"],
+                "calclib" or "expand" => ["fresh"],
+                _ => [],
+            };
             Options options = Options.Parse(args[1..], flags);
-            if (args[0] is not ("trim" or "recalc" or "compare" or "match"))
+            if (args[0] is not ("trim" or "recalc" or "calclib" or "expand" or "compare" or "match"))
             {
                 options.Allow();
             }
@@ -57,6 +66,8 @@ internal static class Program
                 ("stats", 1) => Stats(options[0]),
                 ("trim", 1) => Trim(options),
                 ("recalc", 1) => SearchCommands.Recalc(options),
+                ("calclib", 1) => SearchCommands.Calclib(options),
+                ("expand", 1) => SearchCommands.Expand(options),
                 ("compare", 2) => Compare(options),
                 ("match", 2) => SearchCommands.Match(options),
                 _ => Fail(Usage),
