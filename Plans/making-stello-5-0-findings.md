@@ -534,6 +534,21 @@ Temporary `SearchOptions` / `opt=` switches (`mpc-model=`, `mpc-early=`, `mpc-la
   - Built [opening-book.bin](../../Stello.Net/Book/opening-book.bin) (`39,141` B, down from `193,209` B) and synced [OPENING.bin](../../Stello.Net/Stello.Web/wwwroot/data/OPENING.bin); `Stello.BookTool verify` passed with `0` warnings / `0` errors.
   - Updated [OpeningBookTests.cs](../../Stello.Net/Stello.Engine.Tests/OpeningBookTests.cs) (`positions > 1_000` for master book); full Release solution built (`0` warnings, `0` errors), `Stello.Engine.Tests` passed **`505/505`** (`7 s`), and `Stello.Net.Tests` passed **`116/116`** (`17 s`).
 
+---
+
+## Phase 6 — The Opening Book: Item 3 (`Stello.BookTool calclib`, `60 s`/probe)
+
+- **Implementation:**
+  - Added [BookCalclib.cs](../../Stello.Net/Stello.Engine/BookCalclib.cs) and `Stello.BookTool calclib <book.txt> [--time-s 60 | --depth N] [--threshold 100] [--max-ply 30] [--max-adds 3] [--workers N] [--save-every 10] [--hash-bits 19] [--fresh]` ([SearchCommands.cs](../../Stello.Net/tools/Stello.BookTool/SearchCommands.cs), [Program.cs](../../Stello.Net/tools/Stello.BookTool/Program.cs)).
+  - Links any unbooked transposition moves already present in `_book` without searching, probes remaining unbooked moves (`onlyMoves`), adds moves beating `bestRaw` or within `--threshold` (continuing to additional rounds only when a newly added move strictly beats `bestRaw`), and resumes cleanly via `.calclib.done`.
+  - Added `4` unit tests in [BookCalclibTests.cs](../../Stello.Net/Stello.Engine.Tests/BookCalclibTests.cs).
+- **Results ([opening-book.calclib.report.txt](../../Stello.Net/Book/opening-book.calclib.report.txt), `--time-s 60 --threshold 100 --max-ply 30 --workers 8`):**
+  - Checked all `1,967` positions (`ply <= 30`) with unbooked legal moves in **`4h 12m`**.
+  - **Added `642` moves** (`4,473 -> 5,115` total moves; `640` newly searched `60s:v5` leaves [`2,458 -> 3,098`] + `2` linked transposition edges [`2,015 -> 2,017` `BackedUp`]). Leaf breakdown: `2,894` `Heuristic`, `144` `WinLossDraw`, `60` `Exact` — every leaf uniformly at `60s:v5`.
+  - **`868` values changed** across the DAG, and **`450` positions (`22.6 %`) changed their best (first) book move** (leaving **`896 / 1,993`** positions with `moves[0]` as an unexpanded leaf, including `547` at `ply <= 16` and `819` at `ply < 28`, ready for Item 4 `expand`). `d3` root replies: `c5 (100)`, `c3 (-56)`, `e3 (-500)`.
+- **Build & verify:** Built [opening-book.bin](../../Stello.Net/Book/opening-book.bin) (`46,193` B) and synced [OPENING.bin](../../Stello.Net/Stello.Web/wwwroot/data/OPENING.bin); `Stello.BookTool verify` passed (`0` warnings / `0` errors), Release solution built (`0` warnings, `0` errors), `Stello.Engine.Tests` passed **`512/512`** (`7 s`), and `Stello.Net.Tests` passed **`116/116`** (`17 s`).
+
+
 
 
 
