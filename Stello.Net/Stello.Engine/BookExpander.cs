@@ -32,7 +32,7 @@ internal sealed record ExpandProgress(
 /// </summary>
 internal sealed class BookExpander
 {
-    private const int ProvenWinPenalty = 2000;
+    internal const int ProvenBoundaryPenalty = 1000;
 
     private readonly OpeningBook _book;
     private readonly SearchLimits _limits;
@@ -87,7 +87,8 @@ internal sealed class BookExpander
         int saveEvery,
         CancellationToken cancellationToken)
     {
-        if (!_book.Contains(OpeningBook.RootBoard, OpeningBook.RootPlayer) || _book.PositionCount >= _maxPositions)
+        if (!_book.Contains(OpeningBook.RootBoard, OpeningBook.RootPlayer)
+            || (_book.PositionCount >= _maxPositions && _pendingDeviations.Count == 0))
         {
             return;
         }
@@ -112,15 +113,16 @@ internal sealed class BookExpander
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
+                bool allowLeaves = _book.PositionCount + _inFlightTargets.Count < _maxPositions;
                 if (stopSignalled
-                    || _book.PositionCount + _inFlightTargets.Count >= _maxPositions
+                    || (!allowLeaves && _pendingDeviations.Count == 0 && _inFlightTargets.Count == 0)
                     || iterationsStarted >= _maxIterations
                     || (_maxTime is { } cap && clock.Elapsed >= cap))
                 {
                     return null;
                 }
 
-                ExpandTask? task = SelectNextTask();
+                ExpandTask? task = SelectNextTask(allowLeaves);
                 if (task is not null)
                 {
                     iterationsStarted++;
@@ -178,6 +180,7 @@ internal sealed class BookExpander
                 {
                     lock (gate)
                     {
+                        stopSignalled = true;
                         ReleaseReservation(task);
                         Monitor.PulseAll(gate);
                     }
@@ -338,7 +341,7 @@ internal sealed class BookExpander
                 completions++;
                 stepped?.Invoke(new ExpandProgress(
                     _book.PositionCount, _maxPositions, leaf.Ply, leaf.Line, ExpandStepKind.Leaf,
-                    null, parentValue, posOrigin, posEffort, leaf.Priority,
+                    null, gameOver ? parentValue : BookMinimax.Clamp(posValue), posOrigin, posEffort, leaf.Priority,
                     null, null, Stopwatch.GetElapsedTime(start)));
                 if (saveEvery > 0 && completions % saveEvery == 0)
                 {
@@ -363,7 +366,7 @@ internal sealed class BookExpander
             {
                 List<BookEntry> newReplies = _book.GetOrAddReplies(leaf.Child, leaf.ChildPlayer, out OpeningBook.Symmetry sym);
                 newReplies.Add(new BookEntry(OpeningBook.Transform(new Move(square), sym), clamped, origin, effort));
-                if ((leaf.Child.LegalMoves(leaf.ChildPlayer) & ~square.Bit) != 0)
+                if (leaf.Ply < _maxPly && (leaf.Child.LegalMoves(leaf.ChildPlayer) & ~square.Bit) != 0)
                 {
                     _pendingDeviations.Add(leaf.ChildKey);
                     addedPending = leaf.ChildKey;
@@ -398,8 +401,13 @@ internal sealed class BookExpander
         }
     }
 
-    private ExpandTask? SelectNextTask()
+    private ExpandTask? SelectNextTask(bool allowLeaves)
     {
+        if (!allowLeaves && _pendingDeviations.Count == 0)
+        {
+            return null;
+        }
+
         (BookKey rootKey, _) = OpeningBook.Canonical(OpeningBook.RootBoard, OpeningBook.RootPlayer);
         var best = new Dictionary<BookKey, (long Priority, int Ply, string Line, Board Board, Player Player)>();
         var queue = new PriorityQueue<BookKey, (long Priority, int Ply, string Line)>(PriorityComparer.Instance);
@@ -493,7 +501,7 @@ internal sealed class BookExpander
                         queue.Enqueue(childKey, (nextPriority, nextPly, nextLine));
                     }
                 }
-                else if (!_inFlightTargets.Contains(childKey) && !_terminalLeaves.Contains(childKey))
+                else if (allowLeaves && !_inFlightTargets.Contains(childKey) && !_terminalLeaves.Contains(childKey))
                 {
                     var candidate = new LeafTask(
                         key, move, child, opponent, childKey, symmetry, nextPly, nextLine, nextPriority);
@@ -516,9 +524,10 @@ internal sealed class BookExpander
         }
 
         long baseLoss = Math.Max(0, BookTrimmer.ScoreInUnits(bestRaw) - BookTrimmer.ScoreInUnits(candidateRaw));
-        if (bestRaw > SearchEngine.WinScore && candidateRaw <= SearchEngine.WinScore)
+        if ((bestRaw > SearchEngine.WinScore && candidateRaw <= SearchEngine.WinScore)
+            || (bestRaw >= -SearchEngine.WinScore && candidateRaw < -SearchEngine.WinScore))
         {
-            baseLoss += ProvenWinPenalty;
+            baseLoss += ProvenBoundaryPenalty;
         }
 
         return baseLoss;

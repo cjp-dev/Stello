@@ -92,7 +92,7 @@ public class BookCalclibTests
     }
 
     [Fact]
-    public void IsWithinThreshold_NormalizesScoresAndRespectsProvenWins()
+    public void IsWithinThreshold_NormalizesScoresAndRespectsProvenBoundaries()
     {
         Assert.True(BookCalclib.IsWithinThreshold(bestRaw: -200, candidateRaw: 50, threshold: 0));
         Assert.True(BookCalclib.IsWithinThreshold(bestRaw: 100, candidateRaw: 0, threshold: 100));
@@ -101,6 +101,10 @@ public class BookCalclibTests
         // Proven win vs heuristic: never add an unproven move.
         Assert.False(BookCalclib.IsWithinThreshold(bestRaw: 32602, candidateRaw: 450, threshold: 500));
         Assert.True(BookCalclib.IsWithinThreshold(bestRaw: 32604, candidateRaw: 32602, threshold: 200));
+
+        // Unproven heuristic vs proven loss: never add a proven loss.
+        Assert.False(BookCalclib.IsWithinThreshold(bestRaw: -500, candidateRaw: -32601, threshold: 0));
+        Assert.False(BookCalclib.IsWithinThreshold(bestRaw: -500, candidateRaw: -32601, threshold: 500));
     }
 
     [Fact]

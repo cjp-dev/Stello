@@ -169,13 +169,21 @@ internal static class BookTrimmer
             return true;
         }
 
-        // Never allow hero to leave a proven win for an unproven (heuristic / loss) move.
-        if (isHeroTurn && bestRaw > SearchEngine.WinScore && candidateRaw <= SearchEngine.WinScore)
+        bool crossesWin = bestRaw > SearchEngine.WinScore && candidateRaw <= SearchEngine.WinScore;
+        bool crossesLoss = bestRaw >= -SearchEngine.WinScore && candidateRaw < -SearchEngine.WinScore;
+
+        // Never allow hero to leave a proven win or enter a proven loss across the WinScore boundary.
+        if (isHeroTurn && (crossesWin || crossesLoss))
         {
             return false;
         }
 
         int loss = Math.Max(0, ScoreInUnits(bestRaw) - ScoreInUnits(candidateRaw));
+        if (crossesWin || crossesLoss)
+        {
+            loss += BookExpander.ProvenBoundaryPenalty;
+        }
+
         return loss <= maxLoss.Value;
     }
 

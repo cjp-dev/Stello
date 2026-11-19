@@ -220,8 +220,9 @@ internal sealed class BookCalclib
             return true;
         }
 
-        // Do not add an unproven heuristic/loss alternative if the book already has a proven win.
-        if (bestRaw > SearchEngine.WinScore && candidateRaw <= SearchEngine.WinScore)
+        // Do not cross the proven-win or proven-loss boundary when adding alternative moves.
+        if ((bestRaw > SearchEngine.WinScore && candidateRaw <= SearchEngine.WinScore)
+            || (bestRaw >= -SearchEngine.WinScore && candidateRaw < -SearchEngine.WinScore))
         {
             return false;
         }

@@ -88,18 +88,23 @@ public class BookTrimmerTests
     }
 
     [Fact]
-    public void IsAllowed_NormalizesSolvedAndHeuristicScores_WithoutAbandoningProvenWins()
+    public void IsAllowed_NormalizesSolvedAndHeuristicScores_WithoutCrossingProvenBoundaries()
     {
-        // Opponent heuristic best (+50) vs proven WLD loss (-32602 -> -200): diff is 250 <= 300 -> allowed.
-        Assert.True(BookTrimmer.IsAllowed(bestRaw: 50, candidateRaw: -32602, maxLoss: 300, isHeroTurn: false));
+        // Crossing -WinScore (heuristic best vs proven WLD loss): hero always rejects; opponent adds ProvenBoundaryPenalty.
+        Assert.False(BookTrimmer.IsAllowed(bestRaw: -500, candidateRaw: -32601, maxLoss: 0, isHeroTurn: true));
+        Assert.False(BookTrimmer.IsAllowed(bestRaw: -500, candidateRaw: -32601, maxLoss: 300, isHeroTurn: false));
+        Assert.True(BookTrimmer.IsAllowed(bestRaw: -500, candidateRaw: -32601, maxLoss: null, isHeroTurn: false));
+        Assert.False(BookTrimmer.IsAllowed(bestRaw: 50, candidateRaw: -32602, maxLoss: 300, isHeroTurn: false));
         Assert.False(BookTrimmer.IsAllowed(bestRaw: 50, candidateRaw: -32602, maxLoss: 100, isHeroTurn: true));
 
         // Exact +8 win (+32608 -> +800) vs Exact +4 win (+32604 -> +400): diff is 400 -> rejected at 100, allowed at 400.
         Assert.False(BookTrimmer.IsAllowed(bestRaw: 32608, candidateRaw: 32604, maxLoss: 100, isHeroTurn: true));
         Assert.True(BookTrimmer.IsAllowed(bestRaw: 32608, candidateRaw: 32604, maxLoss: 400, isHeroTurn: true));
 
-        // Hero never leaves a proven win (+32602 WLD) for a higher-looking heuristic move (+431).
+        // Crossing +WinScore (proven win vs heuristic): hero rejects; opponent with finite oppLoss cannot bypass via 0 clamp.
         Assert.False(BookTrimmer.IsAllowed(bestRaw: 32602, candidateRaw: 431, maxLoss: 100, isHeroTurn: true));
+        Assert.False(BookTrimmer.IsAllowed(bestRaw: 32601, candidateRaw: 500, maxLoss: 300, isHeroTurn: false));
+        Assert.True(BookTrimmer.IsAllowed(bestRaw: 32601, candidateRaw: 500, maxLoss: 1000, isHeroTurn: false));
     }
 
     [Fact]
