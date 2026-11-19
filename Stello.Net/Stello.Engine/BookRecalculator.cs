@@ -97,12 +97,21 @@ internal sealed class BookRecalculator
         ParallelWork.Run(Math.Min(_workers, _pending.Count), Work, cancellationToken);
     }
 
-    private bool NeedsSearch(BookEntry entry) =>
-        entry.Origin != BookOrigin.Exact
-        && !(entry.IsSearched
+    private bool NeedsSearch(BookEntry entry)
+    {
+        // Timed Exact entries from EngineVersion <= 4 could have come from an aborted solve before the 3.1 Phase 1.1 fix;
+        // untimed Exact entries (and any Exact entry from EngineVersion >= 5) are full solves and stay kept.
+        if (entry.Origin == BookOrigin.Exact
+            && (entry.Effort.Kind != EffortKind.Time || entry.Effort.EngineVersion >= 5))
+        {
+            return false;
+        }
+
+        return !(entry.IsSearched
             && entry.Effort.EngineVersion == OpeningBook.EngineVersion
             && entry.Effort.Kind == _target.Kind
             && entry.Effort.Amount >= _target.Amount);
+    }
 
     // A win or loss is stored beyond ±32 600; a draw is 0, so it is a proof only if Stello searched it.
     private static bool IsProof(BookEntry entry) =>

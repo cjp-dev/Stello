@@ -501,6 +501,26 @@ Temporary `SearchOptions` / `opt=` switches (`mpc-model=`, `mpc-early=`, `mpc-la
 
 - **Decision & landing (Gate P5 Item 2):** Accepted (`4.97 MAE / 6.74 RMSE` beating Item 1 `5.07 / 6.87`, Stello 4.0 `5.47 / 7.31`, and Egaroucid `5.05 / 6.90`; `+13` Elo at `500 ms` `LOS 96.9 %` and `+20` Elo at `2,000 ms` `LOS 98.4 %`; `+9 KB` WASM brotli). Landed `e16-mob-s60-10m.bin` as unified [stello-eval.bin](../../Stello.Net/Book/stello-eval.bin). Embedded Stello 2.0's frozen `plus15 × 10` [stello-eval.bin](../../Stello.Net/Stello.Engine.V2/stello-eval.bin) (`990,568` B) in [Stello.Engine.V2.csproj](../../Stello.Net/Stello.Engine.V2/Stello.Engine.V2.csproj) so frozen `V2` continues to load v2 weights cleanly on clean builds. Updated parity/test fixtures (`Stello.Cpp/tests/data/`, `test_main.cpp`, `parity_tests.cpp`, `search_tests.cpp`, `engine.test.mjs`, `ParityCommands.cs`, `PatternTests.cs`, `NativeEngineTests.cs`, `BookLearnerTests.cs`, `stello-v3-signatures.txt`). Verified `clang-release` CTest (`2/2`, `31.75 s`), `msvc-release` CTest (`2/2`, `35.14 s`), WASM Node tests (`19/19`), `Stello.Engine.Tests` (`500/500`), `Stello.Net.Tests` (`116/116`), and `Egaroucid.Engine.Tests` (`100 passed, 8 skipped`).
 
+---
+
+## Phase 6 — The Opening Book: Item 1 (`Stello.BookTool recalc`, `60 s`/leaf)
+
+- **Preparation & pre-3.1 `Exact` safeguard:**
+  - Bumped `OpeningBook.EngineVersion` from `4` to `5` in [OpeningBook.cs](../../Stello.Net/Stello.Engine/OpeningBook.cs) and updated `BookRecalculator.NeedsSearch` ([BookRecalculator.cs](../../Stello.Net/Stello.Engine/BookRecalculator.cs)) so timed `Exact` (`EffortKind.Time`, `2,988` `X:60s:v1..v4` entries) are re-searched while untimed `Exact` full solves (`1,091` entries) and any `EngineVersion >= 5` `Exact` solves stay kept (`BookRecalculatorTests`: `14/14`).
+- **Recalculation results ([opening-book.report.txt](../../Stello.Net/Book/opening-book.report.txt), `Stello.BookTool recalc --time-s 60 --workers 8 --hash-bits 19`):**
+  - All `10,531` target leaves updated cleanly to `v5` (`6,703` `H:60s:v5`, `559` `W:60s:v5`, `3,269` `X:60s:v5`; `1,091` untimed `X` preserved).
+  - **Midgame search depth:** average leaf depth jumped by **`+4.43 plies`** from **`25.18`** (`n = 6,948` in `v4`) to **`29.61`** (`n = 6,703` in `v5`).
+  - **Origin transitions (`22,878` moves, `13,910` values changed):**
+    - Upgrades: `196` `Heuristic -> WinLossDraw`, `52` `Heuristic -> Exact`, `252` `WinLossDraw -> Exact` (`+281` net `Exact` solves: `4,079 -> 4,360`).
+    - Caught pre-3.1 aborted solves among old `X:60s:v1..v4`: `20` `Exact -> WinLossDraw` (`16` values changed), `3` `Exact -> Heuristic`, and `64` of `4,056` `Exact -> Exact` value corrections (for example `0` corrected to `-32604` [−4 discs] at `30` empties).
+  - **First-move changes (`946` positions):** `d3` root backed-up replies shifted from `c5 (-87), c3 (-262), e3 (-775)` to **`c5 (+100), c3 (-50), e3 (-500)`**, and the main line shifted from Rose (`f5 d6 c5 ...`) to **Tiger** (`f5 d6 c3 d3 c4 f4 c5 b3 c2 e3 d2 c6 b4 a3 f2 e6 b5`).
+- **Build, verify & test status:**
+  - Built [opening-book.bin](../../Stello.Net/Book/opening-book.bin) (`193,209` B for `11,200` positions / `22,878` moves, synced to `Stello.Web/wwwroot/data/OPENING.bin`); `Stello.BookTool verify` passed with `0` warnings / `0` errors.
+  - Updated [OpeningBookTests.cs](../../Stello.Net/Stello.Engine.Tests/OpeningBookTests.cs) (`c5 -> 100`, Tiger main line); full Release solution built cleanly (`0` warnings, `0` errors), `Stello.Engine.Tests` passed **`501/501`** (`7 s`), and `Stello.Net.Tests` passed **`116/116`** (`17 s`).
+- **`500 ms` book comparison match (`v5` vs `v4`, `946` changed-move starts, `1,892` games, `--workers 8`, `hash-bits=19`):**
+  - `BookTool match` scored **`944 / 1,892`** (**`49.9 %`**, `95 % CI 48.7–51.0 %`, `0.0` discs/game, wall time **`31m 46s`**) — statistically tied (`686/946` pairs tied `1.0–1.0`; `125` pairs won [`41` `2.0`, `84` `1.5`] vs `135` lost [`35` `0.0`, `100` `0.5`]; early plies `<= 10` scored `195.5/386` = `50.7 %`). Both books already had `60 s` search depth on existing branches, so re-ranking the *existing* moves alone leaves most lines near-equal draws at `500 ms`; adding missing good moves (`Item 2: calclib`) and expanding thin lines (`Item 3: expand` DOE) are where book strength increases come from.
+
+
 
 
 

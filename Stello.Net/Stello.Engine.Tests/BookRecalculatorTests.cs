@@ -142,6 +142,20 @@ public class BookRecalculatorTests
     }
 
     [Fact]
+    public void Run_ResearchesTimedExactEntriesFromOldEngines_WhileKeepingUntimedExact()
+    {
+        OpeningBook book = Book("d3 c5 f6 f5", "d3 c3 c4 c5", "d3 e3 f4 c3");
+        BookTestData.Entry(book, "d3 c5 f6", "f5").Set(32610, BookOrigin.Exact, new BookEffort(EffortKind.Time, 60_000, 22, 4));
+        BookTestData.Entry(book, "d3 c3 c4", "c5").Set(32612, BookOrigin.Exact);
+        BookTestData.Entry(book, "d3 e3 f4", "c3").Set(32614, BookOrigin.Exact, new BookEffort(EffortKind.Time, 60_000, 22, 5));
+
+        var recalculator = new BookRecalculator(book, SearchLimits.TimePerMove(TimeSpan.FromSeconds(60)), workers: 1, hashBits: 10);
+
+        Assert.Equal(3, recalculator.LeafPositions);
+        Assert.Equal(1, recalculator.ToSearch);
+    }
+
+    [Fact]
     public void Comparison_ReportsValuesAndFirstMovesThatChanged()
     {
         OpeningBook oldBook = BookTestData.ReadText(BookTextFormat.FirstLine + "\nd3 c5:-39:U c3:-40:U\n");

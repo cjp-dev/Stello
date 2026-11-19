@@ -21,9 +21,9 @@ public sealed class OpeningBook
     /// <summary>
     /// Bumped by hand when a change to the evaluation or the search changes the values it finds. Versions 3 and 4 are
     /// Stello 2.0, whose heuristic values are in 1/100 disc: 3 the first 2.0 release, 4 with the phase 5 search
-    /// (docs chapters 22 and 23).
+    /// (docs chapters 22 and 23). Version 5 is Stello 5.0 (C++ search, egaroucid16 + mobility evaluation).
     /// </summary>
-    internal const int EngineVersion = 4;
+    internal const int EngineVersion = 5;
 
     internal const Player RootPlayer = Player.White;
 
