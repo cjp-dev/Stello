@@ -518,7 +518,22 @@ Temporary `SearchOptions` / `opt=` switches (`mpc-model=`, `mpc-early=`, `mpc-la
   - Built [opening-book.bin](../../Stello.Net/Book/opening-book.bin) (`193,209` B for `11,200` positions / `22,878` moves, synced to `Stello.Web/wwwroot/data/OPENING.bin`); `Stello.BookTool verify` passed with `0` warnings / `0` errors.
   - Updated [OpeningBookTests.cs](../../Stello.Net/Stello.Engine.Tests/OpeningBookTests.cs) (`c5 -> 100`, Tiger main line); full Release solution built cleanly (`0` warnings, `0` errors), `Stello.Engine.Tests` passed **`501/501`** (`7 s`), and `Stello.Net.Tests` passed **`116/116`** (`17 s`).
 - **`500 ms` book comparison match (`v5` vs `v4`, `946` changed-move starts, `1,892` games, `--workers 8`, `hash-bits=19`):**
-  - `BookTool match` scored **`944 / 1,892`** (**`49.9 %`**, `95 % CI 48.7–51.0 %`, `0.0` discs/game, wall time **`31m 46s`**) — statistically tied (`686/946` pairs tied `1.0–1.0`; `125` pairs won [`41` `2.0`, `84` `1.5`] vs `135` lost [`35` `0.0`, `100` `0.5`]; early plies `<= 10` scored `195.5/386` = `50.7 %`). Both books already had `60 s` search depth on existing branches, so re-ranking the *existing* moves alone leaves most lines near-equal draws at `500 ms`; adding missing good moves (`Item 2: calclib`) and expanding thin lines (`Item 3: expand` DOE) are where book strength increases come from.
+  - `BookTool match` scored **`944 / 1,892`** (**`49.9 %`**, `95 % CI 48.7–51.0 %`, `0.0` discs/game, wall time **`31m 46s`**) — statistically tied (`686/946` pairs tied `1.0–1.0`; `125` pairs won [`41` `2.0`, `84` `1.5`] vs `135` lost [`35` `0.0`, `100` `0.5`]; early plies `<= 10` scored `195.5/386` = `50.7 %`). Both books already had `60 s` search depth on existing branches, so re-ranking the *existing* moves alone leaves most lines near-equal draws at `500 ms`; adding missing good moves (`calclib`) and expanding thin lines (`expand` DOE) are where book strength increases come from.
+
+---
+
+## Phase 6 — The Opening Book: Item 2 (`Stello.BookTool trim`)
+
+- **Why trim first:** After Item 1's `v5` recalculation on the legacy Stello 1.0 self-play tree, `93.0 %` of the `11,200` positions were unreachable along best play (`80.0 %` even within `1.00`-disc hero margin), `2,955` positions had an unexpanded leaf as their new `moves[0]`, and `8,150` sat in 1-move-wide tails up to ply `57`.
+- **Implementation:**
+  - Added [BookTrimmer.cs](../../Stello.Net/Stello.Engine/BookTrimmer.cs) (`BookTrimmer.Trim`) and `Stello.BookTool trim <book.txt> [--hero-loss 100] [--opp-loss <N|unlimited>] [--max-ply 30] [--dry-run]` ([Program.cs](../../Stello.Net/tools/Stello.BookTool/Program.cs)).
+  - Keeps the union of positions reachable from `d3` at `ply <= max-ply` when Stello plays Black and when Stello plays White (`±(32600 + discs)` normalized to `±discs * 100`, while never leaving a proven win `> 32600` for an unproven move `<= 32600`). Converts severed `BackedUp` parent edges into leaves keeping their exact `Value`, underlying `Origin`/`Effort`, and consistent `BookMinimax.Run` values.
+  - Added `4` unit tests in [BookTrimmerTests.cs](../../Stello.Net/Stello.Engine.Tests/BookTrimmerTests.cs).
+- **Applied trim (`--hero-loss 100 --opp-loss unlimited --max-ply 30`):**
+  - Pruned [opening-book.txt](../../Stello.Net/Book/opening-book.txt) from **`11,200 -> 1,993` positions** (`−82.2 %`), **`22,878 -> 4,473` moves**, **`11,622 -> 2,458` leaf moves**, with `373` severed edges converted to leaves (`longest line: 31 plies`; zero passes). Kept all three classic `d3` openings (`c5: 100`, `c3: -50`, `e3: -500`) and preserved every remaining ancestor and root value identically.
+  - Built [opening-book.bin](../../Stello.Net/Book/opening-book.bin) (`39,141` B, down from `193,209` B) and synced [OPENING.bin](../../Stello.Net/Stello.Web/wwwroot/data/OPENING.bin); `Stello.BookTool verify` passed with `0` warnings / `0` errors.
+  - Updated [OpeningBookTests.cs](../../Stello.Net/Stello.Engine.Tests/OpeningBookTests.cs) (`positions > 1_000` for master book); full Release solution built (`0` warnings, `0` errors), `Stello.Engine.Tests` passed **`505/505`** (`7 s`), and `Stello.Net.Tests` passed **`116/116`** (`17 s`).
+
 
 
 

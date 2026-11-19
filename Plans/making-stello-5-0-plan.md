@@ -151,10 +151,20 @@ Each item is implemented behind a temporary `SearchOptions` / `opt=` switch, ben
    - bump `OpeningBook.EngineVersion` from `4` to `5` (`Stello.Engine/OpeningBook.cs`);
    - update `BookRecalculator.NeedsSearch` so that the 2,988 timed `X` (`Exact` with a time limit, `X:60s`) entries from `EngineVersion <= 4` — which may have come from an aborted solve before the 3.1 Phase 1.1 fix — are treated as needing re-search, while the 1,091 untimed `X` entries (full solves) are kept;
    - run `recalc` at 1 thread per worker (`--workers 8` on the 7800X3D) on the user's go.
-2. **Search the moves the book lacks (`calclib` mode in `Stello.BookTool`):**
-   - for each book position, search the legal moves not yet in the book using `onlyMoves` (`BookSearch`) and add moves within a threshold of the best book move.
-3. **Drop-Out Expansion ([Opening book improvment.md](Opening%20book%20improvment.md) Phase 3):**
-   - decide with the user on the target book size (and whether web book storage moves from `localStorage` ~5 MB to `IndexedDB`), the effort per position, and the DOE depth.
+2. **Trim unreachable legacy branches and over-deep self-play tails (`Stello.BookTool trim`):**
+   - **Why:** The 11,200-position tree structure comes from ~30-year-old Stello 1.0 self-play (`MAE 12.14` vs Stello 5.0's `4.97`). After Item 1's `v5` recalculation:
+     - in `2,955` / `11,200` positions (`26.4 %`, including `605` at plies `<= 16`), the new best move (`moves[0]`) is an unexpanded leaf while a worse move (`moves[1..]`) holds the expanded `BackedUp` subtree (causing Stello 5.0 to exit the book immediately after playing `moves[0]`);
+     - `10,421` / `11,200` positions (`93.0 %`) are unreachable for both Black and White when Stello plays `moves[0]` against *any* opponent book move (`8,962` / `11,200` = `80.0 %` unreachable even allowing a `1.00`-disc hero margin);
+     - `8,150` / `11,200` positions (`73 %`) sit in 1-move-wide self-play tails at plies `16..57`, where beyond ply `~30` (`<= 30` empties) Stello 5.0's `mpc-end` and solver already reach the end of the game during live play.
+   - **What:**
+     - implement `BookTrimmer` in `Stello.Engine` and `Stello.BookTool trim <book.txt>` with configurable `--hero-loss` (default `50`–`100` in `1/100` disc, i.e., moves Stello itself might play as Black or White), `--opp-loss` (default `300` or unlimited for opponent book replies), and `--max-ply` (default `30`);
+     - keep only positions reachable from the `d3` root along valid paths (union of reachability when Stello plays Black and when Stello plays White) at `ply <= max-ply`;
+     - when a child position $C$ is pruned from the DAG, convert any remaining parent edge $P \xrightarrow{m} C$ from `BackedUp` into a leaf move that preserves its backed-up `v5` value and proven/heuristic origin so **zero ancestor or root minimax values change**;
+     - add unit tests in `Stello.Engine.Tests` verifying that `trim` identifies and removes unreachable/bad branches and over-deep tails, preserves root and ancestor minimax values, and produces a book that passes `Stello.BookTool verify` with 0 warnings/errors.
+3. **Search the moves the trimmed book lacks (`calclib` mode in `Stello.BookTool`):**
+   - run on the trimmed live book (`~1,000–2,200` positions instead of `11,200`, saving `80–90 %` wasted search time on dead branches): for each book position, search the legal moves not yet in the book using `onlyMoves` (`BookSearch`) and add moves within a threshold of the best book move.
+4. **Drop-Out Expansion ([Opening book improvment.md](Opening%20book%20improvment.md) Phase 3, `Stello.BookTool expand`):**
+   - expand the trimmed book using Drop-Out Expansion (prioritizing the early positions where the new `v5` best move `moves[0]` is currently an unexpanded leaf, as well as promising deviations from Item 3), bounded by `--max-ply` (`~28–30`), target book size, and search effort per leaf, backing values up the DAG to the root.
 
 **Gate P6:** with books enabled, 5.0 with the new book beats 5.0 with the 4.0 book at 500 ms, `Stello.BookTool verify` passes with 0 warnings/errors, and the web binary book size is measured.
 

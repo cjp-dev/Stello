@@ -54,7 +54,7 @@ public class OpeningBookTests
             }
         }
 
-        Assert.True(positions > 11_000);
+        Assert.True(positions > 1_000);
     }
 
     [Fact]

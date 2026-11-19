@@ -15,6 +15,8 @@ internal static class Program
           build <book.txt> <book.bin>      Build the binary book used by the apps from the text book.
           verify <book.txt> [<book.bin>]   Check the text book, and that the binary book holds the same book.
           stats <book>                     Statistics for a book file (text, binary or C++).
+          trim <book.txt> [--hero-loss 100] [--opp-loss <N|unlimited>] [--max-ply 30] [--dry-run]
+                                           Prune unreachable branches and over-deep tails from the book.
           recalc <book.txt> [--time-s 60 | --depth N] [--workers N] [--save-every 10] [--hash-bits 19]
                                            Search the leaves again; writes <book>.report.txt.
           compare <old book> <new book> [--out <report.txt>]
@@ -38,8 +40,9 @@ internal static class Program
 
         try
         {
-            Options options = Options.Parse(args[1..]);
-            if (args[0] is not ("recalc" or "compare" or "match"))
+            string[] flags = args[0] == "trim" ? ["dry-run"] : [];
+            Options options = Options.Parse(args[1..], flags);
+            if (args[0] is not ("trim" or "recalc" or "compare" or "match"))
             {
                 options.Allow();
             }
@@ -52,6 +55,7 @@ internal static class Program
                 ("verify", 1) => Verify(options[0], null),
                 ("verify", 2) => Verify(options[0], options[1]),
                 ("stats", 1) => Stats(options[0]),
+                ("trim", 1) => Trim(options),
                 ("recalc", 1) => SearchCommands.Recalc(options),
                 ("compare", 2) => Compare(options),
                 ("match", 2) => SearchCommands.Match(options),
@@ -178,6 +182,56 @@ internal static class Program
         }
 
         return 0;
+    }
+
+    private static int Trim(Options options)
+    {
+        options.Allow("hero-loss", "opp-loss", "max-ply", "dry-run");
+        string path = options[0];
+        int heroLoss = options.Number("hero-loss", 100, 0, 100_000);
+        int? oppLoss = ParseOppLoss(options.Text("opp-loss"));
+        int maxPly = options.Number("max-ply", 30, 1, 60);
+        bool dryRun = options.Flag("dry-run");
+
+        OpeningBook book = OpeningBook.Load(path);
+        BookTrimResult result = BookTrimmer.Trim(book, heroLoss, oppLoss, maxPly);
+        BookStatistics stats = BookAnalysis.Statistics(result.Book);
+
+        string oppText = oppLoss is { } opp ? opp.ToString(CultureInfo.InvariantCulture) : "unlimited";
+        Console.WriteLine(
+            $"{(dryRun ? "Dry run" : "Trimmed")} {path} (hero-loss={heroLoss}, opp-loss={oppText}, max-ply={maxPly}):");
+        Console.WriteLine(
+            $"  Positions:     {result.PositionsBefore:N0} -> {result.PositionsAfter:N0}");
+        Console.WriteLine(
+            $"  Moves:         {result.MovesBefore:N0} -> {result.MovesAfter:N0}");
+        Console.WriteLine(
+            $"  Leaf moves:    {result.LeavesBefore:N0} -> {result.LeavesAfter:N0}");
+        Console.WriteLine(
+            $"  Severed edges: {result.SeveredEdges:N0}");
+        Console.WriteLine(
+            $"  Longest line:  {stats.LongestLine} plies");
+        Console.WriteLine(
+            $"  Replies to d3: {string.Join(", ", stats.RootMoves.Select(m => $"{m.Move} ({m.Value}, {m.Origin})"))}");
+
+        if (!dryRun)
+        {
+            WriteText(result.Book, path);
+            Console.WriteLine($"Wrote {path}. Run build to update the binary book.");
+        }
+
+        return 0;
+    }
+
+    private static int? ParseOppLoss(string? text)
+    {
+        if (text is null || text.Equals("unlimited", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out int value) && value <= 100_000
+            ? value
+            : throw new ArgumentException("--opp-loss must be a whole number from 0 to 100000, or 'unlimited'.");
     }
 
     private static string ToText(OpeningBook book)
