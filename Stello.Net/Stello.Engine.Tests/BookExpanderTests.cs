@@ -197,4 +197,32 @@ public class BookExpanderTests
         Assert.True(passEntry.Move.IsPass);
         Assert.Equal(passEntry.Value, passStep.Value);
     }
+
+    [Fact]
+    public void Constructor_PrunesStalePendingDeviationKeysAtOrBeyondMaxPlyOrMissingFromBook()
+    {
+        OpeningBook book = BookTestData.ReadText(Header + """
+            d3 c5:100:B
+            d3c5 f6:-100:H:2ply:d2:v5
+            """);
+
+        BookKey rootKey = OpeningBook.Canonical(OpeningBook.RootBoard, OpeningBook.RootPlayer).Key;
+        (Board c5Board, Player c5Player) = BookTextFormat.Replay("d3c5");
+        BookKey c5Key = OpeningBook.Canonical(c5Board, c5Player).Key;
+        var missingKey = new BookKey(0, 0, Player.Black);
+
+        // With maxPly = 2, d3 (ply 1) is valid, while d3c5 (ply 2 >= maxPly) and missingKey must be auto-pruned.
+        var expander = new BookExpander(
+            book,
+            SearchLimits.FixedDepth(2),
+            omega: 50,
+            maxPly: 2,
+            maxPositions: 2,
+            workers: 1,
+            hashBits: 10,
+            pendingDeviations: [rootKey, c5Key, missingKey]);
+
+        Assert.Single(expander.PendingDeviations);
+        Assert.Contains(rootKey, expander.PendingDeviations);
+    }
 }

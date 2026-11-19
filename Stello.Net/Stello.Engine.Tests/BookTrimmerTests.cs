@@ -104,7 +104,8 @@ public class BookTrimmerTests
         // Crossing +WinScore (proven win vs heuristic): hero rejects; opponent with finite oppLoss cannot bypass via 0 clamp.
         Assert.False(BookTrimmer.IsAllowed(bestRaw: 32602, candidateRaw: 431, maxLoss: 100, isHeroTurn: true));
         Assert.False(BookTrimmer.IsAllowed(bestRaw: 32601, candidateRaw: 500, maxLoss: 300, isHeroTurn: false));
-        Assert.True(BookTrimmer.IsAllowed(bestRaw: 32601, candidateRaw: 500, maxLoss: 1000, isHeroTurn: false));
+        Assert.False(BookTrimmer.IsAllowed(bestRaw: 32601, candidateRaw: 500, maxLoss: BookExpander.ProvenBoundaryPenalty - 1, isHeroTurn: false));
+        Assert.True(BookTrimmer.IsAllowed(bestRaw: 32601, candidateRaw: 500, maxLoss: BookExpander.ProvenBoundaryPenalty, isHeroTurn: false));
     }
 
     [Fact]

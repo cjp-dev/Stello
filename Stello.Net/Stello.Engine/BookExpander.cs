@@ -32,7 +32,7 @@ internal sealed record ExpandProgress(
 /// </summary>
 internal sealed class BookExpander
 {
-    internal const int ProvenBoundaryPenalty = 1000;
+    internal const int ProvenBoundaryPenalty = 2000;
 
     private readonly OpeningBook _book;
     private readonly SearchLimits _limits;
@@ -77,6 +77,7 @@ internal sealed class BookExpander
         _workers = workers;
         _hashBits = hashBits;
         _pendingDeviations = pendingDeviations is null ? [] : [.. pendingDeviations];
+        PruneStalePendingDeviations();
     }
 
     public IReadOnlyCollection<BookKey> PendingDeviations => _pendingDeviations;
@@ -87,6 +88,7 @@ internal sealed class BookExpander
         int saveEvery,
         CancellationToken cancellationToken)
     {
+        PruneStalePendingDeviations();
         if (!_book.Contains(OpeningBook.RootBoard, OpeningBook.RootPlayer)
             || (_book.PositionCount >= _maxPositions && _pendingDeviations.Count == 0))
         {
@@ -140,6 +142,7 @@ internal sealed class BookExpander
 
                 if (_inFlightDeviations.Count == 0 && _inFlightTargets.Count == 0)
                 {
+                    PruneStalePendingDeviations();
                     return null;
                 }
 
@@ -387,6 +390,45 @@ internal sealed class BookExpander
 
             Monitor.PulseAll(gate);
         }
+    }
+
+    private void PruneStalePendingDeviations()
+    {
+        if (_pendingDeviations.Count == 0)
+        {
+            return;
+        }
+
+        var valid = new HashSet<BookKey>();
+        foreach (BookLine line in BookTextFormat.Lines(_book))
+        {
+            if (line.Moves.Length / 2 >= _maxPly)
+            {
+                continue;
+            }
+
+            (BookKey key, OpeningBook.Symmetry symmetry) = OpeningBook.Canonical(line.Board, line.Player);
+            if (!_pendingDeviations.Contains(key) || !_book.TryGetReplies(key, out List<BookEntry>? replies))
+            {
+                continue;
+            }
+
+            ulong inBook = 0;
+            foreach (BookEntry entry in replies)
+            {
+                if (OpeningBook.Transform(entry.Move, symmetry).Square is { } sq)
+                {
+                    inBook |= sq.Bit;
+                }
+            }
+
+            if ((line.Board.LegalMoves(line.Player) & ~inBook) != 0)
+            {
+                valid.Add(key);
+            }
+        }
+
+        _pendingDeviations.IntersectWith(valid);
     }
 
     private void ReleaseReservation(ExpandTask task)
