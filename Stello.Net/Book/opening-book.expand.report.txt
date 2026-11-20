@@ -1,0 +1,103 @@
+# Expanded Stello.Net/Book/opening-book.txt with 60 s/step, omega 50, max-ply 28 (2026-11-20 06:13)
+# Positions: 6,000 (before 1,993); book moves: 13,154 (before 5,115)
+# Values changed: 827
+# Origin before -> after: book moves (values changed)
+#   Heuristic   -> Heuristic     2,408 (0)
+#   Heuristic   -> BackedUp        486 (400)
+#   WinLossDraw -> WinLossDraw     144 (0)
+#   Exact       -> Exact            60 (0)
+#   BackedUp    -> BackedUp      2,017 (427)
+# Positions whose first book move changed: 92
+# <line> <old move>:<old value> <new move>:<new value>
+d3c5e6 f5:100 d2:87
+d3c5d6e7 b5:581 f6:593
+d3c5f6f3 e3:200 f5:362
+d3c5e6e3d6 c3:-343 f5:-437
+d3c5e6f3e3 d2:-400 f2:-406
+d3c5f6e3c3 e6:-156 f5:-318
+d3c3c4c5b4d2 d6:25 e2:-62
+d3c5e6d2c6d6 c7:-6 c3:-87
+d3c5e6e3d6f5 c6:425 c4:437
+d3c5e6f3e3f7 d6:650 e7:625
+d3c5e6f5f6e3 d6:-100 c3:-81
+d3c5f6d2c6f5 f4:581 c4:600
+d3c5f6e3c3f5 c6:275 f3:318
+d3c3c4c5b4b3b5 d2:-193 a3:-181
+d3c3c4c5b4d2d6 c6:-25 b3:68
+d3c3c4c5b4f3c6 b5:-375 e3:-450
+d3c3c4c5d6e3f5 c6:-37 d7:131
+d3c3c4c5d6f4f5 e2:-56 d2:-62
+d3c5d6e3f4c6c4 b3:400 c3:450
+d3c5e6e3d6c3d2 c1:-343 f5:-493
+d3c5e6f5f6e3c4 c3:287 f7:406
+d3c5f6d2c3e3c4 b5:-481 f3:-400
+d3c3c4c5d6e3f5d7 c2:56 e2:-131
+d3c3c4c5d6f4f5e6 d7:175 c6:125
+d3c5d6e3f4c6f5d2 c4:0 c3:12
+d3c5d6e3f4c6f5g4 g3:143 f3:256
+d3c5e6d2c6d6b5b4 c4:325 d7:300
+d3c5e6d2c6d6b5b6 d7:193 c3:393
+d3c5e6d2c6d6c7d7 e8:137 c8:81
+d3c5e6d2c6f5e3f4 g4:387 g5:387
+d3c5e6e3d6c3d2e1 b5:487 f3:506
+d3c5e6f5f6d7e7e3 d6:250 c3:237
+d3c5e6f5f6e3c3e7 f2:187 f3:362
+d3c5e6f5f6e3d6e7 c6:106 f7:112
+d3c3c4c5b4b3b5d2c6 a4:-193 e3:-300
+d3c3c4c5b4d2e2e3c6 a5:-112 b6:-156
+d3c5d6e3f4c6f5f3e2 d2:31 g4:150
+d3c5e6d2c3e3c2f3e1 f6:237 f5:506
+d3c5e6d2c3e3c6d6c2 f3:231 f5:387
+d3c5e6d2c6d6c7d7c8 f5:-37 f7:-81
+d3c5e6d2c6f5c4d6e3 f4:-237 f6:-268
+d3c5e6d2c6f5e3f4g5 e7:-350 d6:-387
+d3c5e6d2c6f5e3f6c3 f4:-137 f3:-81
+d3c5e6f5f6e3d6f7g6 f4:100 c4:212
+d3c5e6f7c6c4b6c7e7 f4:-106 d7:-6
+d3c3c4c5b4d2d6c6f4a4 b5:162 b6:231
+d3c3c4c5b4d2e2e3c6b5 d6:181 f4:231
+d3c5d6e3f4c6f5d2c4c3 f2:0 b5:-162
+d3c5d6e3f4f6c4c3f5e6 d7:162 b5:275
+d3c5e6d2c3e3c6d6c4b5 b3:6 b4:106
+d3c5e6d2c6d6b5f5c3f4 e7:-231 d7:-381
+d3c5e6f5f6d7e7e3d6f7 b6:250 b4:93
+d3c5e6f5f6e3c3d2c4b4 f2:243 c6:356
+d3c5e6f5f6e3c3d2f4f3 e2:-137 c2:-268
+d3c5e6f5f6e3d6f7g6g5 c4:181 f4:237
+d3c5e6f7e7d2c3e3f3f2 e2:437 d6:400
+d3c5e6f7e7d2c3e3f3f4 f5:175 c6:318
+d3c3c4c5b4d2e2e3c6b3b5 c2:-150 a4:-212
+d3c5d6e3f4c6f5c3c4b5b4 b6:393 f6:481
+d3c5d6e3f4c6f5f3c4b3e2 f6:-143 d2:-212
+d3c5e6d2c6d6c7f3c4b4a3 f6:43 f7:-12
+d3c5e6d2c6f5e3f6c3f3d6 c4:-237 f4:-81
+d3c5e6f5f6e3c3d2f3c2e1 d1:300 c4:512
+d3c5e6f5f6e3c3d2f4f3e1 d1:412 g4:362
+d3c5e6f5f6e3c3e7f3c4f4 g3:-156 d2:-362
+d3c5e6f5f6e3d6f7g6c4e7 f8:231 f3:256
+d3c3c4c5b4d2e2e3c6b3b5c2 e1:150 c1:243
+d3c3c4c5d6e3f5c6b6e6f4f6 f3:118 b5:206
+d3c5e6d2c3e3c6d6c4b3e2f3 f2:-218 d1:-300
+d3c5e6d2c3e3c6d6c4f4f5b5 b4:143 f2:256
+d3c5e6d2c3e3f3f5f6c2f4f2 c4:-131 f1:0
+d3c5e6d2c6d6b5f5c3f4d7e7 e3:-256 f6:-381
+d3c5e6d2c6d6b5f5c3f4f6e7 d8:-362 d7:-406
+d3c5e6f5f6e3c3d2c4b5f4d6 c7:0 f3:62
+d3c5e6f5f6e3d6f7g6e7c6g5 f8:-212 c4:-250
+d3c5e6f5f6e3c3d2c4d6f3b3b4 a3:-206 f4:-275
+d3c5e6f5f6e3c3d2c4d6f3d7e7 g6:-75 f4:-93
+d3c5e6f5f6e3c3f3c4b4b3d6c7 e7:225 c2:256
+d3c5e6f5f6e3c3f3c4b4b5c2d2 b3:250 d6:256
+d3c5e6f5f6e3c3f3c4b4b5d2a3 a6:-118 d6:-256
+d3c5e6f5f6e3d6f7g6c4c6e7d7 c3:50 g5:212
+d3c5e6f5f6e3c3d2c4b5f4d6b3b4 a4:-6 c6:-150
+d3c5e6f5f6e3c3f3c4b4b3d6c7c2 d2:-125 a3:-256
+d3c5e6f5f6e3c3f3c4b4b5c2d2d6 c7:-93 c6:-256
+d3c5e6d2c3e3f3f5f6f4c4b3c2b4c6 f2:-212 b6:-218
+d3c5e6f5f6e3c3f3c4b4b5d2a3d6c6 a6:-181 b3:-256
+d3c5d6e3f4c6f5c3c4b5e2e6d2f6b3g5 h6:-150 b4:-318
+d3c5e6f5f6e3c3f3c4b4b5d6c7e7d8f8 a5:-156 f7:-187
+d3c5e6f5f6e3d6f7g6c4e7f3f4g4h3c7 c3:-262 e2:-468
+d3c5e6f5f6e3d6f7g6e7f4c4c6c3d8g3 g4:287 e8:275
+d3c5e6f5f6e3d6f7g6f4g5c6e7f8f2e2 f3:-156 g4:-256
+d3c5e6f5f6e3c3d2c4b5f4d6b3b4c6c7a4 d7:31 f3:150
