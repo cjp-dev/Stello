@@ -548,6 +548,30 @@ Temporary `SearchOptions` / `opt=` switches (`mpc-model=`, `mpc-early=`, `mpc-la
   - **`868` values changed** across the DAG, and **`450` positions (`22.6 %`) changed their best (first) book move** (leaving **`896 / 1,993`** positions with `moves[0]` as an unexpanded leaf, including `547` at `ply <= 16` and `819` at `ply < 28`, ready for Item 4 `expand`). `d3` root replies: `c5 (100)`, `c3 (-56)`, `e3 (-500)`.
 - **Build & verify:** Built [opening-book.bin](../../Stello.Net/Book/opening-book.bin) (`46,193` B) and synced [OPENING.bin](../../Stello.Net/Stello.Web/wwwroot/data/OPENING.bin); `Stello.BookTool verify` passed (`0` warnings / `0` errors), Release solution built (`0` warnings, `0` errors), `Stello.Engine.Tests` passed **`512/512`** (`7 s`), and `Stello.Net.Tests` passed **`116/116`** (`17 s`).
 
+---
+
+## Phase 6 — The Opening Book: Item 4 (`Stello.BookTool expand` DOE & Gate P6, Accepted)
+
+- **Implementation & pre-run audit fixes (`da85143`, `2fbd82d`, `fb325e2`):**
+  - Added [BookExpander.cs](../../Stello.Net/Stello.Engine/BookExpander.cs) and `Stello.BookTool expand <book.txt> [--time-s 60 | --depth N] [--omega 50] [--max-ply 28] [--max-positions 6000] [--iterations N] [--max-time-min M] [--workers N] [--save-every 10] [--hash-bits 19] [--fresh]` ([SearchCommands.cs](../../Stello.Net/tools/Stello.BookTool/SearchCommands.cs), [Program.cs](../../Stello.Net/tools/Stello.BookTool/Program.cs)), using Dijkstra-based Lincke DOE priority ($\omega \cdot \text{ply} + \text{cumulative\_loss}$), virtual reservations across parallel workers, lazy one-shot `onlyMoves` deviation searches on newly created internal nodes, and resumable `.expand.pending` checkpointing.
+  - Before the long run, patched 4 audited bugs across [BookExpander.cs](../../Stello.Net/Stello.Engine/BookExpander.cs), [BookTrimmer.cs](../../Stello.Net/Stello.Engine/BookTrimmer.cs), and [BookCalclib.cs](../../Stello.Net/Stello.Engine/BookCalclib.cs) (symmetric `±WinScore` `ProvenBoundaryPenalty = 2000`, `stopSignalled = true` on worker exception, `leaf.Ply < _maxPly` + draining pending deviations at `maxPositions` + `PruneStalePendingDeviations()`, and pass-leaf progress value sign), verified with `BookExpanderTests` (`8` tests), `Stello.Engine.Tests` (`517/517`), `Stello.Net.Tests` (`116/116`), and `Egaroucid.Engine.Tests` (`100 passed, 8 skipped`).
+- **Expansion results ([opening-book.expand.report.txt](../../Stello.Net/Book/opening-book.expand.report.txt), `--time-s 60 --omega 50 --max-ply 28 --max-positions 6000 --workers 8 --hash-bits 19`):**
+  - Expanded [opening-book.txt](../../Stello.Net/Book/opening-book.txt) cleanly from **`1,993 -> 6,000` positions** (`+4,007`) and **`5,115 -> 13,154` moves** (`7,047` leaf moves, all uniformly `60s:v5`: `6,843` `Heuristic`, `144` `WinLossDraw`, `60` `Exact`; `6,107` `BackedUp`; `0` passes; longest line `31` plies; `.expand.pending` drained and auto-removed).
+  - Early-ply density jumped sharply: `ply 1–10` grew `664 -> 1,467` positions (`2.2×`) and `ply 11–16` grew `687 -> 3,414` positions (`5.0×`).
+  - `827` values changed across the pre-expand `1,993` positions (`486` `Heuristic -> BackedUp`, `427` `BackedUp` refined), **`92` existing positions changed their best move**, `d3` root replies tightened to **`c5 (81)`, `c3 (-62)`, `e3 (-500)`**, and the main line deepened to `23` plies (`f5 d6 c3 d3 c4 f4 f6 f3 e6 e7 d7 g6 d8 c5 c6 c7 c8 b6 a5 a6 a7 f8 b5`).
+- **Binary book size, verify & tests:**
+  - Built [opening-book.bin](../../Stello.Net/Book/opening-book.bin) and synced [OPENING.bin](../../Stello.Net/Stello.Web/wwwroot/data/OPENING.bin): **`114,169` B raw** (41 % smaller than Stello 4.0's `193,210` B), **`39,853` B gzip**, **`33,809` B brotli** (~`152 KB` Base64 in `localStorage`, well within the ~`5 MB` quota — no `IndexedDB` migration needed).
+  - `Stello.BookTool verify` passed (`0` warnings / `0` errors); updated [OpeningBookTests.cs](../../Stello.Net/Stello.Engine.Tests/OpeningBookTests.cs) (`c5 -> 81`, 23-ply main line); `Stello.Engine.Tests` passed **`517/517`** (`8 s`) and `Stello.Net.Tests` passed **`116/116`** (`17 s`).
+- **Gate P6 `500 ms` book matches (`Stello.BookTool match`, `--time-s 0.5 --workers 8 --hash-bits 19`, `5.0` with final `v5` book vs `5.0` with `v4` book):**
+
+| Match | Starts (Games) | Side A | Side B | Score (B, 95 % CI) | Discs/g | Decided Pairs (W / T / L) | Wall Time |
+|---|---:|---|---|---:|---:|---|---|
+| Changed-move shared starts (`compare v4->v5`) | 636 (1,272) | `v4` (`11,200` pos) | `v5` (`6,000` pos) | **55.0 %** (53.4–56.5 %) | **+0.7** | **138** (`68` 2–0, `70` 1.5–0.5) / 432 / **66** (`14` 0–2, `52` 0.5–1.5) | 25m 18s |
+| All ply-8 book openings (`--starts-ply 8`) | 284 (568) | `v4` (`11,200` pos) | `v5` (`6,000` pos) | **51.8 %** (49.7–54.0 %) | **+0.3** | **43** (`19` 2–0, `24` 1.5–0.5) / 211 / **30** (`11` 0–2, `19` 0.5–1.5) | 15m 07s |
+
+- **Decision (Gate P6):** **Passed.** Compared against Item 1's pure `recalc` (`49.9 %`), adding `trim` + `calclib` + Lincke DOE `expand` lifted the book to a decisive **`55.0 %`** (`95 % CI 53.4–56.5 %`, `+0.7` discs/g; winning across every ply bucket: `ply <= 10` `55.6 %`, `ply 11–20` `55.4 %`, `ply > 20` `53.1 %`) on changed-move starts and **`51.8 %`** (`+0.3` discs/g) across all ply-8 openings, while shrinking the web binary book from `193 KB` to `114 KB` (`33.8 KB` brotli) with `0` `verify` warnings/errors.
+
+
 
 
 
