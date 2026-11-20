@@ -9,7 +9,7 @@ This plan is in `Plans/making-stello-6-0-plan.md`. Its findings document, `Plans
   2. **Multi-thread overhead & node inflation (`+27–38 %` vs `+6–17 %`):** On FFO `#40–49`, Stello scales `4.88×` @ 8t and `5.69×` @ 16t vs Egaroucid's `5.27×` @ 8t and `7.07×` @ 16t. Audit of `Stello.Cpp/src/search/` found four concrete bottlenecks: `s.may_split()` never checks `pool->idle() > 0` (heap-allocating `ScopeTasks` + 2 mutexes + 1 condvar and building child arrays even when all workers are busy, and recomputing `state_of` from scratch on local fallback), `flush_nodes()` executes ~490k cross-core atomic `fetch_add` RMWs/s on one shared cache line, static wave barriers abort all brothers on null-window fail-highs without a Helpful Master, and `ScopeTasks::running_mutex` nests inside `PoolShared::queue_mutex`.
   3. **Untapped speed & Zen 4 hardware (`x86-64-v4` 256-bit AVX-512 & cache density):** Zen 4 executes 256-bit `ymm` AVX-512VL/CD/DQ/VNNI at full clock speed with zero `zmm` downclocking; `stable.cpp` currently allocates **1 MB** of scalar tables (16× larger than Edax's 64 KB edge table); `PatternState` is **256 B (`8 × ymm`)** instead of a single ternary **128 B (`4 × ymm`)**; and midgame `search_inc` computes `flips()` up to 3× per move while calling `order_by_evaluation` *before* trying `hash_move`.
   4. **Evaluation ceiling & RTX 4080 GPU training:** Stello 5.0's linear `egaroucid16 + mobility` × 60 already beats Egaroucid's linear pattern model. Pushing meaningfully below `4.97` MAE (and/or shrinking WebAssembly below `8.96 MB` brotli) motivates exploring Egaroucid's post-training integer-rounding hill-climb, fresh Stello 5.0/6.0 self-play + WTHOR data, and **RTX 4080 GPU-trained NNUE / non-linear pattern-hybrid evaluators** (with zero-dependency C++20 SIMD inference, including Zen 4 `vpdpbusd` VNNI, and an optional desktop/web model split).
-  5. **Verified bugs across the full repository:** An exhaustive pre-plan audit of `Stello.Cpp` and `Stello.Net` (including `Stello.Engine`, `Stello.App`, `Stello.Net` WPF, `Stello.Web` Blazor WASM + JS, and CLI tools) uncovered **21 confirmed bugs** (6 C++, 15 .NET/Web/CLI) and **14 defensive/latent issues** that belong in an initial Bug Fixing phase before any new optimizations begin.
+  5. **Verified bugs across the full repository:** An exhaustive pre-plan audit of `Stello.Cpp` and `Stello.Net` (including `Stello.Engine`, `Stello.App`, `Stello.Net` WPF, `Stello.Web` Blazor WASM + JS, and CLI tools) uncovered **19 remaining confirmed bugs** (6 C++, 13 .NET/Web/CLI) and **14 defensive/latent issues** that belong in an initial Bug Fixing phase before any new optimizations begin *(2 additional `BookTrimmer`/`BookCalclib`/`BookExpander` bugs found in the same audit were already fixed ahead of Stello 5.0 Phase 6.4 in commits `2fbd82d` and `fb325e2`)*.
 - **External engines, codebases & literature surveyed for Stello 6.0:**
   - **Local reference engines:** `Egaroucid-main` (Takuto Yamana, v7.9.0, GPL-3.0-or-later) and `edax-reversi-master` (Richard Delorme, v4.7, GPL-3.0) + Toshihiko Okuhara's `edax-reversi-AVX` (4.5.x AVX2/AVX-512/BMI2 & thread-local TT optimizations).
   - **Chess & modern alpha-beta / NNUE:** `official-stockfish/stockfish` (Correction History, Internal Iterative Reductions [IIR], CutNode-aware LMR & Continuation History, dynamic best-move-instability time management, Lazy SMP diversification, dual small/big NNUE, SCReLU, `vpdpbusd` VNNI, PGO).
@@ -69,9 +69,7 @@ This plan is in `Plans/making-stello-6-0-plan.md`. Its findings document, `Plans
 
 ## Phase 1: bug fixing (full codebase audit)
 
-All bugs below were verified directly in source during the pre-6.0 audit. Each confirmed bug gets a targeted fix and a regression test before Phase 2 starts.
-
-> **Early-patch note for Stello 5.0 Phase 6.4 (`expand`):** Items **N1** (`BookTrimmer`/`BookCalclib`/`BookExpander` proven-loss boundary) and **N8** (`BookExpander` worker-stop, `maxPly`/`maxPositions` pending deviations, and inverted pass-leaf score) directly affect `Stello.BookTool expand`. At the start of Phase 1, verify whether they were already patched prior to the Stello 5.0 release and close any remaining items here.
+All bugs below were verified directly in source during the pre-6.0 audit. Each confirmed bug gets a targeted fix and a regression test before Phase 2 starts. *(The `BookTrimmer`/`BookCalclib`/`BookExpander` proven-loss boundary and DOE lifecycle bugs found in the same audit were already fixed and unit-tested during Stello 5.0 Phase 6 in commits `2fbd82d` and `fb325e2`.)*
 
 ### 1A. C++20 Engine Confirmed Bugs (`Stello.Cpp`)
 1. **[C1 — High] YBWC brother-cutoff memory-ordering race (`point.cut` vs `point.stop`):**
@@ -100,58 +98,50 @@ All bugs below were verified directly in source during the pre-6.0 audit. Each c
    - **Fix:** Reject null-pointer + non-zero-length spans, check `pthread_create` / `pthread_getattr_np` return values (propagating `0` to throw in `stello_wasm.js`), and reject `time_ticks < 0` for `TimePerMove`.
 
 ### 1B. .NET Engine, Opening Book, Apps, Web & CLI Confirmed Bugs (`Stello.Net`)
-1. **[N1 — High] Asymmetric `-WinScore` proven-loss boundary bug in `BookTrimmer`, `BookCalclib`, and `BookExpander`:**
-   - **Location:** `Stello.Net/Stello.Engine/BookTrimmer.cs:160-195`, `BookCalclib.cs:216-231`, `BookExpander.cs:511-525`.
-   - **Cause:** `ScoreInUnits(-32601)` returns `-100`, while an unproven negative heuristic `-500` (`-5.00` discs) returns `-500`. Only the positive `+WinScore` boundary was guarded, so `Math.Max(0, -500 - (-100)) = 0` causes `BookTrimmer` to retain proven-loss hero moves even at `heroLoss = 0`, `BookCalclib` to add proven losses at `threshold = 0`, and `BookExpander` to treat proven losses as zero-loss PV lines (and on opponent turns in `BookTrimmer`, `bestRaw = +32601` vs `+500` gives `loss = 0`).
-   - **Fix:** Guard the `-WinScore` proven-loss boundary symmetrically in all three classes (reject proven-loss hero moves / `calclib` additions against `>= -WinScore` best moves; apply `ProvenBoundaryPenalty` in `BookExpander.EdgeLoss` across both `+WinScore` and `-WinScore` boundaries; prevent cross-boundary clamping to `0` on opponent turns in `BookTrimmer.IsAllowed`).
-2. **[N2 — High] `MainViewModel.StopAsync()` re-entrancy allows concurrent native `SearchEngine.Search()` calls:**
+1. **[N1 — High] `MainViewModel.StopAsync()` re-entrancy allows concurrent native `SearchEngine.Search()` calls:**
    - **Location:** `Stello.Net/Stello.App/ViewModels/MainViewModel.cs:651-657, 742-824`.
    - **Cause:** Two different commands (or `HandleTimeoutAsync`) awaiting `StopAsync()` while search `T1` is running both resume sequentially once `T1` ends and launch overlapping `RunAsync()` loops (`T2` and `T3`), invoking native `SearchEngine.Search` concurrently on the same `StelloEngine*` (UB/crash) or clobbering `WebEngineHost._progress`.
    - **Fix:** Loop `while (!Idle.IsCompleted) { _cancel?.Cancel(); await Idle; }` in `StopAsync()` and serialize all game-state-transitioning async actions with a single re-entrancy gate (`SemaphoreSlim(1, 1)`).
-3. **[N3 — High] `MainViewModel.SetGameModeCommand` stays enabled during `IsLearning`:**
+2. **[N2 — High] `MainViewModel.SetGameModeCommand` stays enabled during `IsLearning`:**
    - **Location:** `Stello.Net/Stello.App/ViewModels/MainViewModel.cs:95-101, 265-292`, `Stello.Net/Stello.Net/MainWindow.xaml:81-88`.
    - **Cause:** Missing `CanExecute = nameof(CanChangeGame)` allows starting a game (reading `OpeningBook._positions`) while `BookLearner` mutates `OpeningBook` on a background thread.
    - **Fix:** Add `CanExecute = nameof(CanChangeGame)`, `[NotifyCanExecuteChangedFor(nameof(SetGameModeCommand))]`, and an `if (IsLearning) return;` guard.
-4. **[N4 — High] `LocalStorageBookStore.Load()` unhandled `JSException` crashes Blazor WebAssembly startup:**
+3. **[N3 — High] `LocalStorageBookStore.Load()` unhandled `JSException` crashes Blazor WebAssembly startup:**
    - **Location:** `Stello.Net/Stello.Web/Services/LocalStorageBookStore.cs:14-31`, `StartupBook.cs:15-28`, `Program.cs:52`.
    - **Cause:** `localStorage.getItem` throws `JSException` (`SecurityError`) in strict privacy / blocked-storage browsers and is not caught (unlike `LocalStorageSettingsStore.Load`), aborting startup before `host.RunAsync()`.
    - **Fix:** Catch `JSException` in `LocalStorageBookStore.Load()` and return `null` so startup falls back to `data/OPENING.bin`.
-5. **[N5 — High] `WebEngineHost` ignores `cancellationToken` during 300 ms MoveNow grace window & `WaitForNaturalDelayAsync` checks `moveNow` before `cancel`:**
+4. **[N4 — High] `WebEngineHost` ignores `cancellationToken` during 300 ms MoveNow grace window & `WaitForNaturalDelayAsync` checks `moveNow` before `cancel`:**
    - **Location:** `Stello.Net/Stello.Web/Services/WebEngineHost.cs:98-145`, `Stello.Net/Stello.App/ViewModels/MainViewModel.cs:776-807, 828-845`.
    - **Cause:** Cancelling immediately after triggering Move Now fails to abort `ChooseMoveAsync` and bypasses the cancel check in `WaitForNaturalDelayAsync`, playing a cancelled move on `_game`.
    - **Fix:** Pass `cancellationToken` into the 300 ms wait (signalling `2` on cancel), call `cancellationToken.ThrowIfCancellationRequested()` before returning in `WebEngineHost` (restarting the worker if needed), and check `cancel.ThrowIfCancellationRequested()` first in `WaitForNaturalDelayAsync`.
-6. **[N6 — High] Uncorrelated `progress` messages in `Stello.Web` + unvalidated move in `EngineProtocol.MoveNowResult`:**
+5. **[N5 — High] Uncorrelated `progress` messages in `Stello.Web` + unvalidated move in `EngineProtocol.MoveNowResult`:**
    - **Location:** `Stello.Net/Stello.Web/wwwroot/js/engine-worker.js:24-26`, `engine-client.js:47-50`, `WebEngineHost.cs:102-106`, `EngineProtocol.cs:94-107`.
    - **Cause:** Late `progress` messages from Search #1 lack a request `id` and can overwrite Search #2's `last` `SearchInfo`; if Move Now falls back to `MoveNowResult`, it returns `last.BestMove` without checking `(legal & sq.Bit) != 0`, throwing `InvalidOperationException` in `_game.Play`.
    - **Fix:** Tag `progress` messages with search request `id`, ignore stale IDs in `engine-client.js` / `WebEngineHost`, and validate move legality in `EngineProtocol.MoveNowResult`.
-7. **[N7 — Medium] `BookLearner.AddGame` accepts `Move.Pass` on game-over boards (enabling book corruption & 2-cycle `StackOverflowException`):**
+6. **[N6 — Medium] `BookLearner.AddGame` accepts `Move.Pass` on game-over boards (enabling book corruption & 2-cycle `StackOverflowException`):**
    - **Location:** `Stello.Net/Stello.Engine/BookLearner.cs:61-87, 249-261`.
    - **Cause:** `BookLearner.Apply` omits `&& board.HasLegalMove(player.Opponent())` when validating `Move.Pass` and mutates `_book` before validating later moves.
    - **Fix:** Validate all plies upfront using `OpeningBook.IsLegal(board, player, move)` before mutating `_book`.
-8. **[N8 — Medium] Three bugs in `BookExpander` (`stopSignalled`, `_pendingDeviations` leaks, inverted pass-leaf score):**
-   - **Location:** `Stello.Net/Stello.Engine/BookExpander.cs:90, 99, 115-116, 177-186, 332-342, 366-370, 435`.
-   - **Cause:** (a) Worker `catch` block never sets `stopSignalled = true`, so sibling workers run the entire remaining expansion after a worker exception; (b) `ExecuteLeaf` queues `leaf.ChildKey` into `_pendingDeviations` even when `leaf.Ply >= _maxPly` (preventing `.expand.pending` deletion), and `AcquireTask` halts before draining pending deviations once `_maxPositions` is reached; (c) pass-leaf `ExpandProgress.Value` reports inverted `parentValue` (`-posValue`) instead of `BookMinimax.Clamp(posValue)`.
-   - **Fix:** Set `stopSignalled = true` inside `lock (gate)` on exception; guard `_pendingDeviations.Add` with `leaf.Ply < _maxPly`; allow draining `DeviationTask`s (suppressing only `LeafTask`s) once `_maxPositions` is reached; pass `gameOver ? parentValue : BookMinimax.Clamp(posValue)` to `ExpandProgress`.
-9. **[N9 — Medium] `MainViewModel` clock & timeout bugs:**
+7. **[N7 — Medium] `MainViewModel` clock & timeout bugs:**
    - **Location:** `Stello.Net/Stello.App/ViewModels/MainViewModel.cs:424-443, 501-523, 756, 787-795, 968-976, 990-1063`.
    - **Cause:** `TickClock()` runs during `IsLearning`; an in-flight search overwrites clocks reset via `EditSettingsCommand`; `_hasHumanContinuedOnTime` wipes restored clocks after `Undo` and wipes the human's new color after `SwitchSides`; early `return` on timeout leaves `0:01` displayed during the prompt.
    - **Fix:** Guard `IsLearning` in `TickClock()`, add a `_clockGeneration` counter checked before writing `timeLeft` back, track continued-on-time per `Player` (cleared in `RestoreClock()` when restored time > 0), and raise clock property notifications before calling `HandleTimeoutAsync`.
-10. **[N10 — Medium] `LocalEngineHost.LearnAsync` saves an un-minimaxed, unsorted `OpeningBook` when stopped (and ignores `HashBits`/`Threads`):**
-    - **Location:** `Stello.Net/Stello.App/Services/LocalEngineHost.cs:37-79`, `MainViewModel.cs:641-643`.
-    - **Fix:** Call `learner.Minimax()` before `bookStore.Save(book)` when stopped, and pass `Settings.HashBits` / `Settings.ThreadsFor(...)` into `LearningLimits()` and `CreateLearner`.
-11. **[N11 — Medium] `Stello.Benchmark` `mid-quality` silently ignores `threads=`:**
-    - **Location:** `Stello.Net/tools/Stello.Benchmark/QualityCommands.cs:150-183`.
-    - **Fix:** Apply `sides[e].Limits.Threads` and `sides[e].HashBits` to each side's `SearchLimits` inside the worker loop.
-12. **[N12 — Medium] `Stello.Trainer` `mpc --to 56` crashes with `FixedDepth(0)`:**
+8. **[N8 — Medium] `LocalEngineHost.LearnAsync` saves an un-minimaxed, unsorted `OpeningBook` when stopped (and ignores `HashBits`/`Threads`):**
+   - **Location:** `Stello.Net/Stello.App/Services/LocalEngineHost.cs:37-79`, `MainViewModel.cs:641-643`.
+   - **Fix:** Call `learner.Minimax()` before `bookStore.Save(book)` when stopped, and pass `Settings.HashBits` / `Settings.ThreadsFor(...)` into `LearningLimits()` and `CreateLearner`.
+9. **[N9 — Medium] `Stello.Benchmark` `mid-quality` silently ignores `threads=`:**
+   - **Location:** `Stello.Net/tools/Stello.Benchmark/QualityCommands.cs:150-183`.
+   - **Fix:** Apply `sides[e].Limits.Threads` and `sides[e].HashBits` to each side's `SearchLimits` inside the worker loop.
+10. **[N10 — Medium] `Stello.Trainer` `mpc --to 56` crashes with `FixedDepth(0)`:**
     - **Location:** `Stello.Net/tools/Stello.Trainer/MpcCommand.cs:25-26, 61-73`.
     - **Fix:** Cap `--from` / `--to` at `55`.
-13. **[N13 — Medium] `Stello.Trainer` `report` puts 0-empty (64-disc) positions into `"1-5"` bucket (`-1 / 5 == 0`):**
+11. **[N11 — Medium] `Stello.Trainer` `report` puts 0-empty (64-disc) positions into `"1-5"` bucket (`-1 / 5 == 0`):**
     - **Location:** `Stello.Net/tools/Stello.Trainer/ReportCommand.cs:39-40, 73-74`.
     - **Fix:** Filter `samples[i].Discs < 64` before grouping.
-14. **[N14 — Low] `MatchSide.NewPlayer()` silently drops `MatchSide.Options`:**
+12. **[N12 — Low] `MatchSide.NewPlayer()` silently drops `MatchSide.Options`:**
     - **Location:** `Stello.Net/Stello.Engine/BookMatch.cs:111-121`.
     - **Fix:** Pass `Options` to `new StelloMatchPlayer(HashBits, Book, Options)`.
-15. **[N15 — Low] `BrowserDialogService.Beep()` unguarded `AudioContext` throws `JSException`:**
+13. **[N13 — Low] `BrowserDialogService.Beep()` unguarded `AudioContext` throws `JSException`:**
     - **Location:** `Stello.Net/Stello.Web/Services/BrowserDialogService.cs:48`, `Stello.Net/Stello.Web/wwwroot/js/stello.js:13-22`.
     - **Fix:** Guard `AudioContext` in `stello.js` and catch `JSException` in `BrowserDialogService.Beep()`.
 
@@ -174,7 +164,7 @@ All bugs below were verified directly in source during the pre-6.0 audit. Each c
   14. Deterministic `IDisposable` cleanup in `EngineMatch.Work()` and `BenchSearcher.NativeReference` (landed in Phase 0).
 - *(Note on selective-endgame TT eviction flaw: `endgame/search_impl.hpp:180,299,341,464` sets `store_depth = s.end_mpc_stage` (`1/2/4`), letting `empties = 14` evict `empties = 28` in `slot[0]`. This is resolved structurally by composite `level = (depth << 4) | mpc_stage` in Phase 4's Unified TT.)*
 
-**Gate P1:** Regression tests added for all 21 confirmed bugs; all 5 C++ presets (`clang-release`, `clang-native`, `msvc-release`, `msvc-native`, `clang-sanitized`), `.NET` test suites, and WASM Node tests pass with 0 warnings; if C3 alters search parity, a 500 ms match confirms "not worse" and signatures are refreshed.
+**Gate P1:** Regression tests added for all 19 confirmed bugs; all 5 C++ presets (`clang-release`, `clang-native`, `msvc-release`, `msvc-native`, `clang-sanitized`), `.NET` test suites, and WASM Node tests pass with 0 warnings; if C3 alters search parity, a 500 ms match confirms "not worse" and signatures are refreshed.
 
 ---
 
@@ -347,7 +337,7 @@ Stello 5.0's `egaroucid16 + mobility` × 60 (Format v3) already beats Egaroucid'
 | Phase | Check |
 |---|---|
 | 0 | `engine=stello-v5`, `engine=edax` (`-xboard`), and `engine=egaroucid-cpp` (`Egaroucid.Runner`) pass unit tests & smoke matches with clean `IDisposable` teardown; `v5.0-ref/` & external baselines recorded |
-| 1 | Regression tests for all 21 confirmed bugs (6 C++, 15 .NET/Web/CLI) + 14 defensive items; all 5 C++ presets (incl. `clang-sanitized`), `.NET` tests, and WASM Node tests pass with 0 warnings |
+| 1 | Regression tests for all 19 confirmed bugs (6 C++, 13 .NET/Web/CLI) + 14 defensive items; all 5 C++ presets (incl. `clang-sanitized`), `.NET` tests, and WASM Node tests pass with 0 warnings |
 | 2 | 100 % node-identical to Phase 1 on all parity sets (`--cpu portable`, `--cpu v3`, `--cpu auto`/`v4`, `zmm = 0`); faster in `.NET` FFI (`mid-bench`, `solve-bench`) and WASM |
 | 3 | Faster 8t/16t FFO & `mid-bench d16` with lower node inflation; 8t matches beat Phase 2 at 500 ms & 2 s; ASan+UBSan and multi-thread stress tests clean |
 | 4–6 | Per item: 500 ms (1,180g) lower bound > 50 %, confirmed at 2 s (600g); FFO `#40–59` 100 % exact & targeting `< 650M` 1t nodes on `#40–49`; lower MAE/RMSE on both test splits; desktop & WASM bundle/RAM within budget |
