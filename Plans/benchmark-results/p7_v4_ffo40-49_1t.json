@@ -1,0 +1,111 @@
+{
+  "Command": "solve-bench",
+  "Date": "2026-11-22 08:20",
+  "ProcessorCount": 16,
+  "Limits": "solve",
+  "HashBits": 19,
+  "Passes": 1,
+  "Results": [
+    {
+      "Id": "40",
+      "Empties": 20,
+      "Move": "a2",
+      "Score": 38,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 12618023,
+      "Ms": 209.3806
+    },
+    {
+      "Id": "41",
+      "Empties": 22,
+      "Move": "h4",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 12718255,
+      "Ms": 259.2986
+    },
+    {
+      "Id": "42",
+      "Empties": 22,
+      "Move": "g2",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 22600759,
+      "Ms": 427.3965
+    },
+    {
+      "Id": "43",
+      "Empties": 23,
+      "Move": "c7",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 33845590,
+      "Ms": 919.7564
+    },
+    {
+      "Id": "44",
+      "Empties": 23,
+      "Move": "d2",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 11914537,
+      "Ms": 317.99
+    },
+    {
+      "Id": "45",
+      "Empties": 24,
+      "Move": "b2",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 308485227,
+      "Ms": 5852.9213
+    },
+    {
+      "Id": "46",
+      "Empties": 24,
+      "Move": "b3",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 51063812,
+      "Ms": 1096.9735
+    },
+    {
+      "Id": "47",
+      "Empties": 25,
+      "Move": "g2",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 25,
+      "Nodes": 31515508,
+      "Ms": 628.9904
+    },
+    {
+      "Id": "48",
+      "Empties": 25,
+      "Move": "f6",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 25,
+      "Nodes": 243673122,
+      "Ms": 6377.9352
+    },
+    {
+      "Id": "49",
+      "Empties": 26,
+      "Move": "e1",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 26,
+      "Nodes": 387231868,
+      "Ms": 7911.025
+    }
+  ],
+  "Engine": "stello-v4"
+}

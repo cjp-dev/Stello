@@ -571,11 +571,47 @@ Temporary `SearchOptions` / `opt=` switches (`mpc-model=`, `mpc-early=`, `mpc-la
 
 - **Decision (Gate P6):** **Passed.** Compared against Item 1's pure `recalc` (`49.9 %`), adding `trim` + `calclib` + Lincke DOE `expand` lifted the book to a decisive **`55.0 %`** (`95 % CI 53.4–56.5 %`, `+0.7` discs/g; winning across every ply bucket: `ply <= 10` `55.6 %`, `ply 11–20` `55.4 %`, `ply > 20` `53.1 %`) on changed-move starts and **`51.8 %`** (`+0.3` discs/g) across all ply-8 openings, while shrinking the web binary book from `193 KB` to `114 KB` (`33.8 KB` brotli) with `0` `verify` warnings/errors.
 
+---
 
+## Phase 7 — Final Matches & FFO Solve-Bench (Part 1)
 
+Removed temporary Gate P6 scratch files (`scratch/opening-book-v4.txt`, `scratch/compare-v4-to-v5-final.txt`) and ran all `18` timed matches (`1,180` games per match = all `590` balanced starts in `starts.txt`, `no book`, `hash-bits=19` for Stello / default `21` for Egaroucid, `--workers 8` for `1t` and `--workers 1` for `8t` multi-threaded opponents) plus FFO `#40–49` and `#50–59` `solve-bench` comparisons.
 
+### 1. Complete Final Match Table (`21,240` Games Total, Side B = `Stello 5.0`)
 
+| # | Opponent | Time | Threads | Score (95 % CI) | W / D / L | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | NPS (A / B) | Wall Time |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| 1 | `Stello 4.0` (`v4`) | 100 ms | 1t | **61.4 %** (59.2–63.7 %) | `+643 =164 −373` | **+81** (+65 to +98) | 100.0 % | +2.0 ± 0.3 | 16.29 / 17.45 | 21.4 / 20.5 | 15.00M / 19.79M | [6m 40s](benchmark-results/match_p7_v5_vs_v4_100ms_1t.md) |
+| 2 | `Stello 4.0` (`v4`) | 500 ms | 1t | **58.3 %** (56.2–60.3 %) | `+601 =173 −406` | **+58** (+43 to +73) | 100.0 % | +1.3 ± 0.2 | 19.19 / 20.57 | 23.5 / 23.0 | 16.32M / 21.18M | [30m 38s](benchmark-results/match_p7_v5_vs_v4_500ms_1t.md) |
+| 3 | `Stello 4.0` (`v4`) | 2,000 ms | 1t | **59.4 %** (57.4–61.3 %) | `+582 =237 −361` | **+66** (+52 to +80) | 100.0 % | +1.3 ± 0.2 | 21.65 / 23.31 | 25.3 / 25.2 | 17.59M / 22.68M | [1h 53m](benchmark-results/match_p7_v5_vs_v4_2000ms_1t.md) |
+| 4 | `Stello 4.0` (`v4`) | 100 ms | 8t | **60.5 %** (58.3–62.6 %) | `+626 =175 −379` | **+74** (+58 to +89) | 100.0 % | +1.8 ± 0.2 | 18.58 / 20.15 | 23.3 / 22.8 | 100.17M / 111.24M | [49m 49s](benchmark-results/match_p7_v5_vs_v4_100ms_8t.md) |
+| 5 | `Stello 4.0` (`v4`) | 500 ms | 8t | **60.2 %** (58.2–62.1 %) | `+609 =202 −369` | **+72** (+58 to +86) | 100.0 % | +1.3 ± 0.2 | 21.76 / 23.74 | 25.5 / 25.6 | 123.25M / 139.40M | [3h 45m](benchmark-results/match_p7_v5_vs_v4_500ms_8t.md) |
+| 6 | `Stello 4.0` (`v4`) | 2,000 ms | 8t | **61.9 %** (60.1–63.6 %) | `+615 =230 −335` | **+84** (+71 to +97) | 100.0 % | +1.4 ± 0.2 | 24.45 / 26.84 | 27.3 / 27.8 | 141.38M / 158.83M | [13h 50m](benchmark-results/match_p7_v5_vs_v4_2000ms_8t.md) |
+| 7 | `Stello 3.1.0` (`v3`) | 100 ms | 1t | **61.9 %** (59.6–64.2 %) | `+648 =165 −367` | **+84** (+67 to +102) | 100.0 % | +2.1 ± 0.3 | 16.22 / 17.38 | 21.3 / 20.4 | 14.10M / 19.25M | [6m 42s](benchmark-results/match_p7_v5_vs_v3_100ms_1t.md) |
+| 8 | `Stello 3.1.0` (`v3`) | 500 ms | 1t | **57.5 %** (55.4–59.6 %) | `+586 =185 −409` | **+53** (+38 to +68) | 100.0 % | +1.3 ± 0.2 | 19.09 / 20.45 | 23.4 / 23.0 | 14.74M / 19.95M | [30m 42s](benchmark-results/match_p7_v5_vs_v3_500ms_1t.md) |
+| 9 | `Stello 3.1.0` (`v3`) | 2,000 ms | 1t | **60.3 %** (58.3–62.2 %) | `+576 =270 −334` | **+72** (+58 to +87) | 100.0 % | +1.3 ± 0.2 | 21.48 / 23.13 | 25.2 / 25.1 | 15.75M / 21.19M | [1h 54m](benchmark-results/match_p7_v5_vs_v3_2000ms_1t.md) |
+| 10 | `Stello 3.1.0` (`v3`) | 100 ms | 8t | **60.8 %** (58.6–62.9 %) | `+633 =168 −379` | **+76** (+61 to +92) | 100.0 % | +1.7 ± 0.2 | 18.60 / 20.25 | 23.2 / 22.8 | 96.57M / 115.95M | [49m 53s](benchmark-results/match_p7_v5_vs_v3_100ms_8t.md) |
+| 11 | `Stello 3.1.0` (`v3`) | 500 ms | 8t | **61.1 %** (59.1–63.0 %) | `+607 =227 −346` | **+78** (+64 to +93) | 100.0 % | +1.5 ± 0.2 | 21.69 / 23.74 | 25.4 / 25.6 | 115.19M / 138.10M | [3h 45m](benchmark-results/match_p7_v5_vs_v3_500ms_8t.md) |
+| 12 | `Stello 3.1.0` (`v3`) | 2,000 ms | 8t | **60.2 %** (58.5–62.0 %) | `+589 =243 −348` | **+72** (+59 to +85) | 100.0 % | +1.1 ± 0.2 | 24.42 / 26.89 | 27.2 / 27.7 | 132.18M / 160.53M | [13h 51m](benchmark-results/match_p7_v5_vs_v3_2000ms_8t.md) |
+| 13 | `Stello 2.0` (`v2`) | 100 ms | 1t | **69.7 %** (67.6–71.9 %) | `+748 =150 −282` | **+145** (+128 to +163) | 100.0 % | +3.3 ± 0.3 | 14.35 / 17.32 | 20.6 / 20.4 | 6.42M / 19.15M | [6m 46s](benchmark-results/match_p7_v5_vs_v2_100ms_1t.md) |
+| 14 | `Stello 2.0` (`v2`) | 500 ms | 1t | **66.6 %** (64.6–68.6 %) | `+705 =162 −313` | **+120** (+104 to +136) | 100.0 % | +2.6 ± 0.2 | 17.31 / 20.51 | 22.8 / 23.1 | 6.97M / 20.41M | [31m 07s](benchmark-results/match_p7_v5_vs_v2_500ms_1t.md) |
+| 15 | `Stello 2.0` (`v2`) | 2,000 ms | 1t | **66.0 %** (64.1–67.9 %) | `+665 =228 −287` | **+115** (+101 to +130) | 100.0 % | +2.0 ± 0.2 | 19.84 / 23.25 | 24.6 / 25.2 | 7.57M / 21.96M | [1h 55m](benchmark-results/match_p7_v5_vs_v2_2000ms_1t.md) |
+| 16 | `Egaroucid` (`time-strict=on`) | 100 ms | 1t | **77.1 %** (75.1–79.1 %) | `+854 =111 −215` | **+211** (+192 to +231) | 100.0 % | +4.8 ± 0.3 | 10.87 / 17.37 | 18.9 / 20.6 | 6.52M / 19.26M | [7m 10s](benchmark-results/match_p7_v5_vs_egaroucid_100ms_1t.md) |
+| 17 | `Egaroucid` (`time-strict=on`) | 500 ms | 1t | **65.2 %** (63.1–67.3 %) | `+680 =179 −321` | **+109** (+93 to +126) | 100.0 % | +2.2 ± 0.2 | 15.92 / 20.57 | 21.7 / 23.1 | 7.62M / 20.56M | [32m 19s](benchmark-results/match_p7_v5_vs_egaroucid_500ms_1t.md) |
+| 18 | `Egaroucid` (`time-strict=on`) | 2,000 ms | 1t | **49.8 %** (47.9–51.8 %) | `+466 =244 −470` | **−1** (−15 to +12) | 43.2 % | +0.1 ± 0.2 | 24.11 / 23.22 | 23.9 / 25.1 | 9.02M / 21.34M | [1h 58m](benchmark-results/match_p7_v5_vs_egaroucid_2000ms_1t.md) |
 
+### 2. FFO `#40–49` & `#50–59` `solve-bench` Comparisons (`hash-bits=19`, 1 Pass, All Exact)
 
-
-
+| Suite | Engine | Threads | Total Nodes | Total Time | Nodes/s | File |
+|---|---|---:|---:|---:|---:|---|
+| `FFO #40–49` | **`Stello 5.0`** | 1 | **1,070,469,669** | **16.9 s** | **63.21M** | [p7_v5_ffo40-49_1t.json](benchmark-results/p7_v5_ffo40-49_1t.json) |
+| `FFO #40–49` | `Stello 4.0` (`stello-v4`) | 1 | 1,115,666,701 | 24.0 s | 46.48M | [p7_v4_ffo40-49_1t.json](benchmark-results/p7_v4_ffo40-49_1t.json) |
+| `FFO #40–49` | `Stello 3.1.0` (`stello-v3`) | 1 | 1,115,666,701 | 25.9 s | 43.06M | [p7_v3_ffo40-49_1t.json](benchmark-results/p7_v3_ffo40-49_1t.json) |
+| `FFO #40–49` | **`Stello 5.0`** | 8 | **1,177,976,301** | **3.181 s** | **370.36M** | [p7_v5_ffo40-49_8t.json](benchmark-results/p7_v5_ffo40-49_8t.json) |
+| `FFO #40–49` | `Stello 4.0` (`stello-v4`) | 8 | 1,610,845,768 | 6.360 s | 253.27M | [p7_v4_ffo40-49_8t.json](benchmark-results/p7_v4_ffo40-49_8t.json) |
+| `FFO #40–49` | `Stello 3.1.0` (`stello-v3`) | 8 | 1,616,143,675 | 7.029 s | 229.93M | [p7_v3_ffo40-49_8t.json](benchmark-results/p7_v3_ffo40-49_8t.json) |
+| `FFO #50–59` | **`Stello 5.0`** | 1 | 30,513,267,013 | **559.6 s** | **54.52M** | [p7_v5_ffo50-59_1t.json](benchmark-results/p7_v5_ffo50-59_1t.json) |
+| `FFO #50–59` | `Stello 4.0` (`stello-v4`) | 1 | 25,419,468,677 | 586.5 s | 43.34M | [p7_v4_ffo50-59_1t.json](benchmark-results/p7_v4_ffo50-59_1t.json) |
+| `FFO #50–59` | **`Stello 5.0`** | 8 | 38,930,020,066 | **110.8 s** | **351.51M** | [p7_v5_ffo50-59_8t.json](benchmark-results/p7_v5_ffo50-59_8t.json) |
+| `FFO #50–59` | `Stello 4.0` (`stello-v4`) | 8 | 38,911,015,999 | 144.6 s | 269.15M | [p7_v4_ffo50-59_8t.json](benchmark-results/p7_v4_ffo50-59_8t.json) |
+| `FFO #50–59` | `Stello 3.1.0` (`stello-v3`) | 8 | 39,155,644,861 | 160.8 s | 243.48M | [p7_v3_ffo50-59_8t.json](benchmark-results/p7_v3_ffo50-59_8t.json) |

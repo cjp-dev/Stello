@@ -1,0 +1,111 @@
+{
+  "Command": "solve-bench",
+  "Date": "2026-11-22 08:46",
+  "ProcessorCount": 16,
+  "Limits": "solve, 8 threads",
+  "HashBits": 19,
+  "Passes": 1,
+  "Results": [
+    {
+      "Id": "50",
+      "Empties": 26,
+      "Move": "d8",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 26,
+      "Nodes": 877609392,
+      "Ms": 4297.4282
+    },
+    {
+      "Id": "51",
+      "Empties": 27,
+      "Move": "a3",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 27,
+      "Nodes": 344430369,
+      "Ms": 1640.1351
+    },
+    {
+      "Id": "52",
+      "Empties": 27,
+      "Move": "a3",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 27,
+      "Nodes": 315219064,
+      "Ms": 1297.8382
+    },
+    {
+      "Id": "53",
+      "Empties": 28,
+      "Move": "d8",
+      "Score": -2,
+      "Kind": "Exact",
+      "Depth": 28,
+      "Nodes": 2744078409,
+      "Ms": 10757.3935
+    },
+    {
+      "Id": "54",
+      "Empties": 28,
+      "Move": "c7",
+      "Score": -2,
+      "Kind": "Exact",
+      "Depth": 28,
+      "Nodes": 5307123751,
+      "Ms": 20150.4042
+    },
+    {
+      "Id": "55",
+      "Empties": 29,
+      "Move": "e2",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 29,
+      "Nodes": 19927503207,
+      "Ms": 78109.6401
+    },
+    {
+      "Id": "56",
+      "Empties": 29,
+      "Move": "h5",
+      "Score": 2,
+      "Kind": "Exact",
+      "Depth": 29,
+      "Nodes": 1407588875,
+      "Ms": 5945.8201
+    },
+    {
+      "Id": "57",
+      "Empties": 30,
+      "Move": "a6",
+      "Score": -10,
+      "Kind": "Exact",
+      "Depth": 30,
+      "Nodes": 5910389291,
+      "Ms": 28422.3333
+    },
+    {
+      "Id": "58",
+      "Empties": 30,
+      "Move": "g1",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 30,
+      "Nodes": 1398632300,
+      "Ms": 6157.0325
+    },
+    {
+      "Id": "59",
+      "Empties": 34,
+      "Move": "h4",
+      "Score": 64,
+      "Kind": "Exact",
+      "Depth": 34,
+      "Nodes": 923070203,
+      "Ms": 4038.4358
+    }
+  ],
+  "Engine": "stello-v3"
+}
