@@ -36,7 +36,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Install WebAssembly build tools
-        run: dotnet workload restore Stello.Net/Stello.Web/Stello.Web.csproj
+        run: dotnet --version && dotnet workload install wasm-tools
 
       # The engine in the browser is the C++ engine (Stello.Cpp), which Stello.Web compiles to single- and
       # multi-threaded WebAssembly with Emscripten via CMake + Ninja.
