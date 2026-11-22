@@ -4,7 +4,7 @@
 
 ## In short
 
-`Stello.BookTool` is a console program for keeping the master opening book ([chapter 10](10-opening-book.md)). It imports the C++ book, keeps the text book in its normal form, builds the binary book that the apps use, checks the book, and prints statistics. It also **recalculates** the book: it searches every leaf again with the current engine, on several engines at once, and then plays the old and the new book against each other in a **match**, to see whether the new book is stronger. It uses the book code in `Stello.Engine`, so the tool and the apps always agree on the format.
+`Stello.BookTool` is a console program for keeping the master opening book ([chapter 10](10-opening-book.md)). It imports the C++ book, keeps the text book in its normal form, builds the binary book that the apps use, checks the book, prints statistics, **trims** unreachable tails (`trim`), **recalculates** leaves (`recalc`), **adds strong unbooked alternatives** (`calclib`), **expands** promising lines with Lincke drop-out expansion (`expand`), and matches books against each other (`match`). It uses the book code in `Stello.Engine`, so the tool and the apps always agree on the format.
 
 ## Running it
 
@@ -21,11 +21,14 @@ dotnet run -c Release --project Stello.Net/tools/Stello.BookTool -- <command> [a
 | `build <book.txt> <book.bin>` | Builds the binary book for the apps from the text book |
 | `verify <book.txt> [<book.bin>]` | Checks the text book and, if given, that the binary book holds the same book |
 | `stats <book>` | Statistics for a book in any of the three formats |
+| `trim <book.txt> [--hero-loss 100] [--opp-loss <N\|unlimited>] [--max-ply 30] [--dry-run]` | Prunes unreachable branches and over-deep tails from the book (`BookTrimmer`) |
 | `recalc <book.txt> [--time-s 60 \| --depth N] [--workers N] [--save-every 10] [--hash-bits 19]` | Searches the leaves again, backs up and sorts, and writes `<book>.report.txt` |
+| `calclib <book.txt> [--time-s 60 \| --depth N] [--threshold 100] [--max-ply 30] [--max-adds 3] [--workers N] [--save-every 10] [--hash-bits 19] [--fresh]` | Searches unbooked legal moves (`onlyMoves`) and adds moves within `--threshold` (`BookCalclib`) |
+| `expand <book.txt> [--time-s 60 \| --depth N] [--omega 50] [--max-ply 28] [--max-positions 6000] [--iterations N] [--max-time-min M] [--workers N] [--save-every 10] [--hash-bits 19] [--fresh]` | Expands promising leaves with Lincke Drop-Out Expansion (`BookExpander`) |
 | `compare <old book> <new book> [--out <report.txt>]` | Reports the values and first moves that changed |
 | `match <book A> <book B> (--starts <report.txt> \| --starts-ply N) [--max-starts N] [--depth 10 \| --time-s S] [--workers N] [--threads 1] [--hash-bits 19]` | Plays the two books against each other; `--threads` is each engine's search threads (1–256), and workers × threads should stay within the cores |
 
-Books are written to a temporary file first and then renamed (`WriteAtomically`), so a failed run never leaves half a book; the reports of `recalc` and `compare` are written directly. A file that cannot be read gives the error and exit code 1. `--workers` is the number of engines that search at the same time; the default is half the number of logical processors (the physical cores with hyper-threading). Each engine has two hash tables of $2^{\text{hash-bits}}$ slots (48 MiB at 19, chapter 07). Ctrl+C stops `recalc` and `match` cleanly; they then exit with code 2.
+Books are written to a temporary file first and then renamed (`WriteAtomically`), so a failed run never leaves half a book; the reports of `recalc`, `calclib`, `expand` and `compare` are written directly. A file that cannot be read gives the error and exit code 1. `--workers` is the number of engines that search at the same time; the default is the number of physical cores. Each engine has two hash tables of $2^{\text{hash-bits}}$ slots (64 MiB at 19, chapter 07). Ctrl+C stops `recalc` and `match` cleanly; they then exit with code 2.
 
 ## Updating the master book
 
@@ -173,41 +176,48 @@ The report that `recalc` writes compares with the book at the start of the last 
 
 ### The master book now
 
-The master book's values are those of Stello 2.0, engine version 4 (chapter 10): every leaf that is not exact was searched with 60 s per position, 8 workers on a Ryzen 7 7800X3D, in about 14 hours, and the exact values of earlier engine versions were kept. The run changed 15 776 values and the first move in 1 694 positions (the report above). In 1 180 games with books on and 500 ms per move, a pair from each of the 590 start positions at plies 10–12 in the benchmark's `starts.txt` (chapter 17), it scored 51.7 % (49.7–53.6 %) against the book before it, which is no significant difference but not worse ([result](../Plans/benchmark-results/match_v2x-book2x-vs-book20-500ms.md)). The book was recalculated twice for Stello 2.0, as told in [chapter 22](22-phase-4-the-release.md) and [chapter 23](23-phase-5-the-search.md); the second run also searched the 2 718 `INEXACT` leaves that the first one had kept by mistake.
+Stello 5.0's master book (`OpeningBook.EngineVersion` 5, 6,000 canonical positions / 13,154 moves) was built in four steps with the C++20 `5.0` engine ([chapter 29](29-stello-5-0-speed-threads-search-and-book.md)):
 
-Since Stello 3.0, `recalc` searches with the Rust engine (chapter 14). The original 3.0 port searched node for node like Stello 2.0: the whole master book at `--depth 10` with 4 workers gave identical books and reports, in 32 s instead of 50 s with the C# engine ([findings, speed pass](../Plans/making-stello-3-findings.md#speed-one-pinned-cpu-fastest-of-3-passes-same-session)). Later search fixes can change the nodes. With `--time-s` the faster engine searches deeper in the same time, so the values would change; the master book has not been recalculated by 3.0.
+1. **`recalc` (60 s/leaf):** Re-searched all 10,531 non-legacy leaves (`1,091` untimed `Exact` values kept), raising mean leaf midgame depth from `25.18` to `29.61` plies (`+4.43` plies).
+2. **`trim` (`--hero-loss 100 --opp-loss unlimited --max-ply 30`):** Kept only the union of positions reachable from `d3` when Stello plays Black and when Stello plays White, cutting unreachable legacy tails from `11,200 -> 1,993` positions (`22,878 -> 4,473` moves) and converting `373` severed edges cleanly into backed-up leaves.
+3. **`calclib` (`--time-s 60 --threshold 100 --max-ply 30`):** Probed unbooked legal moves with `onlyMoves`, adding `642` missing good alternatives (`+640` leaves and `+2` transposition edges), changing `450` (`22.6 %`) best moves.
+4. **`expand` (`--time-s 60 --omega 50 --max-ply 28 --max-positions 6000`):** Used Dijkstra Lincke drop-out expansion ($\omega \cdot \text{ply} + \text{cumulative\_loss}$) to grow early lines (`ply 1–10` `664 -> 1,467`, `ply 11–16` `687 -> 3,414`) to **6,000 positions** (`7,047` leaves, all `60s:v5`), shrinking [opening-book.bin](../Stello.Net/Book/opening-book.bin) to **114,169 bytes** (`33,809` bytes brotli) with `0` `verify` warnings.
+
+In 500 ms Gate P6 matches (`Stello 5.0` engine, `--workers 8 --hash-bits 19`), the `v5` book beat the `v4` book by **`55.0 %`** (`95 % CI 53.4–56.5 %`, `+0.7` discs/game) over 1,272 games from shared changed-move positions and **`51.8 %`** (`+0.3` discs/game) over all `284` ply-8 openings (`568` games).
 
 ## Worked example: `stats`
 
 `stats Stello.Net/Book/opening-book.bin` (shortened):
 
 ```text
-Positions:    11,200
-Moves:        22,878
-Leaf moves:   11,622
-Passes:       4
-Longest line: 57 plies
-Replies to d3: c5 (-87, BackedUp), c3 (-262, BackedUp), e3 (-775, BackedUp)
+Positions:    6,000
+Moves:        13,154
+Leaf moves:   7,047
+Passes:       0
+Longest line: 31 plies
+Replies to d3: c5 (81, BackedUp), c3 (-62, BackedUp), e3 (-500, BackedUp)
 
 Origin of the values:
-  Heuristic       6,948
-  WinLossDraw       595
-  Exact           4,079
-  BackedUp       11,256
+  Heuristic       6,843
+  WinLossDraw       144
+  Exact              60
+  BackedUp        6,107
 
 Search limit of the searched values:
-  unknown         1,091
-  60s            10,531
+  60s             7,047
 
 Ply  Positions  Leaf moves   (d3 is ply 1; a position counts at its shortest line)
   1          1           0
   2          3           0
-  3          5           3
+  3          7           1
 ...
- 55         26           2
+ 12        682         567
+...
+ 30         37          64
+ 31          0         103
 ```
 
-Only the 1 091 exact values from the C++ book have no known effort; all other leaves were searched by `recalc` with 60 s per move. The values are in 1/100 disc for the player who makes the move: c5 is worth −0.87 discs for White.
+Every one of the 7,047 leaves was searched with `60s` per move by engine version 5. The values are in 1/100 disc for the player who makes the move: c5 is worth +0.81 discs for White.
 
 ## Design notes
 
@@ -223,10 +233,13 @@ Only the 1 091 exact values from the C++ book have no known effort; all other le
 
 | File | Main members |
 |---|---|
-| [Program.cs](../Stello.Net/tools/Stello.BookTool/Program.cs) | `Main`, `Import` (also `format`), `Build`, `Verify`, `Stats`, `Compare`, `WriteText` |
-| [SearchCommands.cs](../Stello.Net/tools/Stello.BookTool/SearchCommands.cs) | `Recalc`, `Match`, `Cancellable` (Ctrl+C) |
+| [Program.cs](../Stello.Net/tools/Stello.BookTool/Program.cs) | `Main`, `Import` (also `format`), `Build`, `Verify`, `Stats`, `Trim`, `Compare`, `WriteText` |
+| [SearchCommands.cs](../Stello.Net/tools/Stello.BookTool/SearchCommands.cs) | `Recalc`, `Calclib`, `Expand`, `Match`, `Cancellable` (Ctrl+C) |
 | [Options.cs](../Stello.Net/tools/Stello.BookTool/Options.cs) | `Parse`, `Allow`, `Number`, `Limits` |
+| [BookTrimmer.cs](../Stello.Net/Stello.Engine/BookTrimmer.cs) | `Trim`: hero/opponent loss pruning, `Exact` boundary normalization, severed-edge leaf conversion |
 | [BookRecalculator.cs](../Stello.Net/Stello.Engine/BookRecalculator.cs) | `LeafPositions`, `ToSearch`, `Run` |
+| [BookCalclib.cs](../Stello.Net/Stello.Engine/BookCalclib.cs) | `Run`, `onlyMoves` deviation search, `.calclib.done` checkpointing |
+| [BookExpander.cs](../Stello.Net/Stello.Engine/BookExpander.cs) | `Run`, Lincke DOE priority expansion, `.expand.pending` checkpointing |
 | [BookComparison.cs](../Stello.Net/Stello.Engine/BookComparison.cs) | `Of`, `Write` |
 | [BookMatch.cs](../Stello.Net/Stello.Engine/BookMatch.cs) | `BookMatch.Play`, `ReadStarts`, `StartsAtPly`, `EngineMatch.Play`, `MatchSummary.Of` |
 | [BookSearch.cs](../Stello.Net/Stello.Engine/BookSearch.cs), [BookMinimax.cs](../Stello.Net/Stello.Engine/BookMinimax.cs) | `PositionValue`, `Search`; `Run` (shared with book learning) |
@@ -237,7 +250,7 @@ Only the 1 091 exact values from the C++ book have no known effort; all other le
 
 ## Tests
 
-The tool itself has no tests; the code it calls is tested in [OpeningBookTests.cs](../Stello.Net/Stello.Engine.Tests/OpeningBookTests.cs) (chapter 10), including the two tests on the shipped files above, and in [BookRecalculatorTests.cs](../Stello.Net/Stello.Engine.Tests/BookRecalculatorTests.cs):
+The tool itself has no tests; the code it calls is tested in [OpeningBookTests.cs](../Stello.Net/Stello.Engine.Tests/OpeningBookTests.cs) (chapter 10), including the two tests on the shipped files above, in [BookRecalculatorTests.cs](../Stello.Net/Stello.Engine.Tests/BookRecalculatorTests.cs), [BookTrimmerTests.cs](../Stello.Net/Stello.Engine.Tests/BookTrimmerTests.cs), [BookCalclibTests.cs](../Stello.Net/Stello.Engine.Tests/BookCalclibTests.cs), and [BookExpanderTests.cs](../Stello.Net/Stello.Engine.Tests/BookExpanderTests.cs):
 
 - `recalc` searches only the leaves that are not good enough, searches a transposed leaf once, keeps a proven result the search cannot solve, keeps a draw that Stello solved but replaces an imported one, replaces a win/loss/draw value that is no proof, gives the same book with 1 and 4 workers (and a consistent book after back-up), and continues where a stopped run stopped, with checkpoints;
 - `compare` reports the changed values and first moves, and its report gives the start positions;

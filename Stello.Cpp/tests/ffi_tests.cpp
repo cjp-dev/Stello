@@ -33,7 +33,7 @@ std::pair<StelloEngine*, int32_t> create_ffi_engine(int32_t hash_bits) {
 } // namespace
 
 STELLO_TEST(ffi_version_and_layout) {
-    STELLO_CHECK_EQ(stello_version(), 40000u);
+    STELLO_CHECK_EQ(stello_version(), 50000u);
     STELLO_CHECK_EQ(stello_abi_version(), 3u);
     STELLO_CHECK_EQ(sizeof(StelloSearchInfo), size_t{48});
     STELLO_CHECK_EQ(offsetof(StelloSearchInfo, depth), size_t{24});

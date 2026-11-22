@@ -155,8 +155,8 @@ Whereas Rust's `-Z build-std` threaded build lost ~10–11% in 1-thread midgame 
 - [Stello 4.0 C++ implementation.md](../Plans/Stello%204.0%20C++%20implementation.md): the two-part plan and Gate P4 decision.
 - [Stello 4.0 C++ findings.md](../Plans/Stello%204.0%20C++%20findings.md): complete benchmark tables, `llvm-objdump` counts, FFI/WASM comparisons and Gate P0–P7 records.
 - [Chapter 25](25-phases-0-4-the-engine-in-rust.md), [chapter 26](26-phases-5-9-threads.md) and [chapter 27](27-stello-3-1-fixes-and-the-desktop-app.md): the Rust 3.0 rewrite, threading design and 3.1 baseline that `Stello.Cpp` ports 1-to-1.
-- [References](30-references.md#28-stello-40-the-engine-in-c): C++20 `<bit>`, Clang, Emscripten and WebAssembly exception handling.
+- [References](31-references.md#28-stello-40-the-engine-in-c): C++20 `<bit>`, Clang, Emscripten and WebAssembly exception handling.
 
 ---
 
-Previous: [27 Stello 3.1: fixes and the desktop app](27-stello-3-1-fixes-and-the-desktop-app.md) · Next: [29 Glossary](29-glossary.md)
+Previous: [27 Stello 3.1: fixes and the desktop app](27-stello-3-1-fixes-and-the-desktop-app.md) · Next: [29 Stello 5.0: speed, threads, search and book](29-stello-5-0-speed-threads-search-and-book.md)

@@ -6,7 +6,7 @@
 
 To choose a move, the engine looks ahead: it tries its moves, the opponent's replies, its answers to those, and so on, and evaluates the positions at the end of each line with the pattern evaluation (chapter 04). The best move is the one that leads to the best position when both sides play their best. This is **minimax**; Stello writes it as **negamax** with **alpha-beta pruning**, which skips lines that cannot change the result. The search runs **iteratively deeper**: first 1 ply, then 2, then 3, until the time is used. **Principal variation search** tries the first move with the full window and later moves with a null window; at the root, depths 1–3 use full windows for every move. It is helped by the hash table and its **enhanced transposition cutoff** (chapter 07), move ordering (chapter 05), an **extension** at the horizon and a **selective search**, Multi-ProbCut, that cuts off positions a shallow search shows to be clearly outside the interesting range, with an error model fitted on Stello's own searches. When the end of the game is near enough, the endgame solver takes over (chapter 08).
 
-With more than 1 thread, the other threads help: half of them run **Lazy SMP** helpers, which search the root a few plies deeper into the shared hash tables, and the rest take over the later moves of a node once its first move has been searched (**YBWC**). With 1 thread no pool is used ([Threads](#threads)); the Rust search can differ in nodes from its frozen C# ancestor.
+With more than 1 thread, the other threads help: scaled **Lazy SMP** helpers (`lazy_smp_helpers`: 2 of 7 workers at 8 threads, 4 of 14/15 at 15–16 threads), which search the root a few plies deeper into the shared hash tables, and the rest take over the later moves of a node once its first move has been searched (**YBWC**, including root splits and helper-triggered brother cuts). With 1 thread no pool is used ([Threads](#threads)).
 
 ## Data structures
 
@@ -19,16 +19,17 @@ With more than 1 thread, the other threads help: half of them run **Lazy SMP** h
 | `pool` | The worker threads for searches with more than 1 thread, and the thread count they were started for ([Threads](#the-thread-pool)) |
 | `spawner` | How the pool starts its threads: `std_spawner`, or Web Workers in the threaded web build (`set_spawner`) |
 | `options` | The `SearchOptions`: `pattern`, another evaluation instead of the built-in `EvalWeights::built_in()` (chapter 04), and the switches `selective`, `probcut_percent`, `soft_time_percent` and `ybwc` |
-| `probcut_errors` | Multi-ProbCut's margin $t\,\sigma$ in 1/100 disc for each disc count and depth, or `None` when `selective` is off |
+| `probcut_errors` | Multi-ProbCut's margin $t\,\sigma$ in 1/100 disc for each disc count and depth, or `nullptr` when `selective` is off |
+| `end_probcut_errors` | Selective endgame's margin $t\,\sigma_{\text{end}}$ by confidence stage (1–6) and empty squares (chapter 08), or `nullptr` when `selective` is off |
 | `clock`, `iteration_done` | The clock (`system_clock`, or the browser's, set with `set_clock`; chapter 09) and the callback after each iteration |
 
 | Field of `Searcher` | Contents |
 |---|---|
 | `pattern` | The evaluation this search uses |
 | `midgame_table`, `endgame_table`, `endgame`, `ordering` | Borrows of the shared tables and of this thread's `ThreadState` |
-| `helpers` | The pool and what the other threads need, in a search with more than 1 thread; `None` with 1 thread and in the Lazy SMP helpers |
-| `split`, `ybwc` | The split point this search was split off at, if it was (YBWC), and whether it may split its nodes |
-| `in_probcut` | True during Multi-ProbCut's shallow search, which is not selective itself |
+| `helpers` | The pool and what the other threads need, in a search with more than 1 thread; empty with 1 thread and in the Lazy SMP helpers |
+| `split_point`, `ybwc` | The active split point for sibling early-abort ("brother cuts") when attached, and whether a search may split its nodes |
+| `in_probcut`, `end_mpc_stage` | True during Multi-ProbCut's shallow search (not selective itself), and the active selective-endgame stage (`0` for exact solves, chapter 08) |
 | `start`, `hard_limit_ms`, `soft_time_percent` | When the search started, the hard time limit, and the soft share of the time (chapter 09) |
 | `nodes`, `evaluations` | Counters, reported in `SearchInfo` and `SearchResult` |
 | `hash_get_height`, `hash_put_height` | How far from the root the midgame hash table is used |
@@ -162,13 +163,14 @@ At a node with depth $d$ = `look` + 1 ≥ 3 (`try_probcut` and `probcut_searches
 4. The shallow search is an ordinary node search (same ply, same previous move, the same hash table), but Multi-ProbCut is off inside it (`in_probcut`).
 5. Near won and lost scores it is not used: the cut above β is only tried when $\beta + e < 32\,000$, the cut below α only when $\alpha - e > -32\,000$ (`PROBCUT_SCORE_LIMIT`).
 
-**The error model** comes from Stello's own searches. The trainer's `mpc` command searched 11,700 test positions (300 per disc count from 14 to 52) without selectivity at every depth up to min(13, empties − 8), and measured the spread of the deep result minus the shallow one. A weighted least-squares fit over those spreads gives, in discs, with $x = n / 64$:
+**The error model** comes from Stello's own searches. `Stello.Trainer`'s `mpc` command searched test positions without selectivity at every depth up to min(13, empties − 8) and fitted a weighted least-squares formula over the spread of deep minus shallow results. In Stello 5.0, `detail::make_probcut_errors` ([engine.cpp](../Stello.Cpp/src/search/engine.cpp#L35)) picks the error model matching the loaded evaluation:
 
-$$\sigma(n, s, d) = 1.887 + 2.954\,x + 0.066\,x^2 - 0.675\,s + 0.278\,d$$
+- For Stello 5.0's built-in `egaroucid16 + mobility` evaluation (trained on `3,900` valid rows, `14..52` discs), in discs with $x = n / 64$:
+  $$\sigma(n, s, d) = 0.9972 + 5.1252\,x - 2.8746\,x^2 - 0.5219\,s + 0.2280\,d$$
+- For plain `egaroucid16` (without mobility): $\sigma = 0.9172 + 5.0552\,x - 2.4951\,x^2 - 0.5569\,s + 0.2567\,d$.
+- For `plus15` (the 11,700-position fit from Stello 2.0–4.0): $\sigma = 1.8871 + 2.9543\,x + 0.0660\,x^2 - 0.6749\,s + 0.2778\,d$.
 
-It is off by 10 % on average over the 117 measured cells. Typical values are 2–4 discs: the spread grows with the number of discs and shrinks as the shallow search gets closer to the deep one. For example, at 32 discs and depth 11 (shallow depth 5), σ ≈ 3.06 discs, so $e$ = 307. A node with β = 0 is then cut when the static evaluation is at least +1 disc (here $e - 400$ is negative, so the minimum of 1 disc applies) and the 5-ply null-window search scores at least +3.07 discs. The few positions where the deep search found a forced game end were left out of the fit, just as Multi-ProbCut leaves out such scores.
-
-Because the margin comes from the measured errors, it is wide where the shallow search is unreliable (many discs, a large gap between $s$ and $d$) and narrow where it is reliable. How $t$ = 1.0 was chosen, and what Multi-ProbCut gained over the fixed-margin selective search it replaced, is told in [chapter 23](23-phase-5-the-search.md).
+How $t$ = 1.0 was chosen for Multi-ProbCut is told in [chapter 23](23-phase-5-the-search.md), and the 5.0 refits and experiments in [chapter 29](29-stello-5-0-speed-threads-search-and-book.md).
 
 ### Game over inside the search
 
@@ -214,7 +216,7 @@ The threads come from a fixed pool, [search/pool.rs](../Stello.Rust/stello-core/
 - **Catching up.** The main thread writes the `look` of each iteration into an atomic. A helper starts its next iteration at the main look plus its lead, or one deeper than its last iteration if that is more, so it jumps ahead again when the main thread catches up. It stops at the last midgame depth, below which the solver takes over.
 - **Their results are not used.** A helper searches with the main thread's selectivity, and what it finds goes into the shared tables, where the main search finds it as hash moves and cutoffs. Helpers have no time limit and send no progress.
 - **Stopping.** When the main thread's iterations end, a drop guard (`StopHelpers`) sets the helpers' flag, which they read as Move Now. Because it is a guard, this happens also when the main search returns early or panics; otherwise the scope would wait for the helpers for ever.
-- **How many.** With YBWC on, half of the workers, rounded up, are helpers: 1 of 1, 2 of 3, 4 of 7, 8 of 15 (`lazy_smp_helpers`). The others are left idle for YBWC splits. With YBWC off (`SearchOptions::ybwc`, a switch kept for comparisons) every worker is a helper.
+- **How many.** In Stello 5.0, `lazy_smp_helpers` scales the Lazy SMP helpers as $(\text{workers} + 2) / 4$ (with YBWC on): 1 of 1–5 workers, 2 of 6–9 (so 2 at 8 threads), 4 of 14–15 (so 4 at 15–16 threads). With 8 threads, capping helpers at 2 left 5 workers free for YBWC splits and gained `+23` Elo at `500 ms` over `4` helpers (`chapter 29`), while scaling to `4` helpers at 15–16 threads prevented helper saturation. With YBWC off (`SearchOptions::ybwc`), every worker is a helper.
 - **Few empty squares.** When the position is too near the end for any midgame iteration, the search goes straight to the solver, and no helper is started.
 
 Egaroucid starts its helpers again at each iteration of the main search, at the main depth + ctz(i + 1), and only up to depth 10, because deeper its main search splits with YBWC. Here that gave nothing. The schemes measured before choosing, time to depth 14 on mid-bench (1 thread: 3.03 s):
@@ -240,7 +242,7 @@ The nodes per second grow almost with the threads, but the time to depth does no
 
 ### YBWC
 
-**Where nodes split.** In `Searcher::search` ([engine.rs](../Stello.Rust/stello-core/src/search/engine.rs#L984)), after the first child has been searched, when `look` ≥ 6 (`YBWC_MID_MIN_DEPTH`, Egaroucid's value: the children are searched 6 plies deep or more), the node hands all its other children to `Searcher::split` ([ybwc.rs](../Stello.Rust/stello-core/src/search/ybwc.rs#L140)). This happens at nodes with a full window and at null-window nodes alike. Only the main search and searches split off from it split (`may_split`); the Lazy SMP helpers never do, and with YBWC off nobody does. The solver splits in the same way ([chapter 08](08-endgame-solver.md#threads-in-the-solver)).
+**Where nodes split.** In `Kernel::search_root` (`engine_impl.hpp`) and `Kernel::search_inc`, after the first child has been searched, when `look` ≥ 6 (`YBWC_MID_MIN_DEPTH`), the node hands its remaining children to `Kernel::split` ([ybwc_impl.hpp](../Stello.Cpp/src/search/ybwc_impl.hpp)). Both root moves (new in Stello 5.0) and interior nodes split under either full windows or null windows, and attaching the active split point (`s.split_point`) lets a helper fail-high abort a brother already being searched locally ("brother cut"). Only the main search and searches split off from it split (`may_split`); the Lazy SMP helpers never do. The solver splits in the same way ([chapter 08](08-endgame-solver.md#threads-in-the-solver)).
 
 **One split.** `split` works in rounds:
 
@@ -349,13 +351,13 @@ Two things are typical:
 
 - **No stored game tree.** The C++ search kept a tree of up to 300 000 nodes to order moves between iterations (`findmax`, `findmax1`). The hash table and the root reordering give the same ordering with much less code. Reusing the tree after the opponent's move is gone too, but the hash table survives between moves, so most of the benefit remains.
 - **PVS instead of the C++ restart trick.** `zero_findmax` restarted the root loop after the second improvement; standard PVS re-search gives the same result.
-- **Results instead of `longjmp`.** Every search function returns a `Result`. A time-out or "Move Now" makes `check_abort` return `Abort::Stop`, which `?` passes up to `run`, and the best move found so far is returned; cancel ends in `SearchError::Cancelled`, which the C# wrapper throws as an `OperationCanceledException`.
+- **Unwinding instead of `longjmp`.** When time runs out or Move Now is set, C++20 `check_abort` throws `Abort` (`STELLO_ABORT_EXCEPTIONS=ON`, [chapter 28](28-stello-4-0-the-engine-in-cpp.md)), which `Kernel::run` catches to return the best move found so far (or `SearchError::Cancelled` on cancel, which the C# wrapper turns into `OperationCanceledException`); fallback builds return `AbortStatus`.
 - **Deterministic on 1 thread.** With the same position and limits the search gives the same result every time (no randomness, stable sorting). Only time limits make results differ between runs. With more threads the nodes, and sometimes the move, differ from run to run.
 - **The main thread decides.** With threads, the result is always the main thread's own search; the others only fill the tables (Lazy SMP) or search parts of its tree (YBWC). So the search with threads has the same structure, the same time control and the same result kinds as with 1, and 1 thread stays exactly the old search.
 - **A pool that never waits.** A split asks for an idle thread and searches the move itself when there is none. Nothing is queued for a busy thread, so no thread waits for work that another thread could have done.
 - **Game-over scores** give the empty squares to the winner, the standard rule; C++ did not count them.
 - **Selectivity from statistics.** The C++ selective search used a fixed margin. Multi-ProbCut's margin depends on the disc count and on both depths, and comes from measured errors, so it can be refitted when the evaluation or the search changes (`mpc`, and `SearchOptions.ProbCutPercent` to retune $t$).
-- **No selectivity in the solver.** Multi-ProbCut stops where the solver takes over; the solver is exact. A selective endgame pass was tried and dropped ([chapter 23](23-phase-5-the-search.md)).
+- **Selective endgame only in timed modes.** Multi-ProbCut stops when the search enters exact `WLD`/`Exact` passes. In Stello 5.0, timed modes (`TimePerMove` and `TimePerGame`) run 3 full-window selective-endgame passes (`end_mpc_stage = 1, 2, 4` at `empties >= 16`) in `solve_iteration` (`try_end_probcut`) before starting exact `WLD`, and `TimePerGame` checks `estimate_wld_ms` so unsolvable midgame transitions do not burn half the game clock ([chapter 08](08-endgame-solver.md)). `Solve` and `FixedDepth` stay 100 % exact.
 
 See [Stello porting documentation.md](../Plans/Stello%20porting%20documentation.md), section 3.6.
 
@@ -363,10 +365,10 @@ See [Stello porting documentation.md](../Plans/Stello%20porting%20documentation.
 
 | File | Main members |
 |---|---|
-| [search/engine.rs](../Stello.Rust/stello-core/src/search/engine.rs) | `SearchEngine` (`new`, `search`, `clear_hash`, `set_clock`, `set_iteration_done`, `set_ybwc`, `set_spawner`), `Searcher` (`run`, `iterate`, `search_root`, `search`, `order_by_evaluation`, `try_probcut`, `probcut_searches`, `evaluate_leaf`, `stop_iterating`, `check_abort`, `report`), `probcut_shallow_depth`, `probcut_errors`, `final_score`, `game_over_score`, `move_to_front`, the constants |
-| search/engine.rs, the threads | [`ThreadState`](../Stello.Rust/stello-core/src/search/engine.rs#L198), [`SearchContext`](../Stello.Rust/stello-core/src/search/engine.rs#L206), [`lazy_smp_helpers`](../Stello.Rust/stello-core/src/search/engine.rs#L246), [`YBWC_MID_MIN_DEPTH`](../Stello.Rust/stello-core/src/search/engine.rs#L252), [`Helpers`](../Stello.Rust/stello-core/src/search/engine.rs#L260) (`searcher`, `finish`), [`StopHelpers`](../Stello.Rust/stello-core/src/search/engine.rs#L289), [`THREADS_AVAILABLE`](../Stello.Rust/stello-core/src/search/engine.rs#L299), the pool in [`SearchEngine::search`](../Stello.Rust/stello-core/src/search/engine.rs#L381), [`FlagStop`](../Stello.Rust/stello-core/src/search/engine.rs#L461), [`lazy_smp_midgame`](../Stello.Rust/stello-core/src/search/engine.rs#L720), [`midgame_iterations`](../Stello.Rust/stello-core/src/search/engine.rs#L778), the split in [`Searcher::search`](../Stello.Rust/stello-core/src/search/engine.rs#L984), [`flush_nodes`](../Stello.Rust/stello-core/src/search/engine.rs#L1243) |
-| [search/pool.rs](../Stello.Rust/stello-core/src/search/pool.rs) | [`Spawner`](../Stello.Rust/stello-core/src/search/pool.rs#L25), [`std_spawner`](../Stello.Rust/stello-core/src/search/pool.rs#L29), [`ThreadPool`](../Stello.Rust/stello-core/src/search/pool.rs#L63) (`new`, `workers`, `idle`, `for_each_state`, [`scope`](../Stello.Rust/stello-core/src/search/pool.rs#L120), [`scope_polling`](../Stello.Rust/stello-core/src/search/pool.rs#L130)), the worker loop [`Shared::run`](../Stello.Rust/stello-core/src/search/pool.rs#L184), [`Scope::try_spawn`](../Stello.Rust/stello-core/src/search/pool.rs#L272) |
-| [search/ybwc.rs](../Stello.Rust/stello-core/src/search/ybwc.rs) | [`SplitPoint`](../Stello.Rust/stello-core/src/search/ybwc.rs#L20) (`stopped`), [`SplitStop`](../Stello.Rust/stello-core/src/search/ybwc.rs#L43), [`StopUnlessFinished`](../Stello.Rust/stello-core/src/search/ybwc.rs#L57), [`SplitChild`](../Stello.Rust/stello-core/src/search/ybwc.rs#L74), [`MidgameChild`](../Stello.Rust/stello-core/src/search/ybwc.rs#L87), [`TaskSetup`](../Stello.Rust/stello-core/src/search/ybwc.rs#L117), [`may_split`](../Stello.Rust/stello-core/src/search/ybwc.rs#L132), [`split`](../Stello.Rust/stello-core/src/search/ybwc.rs#L140), `split_task`, `abort_reason` |
+| [search/engine.hpp](../Stello.Cpp/src/search/engine.hpp), [engine.cpp](../Stello.Cpp/src/search/engine.cpp), [engine_impl.hpp](../Stello.Cpp/src/search/engine_impl.hpp) | C++20 `SearchEngine`, `Searcher`, `Kernel::run`, `iterate` (with selective endgame & `estimate_wld_ms`), `search_root`, `search_inc`, `try_probcut_inc`, `make_probcut_errors`, `make_end_probcut_errors`, `lazy_smp_helpers` |
+| [search/kernel.hpp](../Stello.Cpp/src/search/kernel.hpp), [search_v3.cpp](../Stello.Cpp/src/search/search_v3.cpp), [search_portable.cpp](../Stello.Cpp/src/search/search_portable.cpp) | Explicit `Kernel<true>` (AVX2+BMI2) and `Kernel<false>` (portable) instantiations |
+| [search/pool.hpp](../Stello.Cpp/src/search/pool.hpp), [ybwc_impl.hpp](../Stello.Cpp/src/search/ybwc_impl.hpp) | `ThreadPool`, `Scope::try_spawn`, `scope_polling`; YBWC `split_midgame`, `SplitPoint` brother cuts, `maybe_report_heartbeat` |
+| Preserved Rust 3.1: [search/engine.rs](../Stello.Rust/stello-core/src/search/engine.rs), [pool.rs](../Stello.Rust/stello-core/src/search/pool.rs), [ybwc.rs](../Stello.Rust/stello-core/src/search/ybwc.rs) | The frozen 3.1 implementation used by `engine=stello-v3` |
 | [eval/mod.rs](../Stello.Rust/stello-core/src/eval/mod.rs) | `PATTERN_UNITS_PER_DISC`, `pattern_score` (chapter 04) |
 | [search/options.rs](../Stello.Rust/stello-core/src/search/options.rs), [search/limits.rs](../Stello.Rust/stello-core/src/search/limits.rs) | `SearchOptions` (with `ybwc`); the limits (with `threads`, `with_threads` and `MAX_THREADS` = 256), `SearchInfo`, `SearchResult`, `ScoreKind` |
 | [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs), [Native/StelloNative.cs](../Stello.Net/Stello.Engine/Native/StelloNative.cs) | The C# API: `Search`, `ClearHash`, `HashBits`, `IterationDone`, which call the Rust engine through the C ABI (chapter 14) |
@@ -400,7 +402,7 @@ See [Stello porting documentation.md](../Plans/Stello%20porting%20documentation.
 - [ProbCut – Chess Programming Wiki](https://www.chessprogramming.org/ProbCut) and [Buro (1995), ProbCut (pdf)](https://skatgame.net/mburo/ps/probcut.pdf): ProbCut and Multi-ProbCut, the statistical form of the selective search.
 - [Writing an Othello program – Gunnar Andersson](http://radagast.se/othello/howto.html): "Searching", with alpha-beta, move ordering and selective search in Othello.
 - [Lazy SMP – Chess Programming Wiki](https://www.chessprogramming.org/Lazy_SMP) and [Young Brothers Wait Concept – Chess Programming Wiki](https://www.chessprogramming.org/Young_Brothers_Wait_Concept): the two ways of searching on several threads.
-- [Chapter 26](26-phases-5-9-threads.md): how the threads were added and measured, and the [references](30-references.md#26-phases-59-threads) for it.
+- [Chapter 26](26-phases-5-9-threads.md) and [chapter 29](29-stello-5-0-speed-threads-search-and-book.md): how the threads and 5.0 search/evaluation improvements were added and measured, and the [references](31-references.md#26-phases-59-threads) for it.
 
 ---
 

@@ -4,9 +4,9 @@
 
 ## In short
 
-At the leaves of the midgame search the engine cannot look further ahead, so it estimates how good the position is for the side to move. Stello's evaluation is a **pattern evaluation**. A pattern is a fixed group of squares, such as the second row or the 3 × 3 squares in a corner. For every way its squares can be filled with empty squares, own discs and opponent's discs, the pattern has one trained **weight**: a number of discs. Stello uses 15 patterns, each in all its places on the board: 62 **features** in all. The evaluation of a position is the sum of the 62 weights, and the weights are different in each of 10 **stages** of the game. The result estimates the final disc difference for the side to move. The search uses it in 1/100 disc.
+At the leaves of the midgame search the engine cannot look further ahead, so it estimates how good the position is for the side to move. Stello's evaluation is a **pattern evaluation** combined with **legal mobility**. A pattern is a fixed group of squares, such as the second row or the 3 × 3 squares in a corner. For every way its squares can be filled with empty squares, own discs and opponent's discs, the pattern has one trained **weight**: a number of discs. Stello 5.0 uses Egaroucid's **16 patterns** (`egaroucid16`), each in all 4 of its places on the board (64 pattern **features**), plus **96 legal-mobility weights** (48 own + 48 opponent legal-move counts). The evaluation of a position sums the 64 pattern weights plus the two mobility weights in each of **60 single-disc stages** (from 12 discs up), returning the expected final disc difference in 1/16 disc (turned into 1/100 disc in search).
 
-The weights were trained on positions from real games and are built into the Rust engine as the file `stello-eval.bin` (0.99 MB). The evaluation exists twice, with identical results: in Rust (`Stello.Rust/stello-core/src/eval`), where the search uses it, and in C# (`Stello.Net/Stello.Engine/Evaluation`), where the trainer and the tools read, write and study the files. Stello 1's hand-made evaluation is described in the [Stello 1 documentation](stello-1/04-evaluation.md).
+The weights were trained on positions from Egaroucid's training games and are embedded in the C++20 engine as [Stello.Net/Book/stello-eval.bin](../Stello.Net/Book/stello-eval.bin) (`STELLOEV` v3, **8,892,085 bytes** gzip, **38,434,770 bytes** unpacked). During midgame search, C++ maintains `PatternState` incrementally across moves (with 256-bit AVX2 on x86-64-v3 and 128-bit SIMD in WebAssembly), reserving `EvalWeights::evaluate` (C++ [src/eval/](../Stello.Cpp/src/eval) and C# [Stello.Net/Stello.Engine/Evaluation](../Stello.Net/Stello.Engine/Evaluation)) as the reference and for the tools and tests. Stello 1's hand-made evaluation is described in the [Stello 1 documentation](stello-1/04-evaluation.md), and the earlier 15-pattern × 10-stage (`plus15`) model used in Stello 2.0–4.0 is documented in [chapter 20](20-phases-0-2-the-evaluation.md).
 
 ## Data structures
 
@@ -45,60 +45,56 @@ A row has $(6561 + 81) / 2 = 3321$ representatives: the 81 fillings that read th
 
 ### The patterns
 
-![Fifteen small boards, a1 at the top left, each with the squares of one pattern: rows 2, 3 and 4; the diagonals of 4 to 8 squares; the edge with both X-squares; the 2 × 5 corner; the 3 × 3 corner (green, the classic11 set); and Egaroucid's triangle, corner + block, cross and edge + y (orange). Under each board: its squares, its places and its weights per stage.](images/stello2-patterns.svg)
+Stello 5.0's built-in pattern set is `PatternSet::egaroucid16` in [eval/patterns.cpp](../Stello.Cpp/src/eval/patterns.cpp) (C#: `PatternSet.Egaroucid16` in [Patterns.cs](../Stello.Net/Stello.Engine/Evaluation/Patterns.cs)): Egaroucid 7.9's 16 patterns, each in 4 symmetric placements (**64 features**, `320,193` folded pattern weights plus `96` mobility weights = `320,289` weights per stage):
 
-The engine's pattern set is `PatternSet::plus15` in [eval/patterns.rs](../Stello.Rust/stello-core/src/eval/patterns.rs) (C#: `PatternSet.Plus15` in [Patterns.cs](../Stello.Net/Stello.Engine/Evaluation/Patterns.cs); its file name is `plus15`):
+| Pattern | Length | Squares (canonical place) | Places | Weights per stage |
+|---|---:|---|---:|---:|
+| `hv2` | 8 | a2–h2 | 4 | 3,321 |
+| `d6+2c+x` | 9 | b1 c1 d2 e3 g2 f4 g5 h6 h7 | 4 | 9,963 |
+| `hv3` | 8 | a3–h3 | 4 | 3,321 |
+| `d7+2corner` | 9 | a1 b1 c2 d3 e4 f5 g6 h7 h8 | 4 | 9,963 |
+| `hv4` | 8 | a4–h4 | 4 | 3,321 |
+| `corner9` | 9 | a1–c1, a2–c2, a3–c3 | 4 | 10,206 |
+| `d5+2x` | 7 | b2 d1 e2 f3 g4 h5 g7 | 4 | 1,134 |
+| `d8+2c` | 10 | a1 b2 c3 d4 e5 f6 g7 h8 a2 b1 | 4 | 39,366 |
+| `edge+2x` | 10 | b2 a1–h1 g2 | 4 | 29,646 |
+| `triangle` | 10 | a1 b1 c1 d1 a2 b2 c2 a3 b3 a4 | 4 | 29,889 |
+| `corner+block` | 10 | a1 c1 d1 e1 f1 h1 c2 d2 e2 f2 | 4 | 29,646 |
+| `cross` | 10 | a1 b2 c3 d4 b1 c2 d3 a2 b3 c4 | 4 | 30,618 |
+| `edge+y` | 10 | c2 a1–h1 f2 | 4 | 29,646 |
+| `narrow-triangle` | 10 | a1 b1 c1 d1 e1 a2 b2 a3 a4 a5 | 4 | 29,889 |
+| `fish` | 10 | a1 b1 a2 b2 c2 d2 b3 c3 b4 d4 | 4 | 30,618 |
+| `anvil` | 10 | c6 d6 d7 d8 c8 f8 e8 e7 e6 f6 | 4 | 29,646 |
+| **Patterns + mobility** | | | **64** (+2) | **320,193** (+96) |
 
-| Pattern | Squares (canonical place) | Places | Weights per stage |
-|---|---|---:|---:|
-| `row2` | a2–h2 | 4 | 3,321 |
-| `row3` | a3–h3 | 4 | 3,321 |
-| `row4` | a4–h4 | 4 | 3,321 |
-| `diagonal4` | d1 c2 b3 a4 | 4 | 45 |
-| `diagonal5` | e1 d2 c3 b4 a5 | 4 | 135 |
-| `diagonal6` | f1 e2 d3 c4 b5 a6 | 4 | 378 |
-| `diagonal7` | g1 f2 e3 d4 c5 b6 a7 | 4 | 1,134 |
-| `diagonal8` | h1 g2 f3 e4 d5 c6 b7 a8 | 2 | 3,321 |
-| `edge+2x` | a1–h1, b2, g2 | 4 | 29,646 |
-| `corner2x5` | a1–e1, a2–e2 | 8 | 59,049 |
-| `corner3x3` | a1–c1, a2–c2, a3–c3 | 4 | 10,206 |
-| `triangle` | a1 b1 c1 d1 a2 b2 c2 a3 b3 a4 | 4 | 29,889 |
-| `corner+block` | a1 c1 d1 e1 f1 h1 c2 d2 e2 f2 | 4 | 29,646 |
-| `cross` | a1 b2 c3 d4 b1 c2 d3 a2 b3 c4 | 4 | 30,618 |
-| `edge+y` | c2 a1 b1 c1 d1 e1 f1 g1 h1 f2 | 4 | 29,646 |
-| **All** | | **62** | **233,676** |
+The earlier `plus15` set (Stello 2.0–4.0, 62 features / 233,676 folded weights per stage) and `classic11` (46 features) remain defined alongside `egaroucid16`; the worked examples and stage/pattern diagrams below show the `plus15 × 10` format from those versions.
 
-The first 11 patterns are the classic set of Logistello and Edax-like programs; `classic11` has them alone (46 features). The last four have 10 squares each and come from Egaroucid 7.9. They see combinations the classic set misses: a corner with the squares of both its edges and the diagonal at once, or an edge with the two squares in front of it. `egaroucid16`, Egaroucid's 16 patterns (64 features), is also defined. The trainer uses `Classic11` and `Egaroucid16` for experiments; the engine uses only the set named in the file.
+![Fifteen small boards, a1 at the top left, each with the squares of one pattern of the Stello 2.0–4.0 plus15 set: rows 2, 3 and 4; the diagonals of 4 to 8 squares; the edge with both X-squares; the 2 × 5 corner; the 3 × 3 corner (green, the classic11 set); and Egaroucid's triangle, corner + block, cross and edge + y (orange). Under each board: its squares, its places and its weights per stage.](images/stello2-patterns.svg)
 
 ### Stages
 
-A pattern is worth different amounts at different times in the game. A disc on an edge can be a weakness early and a strength late. So every pattern has its own weights in each **stage**: a range of the number of discs on the board.
+A pattern is worth different amounts at different times in the game. A disc on an edge can be a weakness early and a strength late. So every pattern has its own weights in each **stage**: a range of the number of discs on the board. Stello 5.0 uses **60 single-disc stages** (`--min-discs 12`, `--smooth 0`), so stage $n - 5$ corresponds to exact disc count $n$ without mixing odd and even Othello parities; stages below 12 discs are filled from the 12-disc stage (covered by the opening book, chapter 10). The earlier 10-stage `plus15` layout (`even_stages(10)`) is illustrated below:
 
-![A bar from 4 to 64 discs cut into 10 stages: 4–10, 11–16, 17–22, 23–28, 29–34, 35–40, 41–46, 47–52, 53–58 and 59–64 discs. Stage 4 trains on 27–36 discs. Stage 0 is grey: it is a copy of stage 1.](images/stello2-stages.svg)
+![A bar from 4 to 64 discs cut into 10 stages (the Stello 2.0–4.0 plus15 × 10 layout): 4–10, 11–16, 17–22, 23–28, 29–34, 35–40, 41–46, 47–52, 53–58 and 59–64 discs. Stage 4 trains on 27–36 discs. Stage 0 is grey: it is a copy of stage 1.](images/stello2-stages.svg)
 
-`EvalWeights::even_stages(10)` cuts 4 to 64 discs into 10 parts:
+`EvalWeights::even_stages(stages)` cuts 4 to 64 discs into equal parts:
 
-$$s(n) = \min\left(\max\left(\left\lfloor \frac{(n - 4) \cdot 10}{61} \right\rfloor, 0\right), 9\right)$$
-
-where $n$ is the number of discs on the board. Stage 0 has 4–10 discs, the others 6 disc counts each. The file stores this table (`stage_of`), so another file could use other stages.
-
-- **Each stage was trained on its own disc counts and 2 more on each side.** Neighbouring stages therefore share data and agree well.
-- **Stage 0 (4–10 discs) is a copy of stage 1.** The training data has almost no positions with fewer than 12 discs. The opening book covers these positions anyway ([chapter 10](10-opening-book.md)).
+$$s(n) = \min\left(\max\left(\left\lfloor \frac{(n - 4) \cdot \text{stages}}{61} \right\rfloor, 0\right), \text{stages} - 1\right)$$
 
 ### `EvalWeights`
 
-`EvalWeights` in [eval/weights.rs](../Stello.Rust/stello-core/src/eval/weights.rs) holds a complete evaluation (C#'s [EvalWeights.cs](../Stello.Net/Stello.Engine/Evaluation/EvalWeights.cs) has the same members in PascalCase):
+`EvalWeights` in [eval/weights.hpp](../Stello.Cpp/src/eval/weights.hpp) holds a complete evaluation (C#'s [EvalWeights.cs](../Stello.Net/Stello.Engine/Evaluation/EvalWeights.cs) has the same members in PascalCase):
 
 | Member | Contents |
 |---|---|
-| `set()` | The `PatternSet` (`plus15`) |
-| `stages()` | The number of stages (10) |
+| `set()` | The `PatternSet` (`egaroucid16` in Stello 5.0) |
+| `stages()` | The number of stages (`60` in Stello 5.0) |
 | `stage_of(discs)` | The stage of each disc count 0–64 |
-| `units_per_disc()` | The unit of the weights: 8, so the weights are in 1/8 disc |
-| `stage_weights(stage)` | One `i16` per raw index of every pattern, the patterns one after the other (`PatternSet::offsets`) |
-| `built_in()` | The built-in evaluation, read on first use (Rust only) |
-
-In memory the weights are kept **unfolded**: every raw index has its own entry, so the evaluation never folds. That is $403{,}461 \times 10$ values of 2 bytes, about 8.1 MB.
+| `units_per_disc()` | The unit of the weights: `16` in Stello 5.0 (weights are in 1/16 disc) |
+| `has_mobility()` | Whether the 96 legal-mobility weights per stage (`48` own + `48` opponent) are present (`true` in Stello 5.0) |
+| `stage_weights(stage)` | One `int16_t` per raw index of every pattern (`PatternSet::offsets`) |
+| `stage_mobility_weights(stage)` | `96` `int16_t` weights indexed by clamped legal-move counts |
+| `built_in()` | The built-in evaluation, unpacked once per process (`eval/gzip.cpp`) |
 
 ## Algorithm
 
@@ -146,56 +142,34 @@ Reading the canonical squares of a turned position costs the turns: up to 8 symm
 
 `cpu::fast_pext` chooses once, at run time, because the shipped libraries are built for plain x86-64: `pext` is used when the processor has BMI2 and is not an AMD or Hygon processor before family 19h (Zen 3), which run `pext` in microcode at dozens of cycles. `cpu::set_portable_only` keeps the portable code on any processor, for checks (`stello-cli … --cpu portable`). When the two ways were added, the midgame benchmark at depth 10 went from 0.84 s to 0.49 s with `pext`, and to 0.70 s with the portable reading alone ([the speed pass](../Plans/making-stello-3-findings.md#phase-2-part-2-the-speed-pass-2026-11-02-8220705); [chapter 25](25-phases-0-4-the-engine-in-rust.md)).
 
-The indices are computed from scratch for every position, because the boards are immutable.
+### Incremental pattern indices in search (`PatternState`)
 
-### From weights to search scores
+While `EvalWeights::evaluate` still reads indices from scratch (`Direct::sum_pext` with BMI2 `pext`, or `Direct::sum_portable`), Stello 5.0's midgame search keeps an `alignas(32)` `PatternState` ([patterns.hpp](../Stello.Cpp/src/eval/patterns.hpp#L113)) along the tree instead of recomputing all 64 indices from the bitboards at every leaf:
 
-`eval::pattern_score` converts the result to the search's unit, `PATTERN_UNITS_PER_DISC` = 100:
-
-$$\text{score} = \operatorname{clamp}\left(\frac{100 \cdot E(p)}{8},\ -6400,\ 6400\right)$$
-
-(integer division, rounded towards zero). The clamp to ±64 discs keeps every evaluation below the score of a finished game, ±(32 600 + discs), which the search gives itself ([chapter 06](06-midgame-search.md)). The evaluation is never called on a finished game.
-
-### Where the search uses it
-
-- **Leaves of the midgame search.** `evaluate_leaf` calls `pattern_score` and counts the node and the evaluation. At `look` 0 the position after each move is evaluated in the parent's loop ([chapter 06](06-midgame-search.md)).
-- **Move ordering at deeper nodes.** At `look` ≥ 4 (`EVALUATION_ORDER_MIN_LOOK`), `order_by_evaluation` orders the moves by the opponent's mobility and the evaluation after each move ([chapter 05](05-move-ordering.md)).
-- **Multi-ProbCut.** `try_probcut` first compares the static evaluation with the window: a shallow search is only tried if the evaluation is already within 4 discs (`PROBCUT_PRE_CHECK_OFFSET`) of the margin, and at least 1 disc beyond the bound ([chapter 06](06-midgame-search.md)).
-- **The endgame solver's move ordering.** `ordering_value` uses the evaluation in whole discs (`eval::disc_score`: `evaluate` / `units_per_disc`, clamped to ±64), after a small alpha-beta search of 0–2 plies, in windowed nodes with 7 or more empty squares and in null-window nodes with more than 13 ([chapter 08](08-endgame-solver.md)).
-
-Search scores, progress reports, the scores in the GUI and the heuristic values in the opening book are all in this 1/100-disc unit.
+- `PatternState` holds `black[64]` and `white[64]`, the per-feature indices for all empty squares plus each colour's placed discs (with `white` holding base digits $2$ per disc). From that pair, the local index of every feature for the side to move is `other[f] + 2 * own[f]` — a pass costs zero index work because `black` and `white` simply swap roles.
+- Precomputed sparse `(feature, delta)` slices and dense `square_deltas_[64][64]` tables update `PatternState` across a move by adding `delta(placed_square)` and flipping each captured square from the opponent's array to the mover's array.
+- At `look == 0` leaves and in `order_by_evaluation` (`Kernel<UseAvx2>::eval_after_move_score` / `sum_weights_after_move`), the engine computes child indices directly from the parent's `PatternState` using 256-bit AVX2 vectors on `x86-64-v3` (`search_v3.cpp`, scalar 4-way unrolled weight loads beating microcoded `vpgatherdd`) or `<wasm_simd128.h>` in WebAssembly (`patterns.cpp`), without copying `Board` or calling `play_flips`, and adds `mobility_bonus(child_stage, opponent_moves, own_moves)` (`legal_moves` popcount clamped to `0..47`).
 
 ### Where the weights come from
 
-The weights were trained by the console tool [Stello.Trainer](../Stello.Net/tools/Stello.Trainer) on about 500 million positions from Egaroucid's training data. Each position's target is the final disc difference of its game for the side to move, and the trainer minimises the squared error, one stage after the other. Weights seen fewer than 30 times in the data are set to 0, and all weights are rounded to 1/8 disc. On test games kept out of the training, the mean error is **5.47 discs**. The training data may not be redistributed, so it is not in the repository; only the trained weights are, credited in [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md). The trainer, the data and the experiments that chose this pattern set, 10 stages and the 1/8-disc unit are described in [Phases 0–2: the evaluation](20-phases-0-2-the-evaluation.md).
+The weights were trained by [Stello.Trainer](../Stello.Net/tools/Stello.Trainer) on Egaroucid's training games (`10,000,000` positions per single-disc stage from 12 discs up, `--smooth 0 --mobility on --units 16 --min-appear 10` in 1h 20m; [chapter 29](29-stello-5-0-speed-threads-search-and-book.md#phase-5-evaluation)). On the `1,040,276`-position held-out test split, Stello 5.0's `egaroucid16 + mobility × 60` evaluation achieves **4.97 MAE / 6.74 RMSE** (beating `plus15 × 10`'s `5.47 / 7.31` and Egaroucid's `5.05 / 6.90`). The training data is not in the repository; the trained weights are credited in [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md).
 
 ### The file
 
-C#'s `EvalWeights.Write` (the trainer's) and `EvalWeights.Read`, and Rust's `EvalWeights::read`, handle the file format, version 2. The file is gzip-compressed; inside, all numbers are little-endian:
+C#'s `EvalWeights.Write` / `EvalWeights.Read` and C++'s `EvalWeights::read` handle `STELLOEV` formats v2 and **v3** (adding the 96 legal-mobility weights per stage). Inside the gzip stream, all numbers are little-endian:
 
 | Part | Contents |
 |---|---|
-| Magic | `STELLOEV` |
-| Version | u16, 2 |
-| Pattern set | u8 length and the ASCII name (`plus15`) |
-| Stages | u8 (10) |
-| Stage of each disc count | 65 × u8, for 0 to 64 discs |
-| Units per disc | u16 (8) |
-| Weights | For each stage: one i16 per representative of every pattern, **minus the same weight of the stage before**, written as all low bytes and then all high bytes |
+| Magic & version | `STELLOEV`, u16 version (`3` in Stello 5.0; `2` without mobility) |
+| Pattern set & stages | u8 length + ASCII name (`egaroucid16`), u8 stages (`60`), 65 × u8 `stage_of`, u16 `units_per_disc` (`16`) |
+| Pattern weights | For each stage: one i16 per representative minus the stage before, split into all low bytes then all high bytes |
+| Mobility weights (v3) | For each stage: `96` i16 (`48` own + `48` opponent) delta-encoded in the same low/high byte layout |
 
-- **Only representatives are stored.** Reading expands them to full tables of raw indices again with `PatternShape.Fold`.
-- **Differences between stages** are small numbers, because neighbouring stages are alike.
-- **Low bytes first, then high bytes.** Most high bytes of small differences are 0 or 0xFF, so they compress well.
-- Unpacked, `stello-eval.bin` is 4,673,605 bytes: 85 bytes of header and $10 \times 2 \times 233{,}676$ bytes of weights. Compressed it is 990,568 bytes.
-- A wrong magic or version, an unknown pattern set, or a file that is cut short is refused: Rust returns an `EvalError`, C# throws `InvalidDataException`. Rust's reader also accepts a file of several gzip members, as C#'s `GZipStream` does.
+Unpacked, [Stello.Net/Book/stello-eval.bin](../Stello.Net/Book/stello-eval.bin) is **38,434,770 bytes** (`90`-byte header + `60 × 2 × 320,289` bytes of folded + mobility weights); compressed with gzip it is **8,892,085 bytes**, embedded into `stello_engine.dll` (`embed_eval.cmake`) and both WebAssembly packages (~`8.95 MB` brotli). `EvalWeights::built_in` inflates it once per process using the self-contained RFC 1951/1952 decompressor in [eval/gzip.cpp](../Stello.Cpp/src/eval/gzip.cpp).
 
-The file [Stello.Net/Book/stello-eval.bin](../Stello.Net/Book/stello-eval.bin) is built into the Rust engine with `include_bytes!` (`BUILT_IN_FILE` in [eval/weights.rs](../Stello.Rust/stello-core/src/eval/weights.rs)), and `EvalWeights::built_in` reads it on first use. So the desktop library and the browser's WebAssembly module have the evaluation without loading a file. The browser downloads it inside the module: 1,194,262 bytes, of which 990,568 are the gzip file, which brotli cannot shrink any further ([findings](../Plans/making-stello-3-findings.md#phase-3-the-web-app-on-rust-2026-11-02-458c50a)). The builds run Cargo again when the file changes (it is a `StelloRustSource` in [Stello.Engine.csproj](../Stello.Net/Stello.Engine/Stello.Engine.csproj) and a `StelloWasmSource` in [Stello.Web.csproj](../Stello.Net/Stello.Web/Stello.Web.csproj); chapter 14).
+## Worked examples (`plus15` format illustration)
 
-A `SearchEngine` uses the built-in evaluation unless `SearchOptions.Pattern` (C#) gives another one. The wrapper then passes the file's bytes (`EvalWeights.FileBytes`) to the Rust engine, which reads them with `EvalWeights::read`; the benchmark tool uses this to play matches with a file from `EvalWeights.Load(path)`. `Stello.Engine` itself does not contain the evaluation: the C# tools that evaluate positions themselves (the trainer, and the benchmark's `parity-data`) load the copy in their `Data` folder, `Data/stello-eval.bin`.
-
-## Worked examples
-
-The values below were computed from `stello-eval.bin`.
+The values below illustrate the `STELLOEV` v2 `plus15 × 10` format from Stello 2.0–4.0 (`Data` / `Stello.Engine.V2`).
 
 ### Reading one feature
 
@@ -252,30 +226,23 @@ From the start position, Black's four first moves d3, c4, f5 and e6 give positio
 
 ## Design notes
 
-- **Learned, not hand-made.** The evaluation has no explicit terms for mobility, stability or parity. The patterns only see which squares are filled with what; the training finds out what each filling is worth at each stage.
-- **Shared weights.** Because all places of a pattern use one table, each weight learns from four (or eight) times as many examples, and the evaluation is symmetric by construction: a position and its mirror images always get the same score.
+- **Pattern + mobility, learned not hand-made.** Stello 5.0's evaluation learns both the 64 pattern features of `egaroucid16` and two explicit legal-mobility weights (`48` own + `48` opponent) across 60 single-disc stages so odd and even parities never mix during training, improving test accuracy to `4.97 MAE / 6.74 RMSE` ([chapter 29](29-stello-5-0-speed-threads-search-and-book.md)).
+- **Shared weights.** Because all places of a pattern use one table, each weight learns from four times as many examples, and the evaluation is symmetric by construction: a position and its mirror images always get the same score.
 - **Side to move, not colour.** The digits are own and opponent's discs, so one table serves Black and White.
-- **From scratch, no incremental update.** The boards are immutable, so the evaluation reads all 62 indices of each new position. Programs such as Egaroucid update their indices move by move instead; Stello keeps the simpler code, and the fast index reading makes it affordable. Most of the evaluation's time is now spent waiting for the weight tables to load from memory, not on the indices.
-- **One special instruction, chosen at run time.** The portable reading needs only shifts, masks, multiplications and table lookups, which WebAssembly runs nearly as fast as native code. On the desktop `pext` is faster still, where the processor runs it fast; both give the same indices, so the search is node for node the same on every processor.
-- **About 1 MB.** The web app downloads the evaluation with the engine. That budget decided the size: 15 patterns, 10 stages and 1/8-disc weights, with rare weights zeroed, fit in 0.99 MB ([Phases 0–2: the evaluation](20-phases-0-2-the-evaluation.md)).
-- **1/100 disc in the search.** Integer scores in 1/100 disc are finer than the weights' 1/8 disc, so the conversion loses less than 1/100 disc, and a score reads directly as discs with two decimals.
+- **Incremental `PatternState` in search, `EvalWeights::evaluate` as reference.** Up through Stello 4.0, indices were recomputed from scratch at every node. In Stello 5.0, the midgame search maintains `PatternState` incrementally across moves (`patterns.hpp`, `search_v3.cpp`, WASM `-msimd128`), speeding native midgame nodes per second by +36–39 % and single-threaded WASM by +98–100 %. `EvalWeights::evaluate` (BMI2 `pext` or portable multiplication) remains as the exact reference checked by `parity_incremental_eval`.
+- **Size vs accuracy trade-off.** Moving from `plus15 × 10` (`0.99 MB`) to `egaroucid16 + mobility × 60` grows [stello-eval.bin](../Stello.Net/Book/stello-eval.bin) to `8,892,085` bytes (`~8.95 MB` brotli in WebAssembly), gaining `+33` Elo (`+20` from patterns + `+13` from mobility) at 500 ms per move.
 
 ## Where in the code
 
 | File | Main members |
 |---|---|
-| [eval/patterns.rs](../Stello.Rust/stello-core/src/eval/patterns.rs) | `PatternShape` (`squares`, `size`, `placements`, `fold`, `representatives`, `index`, `slow_index`, `make_parts`, `Part::extract`), `PatternSet` (`classic11`, `plus15`, `egaroucid16`, `by_name`, `offsets`, `raw_size`, `feature_count`, `indices`, `sum_weights`), `Direct` (`sum_portable`, `sum_pext`), `direct_groups`, `line_extraction` |
-| [eval/symmetry.rs](../Stello.Rust/stello-core/src/eval/symmetry.rs) | `apply`, `map_square`, `mirror_columns`, `transpose` |
-| [eval/weights.rs](../Stello.Rust/stello-core/src/eval/weights.rs) | `EvalWeights` (`evaluate`, `stage_of`, `stage_weights`, `even_stages`, `built_in`, `built_in_file`, `load`, `read`), `BUILT_IN_FILE`, `EvalError` |
-| [eval/mod.rs](../Stello.Rust/stello-core/src/eval/mod.rs) | `PATTERN_UNITS_PER_DISC`, `pattern_score`, `disc_score` |
-| [cpu.rs](../Stello.Rust/stello-core/src/cpu.rs) | `fast_pext`, `set_portable_only`, `slow_pext` |
-| [search/engine.rs](../Stello.Rust/stello-core/src/search/engine.rs) | `evaluate_leaf`, `order_by_evaluation`, `try_probcut`, `PROBCUT_PRE_CHECK_OFFSET`, `EVALUATION_ORDER_MIN_LOOK` |
-| [endgame/search.rs](../Stello.Rust/stello-core/src/endgame/search.rs) | `ordering_value` (the evaluation in the solver's move ordering) |
-| [search/options.rs](../Stello.Rust/stello-core/src/search/options.rs), C#: [SearchOptions.cs](../Stello.Net/Stello.Engine/Search/SearchOptions.cs) | `pattern` / `Pattern`: another evaluation for matches |
-| C#: [Patterns.cs](../Stello.Net/Stello.Engine/Evaluation/Patterns.cs), [Symmetry.cs](../Stello.Net/Stello.Engine/Evaluation/Symmetry.cs), [EvalWeights.cs](../Stello.Net/Stello.Engine/Evaluation/EvalWeights.cs) | The same patterns, symmetries and weights for the trainer and the tools; `EvalWeights.Load`, `Read`, `Write` and `FileBytes` |
-| [stello-eval.bin](../Stello.Net/Book/stello-eval.bin) | The trained weights |
-| [Stello.Trainer](../Stello.Net/tools/Stello.Trainer) | The trainer that made the file |
-| C# 2.0 (frozen): [Evaluation/](../Stello.Net/Stello.Engine.V2/Evaluation), [SearchEngine.cs](../Stello.Net/Stello.Engine.V2/SearchEngine.cs) | The 2.0 evaluation, with its own embedded copy of the file, and `PatternScore`, `EvaluateLeaf` |
+| [eval/patterns.hpp](../Stello.Cpp/src/eval/patterns.hpp), [patterns.cpp](../Stello.Cpp/src/eval/patterns.cpp), [patterns_bmi2.cpp](../Stello.Cpp/src/eval/patterns_bmi2.cpp) | `PatternShape`, `PatternSet` (`classic11`, `plus15`, `egaroucid16`), `Direct` (`sum_portable`, `sum_pext`), `PatternState`, incremental `square_deltas_` & WASM `-msimd128` SIMD |
+| [search/search_v3.cpp](../Stello.Cpp/src/search/search_v3.cpp), [kernel_impl.hpp](../Stello.Cpp/src/search/kernel_impl.hpp) | 256-bit AVX2 `advance_eval_state`, `build_eval_base`, `eval_after_move_score` |
+| [eval/weights.hpp](../Stello.Cpp/src/eval/weights.hpp), [weights.cpp](../Stello.Cpp/src/eval/weights.cpp), [gzip.cpp](../Stello.Cpp/src/eval/gzip.cpp) | `EvalWeights` (`evaluate`, `mobility_bonus`, `stage_of`, `units_per_disc`, `has_mobility`, `built_in`, `read`), `STELLOEV` v2/v3 reader |
+| C#: [Patterns.cs](../Stello.Net/Stello.Engine/Evaluation/Patterns.cs), [Symmetry.cs](../Stello.Net/Stello.Engine/Evaluation/Symmetry.cs), [EvalWeights.cs](../Stello.Net/Stello.Engine/Evaluation/EvalWeights.cs) | `PatternSet.Egaroucid16`, `EvalWeights` (`HasMobility`, `Read`/`Write` v3) for `Stello.Trainer` and `Stello.Benchmark` |
+| [stello-eval.bin](../Stello.Net/Book/stello-eval.bin) | The built-in Stello 5.0 weights (`8,892,085` B gzip) |
+| [Stello.Trainer](../Stello.Net/tools/Stello.Trainer) | The trainer that made the file (`--mobility on`, `--min-discs 12`, `--smooth 0`) |
+| Preserved: [Stello.Engine.V2/Evaluation](../Stello.Net/Stello.Engine.V2/Evaluation), [Stello.Rust/stello-core/src/eval](../Stello.Rust/stello-core/src/eval) | Frozen `plus15 × 10` evaluation for `engine=stello-v2` and `engine=stello-v3` |
 
 ## Tests
 
@@ -303,8 +270,8 @@ Once, when the evaluation was ported, both evaluated the whole test split of the
 - [Logistello – Michael Buro](https://skatgame.net/mburo/log.html): the program that made trained pattern evaluations standard in Othello, and its papers.
 - [Technical explanation – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/explanation/): Egaroucid's pattern evaluation, where the four 10-square patterns come from.
 - [Training data – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/train-data/): the data the weights were trained on.
-- [Phases 0–2: the evaluation](20-phases-0-2-the-evaluation.md): how the evaluation was trained and chosen; [Phase 5: the search](23-phase-5-the-search.md): how the search was tuned to it; [Phases 0–4: the engine in Rust](25-phases-0-4-the-engine-in-rust.md): the port and the faster reading of the features.
-- [Glossary](29-glossary.md) and [References](30-references.md).
+- [Phases 0–2: the evaluation](20-phases-0-2-the-evaluation.md), [Phase 5: the search](23-phase-5-the-search.md), [Phases 0–4: the engine in Rust](25-phases-0-4-the-engine-in-rust.md), and [Stello 5.0](29-stello-5-0-speed-threads-search-and-book.md).
+- [Glossary](30-glossary.md) and [References](31-references.md).
 
 ---
 

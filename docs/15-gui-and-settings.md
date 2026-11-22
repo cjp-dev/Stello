@@ -102,7 +102,7 @@ The web app's header has four menus (`Home.razor`):
 * **Rules & Documentation (`Shift+F1`):** Opens the index of this documentation in a new tab (the Docs pages at `/docs`; the build copies `docs` into the app, chapter 14).
   Markdown in docs subfolders, including the frozen Stello 1 archive, opens on GitHub rather than in the viewer.
 * *(Separator)*
-* **About Stello...:** Shows "Stello Version 4.0", the picture of the author with the caption "Claus Pedersen – wrote Stello in C++ in 1992 and ported it to C# in 2026", and four paragraphs (`AboutInfo`, shared by both apps): what Stello is; its brain (alpha-beta search, a hash table and iterative deepening; since version 2.0 an evaluation by patterns of squares, trained on 500 million positions from the games of Egaroucid, the Othello program by Takuto Yamana, and an endgame solver adapted from Egaroucid's; more than 11,000 opening positions; perfect play near the end); the history from the 1992 C++ original to C# and .NET 10 in 2026, Rust in version 3.0, and modern C++20 in version 4.0, running on several threads in both the Windows program (WPF) and the browser (Blazor WebAssembly); and the licence (GPL-3.0-only) with the address of the source code, https://github.com/cjp-dev/Stello.
+* **About Stello...:** Shows "Stello Version 5.0", the picture of the author with the caption "Claus Pedersen – wrote Stello in C++ in 1992 and ported it to C# in 2026", and four paragraphs (`AboutInfo`, shared by both apps): what Stello is; its brain (alpha-beta search, a hash table and iterative deepening; since version 2.0 an evaluation by patterns of squares — extended in version 5.0 with mobility — trained on 500 million positions from the games of Egaroucid, the Othello program by Takuto Yamana, and an endgame solver adapted from Egaroucid's; 6,000 opening positions; perfect play near the end); the history from the 1992 C++ original to C# and .NET 10 in 2026, Rust in version 3.0, modern C++20 in version 4.0, and the faster C++20 engine, richer evaluation and expanded opening book in version 5.0, running on several threads in both the Windows program (WPF) and the browser (Blazor WebAssembly); and the licence (GPL-3.0-only) with the address of the source code, https://github.com/cjp-dev/Stello.
 
 > [!NOTE] Dedicated Quick Action Buttons for Undo & Redo
 > In accordance with the tournament GUI specification, Undo and Redo are provided via prominent **Quick Action buttons** beneath the scoreboard and via standard keyboard shortcuts (`Ctrl+Z` / `Ctrl+Y`), keeping the top menus streamlined and uncluttered.
@@ -181,7 +181,7 @@ The dialog is arranged into three fieldset groups:
 graph TD
     Settings["Settings Dialog"]
     Settings --> Section1["1. How long may the computer think?<br/>Fixed depth • Time per move • Time per game"]
-    Settings --> Section2["2. Stello Opening Book &amp; Transposition Table<br/>11,200 Canonical Positions • 4 MB to 1,024 MB TT Capacity"]
+    Settings --> Section2["2. Stello Opening Book &amp; Transposition Table<br/>6,000 Canonical Positions • 4 MB to 1,024 MB TT Capacity"]
     Settings --> Section3["3. Threads<br/>Automatic • 1 up to the device's threads"]
 ```
 
@@ -191,7 +191,7 @@ graph TD
 * **Time per game:** Allocates a total chess clock bank per game (slider: 1 to 60 minutes, default **5 minutes**). The engine dynamically budgets remaining time across estimated remaining plies.
 
 ### 2. Stello Opening Book & Transposition Table
-* **Stello Opening Book (11,200 canonical positions):** Checkbox controlling whether the engine queries the canonical opening book database before launching tree search. When checked, known book positions are played instantly. When unchecked, book lookups are bypassed and the engine searches every move from scratch.
+* **Stello Opening Book (6,000 canonical positions):** Checkbox controlling whether the engine queries the canonical opening book database before launching tree search. When checked, known book positions are played instantly. When unchecked, book lookups are bypassed and the engine searches every move from scratch.
 * **Transposition Table Capacity:** Selects the number of entries in each of the two tables (the midgame heuristic table and the exact endgame solver table); the memory shown covers both. Both dialogs use the same five choices from `SettingsViewModel.TranspositionTableChoices`:
 
 | Entries Option | Hash Bits | Entries / Table | Combined Memory | Description |
@@ -326,7 +326,7 @@ The WPF app ([MainWindow.xaml](../Stello.Net/Stello.Net/MainWindow.xaml)) runs t
 - **Quick actions** are Undo (`Ctrl+Z`, also `Ctrl+T`), Redo (`Ctrl+Y`, also `Ctrl+F`) and Move Now (`Ctrl+M`) buttons.
 - **Move History** shows paired Black/White rows, the move count, the latest row highlighted and auto-scrolls to the latest move.
 - **Analysis** has seven fields: Move, Depth, Score, Best move, Nodes, Speed and Time. The title is uppercase; empty fields show `-`, as in the web app.
-- **Settings** ([SettingsWindow.xaml](../Stello.Net/Stello.Net/Views/SettingsWindow.xaml)) uses the web wording: "How long may the computer think?", "Stello Opening Book (11,200 canonical positions)", "Transposition Table Capacity" and "Search with (of N on this device):". It offers the same five table capacities and the same thread choices.
+- **Settings** ([SettingsWindow.xaml](../Stello.Net/Stello.Net/Views/SettingsWindow.xaml)) uses the web wording: "How long may the computer think?", "Stello Opening Book (6,000 canonical positions)", "Transposition Table Capacity" and "Search with (of N on this device):". It offers the same five table capacities and the same thread choices.
 - Board-style, piece-animation and Sound choices are remembered in the shared settings. The window position and size are also saved (chapter 14).
 
 ---

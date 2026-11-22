@@ -97,10 +97,10 @@ public class SettingsViewModelTests
 public class AboutInfoTests
 {
     [Fact]
-    public void AboutInfo_ReportsVersionFourAndNonEmptyText()
+    public void AboutInfo_ReportsVersionFiveAndNonEmptyText()
     {
         Assert.Equal("About Stello", AboutInfo.Title);
-        Assert.Equal("Stello Version 4.0", AboutInfo.Version);
+        Assert.Equal("Stello Version 5.0", AboutInfo.Version);
         Assert.False(string.IsNullOrWhiteSpace(AboutInfo.PictureCaption));
         Assert.Equal(4, AboutInfo.Paragraphs.Count);
         Assert.All(AboutInfo.Paragraphs, p => Assert.False(string.IsNullOrWhiteSpace(p)));

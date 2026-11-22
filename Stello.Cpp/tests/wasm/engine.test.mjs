@@ -67,8 +67,8 @@ function checkSignature(line, files) {
     assert.equal(actual.join(' '), line);
 }
 
-test('the version is 4.x', () => {
-    assert.match(engine.version(), /^4\.\d+\.\d+$/);
+test('the version is 5.x', () => {
+    assert.match(engine.version(), /^5\.\d+\.\d+$/);
 });
 
 test('midgame searches equal the baseline node for node', () => {

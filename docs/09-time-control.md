@@ -4,7 +4,7 @@
 
 ## In short
 
-The search can always go one ply deeper, so something must decide when to stop. `SearchLimits` says what the caller wants: a fixed depth, a fixed time per move, a share of the time left for the whole game, or a full solve. The time control (`search/time.rs`) turns that into two limits: a **soft** limit (do not start another iteration after it) and a **hard** limit (stop the search in the middle). The user can also stop the search at any moment: **Move Now** plays the best move found so far, and **cancel** discards the search. Progress is reported while the engine thinks, and the result says what kind of score it found.
+The search can always go one ply deeper, so something must decide when to stop. `SearchLimits` says what the caller wants: a fixed depth, a fixed time per move, a share of the time left for the whole game, or a full solve. The time control (`Stello.Cpp/src/search/time.hpp`, matching Rust's `search/time.rs`) turns that into two limits: a **soft** limit (do not start another iteration after it) and a **hard** limit (stop the search in the middle). The user can also stop the search at any moment: **Move Now** plays the best move found so far, and **cancel** discards the search. Progress is reported while the engine thinks, and the result says what kind of score it found.
 
 ## Data structures
 
@@ -84,11 +84,13 @@ xychart-beta
 
 ### The budget for the endgame
 
-When the search switches to the solver, `time::for_endgame` gives it more time, but only with a game clock (C++ `calc_end_time`): with $R$ = the time left minus the time already used for this move, it may use half of it:
+When the search switches to the solver, `time::for_endgame` (`time::for_solver` in C++20) gives it more time, but only with a game clock (C++ `calc_end_time`): with $R$ = the time left minus the time already used for this move, it may use half of it:
 
 $$m = \lfloor R / 2 \rfloor, \qquad \text{hard} = \text{elapsed} + m, \qquad \text{soft} = \text{elapsed} + \left\lfloor \frac{10\,m}{15} \right\rfloor$$
 
 Both limits are measured from the start of the search, so the soft limit includes the time already spent before the solver. A custom `SoftTimePercent` applies to the endgame window after that elapsed time. The soft limit decides whether pass 2 (the exact score) is started after pass 1 (chapter 08). With a time per move, the midgame budget is kept.
+
+In Stello 5.0 (`engine_impl.hpp`), when `TimePerGame` finishes the selective endgame passes (`1, 2, 4` at 16 or more empty squares, chapter 08), `estimate_wld_ms` estimates whether the exact win/loss/draw pass can finish within the remaining endgame budget (capped at four times the midgame hard budget), using the node count and elapsed time recorded right before the selective endgame passes. If the position is still too far from the end to solve on time, the search returns the last selective endgame result immediately instead of spending half the game clock on a timed-out WLD search.
 
 ### How the search uses the limits
 
@@ -96,7 +98,7 @@ Both limits are measured from the start of the search, so the soft limit include
 - **Hard limit:** `check_abort` is called about every 1024 nodes: in the midgame node search when the node counter reaches a multiple of 1024, in the solver every 1024 nodes counted since the last check (`next_abort_check`, in `count_end_node`). If no progress was reported for 100 ms, it first repeats the last report, so the app's analysis panel stays alive during a long iteration. When the hard limit is passed, or Move Now is requested, it returns `Abort::Stop`, which every search function passes up with `?`, so the whole search unwinds; `run` then returns the best move found so far. That move may come from an unfinished iteration: each iteration starts with the previous best move, so a new best move from an unfinished iteration has already been compared with it at the new depth.
 - **Cancel:** `check_abort` reads the cancel signal first. A cancelled search unwinds the same way but ends in `SearchError::Cancelled`, without a result, and the C# wrapper throws an `OperationCanceledException`, so the caller knows that nothing should be played. A search that is already cancelled when it starts returns at once.
 
-At about 10 million nodes per second over whole games ([Stello 3.0 against 2.0 at 500 ms](../Plans/benchmark-results/match_v3p2-vs-v2-500ms.md)) and about 40 million in the solver ([FFO #40–49](../Plans/benchmark-results/v3p2-solve-bench-40-49.json)), 1024 nodes take well under a millisecond, so the search reacts to the limits and the signals almost at once. In the browser, Move Now and cancel are answered within 1 ms of the signal ([findings, gate P3](../Plans/making-stello-3-findings.md#gate-p3-release-aot-publish-in-headless-chromium-served-with-coopcoep-and-brotli)).
+At about 20 million nodes per second over whole games in Stello 5.0 ([Phase 7 matches](../Plans/making-stello-5-0-findings.md#phase-7--final-matches--ffo-solve-bench-part-1)) and about 63 million in the FFO #40–49 solver ([solve-bench](../Plans/benchmark-results/p7_v5_ffo40-49_1t.json)), 1024 nodes take well under a millisecond, so the search reacts to the limits and the signals almost at once. In the browser, Move Now and cancel are answered within 1 ms of the signal ([findings, gate P3](../Plans/making-stello-3-findings.md#gate-p3-release-aot-publish-in-headless-chromium-served-with-coopcoep-and-brotli)).
 
 ### The stop signals and the clock
 
@@ -152,7 +154,7 @@ For the first move with 5 minutes: $s = 54$, $n = 27$, $t = 300\,000 / 27 = 11\,
 ## Design notes
 
 - **Seconds instead of levels.** C++ had levels 0–14 that mapped to times in the tables `tider` and `rtider`. Stello uses seconds and plies directly; the formulas for the game clock are the same.
-- **Deadline checks instead of a timer and `longjmp`.** C++ used a Windows multimedia timer that set a flag, and jumped out of the search with `longjmp`. Stello checks the clock every 1024 nodes and unwinds by returning `Abort` from every search function, which needs nothing special in Rust or WebAssembly and never leaves Rust through the C ABI.
+- **Deadline checks instead of a timer and `longjmp`.** C++ used a Windows multimedia timer that set a flag, and jumped out of the search with `longjmp`. Stello checks the clock every 1024 nodes and unwinds: via `throw Abort` in C++20 (`STELLO_ABORT_EXCEPTIONS=ON`, chapter 28) or returning `Abort` in Rust/fallback builds, never escaping across the C ABI.
 - **Two kinds of stop.** C++ had a "Træk nu" (Move Now) menu item without any code behind it. Stello has both Move Now and cancel.
 - **The engine does not know the clock.** The app keeps the computer's clock, passes the time left in `TimePerGame`, sets the clock after each move to its value at the start of the search minus the search time (charged once, although the display clock also ticks during the search), and restores it on Back and Forward (chapter 14).
 

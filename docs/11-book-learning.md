@@ -16,7 +16,7 @@ The opening book can grow and improve itself. **Adding a game** stores its moves
 | Origin | Value |
 |---|---|
 | A move in an added game | +32 665 for the winner's moves, −32 665 for the loser's, 0 in a draw (`WinValue`) |
-| A search with a heuristic score | The search score in 1/100 disc, at most ±6 400 (the pattern evaluation, [chapter 04](04-evaluation.md)) |
+| A search with a heuristic score | The search score in 1/100 disc, at most ±6 400 (the pattern + mobility evaluation, [chapter 04](04-evaluation.md)) |
 | A search that solved the position | ±(32 600 + disc difference), 0 for a draw |
 | A move to a position that is in the book | −(value of the best move there), backed up by minimax |
 
@@ -155,7 +155,7 @@ Adding the same game in another frame afterwards, `f5 d6 c3 d3 c4` (the tiger af
 - **Bugs fixed.** C++ stored a solved draw as −32 600 (a loss); C# stores 0. C++ self-play took the result from the last *midgame* value even when the endgame had been solved; C# uses the exact score or the final board.
 - **Usable interactively.** C++ self-play ran forever on the UI thread and the program had to be killed; C# runs in the background and stops on request.
 - **An illegal game throws.** `AddGame` checks every move and throws an `ArgumentException` for an illegal one; the moves before it have then already been added. The app only adds games it has played itself, which are always legal.
-- **Not ported.** `extend_lib` (not reachable from the Windows menus) and `Mergelib.cpp` (merging a black and a white book, not in the C++ build).
+- **Not ported.** `extend_lib` (not reachable from the Windows menus) and `Mergelib.cpp` (merging a black and a white book, not in the C++ build). Offline book maintenance now lives in `Stello.BookTool` (`trim`, `recalc`, `calclib` and Lincke drop-out expansion `expand`, [chapter 12](12-book-tool.md)).
 
 See [Stello porting documentation.md](../Plans/Stello%20porting%20documentation.md), phases 7 and 10.
 

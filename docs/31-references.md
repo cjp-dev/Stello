@@ -1,4 +1,4 @@
-# 30 – References
+# 31 – References
 
 [Back to the index](README.md)
 
@@ -198,6 +198,15 @@ Articles, papers and source code on the internet that explain the techniques use
 | [WebAssembly Exception Handling – GitHub](https://github.com/WebAssembly/exception-handling) | Native WebAssembly `-fwasm-exceptions` unwinding used by `STELLO_ABORT_EXCEPTIONS=ON` in `stello_wasm`. |
 | [RFC 1951 (DEFLATE)](https://datatracker.ietf.org/doc/html/rfc1951) and [RFC 1952 (GZIP)](https://datatracker.ietf.org/doc/html/rfc1952) | The bitstream and multi-member container formats decoded by `eval/gzip.cpp`. |
 
+## 29 Stello 5.0: speed, threads, search and book
+
+| Link | What you find there |
+|---|---|
+| [Intel Intrinsics Guide](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html) | AVX2 (`_mm256_*`) and BMI2 (`_pext_u64`) intrinsics used by `PatternState` and `bits_avx2.hpp`. |
+| [WebAssembly SIMD – Emscripten](https://emscripten.org/docs/porting/simd.html) | Fixed-width 128-bit SIMD (`-msimd128`, `<wasm_simd128.h>`) used in the browser WebAssembly builds. |
+| [Technical explanation – Egaroucid](https://www.egaroucid.nyanyan.dev/en/technology/explanation/) | `egaroucid16` patterns, legal-mobility evaluation, and selective endgame `mpc-end` stages. |
+| [Lincke (2001): Strategies for the Automatic Construction of Opening Books](https://link.springer.com/chapter/10.1007/3-540-45579-5_5) | Drop-Out Expansion ($\omega \cdot \text{ply} + \text{cumulative\_loss}$ priority), implemented in `BookExpander` (`Stello.BookTool expand`). |
+
 ## Writing these documents
 
 | Link | What you find there |
@@ -208,4 +217,4 @@ Articles, papers and source code on the internet that explain the techniques use
 
 ---
 
-Previous: [29 Glossary](29-glossary.md) · Next: [Index](README.md)
+Previous: [30 Glossary](30-glossary.md) · Next: [Index](README.md)

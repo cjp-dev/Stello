@@ -10,7 +10,7 @@ Before the engine is changed, there must be a way to tell whether a change helps
 - **`solve-bench`** solves FFO endgame positions with known scores. This measures the **endgame solver**: correct scores, nodes and time to solve.
 - **`mid-bench`** searches 100 midgame positions to a fixed depth. This measures **midgame speed** and records the nodes, move and score of every search, so a later run can check that a change kept the search **unchanged**.
 
-Match sides can use the current C++ 4.0 engine, the preserved Stello 3.1 Rust engine, a separately loaded Stello native library, the frozen Stello 1 and 2.0 engines, or the Egaroucid port ([Comparing engines](#comparing-engines)). Every step from Stello 1 to Stello 2.0 was measured with the tool, and every result file of that work is in [Plans/benchmark-results](../Plans/benchmark-results) ([The result files](#the-result-files)). The numbers at the end of this chapter are [the baseline before 2.0](#the-baseline-before-20): the engine as it was ported from C++, now frozen as Stello 1. What Stello 2.0 measures is told phase by phase in chapters [20](20-phases-0-2-the-evaluation.md) to [24](24-results-and-what-comes-next.md).
+Match sides can use the current C++ 5.0 engine, the preserved Stello 4.0 C++ and Stello 3.1 Rust engines, a separately loaded Stello native library, the frozen Stello 1 and 2.0 engines, or the Egaroucid port ([Comparing engines](#comparing-engines)). Every step from Stello 1 to Stello 5.0 was measured with the tool, and result files of that work are in [Plans/benchmark-results](../Plans/benchmark-results) ([The result files](#the-result-files)). The numbers at the end of this chapter are [the baseline before 2.0](#the-baseline-before-20): the engine as it was ported from C++, now frozen as Stello 1. What Stello 2.0 measures is told phase by phase in chapters [20](20-phases-0-2-the-evaluation.md) to [24](24-results-and-what-comes-next.md); Stello 5.0's 18 final matches and FFO solves are in [chapter 29](29-stello-5-0-speed-threads-search-and-book.md).
 
 ## Running the tool
 
@@ -39,7 +39,7 @@ A side is a short list of `key=value` settings, separated by commas. It needs ex
 
 | Key | Meaning | Engines |
 |---|---|---|
-| `engine=stello-v1` | the engine: `stello` (the current C++ 4.0 engine), `stello-v3` (the preserved Rust 3.1 library), `stello-v2` (Stello 2.0), `stello-v1` (Stello 1), `stello-lib` (a separate native library) or `egaroucid` ([below](#comparing-engines)) | all |
+| `engine=stello-v1` | the engine: `stello` (the current C++ 5.0 engine), `stello-v4` (preserved C++ 4.0), `stello-v3` (preserved Rust 3.1), `stello-v2` (Stello 2.0), `stello-v1` (Stello 1), `stello-lib` (a separate native library) or `egaroucid` ([below](#comparing-engines)) | all |
 | `time-ms=100` | 100 ms per move (`TimePerMove`) | all |
 | `game-s=60` | 60 s for the whole game (`TimePerGame`); the side's clock runs down during the game, as in the app | all |
 | `depth=8` | 8 plies per move (`FixedDepth`) | all Stello engines |
@@ -57,7 +57,7 @@ A side is a short list of `key=value` settings, separated by commas. It needs ex
 | `mpc=100` | Multi-ProbCut's t × 100: a cut needs the shallow search to be t standard deviations outside the window (default 100, [chapter 06](06-midgame-search.md#selective-search)) | current Stello |
 | `name=new` | the name in the report and in the file name | all |
 
-Since Stello 4.0, `engine=stello` is the C++20 engine, `engine=stello-v3` is the preserved Stello 3.1 Rust library (built in `Stello.Rust/target/<os>-v3/release/stello_engine_v3`, or set by `STELLO_V3_LIBRARY`), and `engine=stello-v2` is the frozen Stello 2.0 ([chapter 25](25-phases-0-4-the-engine-in-rust.md), [chapter 28](28-stello-4-0-the-engine-in-cpp.md)). `engine=stello` also accepts `threads=N` (1–256, default 1) and `ybwc=on|off` (default on); `engine=stello-v3` accepts `threads=N` and `hash-bits=N`, and is also available in `mid-bench` and `solve-bench`. The match chooses its default workers from the physical cores and both sides' thread counts ([Timing](#timing); [chapter 26](26-phases-5-9-threads.md#threads-through-every-layer)). `mid-bench` and `solve-bench` take `--threads N` too.
+Since Stello 4.0, `engine=stello` is the C++20 engine, `engine=stello-v4` is the preserved C++ 4.0 library (`Stello.Cpp/ref/stello_engine_v4.dll`), `engine=stello-v3` is the preserved Stello 3.1 Rust library (built in `Stello.Rust/target/<os>-v3/release/stello_engine_v3`, or set by `STELLO_V3_LIBRARY`), and `engine=stello-v2` is the frozen Stello 2.0 ([chapter 25](25-phases-0-4-the-engine-in-rust.md), [chapter 28](28-stello-4-0-the-engine-in-cpp.md), [chapter 29](29-stello-5-0-speed-threads-search-and-book.md)). `engine=stello` and `stello-v4`/`stello-v3` also accept `threads=N` (1–256, default 1) and `ybwc=on|off` (default on; `stello`), plus `hash-bits=N`. The match chooses its default workers from the physical cores and both sides' thread counts ([Timing](#timing); [chapter 26](26-phases-5-9-threads.md#threads-through-every-layer)). `mid-bench` and `solve-bench` take `--threads N` too.
 
 For a match against any other separately built Stello ABI 3 library, use a side such as `engine=stello-lib,lib=<absolute path>,sha256=<hash>,time-ms=100,threads=1`. Copy the library under a different file name from `stello_engine.dll` (or `libstello_engine.so`/`.dylib`) to avoid a loader-name collision with the current engine. The file hash and ABI are checked before play and when each worker loads it; the report records the library version and hash. A resumed match must use the same side text and library bytes. Both `stello-lib` and `stello-v3` support the built-in evaluation and default search settings without a book (`threads` and `hash-bits` work, books and search switches are rejected). `stello-lib` is for matches only; `stello-v3` works in matches, `mid-bench` and `solve-bench`.
 
@@ -128,7 +128,8 @@ The tool can measure several engines. A match side chooses one with `engine=`, `
 
 | Value | Engine |
 |---|---|
-| `stello` (the default) | the current C++ 4.0 engine through `Stello.Engine`, which the apps use ([chapter 01](01-overview.md), [chapter 28](28-stello-4-0-the-engine-in-cpp.md)) |
+| `stello` (the default) | the current C++ 5.0 engine through `Stello.Engine`, which the apps use ([chapter 01](01-overview.md), [chapter 29](29-stello-5-0-speed-threads-search-and-book.md)) |
+| `stello-v4` | the preserved C++ 4.0 engine (`stello_engine_v4`), via `StelloLibraryMatchPlayer` |
 | `stello-v3` | the preserved Rust 3.1 engine (`stello_engine_v3`), via `StelloLibraryMatchPlayer` |
 | `stello-v2` | the frozen C# Stello 2.0 engine |
 | `stello-v1` | Stello 1: the engine before 2.0, frozen in `Stello.Engine.V1` as the baseline ([Stello 1 documentation](stello-1/README.md)) |
@@ -139,7 +140,7 @@ Three commands compare the engines part by part:
 
 | Command | What it does |
 |---|---|
-| `eval-compare` | Scores Stello 1's and Egaroucid's evaluations against the final scores of Egaroucid's training games. The data is not in the repository (its terms forbid redistribution); by default it is read from `Traning data/Egaroucid_Train_Data/0001_egaroucid_7_5_1_lv17`. Stello 2.0's evaluation is measured with the trainer's `report` ([below](#the-trainers-measurements)). |
+| `eval-compare` | Scores Stello 1's and Egaroucid's evaluations against the final scores of Egaroucid's training games. The data is not in the repository (its terms forbid redistribution); by default it is read from `Training data/Egaroucid_Train_Data/0001_egaroucid_7_5_1_lv17`. Stello's evaluation is measured with the trainer's `report` ([below](#the-trainers-measurements)). |
 | `make-exact` | Writes midgame positions from Stello's games with every move solved exactly by the port, to `Data/midgame-exact.txt`. An existing file is continued. |
 | `mid-quality` | Measures the discs each engine's move loses against perfect play on those positions, at a fixed time per move, with paired differences for every pair of engines. `--sides "<side>;<side>"` takes match sides instead of engine names, for example with `eval=` or `mpc=`. |
 
@@ -172,7 +173,7 @@ dotnet run -c Release --project Stello.Net/tools/Stello.Trainer -- <command> [op
 | `mpc [--from 14] [--to 52] [--per-discs 100] [--max-depth 12] [--workers N] [--out <file.csv>]` | Searches test positions without selectivity at every depth and fits Multi-ProbCut's error model from the spread of deep against shallow results ([chapter 06](06-midgame-search.md#selective-search)). `mpc --fit <file.csv>` only fits a saved file. |
 | `mpc-end [--from 38] [--to 50] [--per-discs 100] [--max-depth 10] [--solve-s 60] [--workers N] [--out <file.csv>]` | The same against exact scores, for a selective endgame. It was tried in phase 5 and dropped ([chapter 23](23-phase-5-the-search.md)). |
 
-All three need the converted training data in `Traning data/stello-bin`, which is not in the repository.
+All three need the converted training data in `Training data/stello-bin`, which is not in the repository.
 
 ## The result files
 
@@ -185,7 +186,7 @@ All three need the converted training data in `Traning data/stello-bin`, which i
 | `mid-quality` | `mid-quality`, or `--name` |
 | `report` (trainer) | `eval-<model file name>`, or `--name` |
 
-`solve-bench` and `mid-bench` print their tables and write a JSON file only with `--out`; `--compare` reads one. The trainer's `mpc` and `mpc-end` write their raw values to `Traning data/mpc-values.csv` and `mpc-end-values.csv`. `make-starts`, `make-positions` and `make-exact` write the data files.
+`solve-bench` and `mid-bench` print their tables and write a JSON file only with `--out`; `--compare` reads one. The trainer's `mpc` and `mpc-end` write their raw values to `Training data/mpc-values.csv` and `mpc-end-values.csv`. `make-starts`, `make-positions` and `make-exact` write the data files.
 
 The results of the 2.0 work are named by phase: `v2-p<phase>-*` and `match_v2-p<phase>-*` for phases 0 to 4; `match_v2x-*` for phase 5 and the second book recalculation, and `grid-*` for the trainer reports of the larger evaluation that was not pursued (these names are kept as they were made, because other documents link to them); `match_v2-final-*` and `v2-final-*` for the final measurements of [chapter 24](24-results-and-what-comes-next.md). The files without a prefix (`baseline-*`, `match_100ms_vs_200ms`, `match_stello-*`, `eval-compare`, `mid-quality`, `mid-bench_*`, `solve-bench_*`) are the measurements of Stello 1 below and in [chapter 19](19-stello-1-against-egaroucid.md).
 
