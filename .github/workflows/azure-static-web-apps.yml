@@ -14,6 +14,7 @@ on:
       - 'external/GameShell'
       - 'external/GameShell/**'
       - '.gitmodules'
+      - 'global.json'
       - '.github/workflows/azure-static-web-apps.yml'
   workflow_dispatch:
 
@@ -29,12 +30,13 @@ jobs:
         with:
           submodules: true
 
+      # Stello uses .NET 10 (pinned via global.json so preinstalled .NET 11+ SDKs on ubuntu-latest are not selected).
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
       - name: Install WebAssembly build tools
-        run: dotnet workload install wasm-tools
+        run: dotnet workload restore Stello.Net/Stello.Web/Stello.Web.csproj
 
       # The engine in the browser is the C++ engine (Stello.Cpp), which Stello.Web compiles to single- and
       # multi-threaded WebAssembly with Emscripten via CMake + Ninja.

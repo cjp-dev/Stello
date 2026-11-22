@@ -99,7 +99,7 @@ The toolchains:
   | `required` | An error | The deploy workflow |
   | `false` | The threaded package is not built, and nothing is checked | Builds that only need single-threaded WASM |
 
-- **The deploy workflow**, [azure-static-web-apps.yml](../.github/workflows/azure-static-web-apps.yml), installs Ninja (`ninja-build`, [line 42](../.github/workflows/azure-static-web-apps.yml#L42)) and Emscripten SDK `7.0.0` via `emscripten-core/setup-emsdk@v15` ([lines 44–47](../.github/workflows/azure-static-web-apps.yml#L44-L47)), and publishes with `-p:StelloNativeEngine=false -p:StelloWasmThreads=required` ([line 52](../.github/workflows/azure-static-web-apps.yml#L52)), so the live site always has both packages.
+- **The deploy workflow**, [azure-static-web-apps.yml](../.github/workflows/azure-static-web-apps.yml), installs Ninja (`ninja-build`, [line 44](../.github/workflows/azure-static-web-apps.yml#L44)) and Emscripten SDK `7.0.0` via `emscripten-core/setup-emsdk@v15` ([lines 46–49](../.github/workflows/azure-static-web-apps.yml#L46-L49)), pins `.NET 10` via [global.json](../global.json), and publishes with `-p:StelloNativeEngine=false -p:StelloWasmThreads=required` ([line 54](../.github/workflows/azure-static-web-apps.yml#L54)), so the live site always has both packages.
 
 ## Algorithm
 
