@@ -57,10 +57,17 @@ Working notes, benchmark baselines, and gate records for [making-stello-6-0-plan
 - Generated [Stello.Net/tools/Stello.Benchmark/Data/starts-v6.txt](../Stello.Net/tools/Stello.Benchmark/Data/starts-v6.txt) via `make-starts --plies 10-14 --max-value 220 --prefix-free` (**`587` starts / `1,174` games**, `0 %` ancestor–descendant overlap).
 - Verified in `StartsV6File_HoldsPrefixFreeBalancedBookLines` and `MakeStarts_PrefixFree_RemovesAncestorsAndKeepsDeepest`.
 
-### 6. Pending Phase 0 Baselines (Awaiting User Go)
+### 6. Phase 0 Baseline Matches (`starts-v6.txt`, `1,174` Games Each, `book=off`, Side B = `Stello 5.0`)
 
-- `Plans/benchmark-results/v5.0-ref/` reference JSONs (`ffo-40-49`, `ffo-50-59` 1t/8t, `endgame-random-14-24`, `midgame-depth10/12/14/16`, `midgame-random-depth8`, `midgame-handover-depth12`, WASM ST/MT, and external `stello-v4`/`egaroucid-cpp`/`edax` FFO comparisons).
-- Full `1,174`-game `starts-v6.txt` baseline matches (`100 ms`, `500 ms`, `2,000 ms`) across all 8 pairings (`stello-v4` 1t/8t, `stello-v2` 1t, `stello-v1` 1t, `egaroucid-cpp` 1t/8t, `edax` 1t/8t).
+*(Matches running sequentially; Part A `v5.0-ref/` JSONs + WASM baseline and external FFO `#40–49` / `#50–59` benchmarks pending.)*
+
+| # | Opponent | Time | Threads | Score (95 % CI) | W / D / L | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | NPS (A / B) | Wall Time |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| 1 | `Stello 4.0` (`v4`) | 100 ms | 1t | **60.6 %** (58.2–63.1 %) | `+620 =184 −370` | **+75** (+57 to +93) | 100.0 % | +1.6 ± 0.3 | 16.23 / 17.37 | 21.3 / 20.4 | 15.16M / 19.90M | [6m 12s](benchmark-results/match_p0_v5_vs_v4_100ms_1t.md) |
+| 2 | `Stello 2.0` (`v2`) | 100 ms | 1t | **72.4 %** (70.2–74.6 %) | `+773 =154 −247` | **+168** (+149 to +187) | 100.0 % | +3.6 ± 0.3 | 14.34 / 17.43 | 20.6 / 20.5 | 6.69M / 20.31M | [6m 17s](benchmark-results/match_p0_v5_vs_v2_100ms_1t.md) |
+| 3 | `Stello 1` (`v1`) | 100 ms | 1t | **98.2 %** (97.6–98.9 %) | `+1143 =20 −11` | **+696** (+641 to +776) | 100.0 % | +17.6 ± 0.5 | 11.06 / 17.41 | 19.2 / 20.9 | 5.06M / 20.40M | [6m 29s](benchmark-results/match_p0_v5_vs_v1_100ms_1t.md) |
+| 4 | `Egaroucid` (`egaroucid-cpp`) | 100 ms | 1t | **73.3 %** (71.1–75.4 %) | `+781 =158 −235` | **+175** (+156 to +195) | 100.0 % | +3.3 ± 0.3 | 11.54 / 17.25 | 20.0 / 20.5 | 11.26M / 18.69M | [6m 44s](benchmark-results/match_p0_v5_vs_egaroucid_cpp_100ms_1t.md) |
+| 5 | `Edax` (`edax`) | 100 ms | 1t | **38.5 %** (36.3–40.8 %) | `+342 =221 −611` | **−81** (−98 to −65) | 0.0 % | −1.3 ± 0.3 | 21.63 / 17.25 | 21.7 / 20.3 | 38.83M / 18.99M | [6m 23s](benchmark-results/match_p0_v5_vs_edax_100ms_1t.md) |
 
 ### 7. Test Verification (Items 1–5)
 
