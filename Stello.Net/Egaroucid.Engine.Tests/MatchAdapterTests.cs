@@ -68,7 +68,7 @@ public class MatchAdapterTests
     [InlineData("seed=3,time-ms=100")]
     [InlineData("engine=egaroucid,time-ms=100,level=5")]
     [InlineData("engine=egaroucid,time-ms=100,hash-bits=26")]
-    [InlineData("engine=edax,time-ms=100")]
+    [InlineData("engine=unknown,time-ms=100")]
     [InlineData("time-ms=100,book=yes")]
     [InlineData("depth=5,opt=ybwc")]
     [InlineData("depth=5,opt=unknown=on")]

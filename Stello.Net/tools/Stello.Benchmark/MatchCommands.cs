@@ -104,10 +104,11 @@ internal static class MatchCommands
 
     public static int MakeStarts(Options options)
     {
-        options.Allow("book", "plies", "max-value", "out");
+        options.Allow("book", "plies", "max-value", "prefix-free", "out");
         string bookPath = options.Text("book") ?? Program.DataFile("opening-book.txt");
         (int fromPly, int toPly) = Range(options.Text("plies") ?? "10-12");
         int maxValue = options.Number("max-value", 40, 0, 32000);
+        bool prefixFree = options.Flag("prefix-free");
         string path = options.Text("out") ?? Program.DataFile("starts.txt");
 
         OpeningBook book = OpeningBook.Load(bookPath);
@@ -117,12 +118,27 @@ internal static class MatchCommands
             .Where(line => line.Value is { } value && Math.Abs(value) <= maxValue)
             .ToList();
 
+        if (prefixFree)
+        {
+            var ancestors = new HashSet<string>(StringComparer.Ordinal);
+            foreach ((string moves, _) in lines)
+            {
+                for (int len = 2; len < moves.Length; len += 2)
+                {
+                    ancestors.Add(moves[..len]);
+                }
+            }
+
+            lines = lines.Where(line => !ancestors.Contains(line.Moves)).ToList();
+        }
+
         // A fixed shuffle, so that the first N start positions (--max-starts N) mix the plies and the openings.
         var random = new Random(1);
         random.Shuffle(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(lines));
 
         var text = new StringBuilder();
-        text.AppendLine(CultureInfo.InvariantCulture, $"# Start positions for match: the book positions at ply {fromPly} to {toPly} whose best book move has a value");
+        string prefixNote = prefixFree ? "prefix-free " : "";
+        text.AppendLine(CultureInfo.InvariantCulture, $"# Start positions for match: the {prefixNote}book positions at ply {fromPly} to {toPly} whose best book move has a value");
         text.AppendLine(CultureInfo.InvariantCulture, $"# of at most {maxValue} either way (in evaluation units, for the side to move), from {Path.GetFileName(bookPath)}, in a fixed shuffled order.");
         text.AppendLine("# <line from d3> <value of the best book move>");
         foreach ((string moves, int? value) in lines)
@@ -137,7 +153,7 @@ internal static class MatchCommands
 
     public static List<string> LoadStarts(string? path)
     {
-        using StreamReader reader = File.OpenText(path ?? Program.DataFile("starts.txt"));
+        using StreamReader reader = File.OpenText(path ?? Program.DataFile("starts-v6.txt"));
         List<string> starts = BookMatch.ReadStarts(reader);
         return starts.Count > 0 ? starts : throw new ArgumentException("The start file holds no start positions.");
     }
@@ -145,9 +161,10 @@ internal static class MatchCommands
     /// <summary>
     /// A side such as <c>time-ms=100</c>, <c>depth=8</c>, <c>game-s=60,hash-bits=20,name=new,opt=ybwc=off</c> or
     /// <c>engine=egaroucid,time-ms=100,book=on</c>. The engines are <c>stello</c> (the current C++ engine, the
-    /// default), <c>stello-v4</c> (Stello 4.0 in C++, preserved), <c>stello-v3</c> (Stello 3.1 in Rust, preserved),
-    /// <c>stello-v2</c> (Stello 2.0's C# engine, frozen), <c>stello-v1</c> (Stello 1, frozen), <c>stello-lib</c> (a
-    /// separate native library) and <c>egaroucid</c> (the port).
+    /// default), <c>stello-v5</c> (Stello 5.0 in C++, preserved), <c>stello-v4</c> (Stello 4.0 in C++, preserved),
+    /// <c>stello-v3</c> (Stello 3.1 in Rust, preserved), <c>stello-v2</c> (Stello 2.0's C# engine, frozen),
+    /// <c>stello-v1</c> (Stello 1, frozen), <c>stello-lib</c> (a separate native library), <c>edax</c> (native C Edax),
+    /// <c>egaroucid</c> (the C# port) and <c>egaroucid-cpp</c> (native C++ Egaroucid).
     /// </summary>
     /// <exception cref="ArgumentException">The text is not a valid side.</exception>
     public static MatchSide ParseSide(string text, bool allowLibrary = true)
@@ -192,9 +209,12 @@ internal static class MatchCommands
                         "stello-v2" => EngineKind.StelloV2,
                         "stello-v3" => EngineKind.StelloV3,
                         "stello-v4" => EngineKind.StelloV4,
+                        "stello-v5" => EngineKind.StelloV5,
                         "stello-lib" => EngineKind.StelloLibrary,
+                        "edax" => EngineKind.Edax,
                         "egaroucid" => EngineKind.Egaroucid,
-                        _ => throw new ArgumentException($"engine must be stello, stello-v4, stello-v3, stello-v2, stello-v1, stello-lib or egaroucid in the side \"{text}\"."),
+                        "egaroucid-cpp" => EngineKind.EgaroucidCpp,
+                        _ => throw new ArgumentException($"engine must be stello, stello-v5, stello-v4, stello-v3, stello-v2, stello-v1, stello-lib, edax, egaroucid or egaroucid-cpp in the side \"{text}\"."),
                     };
                     break;
                 case "lib":
@@ -214,7 +234,7 @@ internal static class MatchCommands
                     SetLimit(TimeControlMode.FixedDepth, Number(key, value, 1, 60));
                     break;
                 case "hash-bits":
-                    hashBits = Number(key, value, 10, 26);
+                    hashBits = Number(key, value, 10, 27);
                     break;
                 case "book":
                     useBook = value switch
@@ -273,11 +293,13 @@ internal static class MatchCommands
         }
 
         bool egaroucid = engine == EngineKind.Egaroucid;
+        bool egaroucidAny = engine is EngineKind.Egaroucid or EngineKind.EgaroucidCpp;
         bool library = engine == EngineKind.StelloLibrary;
-        bool nativeRef = engine is EngineKind.StelloLibrary or EngineKind.StelloV3 or EngineKind.StelloV4;
+        bool nativeRef = engine is EngineKind.StelloLibrary or EngineKind.StelloV3 or EngineKind.StelloV4 or EngineKind.StelloV5;
+        bool externalNative = engine is EngineKind.Edax or EngineKind.EgaroucidCpp;
         if (mode is null)
         {
-            throw new ArgumentException($"The side \"{text}\" needs time-ms, game-s, {(egaroucid ? "level" : "depth")}.");
+            throw new ArgumentException($"The side \"{text}\" needs time-ms, game-s, {(egaroucidAny ? "level" : "depth")}.");
         }
 
         if (library && !allowLibrary)
@@ -291,6 +313,7 @@ internal static class MatchCommands
             {
                 EngineKind.StelloV3 => "stello-v3",
                 EngineKind.StelloV4 => "stello-v4",
+                EngineKind.StelloV5 => "stello-v5",
                 _ => "stello-lib",
             };
             string? unsupported = new[] { "book-file", "book-acc", "seed", "time-strict", "eval", "soft-pct", "mpc", "selective", "ybwc", "opt" }
@@ -305,15 +328,27 @@ internal static class MatchCommands
                 throw new ArgumentException($"engine=stello-lib needs lib and sha256 in the side \"{text}\".");
             }
         }
+
+        if (externalNative)
+        {
+            string label = engine == EngineKind.Edax ? "edax" : "egaroucid-cpp";
+            string? unsupported = new[] { "book-file", "book-acc", "seed", "time-strict", "eval", "soft-pct", "mpc", "selective", "ybwc", "opt" }
+                .FirstOrDefault(keys.Contains);
+            if (unsupported is not null || useBook)
+            {
+                throw new ArgumentException($"engine={label} supports no book or search switches (side \"{text}\").");
+            }
+        }
+
         if (!library && (keys.Contains("lib") || keys.Contains("sha256")))
         {
             throw new ArgumentException($"lib and sha256 are only for engine=stello-lib (side \"{text}\").");
         }
 
         // Only native engines search with threads; the frozen C# engines and Egaroucid port use 1.
-        if (keys.Contains("threads") && engine is not (EngineKind.Stello or EngineKind.StelloLibrary or EngineKind.StelloV3 or EngineKind.StelloV4))
+        if (keys.Contains("threads") && engine is not (EngineKind.Stello or EngineKind.StelloLibrary or EngineKind.StelloV3 or EngineKind.StelloV4 or EngineKind.StelloV5 or EngineKind.Edax or EngineKind.EgaroucidCpp))
         {
-            throw new ArgumentException($"threads is only for engine=stello, stello-v4, stello-v3 or stello-lib (side \"{text}\").");
+            throw new ArgumentException($"threads is only for engine=stello, stello-v5, stello-v4, stello-v3, stello-lib, edax or egaroucid-cpp (side \"{text}\").");
         }
 
         if (keys.Contains("ybwc") && engine != EngineKind.Stello)
@@ -328,8 +363,8 @@ internal static class MatchCommands
 
         foreach ((string key, bool allowed) in new[]
         {
-            ("depth", !egaroucid), ("level", egaroucid), ("book-acc", egaroucid), ("seed", egaroucid), ("eval", engine == EngineKind.Stello),
-            ("book-file", !egaroucid), ("time-strict", egaroucid),
+            ("depth", !egaroucidAny), ("level", egaroucidAny), ("book-acc", egaroucid), ("seed", egaroucid), ("eval", engine == EngineKind.Stello),
+            ("book-file", !egaroucidAny), ("time-strict", egaroucid),
             ("soft-pct", engine == EngineKind.Stello),
             ("mpc", engine == EngineKind.Stello),
             ("selective", engine == EngineKind.Stello),
@@ -337,7 +372,7 @@ internal static class MatchCommands
         {
             if (keys.Contains(key) && !allowed)
             {
-                throw new ArgumentException($"{key} is only for {(egaroucid ? "engine=stello, stello-v2 and stello-v1" : "engine=egaroucid")} (side \"{text}\").");
+                throw new ArgumentException($"{key} is only for {(egaroucidAny ? "engine=stello, stello-v2, stello-v1 and edax" : "engine=egaroucid")} (side \"{text}\").");
             }
         }
 
@@ -351,12 +386,43 @@ internal static class MatchCommands
         {
             TimeControlMode.TimePerMove => $"{amount} ms/move",
             TimeControlMode.TimePerGame => $"{amount} s/game",
-            _ => egaroucid ? $"level {amount}" : $"depth {amount}",
+            _ => egaroucidAny ? $"level {amount}" : $"depth {amount}",
         } + (threads > 1 ? $", {threads} threads" : "");
+
+        if (engine == EngineKind.Edax)
+        {
+            int bits = hashBits ?? EdaxMatchPlayer.DefaultHashBits;
+            if (bits > 26)
+            {
+                throw new ArgumentException($"hash-bits for engine=edax is at most 26 (side \"{text}\").");
+            }
+
+            _ = EdaxMatchPlayer.ResolveExecutable();
+            _ = EdaxMatchPlayer.ResolveEvalFile();
+            return new MatchSide(name ?? text, limits, bits,
+                CreatePlayer: () => new EdaxMatchPlayer(bits, threads),
+                Description: $"Edax (native C), {limitText}, hash bits {bits}, no book");
+        }
+
+        if (engine == EngineKind.EgaroucidCpp)
+        {
+            int bits = hashBits ?? EgaroucidCppMatchPlayer.DefaultHashBits;
+            _ = EgaroucidCppMatchPlayer.ResolveRunnerExecutable();
+            _ = EgaroucidResources.FindDirectory() ?? throw new ArgumentException(
+                $"Egaroucid's resources were not found. Put Egaroucid in <repo>/Egaroucid-main or set {EgaroucidResources.EnvironmentVariable}.");
+            return new MatchSide(name ?? text, limits, bits,
+                CreatePlayer: () => new EgaroucidCppMatchPlayer(bits, threads),
+                Description: $"Egaroucid (native C++), {limitText}, table bits {bits}, no book");
+        }
 
         if (!egaroucid)
         {
             int bits = hashBits ?? SearchLimits.DefaultHashBits;
+            if (bits > 26)
+            {
+                throw new ArgumentException($"hash-bits for Stello is at most 26 (side \"{text}\").");
+            }
+
             // Stello 1 plays from the book it was made with; Stello 2's book was recalculated by Stello 2.
             OpeningBook? book = useBook
                 ? OpeningBook.Load(bookFile ?? Program.DataFile(engine == EngineKind.StelloV1 ? "opening-book-stello1.txt" : "opening-book.txt"))
@@ -368,6 +434,7 @@ internal static class MatchCommands
                 EngineKind.StelloV2 => new MatchSide(name ?? text, limits, bits, CreatePlayer: () => new Stello.Engine.V2.V2MatchPlayer(bits, book), Description: $"Stello 2.0 (C#), {description}"),
                 EngineKind.StelloV3 => ResolvedNativeSide(name ?? text, limits, bits, description, "Rust", StelloLibrary.ResolveV3()),
                 EngineKind.StelloV4 => ResolvedNativeSide(name ?? text, limits, bits, description, "C++", StelloLibrary.ResolveV4()),
+                EngineKind.StelloV5 => ResolvedNativeSide(name ?? text, limits, bits, description, "C++", StelloLibrary.ResolveV5()),
                 EngineKind.StelloLibrary => StelloLibrarySide(name ?? text, limits, bits, description, libraryFile!, librarySha256!),
                 _ => StelloSide(name ?? text, limits, bits, book, description, evalFile, softTimePercent, probCutPercent, selective, ybwc),
             };
@@ -572,9 +639,18 @@ internal enum EngineKind
     /// <summary>Stello.Cpp 4.0 (<c>stello_engine_v4</c>), preserved as the 4.0 baseline.</summary>
     StelloV4,
 
+    /// <summary>Stello.Cpp 5.0 (<c>stello_engine_v5</c>), preserved as the 5.0 baseline.</summary>
+    StelloV5,
+
     /// <summary>A separately loaded Stello native library.</summary>
     StelloLibrary,
 
+    /// <summary>Native C Edax (<c>edax-reversi-master</c>).</summary>
+    Edax,
+
     /// <summary>Egaroucid.Engine: the port of Egaroucid 7.9.</summary>
     Egaroucid,
+
+    /// <summary>Native C++ Egaroucid (<c>Egaroucid-main</c> via <c>Egaroucid.Runner</c>).</summary>
+    EgaroucidCpp,
 }

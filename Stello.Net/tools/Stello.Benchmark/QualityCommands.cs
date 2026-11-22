@@ -38,7 +38,7 @@ internal static class QualityCommands
     public static int MakeExact(Options options)
     {
         options.Allow("starts", "from", "games", "depth", "empties", "workers", "hash-bits", "out");
-        List<string> starts = MatchCommands.LoadStarts(options.Text("starts"));
+        List<string> starts = MatchCommands.LoadStarts(options.Text("starts") ?? Program.DataFile("starts.txt"));
         int from = options.Number("from", 20, 0, starts.Count - 1);
         int games = options.Number("games", 100, 1, starts.Count - from);
         int depth = options.Number("depth", 6, 1, 20);
@@ -170,25 +170,35 @@ internal static class QualityCommands
         bool completed = Program.Cancellable(token => ParallelWork.Run(workers, () =>
         {
             IMatchPlayer[] players = sides.Select(side => side.NewPlayer()).ToArray();
-            int task;
-            while ((task = Interlocked.Increment(ref next)) < tasks.Length)
+            try
             {
-                (int time, int index) = tasks[task];
-                BenchmarkPosition position = positions[index];
-                SearchLimits limits = SearchLimits.TimePerMove(TimeSpan.FromMilliseconds(time), useOpeningBook: false);
-                for (int e = 0; e < players.Length; e++)
+                int task;
+                while ((task = Interlocked.Increment(ref next)) < tasks.Length)
                 {
-                    players[e].NewGame();
-                    long started = Stopwatch.GetTimestamp();
-                    SearchResult result = players[e].ChooseMove(position.Board, position.Player, limits, token);
-                    double ms = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
-                    int score = position.MoveScores.First(m => m.Move == result.Move.Square).Score;
-                    moves[e, task] = (position.Score!.Value - score, result.Kind is ScoreKind.Exact or ScoreKind.WinLossDraw, ms);
-                }
+                    (int time, int index) = tasks[task];
+                    BenchmarkPosition position = positions[index];
+                    SearchLimits limits = SearchLimits.TimePerMove(TimeSpan.FromMilliseconds(time), useOpeningBook: false);
+                    for (int e = 0; e < players.Length; e++)
+                    {
+                        players[e].NewGame();
+                        long started = Stopwatch.GetTimestamp();
+                        SearchResult result = players[e].ChooseMove(position.Board, position.Player, limits, token);
+                        double ms = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+                        int score = position.MoveScores.First(m => m.Move == result.Move.Square).Score;
+                        moves[e, task] = (position.Score!.Value - score, result.Kind is ScoreKind.Exact or ScoreKind.WinLossDraw, ms);
+                    }
 
-                if (Interlocked.Increment(ref done) % 100 == 0)
+                    if (Interlocked.Increment(ref done) % 100 == 0)
+                    {
+                        Console.WriteLine($"  [{done}/{tasks.Length}] {Program.Duration(clock.Elapsed)}");
+                    }
+                }
+            }
+            finally
+            {
+                foreach (IMatchPlayer player in players)
                 {
-                    Console.WriteLine($"  [{done}/{tasks.Length}] {Program.Duration(clock.Elapsed)}");
+                    (player as IDisposable)?.Dispose();
                 }
             }
         }, token));

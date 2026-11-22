@@ -164,70 +164,78 @@ internal sealed class EngineMatch(MatchSide a, MatchSide b, int workers)
             IMatchPlayer? playerA = null;
             IMatchPlayer? playerB = null;
             bool warmedUp = false;
-            int index;
-            while ((index = Interlocked.Increment(ref next)) < starts.Count)
+            try
             {
-                (Board board, Player toMove) = BookTextFormat.Replay(starts[index]);
-                bool newGame = false;
-                MatchGame first;
-                if (aFirstGames?[index] is { } savedFirst)
+                int index;
+                while ((index = Interlocked.Increment(ref next)) < starts.Count)
                 {
-                    first = savedFirst;
-                }
-                else
-                {
-                    playerA ??= A.NewPlayer();
-                    playerB ??= B.NewPlayer();
-                    WarmUpPlayers(board, toMove);
-                    first = PlayGame(board, toMove, toMove.Opponent(), playerA, playerB, cancellationToken);
-                    gamePlayed?.Invoke(index, false, first);
-                    newGame = true;
-                }
-
-                MatchGame second;
-                if (bFirstGames?[index] is { } savedSecond)
-                {
-                    second = savedSecond;
-                }
-                else
-                {
-                    playerA ??= A.NewPlayer();
-                    playerB ??= B.NewPlayer();
-                    WarmUpPlayers(board, toMove);
-                    second = PlayGame(board, toMove, toMove, playerA, playerB, cancellationToken);
-                    gamePlayed?.Invoke(index, true, second);
-                    newGame = true;
-                }
-
-                var pair = new MatchPair(starts[index], first, second);
-                lock (gate)
-                {
-                    pairs[index] = pair;
-                    if (newGame)
+                    (Board board, Player toMove) = BookTextFormat.Replay(starts[index]);
+                    bool newGame = false;
+                    MatchGame first;
+                    if (aFirstGames?[index] is { } savedFirst)
                     {
-                        played?.Invoke(pair);
+                        first = savedFirst;
+                    }
+                    else
+                    {
+                        playerA ??= A.NewPlayer();
+                        playerB ??= B.NewPlayer();
+                        WarmUpPlayers(board, toMove);
+                        first = PlayGame(board, toMove, toMove.Opponent(), playerA, playerB, cancellationToken);
+                        gamePlayed?.Invoke(index, false, first);
+                        newGame = true;
+                    }
+
+                    MatchGame second;
+                    if (bFirstGames?[index] is { } savedSecond)
+                    {
+                        second = savedSecond;
+                    }
+                    else
+                    {
+                        playerA ??= A.NewPlayer();
+                        playerB ??= B.NewPlayer();
+                        WarmUpPlayers(board, toMove);
+                        second = PlayGame(board, toMove, toMove, playerA, playerB, cancellationToken);
+                        gamePlayed?.Invoke(index, true, second);
+                        newGame = true;
+                    }
+
+                    var pair = new MatchPair(starts[index], first, second);
+                    lock (gate)
+                    {
+                        pairs[index] = pair;
+                        if (newGame)
+                        {
+                            played?.Invoke(pair);
+                        }
                     }
                 }
+
+                void WarmUpPlayers(Board board, Player toMove)
+                {
+                    if (warmedUp || board.IsGameOver)
+                    {
+                        return;
+                    }
+
+                    if (BitOperations.PopCount(board.LegalMoves(toMove)) < 2)
+                    {
+                        (board, toMove) = (Board.Initial, Player.Black);
+                    }
+
+                    // Side A normally gets the first measured search; warm both cold search paths beforehand.
+                    playerA!.NewGame();
+                    playerA.ChooseMove(board, toMove, WarmUpLimits(A.Limits), cancellationToken);
+                    playerB!.NewGame();
+                    playerB.ChooseMove(board, toMove, WarmUpLimits(B.Limits), cancellationToken);
+                    warmedUp = true;
+                }
             }
-
-            void WarmUpPlayers(Board board, Player toMove)
+            finally
             {
-                if (warmedUp || board.IsGameOver)
-                {
-                    return;
-                }
-
-                if (BitOperations.PopCount(board.LegalMoves(toMove)) < 2)
-                {
-                    (board, toMove) = (Board.Initial, Player.Black);
-                }
-
-                // Side A normally gets the first measured search; warm both cold search paths beforehand.
-                playerA!.NewGame();
-                playerA.ChooseMove(board, toMove, WarmUpLimits(A.Limits), cancellationToken);
-                playerB!.NewGame();
-                playerB.ChooseMove(board, toMove, WarmUpLimits(B.Limits), cancellationToken);
-                warmedUp = true;
+                (playerA as IDisposable)?.Dispose();
+                (playerB as IDisposable)?.Dispose();
             }
         }
 

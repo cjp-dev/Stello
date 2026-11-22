@@ -17,9 +17,11 @@ namespace Stello.Benchmark;
 /// <param name="Engine">stello, stello-v1 or egaroucid.</param>
 /// <param name="Limits">The limits as text, for the report.</param>
 /// <param name="HashBits">Stello: two tables of 2^bits slots of two entries; Egaroucid: one table of 2^bits slots.</param>
-internal sealed record BenchSearcher(string Engine, string Limits, int HashBits, Func<BenchmarkPosition, SearchResult> Search)
+internal sealed record BenchSearcher(string Engine, string Limits, int HashBits, Func<BenchmarkPosition, SearchResult> Search, IDisposable? Resource = null) : IDisposable
 {
     public string Description => $"{Engine}, {Limits}, hash bits {HashBits}";
+
+    public void Dispose() => Resource?.Dispose();
 
     /// <summary>
     /// The searcher for <paramref name="limits"/>, which is <see cref="SearchLimits.Solve"/> or a fixed depth. For
@@ -30,9 +32,9 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
     public static BenchSearcher Create(Options options, SearchLimits limits, string limitText)
     {
         string engine = options.Text("engine") ?? "stello";
-        if (engine is not ("stello" or "stello-v3" or "stello-v4") && options.Text("threads") is not null)
+        if (engine is not ("stello" or "stello-v3" or "stello-v4" or "stello-v5" or "edax" or "egaroucid-cpp") && options.Text("threads") is not null)
         {
-            throw new ArgumentException("--threads is only for --engine stello, stello-v4 or stello-v3.");
+            throw new ArgumentException("--threads is only for --engine stello, stello-v5, stello-v4, stello-v3, edax or egaroucid-cpp.");
         }
 
         switch (engine)
@@ -40,7 +42,7 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
             case "stello":
                 if (options.Text("mpc") is not null || options.Text("level") is not null)
                 {
-                    throw new ArgumentException("--mpc and --level are only for --engine egaroucid.");
+                    throw new ArgumentException("--mpc and --level are only for --engine egaroucid or egaroucid-cpp.");
                 }
 
                 int bits = options.Number("hash-bits", SearchLimits.DefaultHashBits, 10, 26);
@@ -84,10 +86,80 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
             case "stello-v4":
                 return NativeReference(engine, options, limits, limitText, StelloLibrary.ResolveV4);
 
+            case "stello-v5":
+                return NativeReference(engine, options, limits, limitText, StelloLibrary.ResolveV5);
+
+            case "edax":
+                if (options.Text("mpc") is not null || options.Text("level") is not null || options.Text("eval") is not null
+                    || options.Text("side") is not null || options.Text("selective") is not null || options.Text("probcut-pct") is not null)
+                {
+                    throw new ArgumentException("--mpc, --level, --eval, --side, --selective and --probcut-pct are not supported by --engine edax.");
+                }
+
+                int edaxBits = options.Number("hash-bits", EdaxMatchPlayer.DefaultHashBits, 10, 26);
+                int edaxThreads = options.Number("threads", 1, 1, SearchLimits.MaxThreads);
+                if (edaxThreads > 1)
+                {
+                    limits = limits with { Threads = edaxThreads };
+                    limitText += $", {edaxThreads} threads";
+                }
+
+                var edax = new EdaxMatchPlayer(edaxBits, edaxThreads);
+                return new BenchSearcher(engine, limitText, edaxBits, position =>
+                {
+                    edax.NewGame();
+                    return edax.ChooseMove(position.Board, position.Player, limits, CancellationToken.None);
+                }, edax);
+
+            case "egaroucid-cpp":
+                if (options.Text("eval") is not null || options.Text("side") is not null
+                    || options.Text("selective") is not null || options.Text("probcut-pct") is not null)
+                {
+                    throw new ArgumentException("--eval, --side, --selective and --probcut-pct are not supported by --engine egaroucid-cpp.");
+                }
+
+                int cppBits = options.Number("hash-bits", EgaroucidCppMatchPlayer.DefaultHashBits, 10, 27);
+                int cppThreads = options.Number("threads", 1, 1, SearchLimits.MaxThreads);
+                if (cppThreads > 1)
+                {
+                    limits = limits with { Threads = cppThreads };
+                    limitText += $", {cppThreads} threads";
+                }
+
+                var cppPlayer = new EgaroucidCppMatchPlayer(cppBits, cppThreads);
+                if (limits.Mode == TimeControlMode.Solve)
+                {
+                    return new BenchSearcher(engine, limitText, cppBits, position =>
+                    {
+                        cppPlayer.NewGame();
+                        return cppPlayer.ChooseMove(position.Board, position.Player, limits, CancellationToken.None);
+                    }, cppPlayer);
+                }
+
+                if (options.Text("level") is not null)
+                {
+                    int cppLevel = options.Number("level", 21, 1, Level.MAX_LEVEL);
+                    limitText = $"level {cppLevel}" + (cppThreads > 1 ? $", {cppThreads} threads" : "");
+                    SearchLimits levelLimits = SearchLimits.FixedDepth(cppLevel, useOpeningBook: false, hashBits: cppBits) with { Threads = cppThreads };
+                    return new BenchSearcher(engine, limitText, cppBits, position =>
+                    {
+                        cppPlayer.NewGame();
+                        return cppPlayer.ChooseMove(position.Board, position.Player, levelLimits, CancellationToken.None);
+                    }, cppPlayer);
+                }
+
+                int cppMpc = MpcLevel(options.Text("mpc") ?? "100");
+                limitText += $", MPC {Level.SelectivityPercentage[cppMpc].ToString(System.Globalization.CultureInfo.InvariantCulture)} %";
+                return new BenchSearcher(engine, limitText, cppBits, position =>
+                {
+                    cppPlayer.NewGame();
+                    return cppPlayer.SearchDepth(position.Board, position.Player, limits.Depth, cppMpc);
+                }, cppPlayer);
+
             case "stello-v1":
                 if (options.Text("mpc") is not null || options.Text("level") is not null || options.Text("eval") is not null)
                 {
-                    throw new ArgumentException("--mpc and --level are only for --engine egaroucid, --eval only for --engine stello.");
+                    throw new ArgumentException("--mpc and --level are only for --engine egaroucid or egaroucid-cpp, --eval only for --engine stello.");
                 }
 
                 int v1Bits = options.Number("hash-bits", SearchLimits.DefaultHashBits, 10, 26);
@@ -101,7 +173,7 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
             case "stello-v2":
                 if (options.Text("mpc") is not null || options.Text("level") is not null || options.Text("side") is not null)
                 {
-                    throw new ArgumentException("--mpc and --level are only for --engine egaroucid, --side only for --engine stello.");
+                    throw new ArgumentException("--mpc and --level are only for --engine egaroucid or egaroucid-cpp, --side only for --engine stello.");
                 }
 
                 int v2Bits = options.Number("hash-bits", SearchLimits.DefaultHashBits, 10, 26);
@@ -163,7 +235,7 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                 });
 
             default:
-                throw new ArgumentException("--engine must be stello, stello-v4, stello-v3, stello-v2, stello-v1 or egaroucid.");
+                throw new ArgumentException("--engine must be stello, stello-v5, stello-v4, stello-v3, stello-v2, stello-v1, edax, egaroucid or egaroucid-cpp.");
         }
     }
 
@@ -194,7 +266,7 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
         {
             player.NewGame();
             return player.ChooseMove(position.Board, position.Player, limits, CancellationToken.None);
-        });
+        }, player);
     }
 
     private static int MpcLevel(string text)

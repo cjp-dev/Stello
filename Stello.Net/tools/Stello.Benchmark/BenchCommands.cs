@@ -30,7 +30,8 @@ internal static class BenchCommands
         int to = options.Number("to", 44, 0, int.MaxValue);
         List<BenchmarkPosition> positions = SelectByIdRange(all, from, to);
 
-        BenchRun run = Run("solve-bench", positions, BenchSearcher.Create(options, SearchLimits.Solve, "solve"), options);
+        using BenchSearcher searcher = BenchSearcher.Create(options, SearchLimits.Solve, "solve");
+        BenchRun run = Run("solve-bench", positions, searcher, options);
         int wrong = 0;
         Console.WriteLine();
         Console.WriteLine("| # | Empty | Score | Move | Nodes | Time | Nodes/s |");
@@ -64,7 +65,8 @@ internal static class BenchCommands
         List<BenchmarkPosition> positions = BenchmarkPosition.Load(options.Text("positions") ?? Program.DataFile("midgame.txt"));
         int depth = options.Number("depth", 10, 1, 60);
 
-        BenchRun run = Run("mid-bench", positions, BenchSearcher.Create(options, SearchLimits.FixedDepth(depth), $"depth {depth}"), options);
+        using BenchSearcher searcher = BenchSearcher.Create(options, SearchLimits.FixedDepth(depth), $"depth {depth}");
+        BenchRun run = Run("mid-bench", positions, searcher, options);
         Console.WriteLine();
         Console.WriteLine("| Empty squares | Positions | Nodes | Time | Nodes/s |");
         Console.WriteLine("|---:|---:|---:|---:|---:|");
@@ -83,7 +85,7 @@ internal static class BenchCommands
     public static int MakePositions(Options options)
     {
         options.Allow("starts", "games", "depth", "empties", "out");
-        List<string> starts = MatchCommands.LoadStarts(options.Text("starts"));
+        List<string> starts = MatchCommands.LoadStarts(options.Text("starts") ?? Program.DataFile("starts.txt"));
         int games = options.Number("games", 20, 1, starts.Count);
         int depth = options.Number("depth", 6, 1, 20);
         int[] empties = NumberList(options, "empties", "48,42,36,30,26", 1, 59);

@@ -85,6 +85,66 @@ public class BenchmarkTests
     }
 
     [Fact]
+    public void StartsV6File_HoldsPrefixFreeBalancedBookLines()
+    {
+        using StreamReader reader = File.OpenText(DataFile("starts-v6.txt"));
+        List<string> starts = BookMatch.ReadStarts(reader);
+
+        Assert.Equal(587, starts.Count);
+        Assert.Equal(starts.Count, starts.Distinct(StringComparer.Ordinal).Count());
+        var ancestors = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string start in starts)
+        {
+            for (int len = 2; len < start.Length; len += 2)
+            {
+                ancestors.Add(start[..len]);
+            }
+        }
+
+        Assert.All(starts, start =>
+        {
+            Assert.InRange(start.Length, 20, 28);
+            Assert.DoesNotContain(start, ancestors);
+            (Board board, Player player) = BookTextFormat.Replay(start);
+            Assert.True(board.HasLegalMove(player));
+            Assert.True(BookTestData.Master.TryGetReplies(board, player, out List<BookEntry>? replies, out _));
+            Assert.InRange(replies!.Max(r => r.Value), -220, 220);
+        });
+    }
+
+    [Fact]
+    public void EngineMatch_DisposesPlayersOnCompletionAndCancellation()
+    {
+        List<string> starts = BookMatch.StartsAtPly(BookTestData.Master, 8).Take(2).ToList();
+        int disposedCompleted = 0;
+        var sideA = new MatchSide("A", SearchLimits.FixedDepth(1, useOpeningBook: false), HashBits: 10,
+            CreatePlayer: () => new DisposableSpyPlayer(() => Interlocked.Increment(ref disposedCompleted), null));
+        var sideB = new MatchSide("B", SearchLimits.FixedDepth(1, useOpeningBook: false), HashBits: 10,
+            CreatePlayer: () => new DisposableSpyPlayer(() => Interlocked.Increment(ref disposedCompleted), null));
+
+        _ = new EngineMatch(sideA, sideB, workers: 1).Play(starts.Take(1).ToList(), null, CancellationToken.None);
+        Assert.Equal(2, disposedCompleted);
+
+        using var cts = new CancellationTokenSource();
+        int disposedCancelled = 0;
+        int calls = 0;
+        var cancelSideA = new MatchSide("A", SearchLimits.FixedDepth(1, useOpeningBook: false), HashBits: 10,
+            CreatePlayer: () => new DisposableSpyPlayer(() => Interlocked.Increment(ref disposedCancelled), () =>
+            {
+                if (Interlocked.Increment(ref calls) >= 3)
+                {
+                    cts.Cancel();
+                }
+            }));
+        var cancelSideB = new MatchSide("B", SearchLimits.FixedDepth(1, useOpeningBook: false), HashBits: 10,
+            CreatePlayer: () => new DisposableSpyPlayer(() => Interlocked.Increment(ref disposedCancelled), null));
+
+        Assert.Throws<OperationCanceledException>(() =>
+            new EngineMatch(cancelSideA, cancelSideB, workers: 1).Play(starts, null, cts.Token));
+        Assert.Equal(2, disposedCancelled);
+    }
+
+    [Fact]
     public void EngineMatch_PlaysPairsAndRecordsWhatEachSideDid()
     {
         List<string> starts = BookMatch.StartsAtPly(BookTestData.Master, 8).Take(2).ToList();
@@ -257,5 +317,21 @@ public class BenchmarkTests
             ResetCountsAtMoves.Add(_resetCount);
             return _inner.ChooseMove(board, player, limits, cancellationToken);
         }
+    }
+
+    private sealed class DisposableSpyPlayer(Action onDispose, Action? onChooseMove) : IMatchPlayer, IDisposable
+    {
+        private readonly StelloMatchPlayer _inner = new(10, null);
+
+        public void NewGame() => _inner.NewGame();
+
+        public SearchResult ChooseMove(Board board, Player player, SearchLimits limits, CancellationToken cancellationToken)
+        {
+            onChooseMove?.Invoke();
+            cancellationToken.ThrowIfCancellationRequested();
+            return _inner.ChooseMove(board, player, limits, cancellationToken);
+        }
+
+        public void Dispose() => onDispose();
     }
 }

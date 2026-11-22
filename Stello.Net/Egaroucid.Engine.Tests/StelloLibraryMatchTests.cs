@@ -22,6 +22,13 @@ public sealed class StelloLibraryMatchTests(ReferenceLibraryFixture fixture) : I
     [InlineData("engine=stello-lib,depth=1,lib=ignored,sha256=ignored,opt=ybwc=off", "no book or search switches")]
     [InlineData("engine=stello-v4,depth=1,book=on", "no book or search switches")]
     [InlineData("engine=stello-v4,depth=1,opt=ybwc=off", "no book or search switches")]
+    [InlineData("engine=stello-v5,depth=1,book=on", "no book or search switches")]
+    [InlineData("engine=stello-v5,depth=1,opt=ybwc=off", "no book or search switches")]
+    [InlineData("engine=edax,depth=1,book=on", "no book or search switches")]
+    [InlineData("engine=edax,level=5", "only for engine=egaroucid")]
+    [InlineData("engine=egaroucid-cpp,level=1,book=on", "no book or search switches")]
+    [InlineData("engine=egaroucid-cpp,level=1,book-acc=1", "no book or search switches")]
+    [InlineData("engine=egaroucid-cpp,depth=1", "only for engine=stello")]
     [InlineData("engine=stello-lib,depth=1,lib=a,lib=b,sha256=ignored", "given more than once")]
     [InlineData("engine=stello-lib,depth=1,lib=ignored,sha256=a,sha256=b", "given more than once")]
     public void ParseSide_RejectsInvalidLibraryOptions(string text, string message)
@@ -48,6 +55,130 @@ public sealed class StelloLibraryMatchTests(ReferenceLibraryFixture fixture) : I
 
         Assert.Equal(4, result.Depth);
         Assert.True(result.Nodes > 0);
+    }
+
+    [Fact]
+    public void StelloV5_SearchesWhenReferenceLibraryIsPresent()
+    {
+        string repoRef = System.IO.Path.Combine(Program.RepositoryFolder(), "Stello.Cpp", "ref",
+            OperatingSystem.IsWindows() ? "stello_engine_v5.dll" : OperatingSystem.IsMacOS() ? "libstello_engine_v5.dylib" : "libstello_engine_v5.so");
+        if (!File.Exists(repoRef))
+        {
+            return;
+        }
+
+        MatchSide side = MatchCommands.ParseSide("engine=stello-v5,depth=4,name=v5");
+        using var player = (StelloLibraryMatchPlayer)side.NewPlayer();
+        player.NewGame();
+        EngineSearchResult result = player.ChooseMove(EngineBoard.Initial, Player.Black, SearchLimits.FixedDepth(4, useOpeningBook: false), CancellationToken.None);
+
+        Assert.Equal(4, result.Depth);
+        Assert.True(result.Nodes > 0);
+    }
+
+    [Fact]
+    public void MakeStarts_PrefixFree_RemovesAncestorsAndKeepsDeepest()
+    {
+        string tempBook = System.IO.Path.Combine(fixture.Folder, "prefix-book.txt");
+        string tempOut = System.IO.Path.Combine(fixture.Folder, "prefix-starts.txt");
+        File.WriteAllText(tempBook,
+            BookTextFormat.FirstLine + "\n" +
+            "d3 c3:0:H:60s:d10:v5\n" +
+            "d3c3 c4:0:H:60s:d10:v5\n" +
+            "d3c3c4 c5:0:H:60s:d10:v5\n");
+
+        Options opts = Options.Parse(["--book", tempBook, "--plies", "1-3", "--max-value", "100", "--out", tempOut], "prefix-free");
+        Assert.Equal(0, MatchCommands.MakeStarts(opts));
+        using (StreamReader r1 = File.OpenText(tempOut))
+        {
+            Assert.Equal(3, BookMatch.ReadStarts(r1).Count);
+        }
+
+        Options pfOpts = Options.Parse(["--book", tempBook, "--plies", "1-3", "--max-value", "100", "--prefix-free", "--out", tempOut], "prefix-free");
+        Assert.Equal(0, MatchCommands.MakeStarts(pfOpts));
+        using (StreamReader r2 = File.OpenText(tempOut))
+        {
+            List<string> lines = BookMatch.ReadStarts(r2);
+            Assert.Single(lines);
+            Assert.Equal("d3c3c4", lines[0]);
+        }
+    }
+
+    [Fact]
+    public void EdaxPlayer_SearchesMovetimeDepthSolvePassAndDisposesCleanly()
+    {
+        if (EdaxMatchPlayer.FindExecutable() is null)
+        {
+            return;
+        }
+
+        MatchSide defaultSide = MatchCommands.ParseSide("engine=edax,time-ms=50,name=edax50");
+        Assert.Equal(EdaxMatchPlayer.DefaultHashBits, defaultSide.HashBits);
+
+        using (var player = Assert.IsType<EdaxMatchPlayer>(defaultSide.NewPlayer()))
+        {
+            player.NewGame();
+            EngineSearchResult r1 = player.ChooseMove(EngineBoard.Initial, Player.Black, defaultSide.Limits, CancellationToken.None);
+            Assert.NotNull(r1.Move.Square);
+            Assert.True(EngineBoard.Initial.IsLegal(Player.Black, r1.Move.Square.Value));
+
+            // Continue game after opponent reply to verify usermove TT-preserving sync.
+            EngineBoard after1 = EngineBoard.Initial.Play(Player.Black, r1.Move.Square.Value);
+            Square oppMove = Square.InMask(after1.LegalMoves(Player.White)).First();
+            EngineBoard after2 = after1.Play(Player.White, oppMove);
+            EngineSearchResult r2 = player.ChooseMove(after2, Player.Black, defaultSide.Limits, CancellationToken.None);
+            Assert.NotNull(r2.Move.Square);
+            Assert.True(after2.IsLegal(Player.Black, r2.Move.Square.Value));
+
+            // Solve FFO #40 exact (+38, a2).
+            BenchmarkPosition ffo40 = BenchmarkPosition.Load(Program.DataFile("ffo-40-59.txt")).First(p => p.Id == "40");
+            player.NewGame();
+            EngineSearchResult solved = player.ChooseMove(ffo40.Board, ffo40.Player, SearchLimits.Solve, CancellationToken.None);
+            Assert.Equal(ScoreKind.Exact, solved.Kind);
+            Assert.Equal(38, solved.Score);
+            Assert.Equal("a2", solved.Move.ToString());
+        }
+
+        // Verify 2-thread solve also disposes cleanly.
+        MatchSide mtSide = MatchCommands.ParseSide("engine=edax,depth=6,threads=2,hash-bits=16");
+        using var mtPlayer = Assert.IsType<EdaxMatchPlayer>(mtSide.NewPlayer());
+        mtPlayer.NewGame();
+        EngineSearchResult mtRes = mtPlayer.ChooseMove(EngineBoard.Initial, Player.Black, mtSide.Limits, CancellationToken.None);
+        Assert.NotNull(mtRes.Move.Square);
+    }
+
+    [Fact]
+    public void EgaroucidCppPlayer_SearchesMovetimeLevelSolveMtAndDisposesCleanly()
+    {
+        if (EgaroucidCppMatchPlayer.FindRunnerExecutable() is null || EgaroucidResources.FindDirectory() is null)
+        {
+            return;
+        }
+
+        MatchSide defaultSide = MatchCommands.ParseSide("engine=egaroucid-cpp,time-ms=50,name=egcpp50");
+        Assert.Equal(EgaroucidCppMatchPlayer.DefaultHashBits, defaultSide.HashBits);
+
+        using (var player = Assert.IsType<EgaroucidCppMatchPlayer>(defaultSide.NewPlayer()))
+        {
+            player.NewGame();
+            EngineSearchResult timed = player.ChooseMove(EngineBoard.Initial, Player.Black, defaultSide.Limits, CancellationToken.None);
+            Assert.NotNull(timed.Move.Square);
+            Assert.True(EngineBoard.Initial.IsLegal(Player.Black, timed.Move.Square.Value));
+
+            BenchmarkPosition ffo40 = BenchmarkPosition.Load(Program.DataFile("ffo-40-59.txt")).First(p => p.Id == "40");
+            player.NewGame();
+            EngineSearchResult solved = player.ChooseMove(ffo40.Board, ffo40.Player, SearchLimits.Solve, CancellationToken.None);
+            Assert.Equal(ScoreKind.Exact, solved.Kind);
+            Assert.Equal(38, solved.Score);
+            Assert.Equal("a2", solved.Move.ToString());
+        }
+
+        MatchSide mtSide = MatchCommands.ParseSide("engine=egaroucid-cpp,level=6,threads=2,hash-bits=16");
+        using var mtPlayer = Assert.IsType<EgaroucidCppMatchPlayer>(mtSide.NewPlayer());
+        mtPlayer.NewGame();
+        EngineSearchResult mtRes = mtPlayer.ChooseMove(EngineBoard.Initial, Player.Black, mtSide.Limits, CancellationToken.None);
+        Assert.NotNull(mtRes.Move.Square);
+        Assert.True(EngineBoard.Initial.IsLegal(Player.Black, mtRes.Move.Square.Value));
     }
 
     [Fact]

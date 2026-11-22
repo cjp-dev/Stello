@@ -1,0 +1,72 @@
+# Stello 6.0 Findings
+
+Working notes, benchmark baselines, and gate records for [making-stello-6-0-plan.md](making-stello-6-0-plan.md) on branch `feature/stello-6.0`.
+
+---
+
+## Environment and Branch Setup
+
+- **Branch:** `feature/stello-6.0`, branched from `main` at commit `caffe06` (`Updated making-stello-6-0-plan.md`, following `v5.0` at `473d0dc`).
+- **Primary machine:** AMD Ryzen 7 7800X3D 8-Core Processor (16 logical processors, Zen 4, 96 MB L3, AVX-512VL/CD/DQ/VNNI) + NVIDIA GeForce RTX 4080, Windows x64.
+- **Toolchains:**
+  - Clang `23.1.5` (`x86_64-pc-windows-msvc`), CMake `3.31` + Ninja, Visual Studio 2022 BuildTools (`vcvars64.bat`).
+  - .NET SDK `10.0.401` (`Stello.Net/Stello.Net.slnx`).
+  - Node.js `v24.19.0`.
+
+---
+
+## Phase 0 — Set-up, the 5.0 Baseline, and Native External Match Harnesses
+
+*(Items 1–5 completed and verified; `v5.0-ref/` benchmarks and `starts-v6.txt` historical/external baseline matches pending user go.)*
+
+### 1. Preserved 5.0 Reference Engine (`stello-v5`)
+
+- Preserved the release 5.0 `stello_engine.dll` (`stello_version() = 50000`, ABI `3`) as `Stello.Cpp/ref/stello_engine_v5.dll` (git-ignored):
+  - Size: `9,418,752` bytes
+  - SHA-256: `15DDA751EC045B89F63493F7CBB16B2CBC2C064F5052EFAE79406657458B78F3`
+- Added `engine=stello-v5` / `--engine stello-v5` across [StelloLibraryMatchPlayer.cs](../Stello.Net/tools/Stello.Benchmark/StelloLibraryMatchPlayer.cs) (`StelloLibrary.ResolveV5`), [Stello.Benchmark.csproj](../Stello.Net/tools/Stello.Benchmark/Stello.Benchmark.csproj), [MatchCommands.cs](../Stello.Net/tools/Stello.Benchmark/MatchCommands.cs), and [BenchSearcher.cs](../Stello.Net/tools/Stello.Benchmark/BenchSearcher.cs), with validation and live search tests in [StelloLibraryMatchTests.cs](../Stello.Net/Egaroucid.Engine.Tests/StelloLibraryMatchTests.cs).
+- Smoke match (`1` start / `2` games, `100 ms`, `1t`, `--workers 1`): `v5` vs `stello-v5` scored `1.0/2` (`50.0 %`, `21.07M` vs `21.42M` nps, avg depth `16.56 / 16.59`, `56 / 100 ms` vs `57 / 100 ms`, `6 s`).
+
+### 2. Deterministic `IDisposable` Match-Player & Benchmark Cleanup
+
+- Wrapped worker-local `playerA` / `playerB` in `try/finally` disposal inside `EngineMatch.Work()` ([BookMatch.cs](../Stello.Net/Stello.Engine/BookMatch.cs)), wrapped `players` in `QualityCommands.MidQuality()` ([QualityCommands.cs](../Stello.Net/tools/Stello.Benchmark/QualityCommands.cs)), implemented `IDisposable` on `BenchSearcher` ([BenchSearcher.cs](../Stello.Net/tools/Stello.Benchmark/BenchSearcher.cs)), and disposed `searcher` via `using` in `BenchCommands.SolveBench` and `BenchCommands.MidBench` ([BenchCommands.cs](../Stello.Net/tools/Stello.Benchmark/BenchCommands.cs)).
+- Verified deterministic cleanup on both normal completion and mid-match cancellation in `EngineMatch_DisposesPlayersOnCompletionAndCancellation` ([BenchmarkTests.cs](../Stello.Net/Stello.Engine.Tests/BenchmarkTests.cs)).
+
+### 3. Direct Native C Edax Harness (`engine=edax`)
+
+- Benchmarked Clang `-march=native` builds of `edax-reversi-master` (zero upstream source edits) on `-bench 20 -n 1 -eval-file ..\bin\data\eval.dat` (`1,337,611,062` nodes total):
+  - Default `-march=native` (AVX2 `MOVE_GENERATOR_AVX_ACEPCK` + `COUNT_LAST_FLIP_BMI2`): `15.970 s` (`83.76M` nps)
+  - `-march=native -D__AVX512__` (`MOVE_GENERATOR_AVX512CD` + `COUNT_LAST_FLIP_BMI2`): **`15.549 s` (`86.03M` nps)**
+  - `-march=native -D__AVX512__ -DCOUNT_LAST_FLIP=COUNT_LAST_FLIP_AVX512CD`: `15.860 s` (`84.34M` nps)
+- Built PGO-optimized `edax-reversi-master/bin/wEdax-native.exe` with `-march=native -D__AVX512__` (`15.891 s` / `84.17M` nps on `-bench 20 -n 1`, git-ignored).
+- Added [EdaxMatchPlayer.cs](../Stello.Net/tools/Stello.Benchmark/EdaxMatchPlayer.cs) speaking `-xboard -q -book-usage off -ponder off -h <bits> -n <threads>` (default `hash-bits=21`, ~54 MB; TT-preserving `usermove` sync within a game and `setboard` reset on `NewGame()`) and wired `engine=edax` into `MatchCommands`, `BenchSearcher`, and `Program.cs`.
+- Verified in `EdaxPlayer_SearchesMovetimeDepthSolvePassAndDisposesCleanly` (FFO `#40` `+38 a2`, `TimePerMove`, `usermove` continuity, `threads=2`, clean `quit` shutdown) and `100 ms` smoke matches (`1t`: `45.33M` nps, avg depth `20.50`, `57 / 109 ms`; `8t`: `209.02M` nps, avg depth `23.84`, `53 / 109 ms`; zero lingering processes).
+
+### 4. Direct Native C++ Egaroucid Harness (`engine=egaroucid-cpp`)
+
+- Created standalone driver [Stello.Net/tools/Egaroucid.Runner/](../Stello.Net/tools/Egaroucid.Runner/README.md) (`runner.cpp`, `build.cmd`, `README.md`, zero upstream edits to `Egaroucid-main/`) and built `bin/egaroucid-runner.exe` (git-ignored).
+- Benchmarked `solve-bench --engine egaroucid-cpp --from 40 --to 44 --passes 1` (`82,691,350` nodes, all exact, `hash-bits=21`):
+  - `-march=native -DHAS_AVX512 -DHAS_AMD_PROCESSOR`: **`1.390 s` (`59.51M` nps)**
+  - `-march=native -DHAS_AMD_PROCESSOR` (AVX2-only): `1.479 s` (`55.91M` nps)
+- Added [EgaroucidCppMatchPlayer.cs](../Stello.Net/tools/Stello.Benchmark/EgaroucidCppMatchPlayer.cs) (default `hash-bits=21`, ~48 MB) and wired `engine=egaroucid-cpp` into `MatchCommands`, `BenchSearcher`, and `Program.cs`.
+- Verified in `EgaroucidCppPlayer_SearchesMovetimeLevelSolveMtAndDisposesCleanly` (FFO `#40` `+38 a2`, `movetime`, `level`, `threads=2`, clean `quit` shutdown) and `100 ms` smoke matches (`1t`: `14.42M` nps, avg depth `11.35`, `60 / 115 ms`; `8t`: `87.92M` nps, avg depth `17.67`, `54 / 112 ms`; zero lingering processes).
+
+### 5. Prefix-Free `starts-v6.txt` Match Start Suite
+
+- Added `--prefix-free` to `Stello.Benchmark make-starts` ([MatchCommands.cs](../Stello.Net/tools/Stello.Benchmark/MatchCommands.cs), [Program.cs](../Stello.Net/tools/Stello.Benchmark/Program.cs)), switched `MatchCommands.LoadStarts(null)` default to `Data/starts-v6.txt` (keeping `starts.txt` untouched and explicit default for `make-positions` and `make-exact`).
+- Generated [Stello.Net/tools/Stello.Benchmark/Data/starts-v6.txt](../Stello.Net/tools/Stello.Benchmark/Data/starts-v6.txt) via `make-starts --plies 10-14 --max-value 220 --prefix-free` (**`587` starts / `1,174` games**, `0 %` ancestor–descendant overlap).
+- Verified in `StartsV6File_HoldsPrefixFreeBalancedBookLines` and `MakeStarts_PrefixFree_RemovesAncestorsAndKeepsDeepest`.
+
+### 6. Pending Phase 0 Baselines (Awaiting User Go)
+
+- `Plans/benchmark-results/v5.0-ref/` reference JSONs (`ffo-40-49`, `ffo-50-59` 1t/8t, `endgame-random-14-24`, `midgame-depth10/12/14/16`, `midgame-random-depth8`, `midgame-handover-depth12`, WASM ST/MT, and external `stello-v4`/`egaroucid-cpp`/`edax` FFO comparisons).
+- Full `1,174`-game `starts-v6.txt` baseline matches (`100 ms`, `500 ms`, `2,000 ms`) across all 8 pairings (`stello-v4` 1t/8t, `stello-v2` 1t, `stello-v1` 1t, `egaroucid-cpp` 1t/8t, `edax` 1t/8t).
+
+### 7. Test Verification (Items 1–5)
+
+- `.NET Release build` (`-p:StelloWasmEngine=false`): `0 Warning(s), 0 Error(s)`.
+- `Stello.Engine.Tests`: `519/519` passed (`8 s`).
+- `Stello.Net.Tests`: `116/116` passed (`17 s`).
+- `Egaroucid.Engine.Tests`: `111 passed, 0 failed, 8 skipped` (`37 s`; skipped tests are the optional `TaggedV30_*` reference DLL tests).
+- C++ `clang-release` (`ctest --preset clang-release`): `2/2` passed (`31.76 s`).
+- WASM Node tests (`node --test Stello.Cpp/tests/wasm/engine.test.mjs Stello.Cpp/tests/wasm/engine-mt.test.mjs`): `19/19` passed (`3.80 s`).

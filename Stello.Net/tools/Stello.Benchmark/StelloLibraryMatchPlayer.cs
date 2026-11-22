@@ -95,6 +95,26 @@ internal sealed class StelloLibrary : IDisposable
                          $"Stello.Cpp/ref/{file} (or set STELLO_V4_LIBRARY).");
     }
 
+    /// <summary>Locates the preserved Stello 5.0 C++ native library (<c>stello_engine_v5</c>), verifies its version and computes its SHA-256.</summary>
+    public static (string Path, string Sha256, string VersionText) ResolveV5()
+    {
+        string file = SharedLibraryName("stello_engine_v5");
+        string repo = Program.RepositoryFolder();
+        return ResolveVersionedLibrary(
+            envVar: "STELLO_V5_LIBRARY",
+            file: file,
+            candidates:
+            [
+                System.IO.Path.Combine(AppContext.BaseDirectory, file),
+                System.IO.Path.Combine(repo, "Stello.Cpp", "ref", file),
+            ],
+            minVersion: 50_000,
+            maxVersionExclusive: 50_100,
+            expectedLabel: "Stello 5.0 (500xx)",
+            missingHint: $"Could not find {file} for engine=stello-v5. Copy the Stello 5.0 release native library into " +
+                         $"Stello.Cpp/ref/{file} (or set STELLO_V5_LIBRARY).");
+    }
+
     private static string CurrentOs() =>
         OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "macos" : "linux";
 
