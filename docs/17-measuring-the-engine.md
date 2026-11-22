@@ -171,7 +171,7 @@ dotnet run -c Release --project Stello.Net/tools/Stello.Trainer -- <command> [op
 |---|---|
 | `report --model <file> [--data <folder>] [--max-per-discs N] [--name <name>]` | The error of an evaluation file on the test split of the training data, per number of empty squares, next to Stello 1's evaluation (with a fitted scale) and the Egaroucid port. For example `report --model Stello.Net/Book/stello-eval.bin`. |
 | `mpc [--from 14] [--to 52] [--per-discs 100] [--max-depth 12] [--workers N] [--out <file.csv>]` | Searches test positions without selectivity at every depth and fits Multi-ProbCut's error model from the spread of deep against shallow results ([chapter 06](06-midgame-search.md#selective-search)). `mpc --fit <file.csv>` only fits a saved file. |
-| `mpc-end [--from 38] [--to 50] [--per-discs 100] [--max-depth 10] [--solve-s 60] [--workers N] [--out <file.csv>]` | The same against exact scores, for a selective endgame. It was tried in phase 5 and dropped ([chapter 23](23-phase-5-the-search.md)). |
+| `mpc-end [--from 38] [--to 50] [--per-discs 100] [--max-depth 10] [--solve-s 60] [--workers N] [--out <file.csv>]` | The same against exact scores, for the timed selective endgame passes (`try_end_probcut`, [chapter 08](08-endgame-solver.md), [chapter 29](29-stello-5-0-speed-threads-search-and-book.md)). |
 
 All three need the converted training data in `Training data/stello-bin`, which is not in the repository.
 
