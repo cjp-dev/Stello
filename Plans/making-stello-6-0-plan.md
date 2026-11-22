@@ -10,6 +10,10 @@ This plan is in `Plans/making-stello-6-0-plan.md`. Its findings document, `Plans
   3. **Untapped speed & Zen 4 hardware (`x86-64-v4` 256-bit AVX-512 & cache density):** Zen 4 executes 256-bit `ymm` AVX-512VL/CD/DQ/VNNI at full clock speed with zero `zmm` downclocking; `stable.cpp` currently allocates **1 MB** of scalar tables (16× larger than Edax's 64 KB edge table); `PatternState` is **256 B (`8 × ymm`)** instead of a single ternary **128 B (`4 × ymm`)**; and midgame `search_inc` computes `flips()` up to 3× per move while calling `order_by_evaluation` *before* trying `hash_move`.
   4. **Evaluation ceiling & RTX 4080 GPU training:** Stello 5.0's linear `egaroucid16 + mobility` × 60 already beats Egaroucid's linear pattern model. Pushing meaningfully below `4.97` MAE (and/or shrinking WebAssembly below `8.96 MB` brotli) motivates exploring Egaroucid's post-training integer-rounding hill-climb, fresh Stello 5.0/6.0 self-play + WTHOR data, and **RTX 4080 GPU-trained NNUE / non-linear pattern-hybrid evaluators** (with zero-dependency C++20 SIMD inference, including Zen 4 `vpdpbusd` VNNI, and an optional desktop/web model split).
   5. **Verified bugs across the full repository:** An exhaustive pre-plan audit of `Stello.Cpp` and `Stello.Net` (including `Stello.Engine`, `Stello.App`, `Stello.Net` WPF, `Stello.Web` Blazor WASM + JS, and CLI tools) uncovered **19 remaining confirmed bugs** (6 C++, 13 .NET/Web/CLI) and **14 defensive/latent issues** that belong in an initial Bug Fixing phase before any new optimizations begin *(2 additional `BookTrimmer`/`BookCalclib`/`BookExpander` bugs found in the same audit were already fixed ahead of Stello 5.0 Phase 6.4 in commits `2fbd82d` and `fb325e2`)*.
+  6. **Legacy `starts.txt` inefficiency & parent–child overlap (`61.5 %` prefix overlap, `15.8 %` lopsided starts):** Auditing `Stello.Benchmark/Data/starts.txt` (590 positions at plies 10–12 selected before Stello 2.0 using Stello 1.0's hand-crafted evaluation `|v1| <= 40`) against Stello 5.0's 60-second book values and all 18 Phase 7 matches (`21,240` games) uncovered three structural issues:
+     - **Lopsided Stello 1 evaluations (`15.8 %` have `|v5| > 4.00` discs, up to `±9.00` discs):** Across the six 2,000 ms Phase 7 matches, pairs with `|v5| <= 1.00` disc were **`62.0 %` decisive** and `1.01–2.00` discs were **`54.7 %` decisive**, whereas `4.01–8.00` discs (`90` starts) dropped to **`23.7 %` decisive** (`40 %` produced zero decisive pairs across all six 2 s matches) and `> 8.00` discs (`3` starts) were **`0.0 %` decisive** (automatic `1–1` color sweeps wasting ~16 % of match time).
+     - **`61.5 %` parent/grandparent prefix overlap (`363 / 590` starts):** Because `make-starts` took all qualifying nodes across plies 10, 11, and 12 simultaneously, `354 / 590` starts have their immediate 1-ply parent also in `starts.txt`, and `221 / 590` (`37.5 %`) transition directly into another start in `starts.txt` via Stello 5.0's #1 best move — causing **`21–27 %` of those 221 parent–child pairs (`94–118` games per 1t match) to replay the exact same game to the exact same final disc score**.
+     - **Out-of-book lines (`only 172 / 590` in the `v5` book):** `418 / 590` (`70.8 %`) were pruned by `trim --hero-loss 100` because at least one side had already made a `> 1.00`-disc mistake before ply 10–12.
 - **External engines, codebases & literature surveyed for Stello 6.0:**
   - **Local reference engines:** `Egaroucid-main` (Takuto Yamana, v7.9.0, GPL-3.0-or-later) and `edax-reversi-master` (Richard Delorme, v4.7, GPL-3.0) + Toshihiko Okuhara's `edax-reversi-AVX` (4.5.x AVX2/AVX-512/BMI2 & thread-local TT optimizations).
   - **Chess & modern alpha-beta / NNUE:** `official-stockfish/stockfish` (Correction History, Internal Iterative Reductions [IIR], CutNode-aware LMR & Continuation History, dynamic best-move-instability time management, Lazy SMP diversification, dual small/big NNUE, SCReLU, `vpdpbusd` VNNI, PGO).
@@ -22,6 +26,7 @@ This plan is in `Plans/making-stello-6-0-plan.md`. Its findings document, `Plans
 - **Hardware & WebAssembly constraints:** Explore optional 256-bit `x86-64-v4` (AVX-512VL/CD/DQ/VNNI, zero `zmm` registers) runtime dispatch alongside `x86-64-v3`, portable `x86-64`, and WASM `simd128`; allow a desktop/web evaluation split if a larger or neural model wins on desktop.
 - **Evaluation & training ambition:** Explore both richer linear/pattern refinements and GPU-trained NNUE / non-linear hybrids using an optional Python/PyTorch/CUDA training pipeline on the **RTX 4080** alongside `Stello.Trainer`, while keeping runtime inference in `Stello.Cpp` **100 % zero external dependencies**, plus generating fresh Stello 5.0/6.0 self-play / WTHOR training data.
 - **Direct external opponent harnesses:** Add native C Edax (`engine=edax`) and native C++ Egaroucid (`engine=egaroucid-cpp`) match/benchmark support in `Stello.Benchmark` alongside `stello-v5`/`stello-v4`/`stello-v3`/`stello-v2`/`egaroucid`.
+- **Upgraded 6.0 match start suite (`starts-v6.txt`):** Keep legacy `Data/starts.txt` (590 starts) untouched for historical 2.0–5.0 reproducibility, and generate a prefix-free, `v5`-balanced suite `Data/starts-v6.txt` from the 6,000-position `v5` master book (`--plies 10-14 --max-value 220 --prefix-free` → `587` starts / `1,174` games, or `--max-value 200` → `528` starts / `1,056` games) with 0 % ancestor–descendant prefix overlap and all positions within `±2.00–2.20` discs by 60-second Stello 5.0 search.
 - **Feature scope:** Stay focused on playing strength and bug fixes, plus closely related high-value book/engine items (including varied book play from [Opening book improvment.md](Opening%20book%20improvment.md) Phase 4).
 - **Phase order:** Speed stays strictly node-identical first (Phase 2), then pure threading overhead fixes & Helpful Master (Phase 3), then Unified TT + midgame search (Phase 4), then Endgame closing the 2.21× FFO gap + re-tuning Phase 3 split thresholds once TT is warm (Phase 5), then Evaluation (Phase 6), then Opening Book (Phase 7), then Release (Phase 8).
 - **Primary machine:** AMD Ryzen 7 7800X3D (8 physical cores / 16 logical threads, Zen 4, 96 MB L3, AVX-512VL/CD/DQ/VNNI) + NVIDIA GeForce RTX 4080 (Windows x64).
@@ -30,10 +35,10 @@ This plan is in `Plans/making-stello-6-0-plan.md`. Its findings document, `Plans
 - **Matches and long runs:** start only on the user's go, from a numbered list with time estimates. Check CPU idle state first, run nothing heavy at the same time, and keep the per-game lines in `.games.jsonl` (`--resume` supported).
 - **A/B switches:** each experimental engine change in Phases 3–6 sits behind a temporary `SearchOptions` switch (`Stello.Cpp/src/search/options.hpp`, FFI setter if needed or `opt=<key>=<value>` in `Stello.Benchmark`). As soon as a change's match gate passes or fails, its switch is removed immediately: a kept change stays as the only code, and a rejected change is reverted cleanly.
   - A correctness fix (Phase 1) is kept unless measurement shows it makes the engine play worse ("not worse" — upper bound of the 95 % interval > 50 %).
-  - A change that claims to make the engine stronger must show a gain (lower bound > 50 % at 500 ms, 1,180 games, confirmed at 2 s, 600 games).
+  - A change that claims to make the engine stronger must show a gain (lower bound > 50 % at 500 ms across all `starts-v6.txt` pairs, confirmed at 2 s on 600 games / `--max-starts 300`).
   - When a kept change alters node counts, `Stello.Net/Stello.Engine.Tests/Data/stello-v3-signatures.txt` (or the 6.0 signature file) and C++/WASM parity fixtures are regenerated with a note in their header and the findings, keeping strict node-for-node regression tests enforced.
 - **Gates:**
-  - For a change that alters play: a 500 ms match of 1,180 games against the previous default (`--workers 8` at 1 thread on the 7800X3D, `--workers 1` at 8 threads), confirmed at 2 s (600 games, `--max-starts 300`), plus periodic progress matches against native C++ Egaroucid (`egaroucid-cpp`) and native C Edax (`edax`).
+  - For a change that alters play: a 500 ms match on `starts-v6.txt` (`587` pairs = `1,174` games at `--max-value 220`, or `528` pairs = `1,056` games at `--max-value 200`) against the previous default (`--workers 8` at 1 thread on the 7800X3D, `--workers 1` at 8 threads), confirmed at 2 s (`600` games, `--max-starts 300`), plus periodic progress matches against native C++ Egaroucid (`egaroucid-cpp`) and native C Edax (`edax`).
   - For a change that only alters speed (Phase 2): `mid-bench` and `solve-bench --compare` against the Phase 1 baseline, with 100 % identical moves, scores, depths and node counts across `--cpu portable`, `--cpu v3`, and `--cpu auto` (`v4`).
   - All tests pass with 0 compiler/MSBuild warnings: C++ presets (`clang-release`, `clang-native`, `msvc-release`, `msvc-native`, `clang-sanitized`), `Stello.Engine.Tests`, `Egaroucid.Engine.Tests`, `Stello.Net.Tests`, and the WASM Node tests (`19/19`).
 - **Git:**
@@ -60,10 +65,24 @@ This plan is in `Plans/making-stello-6-0-plan.md`. Its findings document, `Plans
    - **Why a thin runner:** Stock `Egaroucid_for_Console` has no millisecond `TimePerMove` mode (`command.hpp:220-237` only supports `TimePerGame` in integer seconds and fixed `level`), `gtp_command.hpp` ignores `-time` and does not clear TT on `clear_board`, and `egaroucid_c_api.cpp:263` ignores `time_limit_ms` — even though `Egaroucid-main/src/engine/ai.hpp:297,670` already implements millisecond `iterative_deepening_search_time_limit`;
    - create a standalone ~60-line C++ driver in `Stello.Net/tools/Egaroucid.Runner/` (next to `Egaroucid.Reference/`, zero edits to `Egaroucid-main/`) that `#include`s `Egaroucid-main/src/engine/engine_all.hpp` and speaks a minimal 4-command bitboard stdin/stdout protocol (`init <threads> <hashBits> <resourceDir>`, `clear`, `go <ownHex> <oppHex> movetime <ms> | gametime <ms> | level <N> | solve`, `quit`), returning `bestmove <sq> score <v> depth <d> prob <p> end <0|1> nodes <n> ms <t>`;
    - add a persistent per-worker subprocess `IMatchPlayer` (`engine=egaroucid-cpp`) and `solve-bench`/`mid-bench` support in `Stello.Benchmark`.
-5. **Initial 6.0-start external baselines (on user's go):**
-   - record Stello 5.0 vs `egaroucid-cpp` and vs `edax` at 500 ms and 2 s (1t and 8t, no book), plus same-machine FFO `#40–49` and `#50–59` timings.
+5. **Prefix-free, `v5`-balanced match start suite (`starts-v6.txt` & `make-starts --prefix-free`):**
+   - **Why upgrade:** Legacy `Stello.Net/tools/Stello.Benchmark/Data/starts.txt` (590 positions, plies 10–12) was filtered by Stello 1.0's evaluation (`|v1| <= 40`). Under Stello 5.0's 60-second searches, `93 / 590` (`15.8 %`) are unbalanced by `> ±4.00` discs (up to `±9.00` discs, producing `76–100 %` automatic `1–1` color sweeps at 2 s), `363 / 590` (`61.5 %`) have their 1-ply parent or 2-ply grandparent also in `starts.txt` (`221` linked directly by Stello 5.0's #1 best move, causing `21–27 %` duplicate games in 1t matches), and `418 / 590` were pruned from the `v5` opening book.
+   - **How to build `starts-v6.txt` (`MatchCommands.MakeStarts` in `Stello.Net/tools/Stello.Benchmark/MatchCommands.cs`):**
+     1. Add `--prefix-free` to `Stello.Benchmark make-starts`: after selecting all canonical book lines from `Stello.Net/Book/opening-book.txt` within `--plies <from-to>` whose 60-second `v5` best-move score satisfies `|value| <= --max-value` (in `1/100` disc units), remove any candidate whose key is a move-prefix (ancestor) of another candidate in the set (keeping the deepest qualifying node along each branch so **0 %** of starts lie on the same ancestor–descendant line).
+     2. Generate `Stello.Net/tools/Stello.Benchmark/Data/starts-v6.txt` from the 6,000-position `v5` master book using `--plies 10-14 --max-value 220 --prefix-free` (**`587` starts / `1,174` games**, matching the ~590-pair scale of `starts.txt`; or `--max-value 200` for **`528` starts / `1,056` games** within `±2.00` discs), shuffled deterministically with `new Random(1)` so `--max-starts 300` (`600` games) mixes plies 10–14 and opening families evenly.
+     3. Keep `Data/starts.txt` untouched for `BenchmarkTests.cs` (`StartFile_HoldsDistinctLegalLines`, which asserts plies 10–12) and historical 2.0–5.0 cross-checks; copy `Data/starts-v6.txt` to the benchmark output directory (`Stello.Benchmark.csproj`), use `starts-v6.txt` for all Stello 6.0 gate and final matches, and add a unit test in `BenchmarkTests.cs` verifying that every position in `starts-v6.txt` is legal, canonical-unique, within `±maxValue`, in `opening-book.txt`, and strictly prefix-free.
+6. **Initial `starts-v6.txt` historical & external baselines (all `587` starts = `1,174` games per match, `book=off`, on user's go):**
+   - To give a clean view of Stello's development across each distinct algorithmic generation on `starts-v6.txt` (plus the real native external targets for 6.0), record full `1,174`-game baseline matches (`all 587 starts`, no `--max-starts` truncation; multi-threaded `8t` runs only for engines that support multi-threading):
+     - **Historical Stello lineage (`Stello 5.0` vs earlier distinct generations on `starts-v6.txt`):**
+       - vs **`Stello 4.0` (`engine=stello-v4`, C++20):** `1t` (`--workers 8`) and `8t` (`--workers 1`) *(represents the 3.0/3.1/4.0 `plus15 × 10` search-and-eval generation at C++20 speed, making separate `stello-v3` matches redundant)*
+       - vs **`Stello 2.0` (`engine=stello-v2`, C#):** `1t` only (`--workers 8`; single-threaded C# pattern/solver engine)
+       - vs **`Stello 1.0` (`engine=stello-v1`, frozen C# port of the original 1992 C++ engine, `V1MatchPlayer`):** `1t` only (`--workers 8`; single-threaded engine)
+     - **External reference engines (`Stello 5.0` vs native C/C++ external engines on `starts-v6.txt`):**
+       - vs **native C++ Egaroucid (`engine=egaroucid-cpp`):** `1t` (`--workers 8`) and `8t` (`--workers 1`) *(replaces the single-threaded C# `egaroucid` port with the real native C++ engine)*
+       - vs **native C Edax (`engine=edax`):** `1t` (`--workers 8`) and `8t` (`--workers 1`)
+     - Plus same-machine FFO `#40–49` and `#50–59` `solve-bench` timings (`1t` and `8t`) against `stello-v4`, `egaroucid-cpp`, and `edax`.
 
-**Gate P0:** `engine=stello-v5`, `engine=edax`, and `engine=egaroucid-cpp` pass unit tests and smoke matches with clean subprocess teardown; `v5.0-ref/` JSONs and external baselines are recorded; all existing test suites pass with 0 warnings.
+**Gate P0:** `engine=stello-v5`, `engine=edax`, `engine=egaroucid-cpp`, and `starts-v6.txt` (`make-starts --prefix-free`) pass unit tests and smoke matches with clean subprocess teardown; `v5.0-ref/` JSONs and the full `starts-v6.txt` historical (`v4`, `v2`, `v1`) and native external (`egaroucid-cpp`, `edax`) baseline matches are recorded; all existing test suites pass with 0 warnings.
 
 ---
 
@@ -321,8 +340,16 @@ Stello 5.0's `egaroucid16 + mobility` × 60 (Format v3) already beats Egaroucid'
 ---
 
 ## Phase 8: the Stello 6.0 release
-- **Final matches** (each run one at a time on the user's go):
-  - Stello 6.0 vs Stello 5.0 (`engine=stello-v5`), Stello 4.0 (`engine=stello-v4`), **native C++ Egaroucid (`engine=egaroucid-cpp`)**, and **native C Edax (`engine=edax`)** at 100 ms, 500 ms, and 2 s, with 1 and 8 threads, plus `solve-bench` on FFO `#40–49` and `#50–59` head-to-head against Stello 5.0, native Egaroucid, and native Edax.
+- **Final matches on all `587` starts (`1,174` games per match, `starts-v6.txt`, `book=off`, each run one at a time on the user's go):**
+  - **Historical Stello lineage (`100 ms`, `500 ms`, and `2,000 ms`; `8t` only where supported):**
+    - Stello 6.0 vs **Stello 5.0 (`engine=stello-v5`):** `1t` and `8t`
+    - Stello 6.0 vs **Stello 4.0 (`engine=stello-v4`):** `1t` and `8t`
+    - Stello 6.0 vs **Stello 2.0 (`engine=stello-v2`):** `1t` only
+    - Stello 6.0 vs **Stello 1.0 (`engine=stello-v1`, original 1992 C++ logic):** `1t` only
+  - **External reference engines (`100 ms`, `500 ms`, and `2,000 ms`; `1t` and `8t`):**
+    - Stello 6.0 vs **native C++ Egaroucid (`engine=egaroucid-cpp`):** `1t` and `8t`
+    - Stello 6.0 vs **native C Edax (`engine=edax`):** `1t` and `8t`
+  - **Endgame `solve-bench`:** FFO `#40–49` and `#50–59` (`1t` and `8t`) head-to-head against Stello 5.0, Stello 4.0, native C++ Egaroucid, and native C Edax.
 - **Version 6.0:**
   - bump `Stello.Cpp/CMakeLists.txt` and `Stello.Cpp/src/core/version.hpp` to `6.0.0` (`stello_version() = 60000`), `AboutInfo.cs` to `"Stello Version 6.0"`, and update version/parity tests.
 - **Documentation:**
@@ -336,16 +363,16 @@ Stello 5.0's `egaroucid16 + mobility` × 60 (Format v3) already beats Egaroucid'
 ## Verification summary
 | Phase | Check |
 |---|---|
-| 0 | `engine=stello-v5`, `engine=edax` (`-xboard`), and `engine=egaroucid-cpp` (`Egaroucid.Runner`) pass unit tests & smoke matches with clean `IDisposable` teardown; `v5.0-ref/` & external baselines recorded |
+| 0 | `engine=stello-v5`, `engine=edax` (`-xboard`), `engine=egaroucid-cpp` (`Egaroucid.Runner`), and prefix-free `starts-v6.txt` (`587` starts) pass unit tests & smoke matches with clean `IDisposable` teardown; `v5.0-ref/` JSONs plus full `1,174`-game `starts-v6.txt` historical (`v4`, `v2`, `v1`) and native external (`egaroucid-cpp`, `edax`) baselines recorded |
 | 1 | Regression tests for all 19 confirmed bugs (6 C++, 13 .NET/Web/CLI) + 14 defensive items; all 5 C++ presets (incl. `clang-sanitized`), `.NET` tests, and WASM Node tests pass with 0 warnings |
 | 2 | 100 % node-identical to Phase 1 on all parity sets (`--cpu portable`, `--cpu v3`, `--cpu auto`/`v4`, `zmm = 0`); faster in `.NET` FFI (`mid-bench`, `solve-bench`) and WASM |
 | 3 | Faster 8t/16t FFO & `mid-bench d16` with lower node inflation; 8t matches beat Phase 2 at 500 ms & 2 s; ASan+UBSan and multi-thread stress tests clean |
-| 4–6 | Per item: 500 ms (1,180g) lower bound > 50 %, confirmed at 2 s (600g); FFO `#40–59` 100 % exact & targeting `< 650M` 1t nodes on `#40–49`; lower MAE/RMSE on both test splits; desktop & WASM bundle/RAM within budget |
+| 4–6 | Per item: 500 ms (`1,174`g on `starts-v6.txt`) lower bound > 50 %, confirmed at 2 s (`600`g); FFO `#40–59` 100 % exact & targeting `< 650M` 1t nodes on `#40–49`; lower MAE/RMSE on both test splits; desktop & WASM bundle/RAM within budget |
 | 7 | `v6` book beats `v5` book at 500 ms; varied-play tests pass; `Stello.BookTool verify` 0 warnings/errors; web book & `localStorage` size verified |
-| 8 | Final matches vs Stello 5.0, Stello 4.0, native C++ Egaroucid, and native C Edax; Chapter 30 & Part 1 docs updated; 0 broken links; live site check |
+| 8 | Full `1,174`-game final matches on `starts-v6.txt` vs Stello 5.0 (`1t`/`8t`), Stello 4.0 (`1t`/`8t`), Stello 2.0 (`1t`), Stello 1.0 (`1t`), native C++ Egaroucid (`1t`/`8t`), and native C Edax (`1t`/`8t`); Chapter 30 & Part 1 docs updated; 0 broken links; live site check |
 
 **Tools:**
-- `Stello.Benchmark` `mid-bench` / `solve-bench --compare`, `match` (`--resume`, `opt=`, `threads=`, `engine=stello-v5|stello-v4|stello-v3|stello-v2|egaroucid|egaroucid-cpp|edax`);
+- `Stello.Benchmark` `mid-bench` / `solve-bench --compare`, `match` (`--resume`, `opt=`, `threads=`, `engine=stello-v5|stello-v4|stello-v3|stello-v2|stello-v1|egaroucid|egaroucid-cpp|edax`);
 - `ctest --preset clang-release|clang-native|msvc-release|msvc-native|clang-sanitized --output-on-failure`;
 - `dotnet test Stello.Net/Stello.Net.slnx -c Release` (`Stello.Engine.Tests`, `Egaroucid.Engine.Tests`, `Stello.Net.Tests`);
 - `node --test Stello.Cpp/tests/wasm/engine.test.mjs Stello.Cpp/tests/wasm/engine-mt.test.mjs`;
