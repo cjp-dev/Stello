@@ -17,7 +17,7 @@ Working notes, benchmark baselines, and gate records for [making-stello-6-0-plan
 
 ## Phase 0 — Set-up, the 5.0 Baseline, and Native External Match Harnesses
 
-*(Items 1–5, `v5.0-ref/` benchmarks, WASM 5.0 ST/MT baseline, and external FFO `#40–59` benchmarks completed; `starts-v6.txt` baseline matches paused after Match #18 pending user go for the remaining 12 matches.)*
+*(Items 1–5, `v5.0-ref/` benchmarks, WASM 5.0 ST/MT baseline, and external FFO `#40–59` benchmarks completed; `starts-v6.txt` baseline matches `#1`–`#26` completed and paused after Match `#26` pending user go for the remaining 4 `2,000 ms 8t` matches `#27`–`#30`.)*
 
 ### 1. Preserved 5.0 Reference Engine (`stello-v5`)
 
@@ -165,7 +165,7 @@ Defaults: `hash-bits=19` for Stello (`stello`, `stello-v4`) and `hash-bits=21` f
 
 ### 6. Phase 0 Baseline Matches (`starts-v6.txt`, `1,174` Games Each, `book=off`, Side B = `Stello 5.0`)
 
-*(Running Batch 1–8 matches `#19`–`#26` sequentially; Matches `#27`–`#30` paused after `#26`.)*
+*(Paused after Match `#26` per user request; 4 remaining `2,000 ms 8t` matches `#27`–`#30` pending user go.)*
 
 | # | Opponent | Time | Threads | Score (95 % CI) | W / D / L | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | NPS (A / B) | Wall Time |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
@@ -194,6 +194,7 @@ Defaults: `hash-bits=19` for Stello (`stello`, `stello-v4`) and `hash-bits=21` f
 | 23 | `Egaroucid` (`egaroucid-cpp`) | 2,000 ms | 1t | **42.2 %** (40.1–44.2 %) | `+348 =294 −532` | **−55** (−70 to −40) | 0.0 % | −0.6 ± 0.2 | 25.90 / 23.00 | 24.8 / 25.0 | 17.13M / 21.02M | [1h 46m](benchmark-results/match_p0_v5_vs_egaroucid_cpp_2000ms_1t.md) |
 | 24 | `Edax` (`edax`) | 2,000 ms | 1t | **37.5 %** (35.5–39.5 %) | `+287 =306 −581` | **−89** (−104 to −74) | 0.0 % | −1.0 ± 0.2 | 29.39 / 23.04 | 25.6 / 25.0 | 43.83M / 21.15M | [1h 45m](benchmark-results/match_p0_v5_vs_edax_2000ms_1t.md) |
 | 25 | `Edax AVX` (`edax-avx`) | 2,000 ms | 1t | **37.0 %** (35.0–38.9 %) | `+275 =318 −581` | **−93** (−108 to −78) | 0.0 % | −1.0 ± 0.1 | 29.60 / 23.17 | 25.7 / 25.0 | 47.33M / 22.43M | [1h 45m](benchmark-results/match_p0_v5_vs_edax_avx_2000ms_1t.md) |
+| 26 | `Edax AVX` (`edax-avx`) | 500 ms | 8t | **37.1 %** (35.2–39.1 %) | `+289 =294 −591` | **−91** (−106 to −77) | 0.0 % | −0.9 ± 0.1 | 29.65 / 23.79 | 26.2 / 25.5 | 307.02M / 147.83M | [3h 23m](benchmark-results/match_p0_v5_vs_edax_avx_500ms_8t.md) |
 
 ### 7. Test Verification (Phase 0 Setup Complete, Matches Paused After #18)
 
