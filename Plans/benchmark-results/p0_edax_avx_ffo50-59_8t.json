@@ -1,0 +1,111 @@
+{
+  "Command": "solve-bench",
+  "Date": "2026-11-23 09:16",
+  "ProcessorCount": 16,
+  "Limits": "solve, 8 threads",
+  "HashBits": 21,
+  "Passes": 1,
+  "Results": [
+    {
+      "Id": "50",
+      "Empties": 26,
+      "Move": "d8",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 26,
+      "Nodes": 939821779,
+      "Ms": 1672.5288
+    },
+    {
+      "Id": "51",
+      "Empties": 27,
+      "Move": "e2",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 27,
+      "Nodes": 291795960,
+      "Ms": 502.3568
+    },
+    {
+      "Id": "52",
+      "Empties": 27,
+      "Move": "a3",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 27,
+      "Nodes": 621117139,
+      "Ms": 1009.8742
+    },
+    {
+      "Id": "53",
+      "Empties": 28,
+      "Move": "d8",
+      "Score": -2,
+      "Kind": "Exact",
+      "Depth": 28,
+      "Nodes": 2531098599,
+      "Ms": 3861.2335
+    },
+    {
+      "Id": "54",
+      "Empties": 28,
+      "Move": "c7",
+      "Score": -2,
+      "Kind": "Exact",
+      "Depth": 28,
+      "Nodes": 3685822132,
+      "Ms": 5431.9763
+    },
+    {
+      "Id": "55",
+      "Empties": 29,
+      "Move": "g6",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 29,
+      "Nodes": 11835870631,
+      "Ms": 17488.4866
+    },
+    {
+      "Id": "56",
+      "Empties": 29,
+      "Move": "h5",
+      "Score": 2,
+      "Kind": "Exact",
+      "Depth": 29,
+      "Nodes": 1243478653,
+      "Ms": 1890.6874
+    },
+    {
+      "Id": "57",
+      "Empties": 30,
+      "Move": "a6",
+      "Score": -10,
+      "Kind": "Exact",
+      "Depth": 30,
+      "Nodes": 1655177653,
+      "Ms": 3652.2476
+    },
+    {
+      "Id": "58",
+      "Empties": 30,
+      "Move": "g1",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 30,
+      "Nodes": 1730746904,
+      "Ms": 2960.7383
+    },
+    {
+      "Id": "59",
+      "Empties": 34,
+      "Move": "g8",
+      "Score": 64,
+      "Kind": "Exact",
+      "Depth": 34,
+      "Nodes": 916455,
+      "Ms": 17.1731
+    }
+  ],
+  "Engine": "edax-avx"
+}

@@ -1,0 +1,111 @@
+{
+  "Command": "solve-bench",
+  "Date": "2026-11-23 08:59",
+  "ProcessorCount": 16,
+  "Limits": "solve, 8 threads",
+  "HashBits": 19,
+  "Passes": 1,
+  "Results": [
+    {
+      "Id": "40",
+      "Empties": 20,
+      "Move": "a2",
+      "Score": 38,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 13814586,
+      "Ms": 36.6575
+    },
+    {
+      "Id": "41",
+      "Empties": 22,
+      "Move": "h4",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 17963286,
+      "Ms": 46.236
+    },
+    {
+      "Id": "42",
+      "Empties": 22,
+      "Move": "g2",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 37653626,
+      "Ms": 97.3308
+    },
+    {
+      "Id": "43",
+      "Empties": 23,
+      "Move": "c7",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 59081797,
+      "Ms": 171.2141
+    },
+    {
+      "Id": "44",
+      "Empties": 23,
+      "Move": "d2",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 18561481,
+      "Ms": 62.2694
+    },
+    {
+      "Id": "45",
+      "Empties": 24,
+      "Move": "b2",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 344202782,
+      "Ms": 825.6915
+    },
+    {
+      "Id": "46",
+      "Empties": 24,
+      "Move": "b3",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 116753862,
+      "Ms": 324.9059
+    },
+    {
+      "Id": "47",
+      "Empties": 25,
+      "Move": "g2",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 25,
+      "Nodes": 34317752,
+      "Ms": 125.5247
+    },
+    {
+      "Id": "48",
+      "Empties": 25,
+      "Move": "f6",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 25,
+      "Nodes": 300144131,
+      "Ms": 855.13
+    },
+    {
+      "Id": "49",
+      "Empties": 26,
+      "Move": "e1",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 26,
+      "Nodes": 228086576,
+      "Ms": 568.6
+    }
+  ],
+  "Engine": "stello"
+}

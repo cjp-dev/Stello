@@ -1,0 +1,111 @@
+{
+  "Command": "solve-bench",
+  "Date": "2026-11-23 09:11",
+  "ProcessorCount": 16,
+  "Limits": "solve",
+  "HashBits": 21,
+  "Passes": 1,
+  "Results": [
+    {
+      "Id": "40",
+      "Empties": 20,
+      "Move": "a2",
+      "Score": 38,
+      "Kind": "Exact",
+      "Depth": 20,
+      "Nodes": 10099937,
+      "Ms": 123.0155
+    },
+    {
+      "Id": "41",
+      "Empties": 22,
+      "Move": "h4",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 22491689,
+      "Ms": 236.0952
+    },
+    {
+      "Id": "42",
+      "Empties": 22,
+      "Move": "g2",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 22,
+      "Nodes": 25272713,
+      "Ms": 315.7377
+    },
+    {
+      "Id": "43",
+      "Empties": 23,
+      "Move": "g3",
+      "Score": -12,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 68529926,
+      "Ms": 902.7024
+    },
+    {
+      "Id": "44",
+      "Empties": 23,
+      "Move": "b8",
+      "Score": -14,
+      "Kind": "Exact",
+      "Depth": 23,
+      "Nodes": 19789313,
+      "Ms": 274.8942
+    },
+    {
+      "Id": "45",
+      "Empties": 24,
+      "Move": "b2",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 265606909,
+      "Ms": 3194.6381
+    },
+    {
+      "Id": "46",
+      "Empties": 24,
+      "Move": "b3",
+      "Score": -8,
+      "Kind": "Exact",
+      "Depth": 24,
+      "Nodes": 57783117,
+      "Ms": 649.3217
+    },
+    {
+      "Id": "47",
+      "Empties": 25,
+      "Move": "g2",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 25,
+      "Nodes": 15035437,
+      "Ms": 175.6788
+    },
+    {
+      "Id": "48",
+      "Empties": 25,
+      "Move": "f6",
+      "Score": 28,
+      "Kind": "Exact",
+      "Depth": 25,
+      "Nodes": 140452330,
+      "Ms": 1761.8336
+    },
+    {
+      "Id": "49",
+      "Empties": 26,
+      "Move": "e1",
+      "Score": 16,
+      "Kind": "Exact",
+      "Depth": 26,
+      "Nodes": 308212860,
+      "Ms": 3862.0286
+    }
+  ],
+  "Engine": "edax-avx"
+}

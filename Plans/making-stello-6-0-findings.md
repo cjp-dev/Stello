@@ -17,7 +17,7 @@ Working notes, benchmark baselines, and gate records for [making-stello-6-0-plan
 
 ## Phase 0 — Set-up, the 5.0 Baseline, and Native External Match Harnesses
 
-*(Items 1–5 completed and verified; `v5.0-ref/` benchmarks and `starts-v6.txt` historical/external baseline matches pending user go.)*
+*(Items 1–5, `v5.0-ref/` benchmarks, WASM 5.0 ST/MT baseline, and external FFO `#40–59` benchmarks completed; `starts-v6.txt` baseline matches paused after Match #18 pending user go for the remaining 12 matches.)*
 
 ### 1. Preserved 5.0 Reference Engine (`stello-v5`)
 
@@ -87,9 +87,85 @@ Working notes, benchmark baselines, and gate records for [making-stello-6-0-plan
 | `eval_after_move` | `161.49 < 162.96 ± 0.82 < 165.29` | `204.45 < 206.19 ± 0.97 < 211.19` | `71bce48810567f00` |
 | `eval_advance` | `27.75 < 28.60 ± 0.38 < 29.23` | `70.33 < 72.30 ± 4.41 < 105.77` | `71bce48dc4d33360` |
 
+### 5C. Stello 5.0 Reference Benchmarks (`Plans/benchmark-results/v5.0-ref/`)
+
+Recorded on idle CPU (`hash-bits=19`, `stello` / `50000`, all FFO and random-endgame solves verified 100 % exact):
+
+| Benchmark | Positions | Limits | Threads | Passes | Nodes | Time | Speed | Scaling vs 1t | File |
+|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| `midgame-depth10` | 100 | depth 10 | 1 | 3 | 3,083,842 | 0.237 s | 13.02M nps | — | [midgame-depth10.json](benchmark-results/v5.0-ref/midgame-depth10.json) |
+| `midgame-depth12` | 100 | depth 12 | 1 | 3 | 8,120,201 | 0.631 s | 12.86M nps | — | [midgame-depth12.json](benchmark-results/v5.0-ref/midgame-depth12.json) |
+| `midgame-depth14` | 100 | depth 14 | 1 | 3 | 22,875,227 | 1.780 s | 12.85M nps | — | [midgame-depth14.json](benchmark-results/v5.0-ref/midgame-depth14.json) |
+| `midgame-depth16` | 100 | depth 16 | 1 | 3 | 60,566,022 | 4.549 s | 13.31M nps | 1.00× | [midgame-depth16.json](benchmark-results/v5.0-ref/midgame-depth16.json) |
+| `midgame-depth16-8t` | 100 | depth 16 | 8 | 3 | 83,837,665 | 1.526 s | 54.95M nps | 2.98× (+38.4 % nodes) | [midgame-depth16-8t.json](benchmark-results/v5.0-ref/midgame-depth16-8t.json) |
+| `midgame-depth16-16t` | 100 | depth 16 | 16 | 3 | 99,072,287 | 1.426 s | 69.50M nps | 3.19× (+63.6 % nodes) | [midgame-depth16-16t.json](benchmark-results/v5.0-ref/midgame-depth16-16t.json) |
+| `midgame-random-depth8` | 1,000 | depth 8 | 1 | 3 | 8,699,892 | 0.640 s | 13.59M nps | — | [midgame-random-depth8.json](benchmark-results/v5.0-ref/midgame-random-depth8.json) |
+| `midgame-handover-depth12` | 300 | depth 12 | 1 | 3 | 303,631,734 | 4.531 s | 67.02M nps | — | [midgame-handover-depth12.json](benchmark-results/v5.0-ref/midgame-handover-depth12.json) |
+| `ffo-40-49` | 10 | solve | 1 | 1 | 1,070,469,669 | 16.664 s | 64.24M nps | 1.00× | [ffo-40-49.json](benchmark-results/v5.0-ref/ffo-40-49.json) |
+| `ffo-40-49-8t` | 10 | solve | 8 | 1 | 1,170,579,879 | 3.114 s | 375.96M nps | 5.35× (+9.4 % nodes) | [ffo-40-49-8t.json](benchmark-results/v5.0-ref/ffo-40-49-8t.json) |
+| `ffo-40-49-16t` | 10 | solve | 16 | 1 | 1,258,992,039 | 2.629 s | 478.91M nps | 6.34× (+17.6 % nodes) | [ffo-40-49-16t.json](benchmark-results/v5.0-ref/ffo-40-49-16t.json) |
+| `ffo-50-59-8t` | 10 | solve | 8 | 1 | 37,576,557,005 | 105.095 s | 357.55M nps | 5.33× (+23.1 % nodes)* | [ffo-50-59-8t.json](benchmark-results/v5.0-ref/ffo-50-59-8t.json) |
+| `ffo-50-59-16t` | 10 | solve | 16 | 1 | 42,951,931,459 | 93.144 s | 461.14M nps | 6.01× (+40.8 % nodes)* | [ffo-50-59-16t.json](benchmark-results/v5.0-ref/ffo-50-59-16t.json) |
+| `endgame-random-14-24` | 500 | solve | 1 | 1 | 27,755,239,908 | 364.674 s | 76.11M nps | — | [endgame-random-14-24.json](benchmark-results/v5.0-ref/endgame-random-14-24.json) |
+
+\* `ffo-50-59` 8t/16t scaling is computed against the identical-binary 2026-11-22 Stello 5.0 1t reference ([p7_v5_ffo50-59_1t.json](benchmark-results/p7_v5_ffo50-59_1t.json): `30,513,267,013` nodes, `559.648 s`).
+
+### 5D. WebAssembly 5.0 ST/MT Baseline
+
+- **Artifact sizes (raw / gzip / brotli):**
+  - `Stello.Web/wwwroot/engine/stello_wasm.js`: `10,423` / `2,726` / `2,433` B
+  - `Stello.Web/wwwroot/engine/stello_wasm_bg.wasm`: `9,136,543` / `8,974,551` / `8,954,923` B
+  - `Stello.Web/wwwroot/engine-mt/stello_wasm.js`: `10,423` / `2,726` / `2,433` B
+  - `Stello.Web/wwwroot/engine-mt/stello_wasm_bg.wasm`: `9,167,007` / `8,985,554` / `8,964,314` B
+- **Node.js `v24.19.0` benchmarks (`hash-bits=19`, `3` passes midgame, `2` passes `ffo-40-44`, all exact; reported as `best-per-pos sum / median pass`):**
+
+| Variant | `mid-d10` (100 pos) | `mid-d12` (100 pos) | `ffo-40-44` (5 pos) |
+|---|---|---|---|
+| `ST 1t` (`engine`) | `3,083,842` nodes, `376.3 / 384.9 ms` (`8.20M / 8.01M` nps) | `8,120,201` nodes, `992.1 / 999.1 ms` (`8.18M / 8.13M` nps) | `122,045,591` nodes, `2995.1 / 3000.1 ms` (`40.75M / 40.68M` nps) |
+| `MT 1t` (`engine-mt`) | `3,083,842` nodes, `385.8 / 391.2 ms` (`7.99M / 7.88M` nps) | `8,120,201` nodes, `1022.2 / 1027.9 ms` (`7.94M / 7.90M` nps) | `122,045,591` nodes, `3003.5 / 3018.9 ms` (`40.63M / 40.43M` nps) |
+| `MT 4t` (`engine-mt`) | `5,031,656` nodes, `291.1 / 302.9 ms` (`17.29M / 16.61M` nps) | `12,583,610` nodes, `649.4 / 679.8 ms` (`19.38M / 18.51M` nps) | `139,599,178` nodes, `1106.2 / 1129.3 ms` (`126.19M / 123.62M` nps) |
+
+### 5E. Same-Machine FFO `#40–49` and `#50–59` Comparisons (`solve-bench`, 1 Pass, All Exact)
+
+Defaults: `hash-bits=19` for Stello (`stello`, `stello-v4`) and `hash-bits=21` for external engines (`egaroucid-cpp`, `edax`, `edax-avx`).
+
+#### FFO `#40–49` (`10` positions)
+
+| Engine | Threads | Hash Bits | Total Nodes | Total Time | Nodes/s | Scaling vs 1t | File |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `Stello 5.0` (`stello`) | 1 | 19 | 1,070,469,669 | 16.664 s | 64.24M | 1.00× | [ffo-40-49.json](benchmark-results/v5.0-ref/ffo-40-49.json) |
+| `Stello 4.0` (`stello-v4`) | 1 | 19 | 1,115,666,701 | 23.409 s | 47.66M | 1.00× | [p0_v4_ffo40-49_1t.json](benchmark-results/p0_v4_ffo40-49_1t.json) |
+| `Egaroucid` (`egaroucid-cpp`) | 1 | 21 | **512,627,776** | **9.470 s** | 54.13M | 1.00× | [p0_egaroucid_cpp_ffo40-49_1t.json](benchmark-results/p0_egaroucid_cpp_ffo40-49_1t.json) |
+| `Edax` (`edax`) | 1 | 21 | 939,357,096 | 11.906 s | 78.90M | 1.00× | [p0_edax_ffo40-49_1t.json](benchmark-results/p0_edax_ffo40-49_1t.json) |
+| `Edax AVX` (`edax-avx`) | 1 | 21 | 933,274,231 | 11.496 s | **81.18M** | 1.00× | [p0_edax_avx_ffo40-49_1t.json](benchmark-results/p0_edax_avx_ffo40-49_1t.json) |
+| `Stello 5.0` (`stello`) | 8 | 19 | 1,170,579,879 | 3.114 s | 375.96M | 5.35× (+9.4 % nodes) | [ffo-40-49-8t.json](benchmark-results/v5.0-ref/ffo-40-49-8t.json) |
+| `Stello 4.0` (`stello-v4`) | 8 | 19 | 1,625,810,698 | 6.385 s | 254.63M | 3.67× (+45.7 % nodes) | [p0_v4_ffo40-49_8t.json](benchmark-results/p0_v4_ffo40-49_8t.json) |
+| `Egaroucid` (`egaroucid-cpp`) | 8 | 21 | **728,998,978** | 2.380 s | 306.28M | 3.98× (+42.2 % nodes) | [p0_egaroucid_cpp_ffo40-49_8t.json](benchmark-results/p0_egaroucid_cpp_ffo40-49_8t.json) |
+| `Edax` (`edax`) | 8 | 21 | 1,014,232,221 | 2.158 s | 469.99M | 5.52× (+8.0 % nodes) | [p0_edax_ffo40-49_8t.json](benchmark-results/p0_edax_ffo40-49_8t.json) |
+| `Edax AVX` (`edax-avx`) | 8 | 21 | 987,761,820 | **2.034 s** | **485.57M** | 5.65× (+5.8 % nodes) | [p0_edax_avx_ffo40-49_8t.json](benchmark-results/p0_edax_avx_ffo40-49_8t.json) |
+| `Stello 5.0` (`stello`) | 16 | 19 | 1,258,992,039 | 2.629 s | 478.91M | 6.34× (+17.6 % nodes) | [ffo-40-49-16t.json](benchmark-results/v5.0-ref/ffo-40-49-16t.json) |
+
+#### FFO `#50–59` (`10` positions)
+
+| Engine | Threads | Hash Bits | Total Nodes | Total Time | Nodes/s | Scaling vs 1t | File |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `Stello 5.0` (`stello`)* | 1 | 19 | 30,513,267,013 | 559.648 s | 54.52M | 1.00× | [p7_v5_ffo50-59_1t.json](benchmark-results/p7_v5_ffo50-59_1t.json) |
+| `Stello 4.0` (`stello-v4`)* | 1 | 19 | 25,419,468,677 | 586.495 s | 43.34M | 1.00× | [p7_v4_ffo50-59_1t.json](benchmark-results/p7_v4_ffo50-59_1t.json) |
+| `Egaroucid` (`egaroucid-cpp`) | 1 | 21 | **15,543,366,497** | 325.701 s | 47.72M | 1.00× | [p0_egaroucid_cpp_ffo50-59_1t.json](benchmark-results/p0_egaroucid_cpp_ffo50-59_1t.json) |
+| `Edax` (`edax`) | 1 | 21 | 24,086,394,724 | 265.765 s | 90.63M | 1.00× | [p0_edax_ffo50-59_1t.json](benchmark-results/p0_edax_ffo50-59_1t.json) |
+| `Edax AVX` (`edax-avx`) | 1 | 21 | 23,637,594,214 | **253.005 s** | **93.43M** | 1.00× | [p0_edax_avx_ffo50-59_1t.json](benchmark-results/p0_edax_avx_ffo50-59_1t.json) |
+| `Stello 5.0` (`stello`) | 8 | 19 | 37,576,557,005 | 105.095 s | 357.55M | 5.33× (+23.1 % nodes) | [ffo-50-59-8t.json](benchmark-results/v5.0-ref/ffo-50-59-8t.json) |
+| `Stello 4.0` (`stello-v4`) | 8 | 19 | 39,256,125,746 | 146.450 s | 268.05M | 4.00× (+54.4 % nodes) | [p0_v4_ffo50-59_8t.json](benchmark-results/p0_v4_ffo50-59_8t.json) |
+| `Egaroucid` (`egaroucid-cpp`) | 8 | 21 | **15,859,140,638** | 50.333 s | 315.09M | 6.47× (+2.0 % nodes) | [p0_egaroucid_cpp_ffo50-59_8t.json](benchmark-results/p0_egaroucid_cpp_ffo50-59_8t.json) |
+| `Edax` (`edax`) | 8 | 21 | 24,986,454,798 | 39.434 s | 633.63M | 6.74× (+3.7 % nodes) | [p0_edax_ffo50-59_8t.json](benchmark-results/p0_edax_ffo50-59_8t.json) |
+| `Edax AVX` (`edax-avx`) | 8 | 21 | 24,535,845,905 | **38.487 s** | **637.50M** | 6.57× (+3.8 % nodes) | [p0_edax_avx_ffo50-59_8t.json](benchmark-results/p0_edax_avx_ffo50-59_8t.json) |
+| `Stello 5.0` (`stello`) | 16 | 19 | 42,951,931,459 | 93.144 s | 461.14M | 6.01× (+40.8 % nodes) | [ffo-50-59-16t.json](benchmark-results/v5.0-ref/ffo-50-59-16t.json) |
+
+\* `Stello 5.0` and `Stello 4.0` `FFO #50–59` `1t` rows reference the identical-binary 2026-11-22 `p7_*` JSONs.
+
 ### 6. Phase 0 Baseline Matches (`starts-v6.txt`, `1,174` Games Each, `book=off`, Side B = `Stello 5.0`)
 
-*(Matches running sequentially; Part A `v5.0-ref/` JSONs + WASM baseline and external FFO `#40–49` / `#50–59` benchmarks pending.)*
+*(Paused after Match #18 per user request; 12 matches remaining.)*
 
 | # | Opponent | Time | Threads | Score (95 % CI) | W / D / L | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | NPS (A / B) | Wall Time |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|

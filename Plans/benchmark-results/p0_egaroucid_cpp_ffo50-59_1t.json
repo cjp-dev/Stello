@@ -1,0 +1,111 @@
+{
+  "Command": "solve-bench",
+  "Date": "2026-11-23 09:22",
+  "ProcessorCount": 16,
+  "Limits": "solve",
+  "HashBits": 21,
+  "Passes": 1,
+  "Results": [
+    {
+      "Id": "50",
+      "Empties": 26,
+      "Move": "d8",
+      "Score": 10,
+      "Kind": "Exact",
+      "Depth": 26,
+      "Nodes": 529168872,
+      "Ms": 11894.3504
+    },
+    {
+      "Id": "51",
+      "Empties": 27,
+      "Move": "e2",
+      "Score": 6,
+      "Kind": "Exact",
+      "Depth": 27,
+      "Nodes": 159736926,
+      "Ms": 3110.4546
+    },
+    {
+      "Id": "52",
+      "Empties": 27,
+      "Move": "a3",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 27,
+      "Nodes": 194036325,
+      "Ms": 3697.3584
+    },
+    {
+      "Id": "53",
+      "Empties": 28,
+      "Move": "d8",
+      "Score": -2,
+      "Kind": "Exact",
+      "Depth": 28,
+      "Nodes": 1161059405,
+      "Ms": 21303.7592
+    },
+    {
+      "Id": "54",
+      "Empties": 28,
+      "Move": "c7",
+      "Score": -2,
+      "Kind": "Exact",
+      "Depth": 28,
+      "Nodes": 1947602390,
+      "Ms": 35970.0234
+    },
+    {
+      "Id": "55",
+      "Empties": 29,
+      "Move": "g6",
+      "Score": 0,
+      "Kind": "Exact",
+      "Depth": 29,
+      "Nodes": 8842043285,
+      "Ms": 184112.9819
+    },
+    {
+      "Id": "56",
+      "Empties": 29,
+      "Move": "h5",
+      "Score": 2,
+      "Kind": "Exact",
+      "Depth": 29,
+      "Nodes": 461224264,
+      "Ms": 11975.5369
+    },
+    {
+      "Id": "57",
+      "Empties": 30,
+      "Move": "a6",
+      "Score": -10,
+      "Kind": "Exact",
+      "Depth": 30,
+      "Nodes": 1659988799,
+      "Ms": 38385.6928
+    },
+    {
+      "Id": "58",
+      "Empties": 30,
+      "Move": "g1",
+      "Score": 4,
+      "Kind": "Exact",
+      "Depth": 30,
+      "Nodes": 579661023,
+      "Ms": 14821.0709
+    },
+    {
+      "Id": "59",
+      "Empties": 34,
+      "Move": "h4",
+      "Score": 64,
+      "Kind": "Exact",
+      "Depth": 34,
+      "Nodes": 8845208,
+      "Ms": 430.2009
+    }
+  ],
+  "Engine": "egaroucid-cpp"
+}
