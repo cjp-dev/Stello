@@ -8,9 +8,15 @@ using Stello.Engine;
 
 namespace Stello.Benchmark;
 
+internal enum EdaxVariant
+{
+    Standard,
+    Avx,
+}
+
 /// <summary>
-/// Native C Edax (<c>edax-reversi-master</c>) as a persistent per-worker subprocess <see cref="IMatchPlayer"/>
-/// speaking <c>-xboard -q -book-usage off -ponder off</c>.
+/// Native C Edax (<c>edax-reversi-master</c> or <c>edax-reversi-AVX-master</c>) as a persistent per-worker
+/// subprocess <see cref="IMatchPlayer"/> speaking <c>-xboard -q -book-usage off -ponder off</c>.
 /// </summary>
 internal sealed class EdaxMatchPlayer : IMatchPlayer, IDisposable
 {
@@ -30,7 +36,7 @@ internal sealed class EdaxMatchPlayer : IMatchPlayer, IDisposable
     private bool _sentLevel;
     private bool _disposed;
 
-    public EdaxMatchPlayer(int hashBits = DefaultHashBits, int threads = 1)
+    public EdaxMatchPlayer(int hashBits = DefaultHashBits, int threads = 1, EdaxVariant variant = EdaxVariant.Standard)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(hashBits, 10);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(hashBits, 26);
@@ -39,14 +45,15 @@ internal sealed class EdaxMatchPlayer : IMatchPlayer, IDisposable
 
         _hashBits = hashBits;
         _threads = threads;
-        _exePath = ResolveExecutable();
+        _exePath = ResolveExecutable(variant);
         _evalPath = ResolveEvalFile();
         StartProcess();
     }
 
-    public static string? FindExecutable()
+    public static string? FindExecutable(EdaxVariant variant = EdaxVariant.Standard)
     {
-        string? fromEnv = Environment.GetEnvironmentVariable("EDAX_BIN");
+        string envVar = variant == EdaxVariant.Avx ? "EDAX_AVX_BIN" : "EDAX_BIN";
+        string? fromEnv = Environment.GetEnvironmentVariable(envVar);
         if (!string.IsNullOrWhiteSpace(fromEnv))
         {
             string full = Path.GetFullPath(fromEnv);
@@ -54,17 +61,22 @@ internal sealed class EdaxMatchPlayer : IMatchPlayer, IDisposable
         }
 
         string repo = Program.RepositoryFolder();
+        string folder = variant == EdaxVariant.Avx ? "edax-reversi-AVX-master" : "edax-reversi-master";
+        string prefix = variant == EdaxVariant.Avx ? "avx-" : "";
         string file = OperatingSystem.IsWindows()
-            ? "wEdax-native.exe"
-            : OperatingSystem.IsMacOS() ? "mEdax-native" : "lEdax-native";
-        string candidate = Path.Combine(repo, "edax-reversi-master", "bin", file);
+            ? $"wEdax-{prefix}native.exe"
+            : OperatingSystem.IsMacOS() ? $"mEdax-{prefix}native" : $"lEdax-{prefix}native";
+        string candidate = Path.Combine(repo, folder, "bin", file);
         return File.Exists(candidate) ? candidate : null;
     }
 
-    public static string ResolveExecutable() =>
-        FindExecutable() ?? throw new ArgumentException(
-            "Could not find native Edax executable for engine=edax. Build edax-reversi-master into " +
-            "edax-reversi-master/bin/wEdax-native.exe (or set EDAX_BIN).");
+    public static string ResolveExecutable(EdaxVariant variant = EdaxVariant.Standard) =>
+        FindExecutable(variant) ?? throw new ArgumentException(
+            variant == EdaxVariant.Avx
+                ? "Could not find native Edax AVX executable for engine=edax-avx. Build edax-reversi-AVX-master into " +
+                  "edax-reversi-AVX-master/bin/wEdax-avx-native.exe (or set EDAX_AVX_BIN)."
+                : "Could not find native Edax executable for engine=edax. Build edax-reversi-master into " +
+                  "edax-reversi-master/bin/wEdax-native.exe (or set EDAX_BIN).");
 
     public static string ResolveEvalFile()
     {
@@ -75,7 +87,14 @@ internal sealed class EdaxMatchPlayer : IMatchPlayer, IDisposable
             return File.Exists(full) ? full : throw new ArgumentException($"EDAX_EVAL_FILE points to a missing file: {full}");
         }
 
-        string candidate = Path.Combine(Program.RepositoryFolder(), "edax-reversi-master", "bin", "data", "eval.dat");
+        string repo = Program.RepositoryFolder();
+        string avxCandidate = Path.Combine(repo, "edax-reversi-AVX-master", "bin", "data", "eval.dat");
+        if (File.Exists(avxCandidate))
+        {
+            return avxCandidate;
+        }
+
+        string candidate = Path.Combine(repo, "edax-reversi-master", "bin", "data", "eval.dat");
         return File.Exists(candidate)
             ? candidate
             : throw new ArgumentException($"Could not find Edax eval.dat at {candidate} (or set EDAX_EVAL_FILE).");

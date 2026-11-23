@@ -251,6 +251,7 @@ if(STELLO_BUILD_TESTS AND NOT EMSCRIPTEN)
     add_test(NAME stello_tests COMMAND stello_tests)
     if(TARGET stello-cpp)
         add_test(NAME stello_cli_version COMMAND stello-cpp version)
+        add_test(NAME stello_cli_microbench COMMAND stello-cpp microbench --repeats 100 --warmup 10)
     endif()
 endif()
 

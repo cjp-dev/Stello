@@ -26,6 +26,8 @@ public sealed class StelloLibraryMatchTests(ReferenceLibraryFixture fixture) : I
     [InlineData("engine=stello-v5,depth=1,opt=ybwc=off", "no book or search switches")]
     [InlineData("engine=edax,depth=1,book=on", "no book or search switches")]
     [InlineData("engine=edax,level=5", "only for engine=egaroucid")]
+    [InlineData("engine=edax-avx,depth=1,book=on", "no book or search switches")]
+    [InlineData("engine=edax-avx,level=5", "only for engine=egaroucid")]
     [InlineData("engine=egaroucid-cpp,level=1,book=on", "no book or search switches")]
     [InlineData("engine=egaroucid-cpp,level=1,book-acc=1", "no book or search switches")]
     [InlineData("engine=egaroucid-cpp,depth=1", "only for engine=stello")]
@@ -141,6 +143,49 @@ public sealed class StelloLibraryMatchTests(ReferenceLibraryFixture fixture) : I
 
         // Verify 2-thread solve also disposes cleanly.
         MatchSide mtSide = MatchCommands.ParseSide("engine=edax,depth=6,threads=2,hash-bits=16");
+        using var mtPlayer = Assert.IsType<EdaxMatchPlayer>(mtSide.NewPlayer());
+        mtPlayer.NewGame();
+        EngineSearchResult mtRes = mtPlayer.ChooseMove(EngineBoard.Initial, Player.Black, mtSide.Limits, CancellationToken.None);
+        Assert.NotNull(mtRes.Move.Square);
+    }
+
+    [Fact]
+    public void EdaxAvxPlayer_SearchesMovetimeDepthSolvePassAndDisposesCleanly()
+    {
+        if (EdaxMatchPlayer.FindExecutable(EdaxVariant.Avx) is null)
+        {
+            return;
+        }
+
+        MatchSide defaultSide = MatchCommands.ParseSide("engine=edax-avx,time-ms=50,name=edaxavx50");
+        Assert.Equal(EdaxMatchPlayer.DefaultHashBits, defaultSide.HashBits);
+
+        using (var player = Assert.IsType<EdaxMatchPlayer>(defaultSide.NewPlayer()))
+        {
+            player.NewGame();
+            EngineSearchResult r1 = player.ChooseMove(EngineBoard.Initial, Player.Black, defaultSide.Limits, CancellationToken.None);
+            Assert.NotNull(r1.Move.Square);
+            Assert.True(EngineBoard.Initial.IsLegal(Player.Black, r1.Move.Square.Value));
+
+            // Continue game after opponent reply to verify usermove TT-preserving sync.
+            EngineBoard after1 = EngineBoard.Initial.Play(Player.Black, r1.Move.Square.Value);
+            Square oppMove = Square.InMask(after1.LegalMoves(Player.White)).First();
+            EngineBoard after2 = after1.Play(Player.White, oppMove);
+            EngineSearchResult r2 = player.ChooseMove(after2, Player.Black, defaultSide.Limits, CancellationToken.None);
+            Assert.NotNull(r2.Move.Square);
+            Assert.True(after2.IsLegal(Player.Black, r2.Move.Square.Value));
+
+            // Solve FFO #40 exact (+38, a2).
+            BenchmarkPosition ffo40 = BenchmarkPosition.Load(Program.DataFile("ffo-40-59.txt")).First(p => p.Id == "40");
+            player.NewGame();
+            EngineSearchResult solved = player.ChooseMove(ffo40.Board, ffo40.Player, SearchLimits.Solve, CancellationToken.None);
+            Assert.Equal(ScoreKind.Exact, solved.Kind);
+            Assert.Equal(38, solved.Score);
+            Assert.Equal("a2", solved.Move.ToString());
+        }
+
+        // Verify 2-thread solve also disposes cleanly.
+        MatchSide mtSide = MatchCommands.ParseSide("engine=edax-avx,depth=6,threads=2,hash-bits=16");
         using var mtPlayer = Assert.IsType<EdaxMatchPlayer>(mtSide.NewPlayer());
         mtPlayer.NewGame();
         EngineSearchResult mtRes = mtPlayer.ChooseMove(EngineBoard.Initial, Player.Black, mtSide.Limits, CancellationToken.None);

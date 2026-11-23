@@ -1,4 +1,5 @@
 #include "search/kernel.hpp"
+#include "search/microbench_impl.hpp"
 
 #if STELLO_HAS_X86_64_V3
 
@@ -251,6 +252,12 @@ template AbortVoid Kernel<true>::split<EndgameChild>(
     int32_t&,
     bool
 );
+
+namespace detail::microbench {
+
+template std::vector<MicrobenchStats> run_kernel<true>(const MicrobenchOptions& opts);
+
+} // namespace detail::microbench
 
 } // namespace stello::search
 

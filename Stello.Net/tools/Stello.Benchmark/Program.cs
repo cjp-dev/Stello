@@ -15,9 +15,9 @@ internal static class Program
                                     A side is a list such as "time-ms=100", "depth=8", "game-s=60,hash-bits=20,name=new"
                                     or "engine=egaroucid,time-ms=100,book=on": engine (stello = current C++ engine, stello-v5 = C++ 5.0,
                                     stello-v4 = C++ 4.0, stello-v3 = Rust 3.1, stello-v2 = Stello 2.0 in C#, stello-v1 = Stello 1,
-                                    stello-lib = a separate Stello native library, edax = native C Edax, egaroucid = C# port, or
-                                    egaroucid-cpp = native C++ Egaroucid), time-ms (per move), game-s (per game), depth (Stello/Edax)
-                                    or level (Egaroucid), eval (Stello: another pattern evaluation file), soft-pct (1-100),
+                                    stello-lib = a separate native library, edax = native C Edax, edax-avx = native C Edax AVX,
+                                    egaroucid = C# port, or egaroucid-cpp = native C++ Egaroucid), time-ms (per move),
+                                    game-s (per game), depth (Stello/Edax) or level (Egaroucid), eval (Stello: another pattern evaluation file), soft-pct (1-100),
                                     mpc (Multi-ProbCut t × 100), and opt (repeatable Stello search switches, e.g. opt=selective=off,
                                     opt=soft-pct=80, opt=mpc=150, opt=ybwc=off), threads (native engines: 1-256 threads sharing the
                                     hash tables, 1), ybwc (current Stello: on/off, on; off = Lazy SMP alone), hash-bits (Stello 19;
@@ -28,11 +28,11 @@ internal static class Program
                                     the current native library. Match only; supports threads and hash-bits, but no book or search switches.
                                     Default --starts is Data/starts-v6.txt.
                                     --workers (1-256) overrides the default: max(1, physical cores / max(side threads)).
-          solve-bench [--engine stello|stello-v5|stello-v4|stello-v3|stello-v2|stello-v1|edax|egaroucid|egaroucid-cpp] [--eval <file>] [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits N]
+          solve-bench [--engine stello|stello-v5|stello-v4|stello-v3|stello-v2|stello-v1|edax|edax-avx|egaroucid|egaroucid-cpp] [--eval <file>] [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits N]
                       [--threads N] [--out <file.json>] [--compare <file.json>]
                                     Solve the FFO positions exactly: score check, nodes, time to solve.
                                     Select an inclusive numeric ID range, e.g. --from 50 --to 59 for FFO #50–#59.
-          mid-bench [--engine stello|stello-v5|stello-v4|stello-v3|stello-v2|stello-v1|edax|egaroucid|egaroucid-cpp] [--eval <file>] [--side <Stello side keys>] [--positions <file>] [--depth 10] [--mpc 100 | --level L] [--passes 3]
+          mid-bench [--engine stello|stello-v5|stello-v4|stello-v3|stello-v2|stello-v1|edax|edax-avx|egaroucid|egaroucid-cpp] [--eval <file>] [--side <Stello side keys>] [--positions <file>] [--depth 10] [--mpc 100 | --level L] [--passes 3]
                     [--hash-bits N] [--selective on|off] [--probcut-pct N] [--threads N] [--out <file.json>] [--compare <file.json>]
                                     Search the midgame positions to a fixed depth: nodes, move and score of each search, speed.
                                     --mpc (Egaroucid's selectivity: 74, 88, 93, 98, 99, 99.9 or 100) and --level are for Egaroucid.

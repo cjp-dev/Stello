@@ -32,9 +32,9 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
     public static BenchSearcher Create(Options options, SearchLimits limits, string limitText)
     {
         string engine = options.Text("engine") ?? "stello";
-        if (engine is not ("stello" or "stello-v3" or "stello-v4" or "stello-v5" or "edax" or "egaroucid-cpp") && options.Text("threads") is not null)
+        if (engine is not ("stello" or "stello-v3" or "stello-v4" or "stello-v5" or "edax" or "edax-avx" or "egaroucid-cpp") && options.Text("threads") is not null)
         {
-            throw new ArgumentException("--threads is only for --engine stello, stello-v5, stello-v4, stello-v3, edax or egaroucid-cpp.");
+            throw new ArgumentException("--threads is only for --engine stello, stello-v5, stello-v4, stello-v3, edax, edax-avx or egaroucid-cpp.");
         }
 
         switch (engine)
@@ -90,12 +90,14 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                 return NativeReference(engine, options, limits, limitText, StelloLibrary.ResolveV5);
 
             case "edax":
+            case "edax-avx":
                 if (options.Text("mpc") is not null || options.Text("level") is not null || options.Text("eval") is not null
                     || options.Text("side") is not null || options.Text("selective") is not null || options.Text("probcut-pct") is not null)
                 {
-                    throw new ArgumentException("--mpc, --level, --eval, --side, --selective and --probcut-pct are not supported by --engine edax.");
+                    throw new ArgumentException($"--mpc, --level, --eval, --side, --selective and --probcut-pct are not supported by --engine {engine}.");
                 }
 
+                EdaxVariant edaxVariant = engine == "edax-avx" ? EdaxVariant.Avx : EdaxVariant.Standard;
                 int edaxBits = options.Number("hash-bits", EdaxMatchPlayer.DefaultHashBits, 10, 26);
                 int edaxThreads = options.Number("threads", 1, 1, SearchLimits.MaxThreads);
                 if (edaxThreads > 1)
@@ -104,7 +106,7 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                     limitText += $", {edaxThreads} threads";
                 }
 
-                var edax = new EdaxMatchPlayer(edaxBits, edaxThreads);
+                var edax = new EdaxMatchPlayer(edaxBits, edaxThreads, edaxVariant);
                 return new BenchSearcher(engine, limitText, edaxBits, position =>
                 {
                     edax.NewGame();
@@ -235,7 +237,7 @@ internal sealed record BenchSearcher(string Engine, string Limits, int HashBits,
                 });
 
             default:
-                throw new ArgumentException("--engine must be stello, stello-v5, stello-v4, stello-v3, stello-v2, stello-v1, edax, egaroucid or egaroucid-cpp.");
+                throw new ArgumentException("--engine must be stello, stello-v5, stello-v4, stello-v3, stello-v2, stello-v1, edax, edax-avx, egaroucid or egaroucid-cpp.");
         }
     }
 

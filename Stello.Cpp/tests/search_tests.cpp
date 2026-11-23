@@ -11,7 +11,9 @@
 #include "eval/weights.hpp"
 #include "search/abort.hpp"
 #include "search/engine.hpp"
+#include "search/kernel.hpp"
 #include "search/limits.hpp"
+#include "search/microbench.hpp"
 #include "search/options.hpp"
 #include "search/ordering.hpp"
 #include "search/table.hpp"
@@ -1133,6 +1135,36 @@ STELLO_TEST(selective_endgame_progress_and_time_per_game_tests) {
         STELLO_CHECK(outcome.result.elapsed < std::chrono::seconds(20));
         STELLO_CHECK(outcome.result.mv.square.has_value());
         STELLO_CHECK((board.legal_moves(player) & outcome.result.mv.square->bit()) != 0);
+    }
+}
+
+STELLO_TEST(microbench_portable_and_v3_parity_tests) {
+    search::MicrobenchOptions opts{};
+    opts.warmup = 8;
+    opts.repeats = 64;
+    opts.verbose = true;
+
+    const auto expected_names = search::microbench_names();
+    const auto portable = search::run_microbench(opts, false);
+    STELLO_CHECK_EQ(portable.size(), expected_names.size());
+    for (size_t i = 0; i < portable.size(); ++i) {
+        const auto& s = portable[i];
+        STELLO_CHECK_EQ(s.name, expected_names[i]);
+        STELLO_CHECK(std::isfinite(s.min_cycles) && s.min_cycles >= 0.0);
+        STELLO_CHECK(std::isfinite(s.mean_cycles) && s.mean_cycles >= s.min_cycles);
+        STELLO_CHECK(std::isfinite(s.stddev_cycles) && s.stddev_cycles >= 0.0);
+        STELLO_CHECK(std::isfinite(s.max_cycles) && s.max_cycles >= s.mean_cycles);
+        STELLO_CHECK_EQ(s.per_sample.size(), size_t{64});
+    }
+
+    if (search::dispatch_v3()) {
+        const auto v3 = search::run_microbench(opts, true);
+        STELLO_CHECK_EQ(v3.size(), portable.size());
+        for (size_t i = 0; i < v3.size(); ++i) {
+            STELLO_CHECK_EQ(v3[i].name, portable[i].name);
+            STELLO_CHECK_EQ(v3[i].checksum, portable[i].checksum);
+            STELLO_CHECK(std::isfinite(v3[i].mean_cycles) && v3[i].mean_cycles >= 0.0);
+        }
     }
 }
 

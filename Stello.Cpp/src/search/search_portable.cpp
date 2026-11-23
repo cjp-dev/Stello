@@ -1,5 +1,12 @@
 #include "search/kernel.hpp"
 #include "search/kernel_impl.hpp"
+#include "search/microbench_impl.hpp"
+
+#if STELLO_HAS_X86_64_V3
+namespace stello::search::detail::microbench {
+extern template std::vector<MicrobenchStats> run_kernel<true>(const MicrobenchOptions& opts);
+} // namespace stello::search::detail::microbench
+#endif
 
 #include "endgame/last_impl.hpp"
 #include "endgame/search_impl.hpp"
@@ -49,5 +56,31 @@ template AbortVoid Kernel<false>::split<EndgameChild>(
     int32_t&,
     bool
 );
+
+std::vector<std::string_view> microbench_names() {
+    return {
+        "flips",
+        "last_flip_count",
+        "solve_1",
+        "legal_moves",
+        "potential_mobility",
+        "legal_and_potential",
+        "stable_of",
+        "eval_sum",
+        "eval_after_move",
+        "eval_advance",
+    };
+}
+
+std::vector<MicrobenchStats> run_microbench(const MicrobenchOptions& opts, bool use_avx2) {
+#if STELLO_HAS_X86_64_V3
+    if (use_avx2) {
+        return detail::microbench::run_kernel<true>(opts);
+    }
+#else
+    (void)use_avx2;
+#endif
+    return detail::microbench::run_kernel<false>(opts);
+}
 
 } // namespace stello::search

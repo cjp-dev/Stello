@@ -5,6 +5,8 @@
 #include "core/version.hpp"
 #include "eval/eval.hpp"
 #include "eval/weights.hpp"
+#include "search/kernel.hpp"
+#include "search/microbench.hpp"
 
 #include <array>
 #include <charconv>
@@ -37,7 +39,9 @@ constexpr const char* kUsage =
     "                            Solve benchmark positions and check exact scores/moves.\n"
     "  mid-bench [--positions <file>] [--depth 10] [--passes 3] [--hash-bits 19] [--eval <file>]\n"
     "            [--selective on|off] [--probcut-pct N] [--out <file.json>] [--cpu auto|portable] [--threads 1] [--ybwc on|off]\n"
-    "                            Search midgame benchmark positions to a fixed depth.\n";
+    "                            Search midgame benchmark positions to a fixed depth.\n"
+    "  microbench [--cpu auto|portable] [--repeats 500000] [--warmup 1000] [--only <name>] [--verbose on|off]\n"
+    "                            Measure per-primitive CPU cycles (min < mean +/- stddev < max).\n";
 
 constexpr uint64_t kFnvOffset = 14'695'981'039'346'656'037ULL;
 constexpr uint64_t kFnvPrime = 1'099'511'628'211ULL;
@@ -258,6 +262,81 @@ int cmd_eval_split(std::span<const std::string_view> args, std::string& error_ou
     return 0;
 }
 
+int cmd_microbench(std::span<const std::string_view> args, std::string& error_out) {
+    static constexpr std::array<std::string_view, 5> kAllowed = {
+        "cpu", "repeats", "warmup", "only", "verbose"
+    };
+    const auto opts = stello::cli::Options::parse(args, kAllowed, error_out);
+    if (!opts) {
+        return 1;
+    }
+    if (!opts->positional.empty()) {
+        error_out = kUsage;
+        return 1;
+    }
+    if (!apply_cpu_option(opts->text("cpu"), error_out)) {
+        return 1;
+    }
+
+    stello::search::MicrobenchOptions mb_opts{};
+    if (const auto rep_str = opts->text("repeats")) {
+        const auto parsed = parse_u64(*rep_str);
+        if (!parsed || *parsed < 1 || *parsed > 100'000'000ULL) {
+            error_out = "--repeats must be 1-100000000.";
+            return 1;
+        }
+        mb_opts.repeats = *parsed;
+    }
+    if (const auto warm_str = opts->text("warmup")) {
+        const auto parsed = parse_u64(*warm_str);
+        if (!parsed || *parsed > 10'000'000ULL) {
+            error_out = "--warmup must be 0-10000000.";
+            return 1;
+        }
+        mb_opts.warmup = *parsed;
+    }
+    if (const auto only_str = opts->text("only")) {
+        const auto names = stello::search::microbench_names();
+        if (std::find(names.begin(), names.end(), *only_str) == names.end()) {
+            error_out = "Unknown --only primitive \"" + std::string(*only_str) + "\".";
+            return 1;
+        }
+        mb_opts.only = *only_str;
+    }
+    if (const auto v_str = opts->text("verbose")) {
+        if (*v_str == "on") {
+            mb_opts.verbose = true;
+        } else if (*v_str == "off") {
+            mb_opts.verbose = false;
+        } else {
+            error_out = "--verbose must be on or off.";
+            return 1;
+        }
+    }
+
+    const bool use_avx2 = stello::search::dispatch_v3();
+    std::printf(
+        "microbench (cpu=%s, repeats=%llu, warmup=%llu, units=CPU cycles)\n",
+        use_avx2 ? "v3/avx2" : "portable",
+        static_cast<unsigned long long>(mb_opts.repeats),
+        static_cast<unsigned long long>(mb_opts.warmup));
+
+    const auto results = stello::search::run_microbench(mb_opts, use_avx2);
+    for (const auto& r : results) {
+        std::printf(
+            "%-20.*s %6.2f < %6.2f +/- %5.2f < %6.2f  [checksum %016llx]\n",
+            static_cast<int>(r.name.size()), r.name.data(),
+            r.min_cycles, r.mean_cycles, r.stddev_cycles, r.max_cycles,
+            static_cast<unsigned long long>(r.checksum));
+        if (mb_opts.verbose && !r.per_sample.empty()) {
+            for (size_t i = 0; i < r.per_sample.size(); ++i) {
+                std::printf("  [%2zu] %6.2f\n", i, r.per_sample[i]);
+            }
+        }
+    }
+    return 0;
+}
+
 } // namespace
 
 int main(int argc, char* argv[]) {
@@ -288,6 +367,8 @@ int main(int argc, char* argv[]) {
         rc = stello::cli::cmd_solve_bench(rest, error);
     } else if (cmd == "mid-bench") {
         rc = stello::cli::cmd_mid_bench(rest, error);
+    } else if (cmd == "microbench") {
+        rc = cmd_microbench(rest, error);
     } else {
         std::cerr << kUsage;
         return 1;

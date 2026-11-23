@@ -42,6 +42,19 @@ Working notes, benchmark baselines, and gate records for [making-stello-6-0-plan
 - Added [EdaxMatchPlayer.cs](../Stello.Net/tools/Stello.Benchmark/EdaxMatchPlayer.cs) speaking `-xboard -q -book-usage off -ponder off -h <bits> -n <threads>` (default `hash-bits=21`, ~54 MB; TT-preserving `usermove` sync within a game and `setboard` reset on `NewGame()`) and wired `engine=edax` into `MatchCommands`, `BenchSearcher`, and `Program.cs`.
 - Verified in `EdaxPlayer_SearchesMovetimeDepthSolvePassAndDisposesCleanly` (FFO `#40` `+38 a2`, `TimePerMove`, `usermove` continuity, `threads=2`, clean `quit` shutdown) and `100 ms` smoke matches (`1t`: `45.33M` nps, avg depth `20.50`, `57 / 109 ms`; `8t`: `209.02M` nps, avg depth `23.84`, `53 / 109 ms`; zero lingering processes).
 
+### 3B. Direct Native C Edax AVX Harness (`engine=edax-avx`)
+
+- Benchmarked `edax-reversi-AVX-master` (Okuhara v4.5.7, zero source edits, `-eval-file ..\..\edax-reversi-master\bin\data\eval.dat`) on `-bench 20 -n 1` (`1,357,814,664` nodes across candidates 1–5; `1,532,305,569` on GFNI+highcut):
+  - Clang `v4` (`-march=native -mprefer-vector-width=256`): `15.437 s` (`87.96M` nps) → PGO re-bench `15.312 s` (`88.68M` nps)
+  - `clang-cl` (`-march=native -mprefer-vector-width=256 /arch:AVX512`): `15.438 s` (`87.95M` nps)
+  - Clang `v4` + `-DLASTFLIP_HIGHCUT`: `15.889 s` (`85.46M` nps)
+  - MSVC `vc-x64-v4` (`/GL /arch:AVX512 /vlen=256`): `15.969 s` (`85.03M` nps)
+  - Clang `v4` + `-DMOVE_GENERATOR=MOVE_GENERATOR_AVXGFNI`: `16.374 s` (`82.93M` nps)
+  - Clang `v4` + `GFNI` + `LASTFLIP_HIGHCUT`: `19.157 s` (`79.99M` nps)
+  - **Clang `v4` PGO (`-fprofile-instr-generate` trained on `fforum-20-39.obf` + `-bench 18`, then `-fprofile-instr-use`): `14.827 s` (`91.58M` nps)** (`+8.8 %` NPS over `edax-reversi-master`'s `15.891 s` / `84.17M` nps).
+- Saved winner as git-ignored `edax-reversi-AVX-master/bin/wEdax-avx-native.exe` (`701,952` bytes), extended [EdaxMatchPlayer.cs](../Stello.Net/tools/Stello.Benchmark/EdaxMatchPlayer.cs) (`EdaxVariant.Avx`, `EDAX_AVX_BIN`, default `hash-bits=21`), and wired `engine=edax-avx` / `--engine edax-avx` into `MatchCommands`, `BenchSearcher`, and `Program`.
+- Verified in `EdaxAvxPlayer_SearchesMovetimeDepthSolvePassAndDisposesCleanly` and `100 ms` smoke matches (`1t`: `46.68M` nps, avg depth `20.88`, `58 / 116 ms`, `6 s`; `8t`: `238.66M` nps, avg depth `24.42`, `53 / 113 ms`, `5 s`; zero lingering processes).
+
 ### 4. Direct Native C++ Egaroucid Harness (`engine=egaroucid-cpp`)
 
 - Created standalone driver [Stello.Net/tools/Egaroucid.Runner/](../Stello.Net/tools/Egaroucid.Runner/README.md) (`runner.cpp`, `build.cmd`, `README.md`, zero upstream edits to `Egaroucid-main/`) and built `bin/egaroucid-runner.exe` (git-ignored).
@@ -56,6 +69,23 @@ Working notes, benchmark baselines, and gate records for [making-stello-6-0-plan
 - Added `--prefix-free` to `Stello.Benchmark make-starts` ([MatchCommands.cs](../Stello.Net/tools/Stello.Benchmark/MatchCommands.cs), [Program.cs](../Stello.Net/tools/Stello.Benchmark/Program.cs)), switched `MatchCommands.LoadStarts(null)` default to `Data/starts-v6.txt` (keeping `starts.txt` untouched and explicit default for `make-positions` and `make-exact`).
 - Generated [Stello.Net/tools/Stello.Benchmark/Data/starts-v6.txt](../Stello.Net/tools/Stello.Benchmark/Data/starts-v6.txt) via `make-starts --plies 10-14 --max-value 220 --prefix-free` (**`587` starts / `1,174` games**, `0 %` ancestor–descendant overlap).
 - Verified in `StartsV6File_HoldsPrefixFreeBalancedBookLines` and `MakeStarts_PrefixFree_RemovesAncestorsAndKeepsDeepest`.
+
+### 5B. `stello-cpp microbench` Per-Primitive Cycle Baseline
+
+- Added [microbench.hpp](../Stello.Cpp/src/search/microbench.hpp), [microbench_impl.hpp](../Stello.Cpp/src/search/microbench_impl.hpp), `stello-cpp microbench` ([main.cpp](../Stello.Cpp/src/cli/main.cpp)), `microbench_portable_and_v3_parity_tests` ([search_tests.cpp](../Stello.Cpp/tests/search_tests.cpp)), and `stello_cli_microbench` CTest (`repeats = 500,000`, `warmup = 1,000`, `64` samples, `__rdtsc()` CPU cycles, `clang-release` on 7800X3D):
+
+| Primitive | `--cpu auto` (`v3/avx2`) Cycles (min < mean ± sd < max) | `--cpu portable` Cycles (min < mean ± sd < max) | Checksum (`v3 == portable`) |
+|---|---|---|---|
+| `flips` | `5.98 < 6.35 ± 0.50 < 9.20` | `17.46 < 17.73 ± 0.18 < 18.15` | `da4c9d7fdfcb5660` |
+| `last_flip_count` | `4.36 < 4.54 ± 0.14 < 5.01` | `4.38 < 4.51 ± 0.11 < 4.80` | `71bce4877bbeb380` |
+| `solve_1` | `7.76 < 7.99 ± 0.16 < 8.40` | `11.59 < 12.03 ± 0.22 < 12.72` | `71bce48788869ce0` |
+| `legal_moves` | `8.74 < 9.28 ± 0.47 < 10.90` | `33.48 < 34.02 ± 0.69 < 38.90` | `fbd24755bc7c7d20` |
+| `potential_mobility` | `6.21 < 6.50 ± 0.29 < 8.18` | `17.61 < 18.01 ± 0.30 < 18.63` | `71bce487a9412720` |
+| `legal_and_potential` | `15.59 < 15.86 ± 0.20 < 16.49` | `40.65 < 41.14 ± 0.31 < 41.93` | `fbd2475603ea7fe0` |
+| `stable_of` | `30.64 < 31.08 ± 0.26 < 31.64` | `30.56 < 31.14 ± 0.27 < 31.71` | `3a7999385805bc58` |
+| `eval_sum` | `160.58 < 162.28 ± 3.98 < 191.36` | `166.16 < 167.40 ± 0.84 < 170.16` | `71bce487f75f90e0` |
+| `eval_after_move` | `161.49 < 162.96 ± 0.82 < 165.29` | `204.45 < 206.19 ± 0.97 < 211.19` | `71bce48810567f00` |
+| `eval_advance` | `27.75 < 28.60 ± 0.38 < 29.23` | `70.33 < 72.30 ± 4.41 < 105.77` | `71bce48dc4d33360` |
 
 ### 6. Phase 0 Baseline Matches (`starts-v6.txt`, `1,174` Games Each, `book=off`, Side B = `Stello 5.0`)
 
@@ -82,11 +112,11 @@ Working notes, benchmark baselines, and gate records for [making-stello-6-0-plan
 | 17 | `Stello 4.0` (`v4`) | 2,000 ms | 1t | **59.3 %** (57.2–61.4 %) | `+559 =274 −341` | **+65** (+50 to +81) | 100.0 % | +1.0 ± 0.2 | 21.51 / 23.16 | 25.2 / 25.2 | 17.81M / 22.00M | [1h 44m](benchmark-results/match_p0_v5_vs_v4_2000ms_1t.md) |
 | 18 | `Stello 2.0` (`v2`) | 2,000 ms | 1t | **65.5 %** (63.4–67.6 %) | `+643 =252 −279` | **+111** (+95 to +128) | 100.0 % | +1.8 ± 0.2 | 19.76 / 23.18 | 24.5 / 25.2 | 7.88M / 22.43M | [1h 45m](benchmark-results/match_p0_v5_vs_v2_2000ms_1t.md) |
 
-### 7. Test Verification (Items 1–5)
+### 7. Test Verification (Phase 0 Setup Complete, Matches Paused After #18)
 
 - `.NET Release build` (`-p:StelloWasmEngine=false`): `0 Warning(s), 0 Error(s)`.
-- `Stello.Engine.Tests`: `519/519` passed (`8 s`).
-- `Stello.Net.Tests`: `116/116` passed (`17 s`).
-- `Egaroucid.Engine.Tests`: `111 passed, 0 failed, 8 skipped` (`37 s`; skipped tests are the optional `TaggedV30_*` reference DLL tests).
-- C++ `clang-release` (`ctest --preset clang-release`): `2/2` passed (`31.76 s`).
-- WASM Node tests (`node --test Stello.Cpp/tests/wasm/engine.test.mjs Stello.Cpp/tests/wasm/engine-mt.test.mjs`): `19/19` passed (`3.80 s`).
+- `Stello.Engine.Tests`: `519/519` passed.
+- `Stello.Net.Tests`: `116/116` passed.
+- `Egaroucid.Engine.Tests`: `114 passed, 0 failed, 8 skipped` (`39.74 s`; skipped tests are the optional `TaggedV30_*` reference DLL tests).
+- All 5 C++ presets (`clang-release`, `clang-native`, `msvc-release`, `msvc-native`, `clang-sanitized`): `0` compiler warnings, `3/3` ctest tests passed (`stello_tests`, `stello_cli_version`, `stello_cli_microbench`).
+- WASM Node tests (`node --test Stello.Cpp/tests/wasm/engine.test.mjs Stello.Cpp/tests/wasm/engine-mt.test.mjs`): `19/19` passed (`3.77 s`).

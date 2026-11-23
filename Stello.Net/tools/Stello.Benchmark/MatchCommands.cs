@@ -212,9 +212,10 @@ internal static class MatchCommands
                         "stello-v5" => EngineKind.StelloV5,
                         "stello-lib" => EngineKind.StelloLibrary,
                         "edax" => EngineKind.Edax,
+                        "edax-avx" => EngineKind.EdaxAvx,
                         "egaroucid" => EngineKind.Egaroucid,
                         "egaroucid-cpp" => EngineKind.EgaroucidCpp,
-                        _ => throw new ArgumentException($"engine must be stello, stello-v5, stello-v4, stello-v3, stello-v2, stello-v1, stello-lib, edax, egaroucid or egaroucid-cpp in the side \"{text}\"."),
+                        _ => throw new ArgumentException($"engine must be stello, stello-v5, stello-v4, stello-v3, stello-v2, stello-v1, stello-lib, edax, edax-avx, egaroucid or egaroucid-cpp in the side \"{text}\"."),
                     };
                     break;
                 case "lib":
@@ -296,7 +297,7 @@ internal static class MatchCommands
         bool egaroucidAny = engine is EngineKind.Egaroucid or EngineKind.EgaroucidCpp;
         bool library = engine == EngineKind.StelloLibrary;
         bool nativeRef = engine is EngineKind.StelloLibrary or EngineKind.StelloV3 or EngineKind.StelloV4 or EngineKind.StelloV5;
-        bool externalNative = engine is EngineKind.Edax or EngineKind.EgaroucidCpp;
+        bool externalNative = engine is EngineKind.Edax or EngineKind.EdaxAvx or EngineKind.EgaroucidCpp;
         if (mode is null)
         {
             throw new ArgumentException($"The side \"{text}\" needs time-ms, game-s, {(egaroucidAny ? "level" : "depth")}.");
@@ -331,7 +332,12 @@ internal static class MatchCommands
 
         if (externalNative)
         {
-            string label = engine == EngineKind.Edax ? "edax" : "egaroucid-cpp";
+            string label = engine switch
+            {
+                EngineKind.Edax => "edax",
+                EngineKind.EdaxAvx => "edax-avx",
+                _ => "egaroucid-cpp",
+            };
             string? unsupported = new[] { "book-file", "book-acc", "seed", "time-strict", "eval", "soft-pct", "mpc", "selective", "ybwc", "opt" }
                 .FirstOrDefault(keys.Contains);
             if (unsupported is not null || useBook)
@@ -346,9 +352,9 @@ internal static class MatchCommands
         }
 
         // Only native engines search with threads; the frozen C# engines and Egaroucid port use 1.
-        if (keys.Contains("threads") && engine is not (EngineKind.Stello or EngineKind.StelloLibrary or EngineKind.StelloV3 or EngineKind.StelloV4 or EngineKind.StelloV5 or EngineKind.Edax or EngineKind.EgaroucidCpp))
+        if (keys.Contains("threads") && engine is not (EngineKind.Stello or EngineKind.StelloLibrary or EngineKind.StelloV3 or EngineKind.StelloV4 or EngineKind.StelloV5 or EngineKind.Edax or EngineKind.EdaxAvx or EngineKind.EgaroucidCpp))
         {
-            throw new ArgumentException($"threads is only for engine=stello, stello-v5, stello-v4, stello-v3, stello-lib, edax or egaroucid-cpp (side \"{text}\").");
+            throw new ArgumentException($"threads is only for engine=stello, stello-v5, stello-v4, stello-v3, stello-lib, edax, edax-avx or egaroucid-cpp (side \"{text}\").");
         }
 
         if (keys.Contains("ybwc") && engine != EngineKind.Stello)
@@ -372,7 +378,7 @@ internal static class MatchCommands
         {
             if (keys.Contains(key) && !allowed)
             {
-                throw new ArgumentException($"{key} is only for {(egaroucidAny ? "engine=stello, stello-v2, stello-v1 and edax" : "engine=egaroucid")} (side \"{text}\").");
+                throw new ArgumentException($"{key} is only for {(egaroucidAny ? "engine=stello, stello-v2, stello-v1, edax and edax-avx" : "engine=egaroucid")} (side \"{text}\").");
             }
         }
 
@@ -389,19 +395,21 @@ internal static class MatchCommands
             _ => egaroucidAny ? $"level {amount}" : $"depth {amount}",
         } + (threads > 1 ? $", {threads} threads" : "");
 
-        if (engine == EngineKind.Edax)
+        if (engine is EngineKind.Edax or EngineKind.EdaxAvx)
         {
+            EdaxVariant variant = engine == EngineKind.EdaxAvx ? EdaxVariant.Avx : EdaxVariant.Standard;
             int bits = hashBits ?? EdaxMatchPlayer.DefaultHashBits;
             if (bits > 26)
             {
-                throw new ArgumentException($"hash-bits for engine=edax is at most 26 (side \"{text}\").");
+                throw new ArgumentException($"hash-bits for engine={(variant == EdaxVariant.Avx ? "edax-avx" : "edax")} is at most 26 (side \"{text}\").");
             }
 
-            _ = EdaxMatchPlayer.ResolveExecutable();
+            _ = EdaxMatchPlayer.ResolveExecutable(variant);
             _ = EdaxMatchPlayer.ResolveEvalFile();
+            string label = variant == EdaxVariant.Avx ? "Edax AVX (native C)" : "Edax (native C)";
             return new MatchSide(name ?? text, limits, bits,
-                CreatePlayer: () => new EdaxMatchPlayer(bits, threads),
-                Description: $"Edax (native C), {limitText}, hash bits {bits}, no book");
+                CreatePlayer: () => new EdaxMatchPlayer(bits, threads, variant),
+                Description: $"{label}, {limitText}, hash bits {bits}, no book");
         }
 
         if (engine == EngineKind.EgaroucidCpp)
@@ -647,6 +655,9 @@ internal enum EngineKind
 
     /// <summary>Native C Edax (<c>edax-reversi-master</c>).</summary>
     Edax,
+
+    /// <summary>Native C Edax AVX (<c>edax-reversi-AVX-master</c>).</summary>
+    EdaxAvx,
 
     /// <summary>Egaroucid.Engine: the port of Egaroucid 7.9.</summary>
     Egaroucid,
