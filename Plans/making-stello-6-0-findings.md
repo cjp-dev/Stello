@@ -76,6 +76,9 @@ Working notes, benchmark baselines, and gate records for [making-stello-6-0-plan
 | 11 | `Stello 1` (`v1`) | 500 ms | 1t | **97.8 %** (97.1–98.6 %) | `+1138 =21 −15` | **+661** (+610 to +734) | 100.0 % | +14.1 ± 0.5 | 12.90 / 20.48 | 20.8 / 23.4 | 5.08M / 21.69M | [30m 13s](benchmark-results/match_p0_v5_vs_v1_500ms_1t.md) |
 | 12 | `Egaroucid` (`egaroucid-cpp`) | 500 ms | 1t | **55.0 %** (52.7–57.3 %) | `+531 =229 −414` | **+35** (+18 to +51) | 100.0 % | +0.6 ± 0.2 | 19.07 / 20.37 | 22.8 / 22.9 | 14.66M / 20.41M | [29m 26s](benchmark-results/match_p0_v5_vs_egaroucid_cpp_500ms_1t.md) |
 | 13 | `Edax` (`edax`) | 500 ms | 1t | **37.7 %** (35.6–39.9 %) | `+310 =266 −598` | **−87** (−103 to −71) | 0.0 % | −1.0 ± 0.2 | 25.87 / 20.39 | 23.8 / 22.9 | 41.81M / 20.57M | [28m 37s](benchmark-results/match_p0_v5_vs_edax_500ms_1t.md) |
+| 14 | `Stello 4.0` (`v4`) | 500 ms | 8t | **61.9 %** (59.8–64.0 %) | `+596 =262 −316` | **+84** (+69 to +100) | 100.0 % | +1.3 ± 0.2 | 21.65 / 23.80 | 25.3 / 25.6 | 128.71M / 149.41M | [3h 25m](benchmark-results/match_p0_v5_vs_v4_500ms_8t.md) |
+| 15 | `Egaroucid` (`egaroucid-cpp`) | 500 ms | 8t | **44.8 %** (42.8–46.8 %) | `+366 =320 −488` | **−36** (−50 to −22) | 0.0 % | −0.5 ± 0.1 | 26.58 / 23.77 | 25.4 / 25.4 | 105.04M / 146.90M | [3h 29m](benchmark-results/match_p0_v5_vs_egaroucid_cpp_500ms_8t.md) |
+| 16 | `Edax` (`edax`) | 500 ms | 8t | **37.8 %** (35.8–39.9 %) | `+299 =290 −585` | **−86** (−102 to −71) | 0.0 % | −1.0 ± 0.1 | 29.49 / 23.76 | 26.2 / 25.4 | 288.18M / 147.22M | [3h 24m](benchmark-results/match_p0_v5_vs_edax_500ms_8t.md) |
 
 ### 7. Test Verification (Items 1–5)
 
