@@ -165,7 +165,7 @@ Defaults: `hash-bits=19` for Stello (`stello`, `stello-v4`) and `hash-bits=21` f
 
 ### 6. Phase 0 Baseline Matches (`starts-v6.txt`, `1,174` Games Each, `book=off`, Side B = `Stello 5.0`)
 
-*(Paused after Match `#26` per user request; 4 remaining `2,000 ms 8t` matches `#27`–`#30` pending user go.)*
+*(Paused after Match `#26` per user request; running remaining 4 `2,000 ms 8t` matches `#27`–`#30` sequentially.)*
 
 | # | Opponent | Time | Threads | Score (95 % CI) | W / D / L | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | NPS (A / B) | Wall Time |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
@@ -195,6 +195,7 @@ Defaults: `hash-bits=19` for Stello (`stello`, `stello-v4`) and `hash-bits=21` f
 | 24 | `Edax` (`edax`) | 2,000 ms | 1t | **37.5 %** (35.5–39.5 %) | `+287 =306 −581` | **−89** (−104 to −74) | 0.0 % | −1.0 ± 0.2 | 29.39 / 23.04 | 25.6 / 25.0 | 43.83M / 21.15M | [1h 45m](benchmark-results/match_p0_v5_vs_edax_2000ms_1t.md) |
 | 25 | `Edax AVX` (`edax-avx`) | 2,000 ms | 1t | **37.0 %** (35.0–38.9 %) | `+275 =318 −581` | **−93** (−108 to −78) | 0.0 % | −1.0 ± 0.1 | 29.60 / 23.17 | 25.7 / 25.0 | 47.33M / 22.43M | [1h 45m](benchmark-results/match_p0_v5_vs_edax_avx_2000ms_1t.md) |
 | 26 | `Edax AVX` (`edax-avx`) | 500 ms | 8t | **37.1 %** (35.2–39.1 %) | `+289 =294 −591` | **−91** (−106 to −77) | 0.0 % | −0.9 ± 0.1 | 29.65 / 23.79 | 26.2 / 25.5 | 307.02M / 147.83M | [3h 23m](benchmark-results/match_p0_v5_vs_edax_avx_500ms_8t.md) |
+| 27 | `Stello 4.0` (`v4`) | 2,000 ms | 8t | **63.1 %** (61.1–65.1 %) | `+604 =273 −297` | **+93** (+78 to +108) | 100.0 % | +1.1 ± 0.2 | 23.36 / 25.95 | 26.5 / 27.2 | 92.13M / 113.11M | [12h 50m](benchmark-results/match_p0_v5_vs_v4_2000ms_8t.md) |
 
 ### 7. Test Verification (Phase 0 Setup Complete, Matches Paused After #18)
 
