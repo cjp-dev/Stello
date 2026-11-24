@@ -196,6 +196,7 @@ Defaults: `hash-bits=19` for Stello (`stello`, `stello-v4`) and `hash-bits=21` f
 | 25 | `Edax AVX` (`edax-avx`) | 2,000 ms | 1t | **37.0 %** (35.0–38.9 %) | `+275 =318 −581` | **−93** (−108 to −78) | 0.0 % | −1.0 ± 0.1 | 29.60 / 23.17 | 25.7 / 25.0 | 47.33M / 22.43M | [1h 45m](benchmark-results/match_p0_v5_vs_edax_avx_2000ms_1t.md) |
 | 26 | `Edax AVX` (`edax-avx`) | 500 ms | 8t | **37.1 %** (35.2–39.1 %) | `+289 =294 −591` | **−91** (−106 to −77) | 0.0 % | −0.9 ± 0.1 | 29.65 / 23.79 | 26.2 / 25.5 | 307.02M / 147.83M | [3h 23m](benchmark-results/match_p0_v5_vs_edax_avx_500ms_8t.md) |
 | 27 | `Stello 4.0` (`v4`) | 2,000 ms | 8t | **63.1 %** (61.1–65.1 %) | `+604 =273 −297` | **+93** (+78 to +108) | 100.0 % | +1.1 ± 0.2 | 23.36 / 25.95 | 26.5 / 27.2 | 92.13M / 113.11M | [12h 50m](benchmark-results/match_p0_v5_vs_v4_2000ms_8t.md) |
+| 28 | `Egaroucid` (`egaroucid-cpp`) | 2,000 ms | 8t | **48.1 %** (46.2–50.0 %) | `+389 =351 −434` | **−13** (−27 to 0) | 2.5 % | −0.1 ± 0.1 | 29.19 / 26.63 | 26.9 / 27.5 | 111.03M / 154.09M | [12h 50m](benchmark-results/match_p0_v5_vs_egaroucid_cpp_2000ms_8t.md) |
 
 ### 7. Test Verification (Phase 0 Setup Complete, Matches Paused After #18)
 
