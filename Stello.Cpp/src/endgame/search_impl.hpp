@@ -763,7 +763,7 @@ AbortResult<int32_t> Kernel<Tier>::end_simple(
     using namespace detail::endgame_search;
 
     if (empties <= END_FAST_EMPTIES) {
-        return end_fast(s, own, opponent, alpha, passed, empties);
+        return end_fast(s, own, opponent, alpha, passed, empties, legal);
     }
 
     STELLO_TRY_VOID_I32(s.count_node());
@@ -874,7 +874,8 @@ AbortResult<int32_t> Kernel<Tier>::end_fast(
     uint64_t opponent,
     int32_t alpha,
     bool passed,
-    int32_t empties
+    int32_t empties,
+    uint64_t known_legal
 ) {
     using namespace detail::endgame_search;
 
@@ -885,7 +886,9 @@ AbortResult<int32_t> Kernel<Tier>::end_fast(
         }
     }
 
-    uint64_t legal = legal_moves(own, opponent);
+    uint64_t legal = (known_legal != endgame::bits::LEGAL_UNDEFINED)
+        ? known_legal
+        : legal_moves(own, opponent);
     if (legal == 0) {
         if (passed) {
             s.evaluations += 1;

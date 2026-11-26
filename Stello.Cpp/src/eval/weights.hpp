@@ -58,6 +58,7 @@ public:
     size_t stages() const noexcept { return stages_; }
     int32_t units_per_disc() const noexcept { return units_per_disc_; }
     bool has_mobility() const noexcept { return !mob_weights_.empty(); }
+    bool packed_vpaddw_safe() const noexcept { return packed_vpaddw_safe_; }
 
     size_t stage_of(uint32_t discs) const noexcept {
         return static_cast<size_t>(stage_of_discs_[discs]);
@@ -116,6 +117,7 @@ private:
     std::array<const int32_t*, 65> parity_ptrs_{};
     std::vector<uint32_t> stage_even_slot_;
     std::vector<uint32_t> stage_odd_slot_;
+    bool packed_vpaddw_safe_{false};
 };
 
 } // namespace stello::eval

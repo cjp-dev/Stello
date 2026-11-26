@@ -122,6 +122,21 @@ std::optional<EvalWeights> EvalWeights::create(
     weights.units_per_disc_ = units_per_disc;
     weights.stages_ = stage_tables.size();
 
+    int32_t min_w = 0;
+    int32_t max_w = 0;
+    for (const auto& tbl : stage_tables) {
+        for (const int16_t val : tbl) {
+            const int32_t v = static_cast<int32_t>(val);
+            if (v < min_w) {
+                min_w = v;
+            }
+            if (v > max_w) {
+                max_w = v;
+            }
+        }
+    }
+    weights.packed_vpaddw_safe_ = (min_w * 8 >= -32768 && max_w * 8 <= 32767);
+
     constexpr uint32_t kNoSlot = (std::numeric_limits<uint32_t>::max)();
     weights.stage_even_slot_.assign(weights.stages_, kNoSlot);
     weights.stage_odd_slot_.assign(weights.stages_, kNoSlot);

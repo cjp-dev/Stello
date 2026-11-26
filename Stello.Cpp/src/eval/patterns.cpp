@@ -667,16 +667,20 @@ PatternSet::PatternSet(std::string name, std::vector<PatternShape> shapes)
         }
     }
 
+    assert(packed_features.size() <= MAX_PATTERN_FEATURES);
     uint16_t sparse_pos = 0;
     for (uint32_t sq = 0; sq < 64U; ++sq) {
         slot_sparse_offsets_[sq] = sparse_pos;
+        uint64_t mask = 0;
         for (size_t slot = 0; slot < packed_features.size(); ++slot) {
             const uint16_t d = slot_deltas_[sq][slot];
             if (d != 0) {
                 slot_sparse_deltas_.push_back(SquareFeatureDelta{static_cast<uint16_t>(slot), d});
+                mask |= (uint64_t{1} << slot);
                 ++sparse_pos;
             }
         }
+        slot_square_masks_[sq] = mask;
     }
     slot_sparse_offsets_[64] = sparse_pos;
 }

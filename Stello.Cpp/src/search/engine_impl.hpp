@@ -24,6 +24,14 @@ inline constexpr int32_t EVALUATION_ORDER_MIN_LOOK = 4;
 inline constexpr int32_t MIDGAME_ETC_MIN_LOOK = 4;
 inline constexpr size_t SOLVE_HELPERS = 3;
 
+template <bool Enable>
+struct SiblingBaselineSlot {};
+
+template <>
+struct SiblingBaselineSlot<true> {
+    eval::SiblingBaseline data;
+};
+
 inline size_t lazy_smp_helpers(size_t workers) noexcept {
     return (workers + 2U) / 4U;
 }
@@ -895,6 +903,18 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc_deep(
     const uint32_t child_discs = node_discs + 1U;
     const int32_t* const child_w = s.pattern->packed_weights_for_discs(child_discs);
 
+#ifndef __wasm_simd128__
+    constexpr bool allow_sibling_deep = (Tier == cpu::CpuTier::Portable);
+    [[maybe_unused]] detail::midgame::SiblingBaselineSlot<allow_sibling_deep> sibling_slot;
+    [[maybe_unused]] bool use_sibling_delta = false;
+    if constexpr (allow_sibling_deep) {
+        use_sibling_delta = (move_count - (hash_move >= 0 ? size_t{1} : size_t{0})) >= size_t{3};
+        if (use_sibling_delta) {
+            set.init_sibling_baseline(eval_state, child_w, node_is_even, sibling_slot.data);
+        }
+    }
+#endif
+
     std::array<int32_t, MAX_MOVES> keys;
     std::array<uint64_t, MAX_MOVES> cached_replies;
     for (size_t idx = 0; idx < move_count; ++idx) {
@@ -926,7 +946,20 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc_deep(
         const int32_t replies = endgame::bits::weighted_moves(replies_bb);
         STELLO_TRY_VOID_R(ScoreMove, s.count_node());
         s.evaluations += 1;
-        int32_t raw = sum_eval_after_move(set, eval_state, node_is_even, static_cast<uint32_t>(mv), f, child_w, node_is_even);
+        int32_t raw;
+#ifndef __wasm_simd128__
+        if constexpr (allow_sibling_deep) {
+            raw = use_sibling_delta
+                ? set.sum_weights_sibling_delta(
+                    sibling_slot.data, eval_state, node_is_even, static_cast<uint32_t>(mv), f, child_w, node_is_even)
+                : sum_eval_after_move(
+                    set, eval_state, node_is_even, static_cast<uint32_t>(mv), f, child_w, node_is_even, s.pattern->packed_vpaddw_safe());
+        } else
+#endif
+        {
+            raw = sum_eval_after_move(
+                set, eval_state, node_is_even, static_cast<uint32_t>(mv), f, child_w, node_is_even, s.pattern->packed_vpaddw_safe());
+        }
         if (s.pattern->has_mobility()) {
             const uint32_t m_own = static_cast<uint32_t>(std::popcount(replies_bb));
             const uint32_t m_opp = static_cast<uint32_t>(std::popcount(opp_moves_bb));
@@ -1091,7 +1124,7 @@ AbortVoid Kernel<Tier>::order_by_evaluation(
         const int32_t replies = endgame::bits::weighted_moves(replies_bb);
         STELLO_TRY_VOID_IN_STATUS(s.count_node());
         s.evaluations += 1;
-        int32_t raw = sum_eval_after_move(set, eval_state, node_is_even, static_cast<uint32_t>(mv), f, child_w, node_is_even);
+        int32_t raw = sum_eval_after_move(set, eval_state, node_is_even, static_cast<uint32_t>(mv), f, child_w, node_is_even, s.pattern->packed_vpaddw_safe());
         if (s.pattern->has_mobility()) {
             const uint32_t m_own = static_cast<uint32_t>(std::popcount(replies_bb));
             const uint32_t m_opp = static_cast<uint32_t>(std::popcount(opp_moves_bb));

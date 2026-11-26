@@ -409,7 +409,8 @@ std::vector<MicrobenchStats> run_kernel(const MicrobenchOptions& opts) {
             [&](uint32_t s, uint64_t i) noexcept -> uint64_t {
                 const EvalSample& sample = eval_samples[static_cast<size_t>((s + i) & 15U)];
                 return static_cast<uint64_t>(static_cast<int64_t>(
-                    Kernel<Tier>::sum_eval_state(set, sample.state, sample.weights, !sample.is_even_disc)));
+                    Kernel<Tier>::sum_eval_state(
+                        set, sample.state, sample.weights, !sample.is_even_disc, ew.packed_vpaddw_safe())));
             }));
     }
 
@@ -420,7 +421,7 @@ std::vector<MicrobenchStats> run_kernel(const MicrobenchOptions& opts) {
                 return static_cast<uint64_t>(static_cast<int64_t>(
                     Kernel<Tier>::sum_eval_after_move(
                         set, sample.state, sample.is_even_disc, sample.square, sample.flips,
-                        sample.child_weights, sample.is_even_disc)));
+                        sample.child_weights, sample.is_even_disc, ew.packed_vpaddw_safe())));
             }));
     }
 

@@ -79,7 +79,8 @@ struct Kernel {
         const eval::PatternSet& set,
         const eval::PatternState& cur,
         const int32_t* packed_pair_weights,
-        bool odd_slot
+        bool odd_slot,
+        bool vpaddw_safe
     ) noexcept;
     static STELLO_FORCEINLINE int32_t sum_eval_after_move(
         const eval::PatternSet& set,
@@ -88,7 +89,8 @@ struct Kernel {
         uint32_t square,
         uint64_t flips,
         const int32_t* packed_child_pair_weights,
-        bool child_odd_slot
+        bool child_odd_slot,
+        bool vpaddw_safe
     ) noexcept;
     static STELLO_FORCEINLINE int32_t disc_score(
         const eval::EvalWeights& weights,
@@ -130,7 +132,7 @@ struct Kernel {
         uint64_t move_flips
     ) noexcept {
         int32_t raw = sum_eval_after_move(
-            weights.set(), cur, mover_is_even_disc, square, move_flips, child_w, mover_is_even_disc);
+            weights.set(), cur, mover_is_even_disc, square, move_flips, child_w, mover_is_even_disc, weights.packed_vpaddw_safe());
         if (weights.has_mobility()) {
             const uint64_t child_own = other ^ move_flips;
             const uint64_t child_other = own | move_flips | (uint64_t{1} << square);
@@ -151,7 +153,7 @@ struct Kernel {
         uint32_t discs,
         const int32_t* stage_w
     ) noexcept {
-        int32_t raw = sum_eval_state(weights.set(), cur, stage_w, (discs & 1U) != 0U);
+        int32_t raw = sum_eval_state(weights.set(), cur, stage_w, (discs & 1U) != 0U, weights.packed_vpaddw_safe());
         if (weights.has_mobility()) {
             const uint32_t m_own = static_cast<uint32_t>(std::popcount(legal_moves(own, opponent)));
             const uint32_t m_opp = static_cast<uint32_t>(std::popcount(legal_moves(opponent, own)));
@@ -425,7 +427,8 @@ struct Kernel {
         uint64_t opponent,
         int32_t alpha,
         bool passed,
-        int32_t empties
+        int32_t empties,
+        uint64_t known_legal = endgame::bits::LEGAL_UNDEFINED
     );
     static AbortResult<int32_t> solve_shallow(
         Searcher& s,
@@ -563,7 +566,8 @@ int32_t Kernel<cpu::CpuTier::V3>::sum_eval_state(
     const eval::PatternSet& set,
     const eval::PatternState& cur,
     const int32_t* packed_pair_weights,
-    bool odd_slot
+    bool odd_slot,
+    bool vpaddw_safe
 ) noexcept;
 template <>
 int32_t Kernel<cpu::CpuTier::V3>::sum_eval_after_move(
@@ -573,7 +577,8 @@ int32_t Kernel<cpu::CpuTier::V3>::sum_eval_after_move(
     uint32_t square,
     uint64_t flips,
     const int32_t* packed_child_pair_weights,
-    bool child_odd_slot
+    bool child_odd_slot,
+    bool vpaddw_safe
 ) noexcept;
 
 extern template struct Kernel<cpu::CpuTier::V3>;
@@ -642,7 +647,8 @@ int32_t Kernel<cpu::CpuTier::V4>::sum_eval_state(
     const eval::PatternSet& set,
     const eval::PatternState& cur,
     const int32_t* packed_pair_weights,
-    bool odd_slot
+    bool odd_slot,
+    bool vpaddw_safe
 ) noexcept;
 template <>
 int32_t Kernel<cpu::CpuTier::V4>::sum_eval_after_move(
@@ -652,7 +658,8 @@ int32_t Kernel<cpu::CpuTier::V4>::sum_eval_after_move(
     uint32_t square,
     uint64_t flips,
     const int32_t* packed_child_pair_weights,
-    bool child_odd_slot
+    bool child_odd_slot,
+    bool vpaddw_safe
 ) noexcept;
 
 extern template struct Kernel<cpu::CpuTier::V4>;

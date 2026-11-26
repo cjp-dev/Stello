@@ -3,6 +3,8 @@
 #include "core/compiler.hpp"
 
 #include <array>
+#include <bit>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -135,6 +137,12 @@ struct alignas(32) PatternState {
     std::array<uint16_t, MAX_PATTERN_FEATURES> features{};
 };
 
+struct SiblingBaseline {
+    int32_t base_sum;
+    std::array<int16_t, MAX_PATTERN_FEATURES> base_weights;
+    std::array<uint16_t, MAX_PATTERN_FEATURES> scratch_delta;
+};
+
 #if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(push)
 #pragma warning(disable : 4324)
@@ -159,6 +167,7 @@ public:
     const PatternState& all_2_state() const noexcept { return all_2_state_; }
     const uint32_t* slot_offsets() const noexcept { return slot_feature_offsets_.data(); }
     const uint16_t* square_deltas(uint32_t square) const noexcept { return slot_deltas_[square].data(); }
+    uint64_t square_feature_mask(uint32_t square) const noexcept { return slot_square_masks_[square]; }
     std::span<const SquareFeatureDelta> square_sparse_deltas(uint32_t square) const noexcept {
         const size_t begin = slot_sparse_offsets_[square];
         const size_t end = slot_sparse_offsets_[square + 1U];
@@ -195,6 +204,33 @@ public:
         const int32_t* packed_child_pair_weights,
         bool child_odd_slot
     ) const noexcept;
+    STELLO_FORCEINLINE void init_sibling_baseline(
+        const PatternState& cur,
+        const int32_t* packed_child_pair_weights,
+        bool child_odd_slot,
+        SiblingBaseline& out
+    ) const noexcept {
+        if (child_odd_slot) {
+            init_sibling_baseline_impl<true>(cur, packed_child_pair_weights, out);
+        } else {
+            init_sibling_baseline_impl<false>(cur, packed_child_pair_weights, out);
+        }
+    }
+    STELLO_FORCEINLINE int32_t sum_weights_sibling_delta(
+        SiblingBaseline& baseline,
+        const PatternState& cur,
+        bool mover_is_even_disc,
+        uint32_t square,
+        uint64_t flips,
+        const int32_t* packed_child_pair_weights,
+        bool child_odd_slot
+    ) const noexcept {
+        return child_odd_slot
+            ? sum_weights_sibling_delta_impl<true>(
+                baseline, cur, mover_is_even_disc, square, flips, packed_child_pair_weights)
+            : sum_weights_sibling_delta_impl<false>(
+                baseline, cur, mover_is_even_disc, square, flips, packed_child_pair_weights);
+    }
 
     int32_t sum_weights_packed(
         uint64_t digit1,
@@ -207,6 +243,87 @@ public:
     int32_t sum_weights_pext(uint64_t own, uint64_t opponent, std::span<const int16_t> weights) const noexcept;
 
 private:
+    template <bool ChildOddSlot>
+    static STELLO_FORCEINLINE int16_t unpack_slot_weight(int32_t packed) noexcept {
+        if constexpr (ChildOddSlot) {
+            return static_cast<int16_t>(packed >> 16);
+        } else {
+            return static_cast<int16_t>(static_cast<uint16_t>(packed));
+        }
+    }
+
+    template <bool ChildOddSlot>
+    STELLO_FORCEINLINE void init_sibling_baseline_impl(
+        const PatternState& cur,
+        const int32_t* packed_child_pair_weights,
+        SiblingBaseline& out
+    ) const noexcept {
+        out.scratch_delta.fill(0);
+        const size_t n = features_.size();
+        const uint32_t* const off = slot_feature_offsets_.data();
+        const uint16_t* const cur_f = cur.features.data();
+        int32_t sum = 0;
+        for (size_t s = 0; s < n; ++s) {
+            const int16_t bw = unpack_slot_weight<ChildOddSlot>(packed_child_pair_weights[off[s] + cur_f[s]]);
+            out.base_weights[s] = bw;
+            sum += bw;
+        }
+        out.base_sum = sum;
+    }
+
+    template <bool ChildOddSlot>
+    STELLO_FORCEINLINE int32_t sum_weights_sibling_delta_impl(
+        SiblingBaseline& baseline,
+        const PatternState& cur,
+        bool mover_is_even_disc,
+        uint32_t square,
+        uint64_t flips,
+        const int32_t* packed_child_pair_weights
+    ) const noexcept {
+        uint64_t touched = slot_square_masks_[square];
+        uint16_t* const scratch = baseline.scratch_delta.data();
+        if (mover_is_even_disc) {
+            for (const auto& entry : square_sparse_deltas(square)) {
+                scratch[entry.feature] = entry.delta;
+            }
+            uint64_t rem = flips;
+            while (rem != 0) {
+                const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
+                rem &= rem - 1U;
+                touched |= slot_square_masks_[bit];
+                for (const auto& entry : square_sparse_deltas(bit)) {
+                    scratch[entry.feature] = static_cast<uint16_t>(scratch[entry.feature] - entry.delta);
+                }
+            }
+        } else {
+            for (const auto& entry : square_sparse_deltas(square)) {
+                scratch[entry.feature] = static_cast<uint16_t>(2U * entry.delta);
+            }
+            uint64_t rem = flips;
+            while (rem != 0) {
+                const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
+                rem &= rem - 1U;
+                touched |= slot_square_masks_[bit];
+                for (const auto& entry : square_sparse_deltas(bit)) {
+                    scratch[entry.feature] = static_cast<uint16_t>(scratch[entry.feature] + entry.delta);
+                }
+            }
+        }
+
+        const uint32_t* const off = slot_feature_offsets_.data();
+        const uint16_t* const cur_f = cur.features.data();
+        int32_t sum = baseline.base_sum;
+        while (touched != 0) {
+            const uint32_t slot = static_cast<uint32_t>(std::countr_zero(touched));
+            touched &= touched - 1U;
+            const uint16_t idx = static_cast<uint16_t>(cur_f[slot] + scratch[slot]);
+            scratch[slot] = 0;
+            const int32_t nw = unpack_slot_weight<ChildOddSlot>(packed_child_pair_weights[off[slot] + idx]);
+            sum += nw - static_cast<int32_t>(baseline.base_weights[slot]);
+        }
+        return sum;
+    }
+
     std::string name_;
     std::vector<PatternShape> shapes_;
     std::vector<size_t> offsets_;
@@ -226,6 +343,7 @@ private:
     alignas(32) std::array<uint32_t, MAX_PATTERN_FEATURES> slot_feature_offsets_{};
     std::array<uint16_t, 65> slot_sparse_offsets_{};
     std::vector<SquareFeatureDelta> slot_sparse_deltas_;
+    std::array<uint64_t, 64> slot_square_masks_{};
 };
 #if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(pop)

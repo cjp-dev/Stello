@@ -356,3 +356,45 @@ All shared primitive checksums matched identically across `--cpu portable`, `--c
   - `Stello.Net.Tests`: `127 passed, 0 failed, 0 skipped` (`18 s`).
   - `Egaroucid.Engine.Tests`: `118 passed, 0 failed, 8 skipped` (`38 s`, optional `TaggedV30_*` reference DLL tests skipped).
   - WASM Node tests (`engine.test.mjs`, `engine-mt.test.mjs`): `20/20 passed, 0 failed` (`3.63 s`).
+
+### 9. Phase 2 Addendum (Zero-Node-Change Speed Experiments)
+
+Evaluated Priorities 1–4 from [Possible remaining Stello speed optimizations.md](Possible%20remaining%20Stello%20speed%20optimizations.md) one at a time in alternated `A, B, B, A, A, B` runs (`hash-bits=19`, `1` thread) against the Phase 2 baseline (`b0aeaf7`), preserving 100 % exact node, evaluation, move, score, depth, and score-kind parity.
+
+- **Summary of experiments:**
+  1. **Priority 1 — `7 → 6` empty reply mask handoff (`end_simple` → `end_fast`) — KEPT:**
+     - Instrumentation on FFO `#40–49`: `41,685,722` of `44,859,387` `end_fast` calls arrived with a known reply mask (`92.92 %`), including `1,220,122` known passes (`0`).
+     - Isolated `A, B, B, A, A, B` vs `b0aeaf7`: Native `ffo-40-49` (`v4`, `1,070,469,669` nodes) improved **`+0.83 %`** (mean `76.05M → 76.68M` NPS, won 3/3 paired runs); `midgame-handover-d12` remained flat (`3.904 → 3.909 s`); WASM ST `ffo-40-44` (`122,045,591` nodes) improved **`+0.63 %`** (`2905.4 → 2887.3 ms`, won 3/3 paired runs); WASM MT1 `ffo-40-44` improved **`+0.83 %`** (`2907.3 → 2883.3 ms`, won 3/3 paired runs).
+  2. **Priority 2 — 16-bit packed eval sum (`VPADDW`) (`sum_gather_avx2_vpaddw<OddSlot>`) — KEPT (`v3`/`v4`):**
+     - Added load-time `EvalWeights::packed_vpaddw_safe()` (`8 * min_w >= -32768 && 8 * max_w <= 32767`) keeping exact wide 32-bit fallback for extreme custom models (verified with a synthetic `−6000/+6000` `egaroucid16` test in `parity_incremental_eval`), clean `vpaddw` + single `vpslld`/`vpsrad` codegen (`zmm = 0`).
+     - Isolated `A, B, B, A, A, B` vs Exp 1: `mid-d12 v4` **`+1.09 %`** (`0.5833 → 0.5770 s`, 3/3 pairs); `mid-d14 v4` **`+1.96 %`** (`1.6837 → 1.6513 s`, 3/3 pairs); `mid-d16 v4` **`+1.25 %`** (`4.3833 → 4.3290 s`, 3/3 pairs); `mid-d14 v3` **`+1.06 %`** (`1.7103 → 1.6923 s`, 3/3 pairs).
+  3. **Priority 3 — Static score reuse (`search_inc_deep` → `try_probcut_inc`) — REVERTED (re-evaluate in Phase 4):**
+     - Instrumentation (`mid-bench v4`): produced vs consumed counts were `393,444 / 138,324` (`35.16 %`) at `d12`, `1,098,376 / 306,578` (`27.91 %`) at `d14`, and `2,892,211 / 649,541` (`22.46 %`) at `d16` with `0` mismatches (`57/57` `stello_tests`).
+     - Clean uninstrumented `A, B, B, A, A, B` vs Exp 2: flat/mixed natively (`mid-d12 v4` `+0.44 %`, `mid-d14 v4` `−0.36 %`, `mid-d16 v4` `+0.19 %`, `mid-d14 v3` `−0.23 %`) and flat on WASM ST (`mid-d10` `−0.5 %`, `mid-d12` `0.0 %`, `mid-d14` `+0.1 %`). Saving `~0.5–1.5 %` of total node evaluations did not overcome `score_by_sq[64]` stack traffic and the extra parameter; reverted cleanly and left for re-evaluation in Phase 4 Item 2 (`hash_move`-first).
+  4. **Priority 4 — Sibling-delta pattern evaluation (`SiblingBaseline`, `slot_square_masks_`) — KEPT ON NATIVE `Portable` ONLY (`search_inc_deep`); REJECTED ON `v3`/`v4`, WASM SIMD128, & `look == 0`:**
+     - `parity_incremental_eval` verifies `init_sibling_baseline` + `sum_weights_sibling_delta` across all `positions.txt` fixtures and all 6 models (`built_in`, `classic11`, `plus15`, `egaroucid16`, mobility, and `−6000/+6000`), checking `scratch_delta == 0` after every call.
+     - **`4a` (`search_inc_deep`, `>= 3` non-hash children):** Native `portable` won 3/3 pairs on `mid-d12` (**`+1.40 %`**, `0.8450 → 0.8333 s`) and `mid-d14` (**`+2.34 %`**, `2.4080 → 2.3530 s`). Native `v4` regressed (`−2.4 %` `d12`, `−0.3 %` `d14`, `−2.3 %` `d16`) vs AVX2 `VPGATHERDD` + `VPADDW`, and WASM ST (`__wasm_simd128__`) regressed (`−0.6 %` `d10`, `−1.2 %` `d12`, `−1.7 %` `d14`, flat `ffo-40-44`) vs unrolled SIMD128 lane advance + flat gather.
+     - **`4b` (lazy `look == 0` sibling-delta in `search_inc`, `list.size() >= 4`):** Regressed on WASM ST (`−11 % to −12 %`), native `v4` (`−6 % to −7 %`), native `v3` (`−5.5 %`), and trimmed `portable` (`+1.26 %` vs `4a`-only `+2.34 %` at `d14`) because early `index == 1..2` cutoffs do not amortize `init_sibling_baseline` and the stack frame; removed completely. `4a` stays strictly compiled via `if constexpr (Tier == cpu::CpuTier::Portable)` under `#ifndef __wasm_simd128__`.
+
+- **Cumulative Final Verification (Post-Addendum vs `b0aeaf7` & `v5.0-ref/`):**
+  - **Cumulative native `A, B, B, A, A, B` vs `b0aeaf7`:** `mid-d12 v4` `0.5823 → 0.5807 s` (`+0.29 %`, best `14.00M` nps); `mid-d14 v4` `1.6513 → 1.6387 s` (**`+0.77 %`**, best `14.05M` nps); `mid-d16 v4` `4.3767 → 4.3427 s` (**`+0.78 %`**, 3/3 pairs, best `14.00M` nps); `ffo-40-49 v4` `14.13 → 14.00 s` (**`+0.95 %`**, mean `75.79M → 76.39M` nps); `mid-d12/d14 portable` `0.8183 → 0.8220 s` / `2.3170 → 2.3150 s`.
+  - **`.NET` FFI `--compare Plans\benchmark-results\v5.0-ref\*.json`:**
+    - `midgame-depth10`: `100/100 identical`, `0.232 s` vs `0.237 s` (`+2.3 %`)
+    - `midgame-depth12`: `100/100 identical`, `0.603 s` vs `0.631 s` (`+4.7 %`)
+    - `midgame-depth14`: `100/100 identical`, `1.674 s` vs `1.780 s` (`+6.3 %`)
+    - `midgame-depth16`: `100/100 identical`, `4.369 s` vs `4.549 s` (`+4.1 %`)
+    - `midgame-random-depth8`: `1000/1000 identical`, `0.603 s` vs `0.640 s` (`+6.1 %`)
+    - `midgame-handover-depth12`: `298/300 identical` (`r00100e19` & `r00196e18` reflect Phase 1 `C3`, identical move & score), `3.892 s` vs `4.531 s` (`+16.4 %`)
+    - `ffo-40-49`: `10/10 identical`, `14.2 s` vs `16.7 s` (`+17.5 %`)
+  - **Final WASM ST/MT sizes & `wasm_bench.mjs`:**
+    - `engine/stello_wasm_bg.wasm`: `9,164,799` raw / `8,982,504` gzip / `8,960,860` B brotli
+    - `engine-mt/stello_wasm_bg.wasm`: `9,194,950` raw / `8,994,205` gzip / `8,974,311` B brotli
+    - `st`: `mid-d10` `326.0 / 328.8 ms` (`9.46M`), `mid-d12` `859.2 / 864.8 ms` (`9.45M`), `ffo-40-44` `2899.7 / 2909.4 ms` (`42.09M`)
+    - `mt1`: `mid-d10` `332.1 / 335.5 ms` (`9.29M`), `mid-d12` `876.3 / 882.1 ms` (`9.27M`), `ffo-40-44` `2892.3 / 2897.0 ms` (`42.20M`)
+    - `mt4`: `mid-d10` `267.8 / 286.5 ms` (`19.02M`), `mid-d12` `583.7 / 603.7 ms` (`21.52M`), `ffo-40-44` `1060.4 / 1072.7 ms` (`132.99M`)
+    - WASM ST `A, B, B, A, A, B` vs `b0aeaf7`: `ffo-40-44` **`+0.58 %`** (`2907.9 → 2891.2 ms`); midgame flat (`323.0 → 326.5 ms` `d10`, `856.7 → 857.8 ms` `d12`, `2420.1 → 2438.0 ms` `d14`).
+  - **Post-addendum Gate checks (all after final edit):**
+    - All 5 C++ presets (`clang-release`, `clang-native`, `msvc-release`, `msvc-native`, `clang-sanitized`): `0` compiler warnings, `3/3` ctests each.
+    - `llvm-objdump -d` `zmm` count: `0` across `windows-ffi\stello_engine.dll`, `clang-release\{stello-cpp.exe, stello_engine.dll}`, `msvc-release\stello-cpp.exe`, and `clang-native\stello-cpp.exe`.
+    - WASM Node tests (`engine.test.mjs`, `engine-mt.test.mjs`): `20/20 passed, 0 failed`.
+    - `.NET` Release build (`0 Warning(s), 0 Error(s)`): `Stello.Engine.Tests` `521 passed, 0 failed`, `Stello.Net.Tests` `127 passed, 0 failed`, `Egaroucid.Engine.Tests` `118 passed, 0 failed, 8 skipped` (`TaggedV30_*`).

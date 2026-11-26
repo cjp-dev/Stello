@@ -83,9 +83,10 @@ STELLO_FORCEINLINE int32_t Kernel<cpu::CpuTier::V4>::sum_eval_state(
     const eval::PatternSet& set,
     const eval::PatternState& cur,
     const int32_t* packed_pair_weights,
-    bool odd_slot
+    bool odd_slot,
+    bool vpaddw_safe
 ) noexcept {
-    return detail::eval_avx2::sum_eval_state_avx2(set, cur, packed_pair_weights, odd_slot);
+    return detail::eval_avx2::sum_eval_state_avx2(set, cur, packed_pair_weights, odd_slot, vpaddw_safe);
 }
 
 template <>
@@ -96,10 +97,11 @@ STELLO_FORCEINLINE int32_t Kernel<cpu::CpuTier::V4>::sum_eval_after_move(
     uint32_t square,
     uint64_t flips,
     const int32_t* packed_child_pair_weights,
-    bool child_odd_slot
+    bool child_odd_slot,
+    bool vpaddw_safe
 ) noexcept {
     return detail::eval_avx2::sum_eval_after_move_avx2(
-        set, cur, mover_is_even_disc, square, flips, packed_child_pair_weights, child_odd_slot);
+        set, cur, mover_is_even_disc, square, flips, packed_child_pair_weights, child_odd_slot, vpaddw_safe);
 }
 
 namespace detail {

@@ -12,7 +12,47 @@
 namespace stello::search::detail::eval_avx2 {
 
 template <bool OddSlot>
-STELLO_FORCEINLINE int32_t sum_gather_avx2(
+STELLO_FORCEINLINE int32_t sum_gather_avx2_vpaddw(
+    const eval::PatternSet& set,
+    __m256i l0,
+    __m256i l1,
+    __m256i l2,
+    __m256i l3,
+    const int32_t* pair_weights
+) noexcept {
+    const __m256i* const off_v = reinterpret_cast<const __m256i*>(set.slot_offsets());
+
+    auto gather_raw = [&](__m128i h, size_t off_idx) noexcept -> __m256i {
+        const __m256i idx = _mm256_add_epi32(_mm256_cvtepu16_epi32(h), off_v[off_idx]);
+        return _mm256_i32gather_epi32(pair_weights, idx, 4);
+    };
+
+    const __m256i g0 = gather_raw(_mm256_castsi256_si128(l0), 0);
+    const __m256i g1 = gather_raw(_mm256_extracti128_si256(l0, 1), 1);
+    const __m256i g2 = gather_raw(_mm256_castsi256_si128(l1), 2);
+    const __m256i g3 = gather_raw(_mm256_extracti128_si256(l1, 1), 3);
+    const __m256i g4 = gather_raw(_mm256_castsi256_si128(l2), 4);
+    const __m256i g5 = gather_raw(_mm256_extracti128_si256(l2, 1), 5);
+    const __m256i g6 = gather_raw(_mm256_castsi256_si128(l3), 6);
+    const __m256i g7 = gather_raw(_mm256_extracti128_si256(l3, 1), 7);
+
+    // Safe without intra-word carry into odd slots because eval::EvalWeights::create checks 8 * [min_w, max_w] in int16_t.
+    const __m256i s01 = _mm256_add_epi16(g0, g1);
+    const __m256i s23 = _mm256_add_epi16(g2, g3);
+    const __m256i s45 = _mm256_add_epi16(g4, g5);
+    const __m256i s67 = _mm256_add_epi16(g6, g7);
+    const __m256i sum16 = _mm256_add_epi16(_mm256_add_epi16(s01, s23), _mm256_add_epi16(s45, s67));
+    const __m256i ss = OddSlot
+        ? _mm256_srai_epi32(sum16, 16)
+        : _mm256_srai_epi32(_mm256_slli_epi32(sum16, 16), 16);
+
+    __m128i s = _mm_add_epi32(_mm256_castsi256_si128(ss), _mm256_extracti128_si256(ss, 1));
+    s = _mm_add_epi32(s, _mm_unpackhi_epi64(s, s));
+    return _mm_cvtsi128_si32(_mm_add_epi32(s, _mm_shufflelo_epi16(s, 0x4e)));
+}
+
+template <bool OddSlot>
+STELLO_FORCEINLINE int32_t sum_gather_avx2_wide(
     const eval::PatternSet& set,
     __m256i l0,
     __m256i l1,
@@ -76,27 +116,34 @@ STELLO_FORCEINLINE int32_t sum_local_avx2(
     __m256i l2,
     __m256i l3,
     const int32_t* pair_weights,
-    bool odd_slot
+    bool odd_slot,
+    bool vpaddw_safe
 ) noexcept {
-    if (set.feature_count() != 64U) [[unlikely]] {
-        alignas(32) uint16_t loc[eval::MAX_PATTERN_FEATURES];
-        __m256i* const dst = reinterpret_cast<__m256i*>(loc);
-        _mm256_store_si256(dst + 0, l0);
-        _mm256_store_si256(dst + 1, l1);
-        _mm256_store_si256(dst + 2, l2);
-        _mm256_store_si256(dst + 3, l3);
-        const uint32_t* const off = set.slot_offsets();
-        const size_t n = set.feature_count();
-        int32_t sum = 0;
-        for (size_t f = 0; f < n; ++f) {
-            const int32_t packed = pair_weights[off[f] + loc[f]];
-            sum += odd_slot ? static_cast<int16_t>(packed >> 16) : static_cast<int16_t>(static_cast<uint16_t>(packed));
+    if (set.feature_count() == 64U) [[likely]] {
+        if (vpaddw_safe) [[likely]] {
+            return odd_slot
+                ? sum_gather_avx2_vpaddw<true>(set, l0, l1, l2, l3, pair_weights)
+                : sum_gather_avx2_vpaddw<false>(set, l0, l1, l2, l3, pair_weights);
         }
-        return sum;
+        return odd_slot
+            ? sum_gather_avx2_wide<true>(set, l0, l1, l2, l3, pair_weights)
+            : sum_gather_avx2_wide<false>(set, l0, l1, l2, l3, pair_weights);
     }
-    return odd_slot
-        ? sum_gather_avx2<true>(set, l0, l1, l2, l3, pair_weights)
-        : sum_gather_avx2<false>(set, l0, l1, l2, l3, pair_weights);
+
+    alignas(32) uint16_t loc[eval::MAX_PATTERN_FEATURES];
+    __m256i* const dst = reinterpret_cast<__m256i*>(loc);
+    _mm256_store_si256(dst + 0, l0);
+    _mm256_store_si256(dst + 1, l1);
+    _mm256_store_si256(dst + 2, l2);
+    _mm256_store_si256(dst + 3, l3);
+    const uint32_t* const off = set.slot_offsets();
+    const size_t n = set.feature_count();
+    int32_t sum = 0;
+    for (size_t f = 0; f < n; ++f) {
+        const int32_t packed = pair_weights[off[f] + loc[f]];
+        sum += odd_slot ? static_cast<int16_t>(packed >> 16) : static_cast<int16_t>(static_cast<uint16_t>(packed));
+    }
+    return sum;
 }
 
 STELLO_FORCEINLINE void accum_masks_avx2(
@@ -225,7 +272,8 @@ STELLO_FORCEINLINE int32_t sum_eval_state_avx2(
     const eval::PatternSet& set,
     const eval::PatternState& cur,
     const int32_t* packed_pair_weights,
-    bool odd_slot
+    bool odd_slot,
+    bool vpaddw_safe
 ) noexcept {
     const __m256i* const in = reinterpret_cast<const __m256i*>(cur.features.data());
     return sum_local_avx2(
@@ -235,7 +283,8 @@ STELLO_FORCEINLINE int32_t sum_eval_state_avx2(
         _mm256_loadu_si256(in + 2),
         _mm256_loadu_si256(in + 3),
         packed_pair_weights,
-        odd_slot);
+        odd_slot,
+        vpaddw_safe);
 }
 
 STELLO_FORCEINLINE int32_t sum_eval_after_move_avx2(
@@ -245,7 +294,8 @@ STELLO_FORCEINLINE int32_t sum_eval_after_move_avx2(
     uint32_t square,
     uint64_t flips,
     const int32_t* packed_child_pair_weights,
-    bool child_odd_slot
+    bool child_odd_slot,
+    bool vpaddw_safe
 ) noexcept {
     const __m256i* const in = reinterpret_cast<const __m256i*>(cur.features.data());
     const __m256i* const sq = reinterpret_cast<const __m256i*>(set.square_deltas(square));
@@ -282,7 +332,7 @@ STELLO_FORCEINLINE int32_t sum_eval_after_move_avx2(
             l3 = _mm256_add_epi16(l3, d[3]);
         }
     }
-    return sum_local_avx2(set, l0, l1, l2, l3, packed_child_pair_weights, child_odd_slot);
+    return sum_local_avx2(set, l0, l1, l2, l3, packed_child_pair_weights, child_odd_slot, vpaddw_safe);
 }
 
 } // namespace stello::search::detail::eval_avx2
