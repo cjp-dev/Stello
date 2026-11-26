@@ -11,14 +11,24 @@ namespace stello::search {
 
 /// A node whose younger brothers are searched in parallel; stopped on a cutoff or parent stop.
 struct SplitPoint {
-    std::atomic<bool> stop{false};
-    std::atomic<bool> cut{false};
+    static constexpr uint8_t STOP_BIT = 1;
+    static constexpr uint8_t CUT_BIT = 2;
+
+    std::atomic<uint8_t> state{0};
     const SplitPoint* parent{nullptr};
+
+    void request_stop() noexcept { state.fetch_or(STOP_BIT, std::memory_order_relaxed); }
+
+    void request_cut() noexcept { state.fetch_or(STOP_BIT | CUT_BIT, std::memory_order_relaxed); }
+
+    bool is_stopped() const noexcept { return (state.load(std::memory_order_relaxed) & STOP_BIT) != 0; }
+
+    bool is_cut() const noexcept { return (state.load(std::memory_order_relaxed) & CUT_BIT) != 0; }
 
     bool stopped() const noexcept {
         const SplitPoint* point = this;
         while (point != nullptr) {
-            if (point->stop.load(std::memory_order_relaxed)) {
+            if (point->is_stopped()) {
                 return true;
             }
             point = point->parent;

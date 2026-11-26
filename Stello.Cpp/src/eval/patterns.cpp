@@ -502,15 +502,18 @@ STELLO_NOINLINE int32_t Direct::sum_any(
 }
 
 int32_t Direct::sum_portable(uint64_t own, uint64_t opponent, std::span<const int16_t> weights) const noexcept {
+    return sum_portable(own, opponent, weights.data());
+}
+
+int32_t Direct::sum_portable(uint64_t own, uint64_t opponent, const int16_t* weights) const noexcept {
     int32_t sum = 0;
-    const int16_t* w = weights.data();
     for (const auto& group : groups_) {
         switch (group.count) {
-            case 1: sum += sum_group<1>(group, own, opponent, w); break;
-            case 2: sum += sum_group<2>(group, own, opponent, w); break;
-            case 3: sum += sum_group<3>(group, own, opponent, w); break;
-            case 4: sum += sum_group<4>(group, own, opponent, w); break;
-            default: sum += sum_any(group, own, opponent, w); break;
+            case 1: sum += sum_group<1>(group, own, opponent, weights); break;
+            case 2: sum += sum_group<2>(group, own, opponent, weights); break;
+            case 3: sum += sum_group<3>(group, own, opponent, weights); break;
+            case 4: sum += sum_group<4>(group, own, opponent, weights); break;
+            default: sum += sum_any(group, own, opponent, weights); break;
         }
     }
     return sum;

@@ -94,10 +94,12 @@ internal static class EngineProtocol
     public static SearchResult MoveNowResult(Board board, Player player, SearchInfo? last, TimeSpan elapsed)
     {
         ulong legal = board.LegalMoves(player);
-        Square? square = last?.BestMove ?? last?.CurrentMove
-            ?? (legal != 0 ? new Square(BitOperations.TrailingZeroCount(legal)) : null);
+        Square? candidate = last?.BestMove ?? last?.CurrentMove;
+        Square? square = candidate is { } s && (legal & s.Bit) != 0
+            ? s
+            : (legal != 0 ? new Square(BitOperations.TrailingZeroCount(legal)) : null);
         return new SearchResult(
-            square is { } s ? new Move(s) : Move.Pass,
+            square is { } chosen ? new Move(chosen) : Move.Pass,
             last?.Score ?? 0,
             last?.Kind ?? ScoreKind.None,
             last?.Depth ?? 0,

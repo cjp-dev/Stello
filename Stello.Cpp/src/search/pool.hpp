@@ -192,16 +192,6 @@ public:
             return false;
         }
 
-        std::lock_guard<std::mutex> lk(shared_->queue_mutex);
-        if (shared_->idle.load(std::memory_order_relaxed) == 0 || !shared_->running) {
-            return false;
-        }
-
-        {
-            std::lock_guard<std::mutex> rlk(tasks_->running_mutex);
-            tasks_->running += 1;
-        }
-
         auto tasks = tasks_;
         detail::UniqueTask<S> wrapped(
             [fn = std::forward<F>(fn), tasks](S& state) mutable {
@@ -215,8 +205,17 @@ public:
                 }
             });
 
-        shared_->idle.fetch_sub(1, std::memory_order_relaxed);
+        std::lock_guard<std::mutex> lk(shared_->queue_mutex);
+        if (shared_->idle.load(std::memory_order_relaxed) == 0 || !shared_->running) {
+            return false;
+        }
+
         shared_->jobs.push_back(typename detail::PoolShared<S>::Job{std::move(wrapped), tasks_});
+        shared_->idle.fetch_sub(1, std::memory_order_relaxed);
+        {
+            std::lock_guard<std::mutex> rlk(tasks_->running_mutex);
+            tasks_->running += 1;
+        }
         shared_->work.notify_one();
         return true;
     }

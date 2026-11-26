@@ -40,7 +40,14 @@ public sealed class BrowserGameFileService(IJSRuntime js, BrowserDialogService d
             }
         }
 
-        await js.InvokeVoidAsync("gameShell.downloadTextFile", name, text);
+        try
+        {
+            await js.InvokeVoidAsync("gameShell.downloadTextFile", name, text);
+        }
+        catch (JSException exception)
+        {
+            throw new IOException(exception.Message, exception);
+        }
         return name;
     }
 }

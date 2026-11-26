@@ -131,9 +131,12 @@ uint8_t detect_features() noexcept {
 #endif
 
 STELLO_NOINLINE uint8_t detect() noexcept {
-    const uint8_t state = detect_features();
-    g_state.store(state, std::memory_order_relaxed);
-    return state;
+    const uint8_t detected = detect_features();
+    uint8_t expected = kUnknown;
+    if (g_state.compare_exchange_strong(expected, detected, std::memory_order_relaxed)) {
+        return detected;
+    }
+    return expected;
 }
 
 uint8_t feature_flags() noexcept {

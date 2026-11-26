@@ -20,6 +20,8 @@ internal sealed class FakeDialogService : IDialogService
 
     public int AboutShown { get; private set; }
 
+    public Action? OnConfirm { get; set; }
+
     public Task<GameSettings?> EditSettingsAsync(GameSettings current) => Task.FromResult(NewSettings);
 
     public void ShowError(string message) => Errors.Add(message);
@@ -31,6 +33,7 @@ internal sealed class FakeDialogService : IDialogService
     public Task<bool> ConfirmAsync(string message)
     {
         Confirmations++;
+        OnConfirm?.Invoke();
         return Task.FromResult(ConfirmAnswer);
     }
 

@@ -40,7 +40,7 @@ public sealed class LocalEngineHost(ComputerPlayer computer, OpeningBook book, I
         IProgress<BookLearningProgress>? progress,
         CancellationToken cancellationToken)
     {
-        BookLearner learner = CreateLearner(limits, hashBits: 19);
+        BookLearner learner = CreateLearner(limits, hashBits: limits.HashBits);
         BookLearningOutcome outcome;
         string? error = null;
         try
@@ -50,6 +50,7 @@ public sealed class LocalEngineHost(ComputerPlayer computer, OpeningBook book, I
         }
         catch (OperationCanceledException)
         {
+            learner.Minimax();
             outcome = BookLearningOutcome.Stopped;
         }
         catch (Exception exception)

@@ -290,6 +290,38 @@ public class BenchmarkTests
         Assert.Equal(new SideStats(3, 11_000, TimeSpan.FromMilliseconds(18), 1, 8, 18, TimeSpan.FromMilliseconds(8)), stats);
     }
 
+    [Fact]
+    public void MatchSide_ForwardsOptionsToNewPlayer_AndMatchSummaryClampsInterval()
+    {
+        var selectiveSide = new MatchSide("mpc", SearchLimits.FixedDepth(6, useOpeningBook: false), HashBits: 11);
+        var unselectiveSide = new MatchSide("no-mpc", SearchLimits.FixedDepth(6, useOpeningBook: false), HashBits: 11,
+            Options: Stello.Engine.Search.SearchOptions.Default with { Selective = false });
+        IMatchPlayer pSelective = selectiveSide.NewPlayer();
+        IMatchPlayer pUnselective = unselectiveSide.NewPlayer();
+        pSelective.NewGame();
+        pUnselective.NewGame();
+        SearchResult resSelective = pSelective.ChooseMove(Board.Initial, Player.Black, selectiveSide.Limits, CancellationToken.None);
+        SearchResult resUnselective = pUnselective.ChooseMove(Board.Initial, Player.Black, unselectiveSide.Limits, CancellationToken.None);
+        Assert.True(Board.Initial.IsLegal(Player.Black, resUnselective.Move.Square!.Value));
+        Assert.True(resUnselective.Nodes > resSelective.Nodes);
+
+        var allWins = Enumerable.Range(0, 4)
+            .Select(i => new MatchPair($"s{i}", new MatchGame(Player.White, [], 1), new MatchGame(Player.Black, [], 1)))
+            .ToList();
+        MatchSummary winSummary = MatchSummary.Of(allWins);
+        Assert.InRange(winSummary.Low, 0.0, 1.0);
+        Assert.InRange(winSummary.High, 0.0, 1.0);
+
+        var mixed = new List<MatchPair>
+        {
+            new("a", new MatchGame(Player.White, [], 10), new MatchGame(Player.Black, [], 10)),
+            new("b", new MatchGame(Player.White, [], -10), new MatchGame(Player.Black, [], -10)),
+        };
+        MatchSummary clamped = MatchSummary.Of(mixed);
+        Assert.Equal(0.0, clamped.Low, 10);
+        Assert.Equal(1.0, clamped.High, 10);
+    }
+
     private static MatchSide RecordedSide(string name, RecordingMatchPlayer player) =>
         new(name, SearchLimits.FixedDepth(3, useOpeningBook: false), HashBits: 10, CreatePlayer: () => player);
 

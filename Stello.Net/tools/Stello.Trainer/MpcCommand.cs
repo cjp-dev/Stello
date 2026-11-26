@@ -18,12 +18,14 @@ internal static class MpcCommand
     private const int BucketDiscs = 4;
     private const int GameEnd = 32000;
 
+    public static int Run(string[] args) => Run(Options.Parse(args));
+
     public static int Run(Options options)
     {
         options.Allow("data", "from", "to", "per-discs", "max-depth", "workers", "out", "fit", "model");
         string data = options.Text("data") ?? TrainingData.DefaultFolder();
-        int from = options.Number("from", 14, 8, 56);
-        int to = options.Number("to", 52, from, 56);
+        int from = options.Number("from", 14, 8, 55);
+        int to = options.Number("to", 52, from, 55);
         int perDiscs = options.Number("per-discs", 100, 1, 100_000);
         int maxDepth = options.Number("max-depth", 12, 1, 20);
         int workers = options.Number("workers", Environment.ProcessorCount, 1, 256);

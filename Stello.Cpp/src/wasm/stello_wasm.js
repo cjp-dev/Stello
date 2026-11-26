@@ -146,6 +146,9 @@ function finalizeInstance(instance, sharedMemory, isWorker) {
         try {
             exports._emscripten_stack_restore(exports.stello_wasm_boot_stack_top());
             const newSp = exports.stello_wasm_worker_prepare();
+            if (!newSp) {
+                throw new Error('Failed to initialize WASM worker thread.');
+            }
             exports._emscripten_stack_restore(newSp);
         } finally {
             Atomics.store(i32, lockIdx, 0);

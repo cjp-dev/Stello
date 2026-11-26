@@ -37,7 +37,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private bool _isWaitingForNaturalDelay;
     private readonly Timer _clockTimer;
     private readonly SynchronizationContext? _syncContext;
-    private bool _hasHumanContinuedOnTime;
+    private readonly SemaphoreSlim _transitionGate = new(1, 1);
+    private bool _disposed;
+    private int _ticking;
+    private int _clockGeneration;
+    private Player? _continuedOnTime;
     private bool _isTimeoutPrompting;
 
     // The side that lost on time; the board itself is not finished, so Game.IsGameOver stays false.
@@ -94,9 +98,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(
-        nameof(NewGameCommand), nameof(OpenCommand), nameof(SwitchSidesCommand), nameof(UndoCommand), nameof(RedoCommand),
-        nameof(EditSettingsCommand), nameof(AddGameToBookCommand), nameof(EvaluateBookCommand), nameof(SelfPlayCommand),
-        nameof(StopLearningCommand))]
+        nameof(NewGameCommand), nameof(OpenCommand), nameof(SetGameModeCommand), nameof(SwitchSidesCommand),
+        nameof(UndoCommand), nameof(RedoCommand), nameof(EditSettingsCommand), nameof(AddGameToBookCommand),
+        nameof(EvaluateBookCommand), nameof(SelfPlayCommand), nameof(StopLearningCommand))]
     [NotifyPropertyChangedFor(nameof(CanUndo), nameof(CanRedo))]
     private bool _isLearning;
 
@@ -262,10 +266,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IsSoundOn = !IsSoundOn;
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanChangeGame))]
     public async Task SetGameMode(GameMode mode)
     {
-        if (GameMode == mode)
+        if (IsLearning || GameMode == mode)
         {
             return;
         }
@@ -278,17 +282,30 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             }
         }
 
-        await StopAsync();
-        GameMode = mode;
-        Player human = mode == GameMode.ComputerVsHuman ? Player.White : Player.Black;
-        _game = new Game(human);
-        _fileName = null;
-        _lostOnTime = null;
-        IsGameModified = false;
-        ResetClock();
-        _engine.ResetBookTracker();
-        Analysis.Clear();
-        Start();
+        await _transitionGate.WaitAsync();
+        try
+        {
+            if (IsLearning || GameMode == mode)
+            {
+                return;
+            }
+
+            await StopAsync();
+            GameMode = mode;
+            Player human = mode == GameMode.ComputerVsHuman ? Player.White : Player.Black;
+            _game = new Game(human);
+            _fileName = null;
+            _lostOnTime = null;
+            IsGameModified = false;
+            ResetClock();
+            _engine.ResetBookTracker();
+            Analysis.Clear();
+            Start();
+        }
+        finally
+        {
+            _transitionGate.Release();
+        }
     }
 
     public void Stop()
@@ -299,6 +316,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        Volatile.Write(ref _disposed, true);
         _clockTimer.Dispose();
         Stop();
     }
@@ -347,6 +365,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanChangeGame))]
     private async Task NewGame()
     {
+        if (IsLearning)
+        {
+            return;
+        }
+
         if (_game.Ply > 0 && !IsGameOver)
         {
             if (!await _dialogs.ConfirmAsync("Abandon current match and start a new game?"))
@@ -360,21 +383,39 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private async Task StartNewGameAsync()
     {
-        await StopAsync();
-        Player human = GameMode == GameMode.ComputerVsHuman ? Player.White : Player.Black;
-        _game = new Game(human);
-        _fileName = null;
-        _lostOnTime = null;
-        IsGameModified = false;
-        ResetClock();
-        _engine.ResetBookTracker();
-        Analysis.Clear();
-        Start();
+        await _transitionGate.WaitAsync();
+        try
+        {
+            if (IsLearning)
+            {
+                return;
+            }
+
+            await StopAsync();
+            Player human = GameMode == GameMode.ComputerVsHuman ? Player.White : Player.Black;
+            _game = new Game(human);
+            _fileName = null;
+            _lostOnTime = null;
+            IsGameModified = false;
+            ResetClock();
+            _engine.ResetBookTracker();
+            Analysis.Clear();
+            Start();
+        }
+        finally
+        {
+            _transitionGate.Release();
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanChangeGame))]
     private async Task Open()
     {
+        if (IsLearning)
+        {
+            return;
+        }
+
         GameFile? file;
         Game loaded;
         try
@@ -393,25 +434,38 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
-        await StopAsync();
-
-        if (GameMode != GameMode.HumanVsHuman && !loaded.IsHumanToMove)
+        await _transitionGate.WaitAsync();
+        try
         {
-            loaded.SwitchSides();
-        }
+            if (IsLearning)
+            {
+                return;
+            }
 
-        _game = loaded;
-        _fileName = file.Name;
-        _lostOnTime = null;
-        IsGameModified = false;
-        if (GameMode != GameMode.HumanVsHuman)
-        {
-            GameMode = loaded.Human == Player.Black ? GameMode.HumanVsComputer : GameMode.ComputerVsHuman;
+            await StopAsync();
+
+            if (GameMode != GameMode.HumanVsHuman && !loaded.IsHumanToMove)
+            {
+                loaded.SwitchSides();
+            }
+
+            _game = loaded;
+            _fileName = file.Name;
+            _lostOnTime = null;
+            IsGameModified = false;
+            if (GameMode != GameMode.HumanVsHuman)
+            {
+                GameMode = loaded.Human == Player.Black ? GameMode.HumanVsComputer : GameMode.ComputerVsHuman;
+            }
+            ResetClock();
+            _engine.ResetBookTracker();
+            Analysis.Clear();
+            Start();
         }
-        ResetClock();
-        _engine.ResetBookTracker();
-        Analysis.Clear();
-        Start();
+        finally
+        {
+            _transitionGate.Release();
+        }
     }
 
     [RelayCommand]
@@ -423,23 +477,36 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanSwitchSides))]
     private async Task SwitchSides()
     {
-        if (!CanSwitchSides)
+        if (IsLearning || !CanSwitchSides)
         {
             return;
         }
 
-        await StopAsync();
-        GameMode = GameMode switch
+        await _transitionGate.WaitAsync();
+        try
         {
-            GameMode.HumanVsComputer => GameMode.ComputerVsHuman,
-            GameMode.ComputerVsHuman => GameMode.HumanVsComputer,
-            GameMode.ComputerVsComputer => GameMode.ComputerVsHuman,
-            _ => GameMode.HumanVsComputer,
-        };
+            if (IsLearning || !CanSwitchSides)
+            {
+                return;
+            }
 
-        _game.SwitchSides();
-        IsGameModified = true;
-        Start();
+            await StopAsync();
+            GameMode = GameMode switch
+            {
+                GameMode.HumanVsComputer => GameMode.ComputerVsHuman,
+                GameMode.ComputerVsHuman => GameMode.HumanVsComputer,
+                GameMode.ComputerVsComputer => GameMode.ComputerVsHuman,
+                _ => GameMode.HumanVsComputer,
+            };
+
+            _game.SwitchSides();
+            IsGameModified = true;
+            Start();
+        }
+        finally
+        {
+            _transitionGate.Release();
+        }
     }
 
     [RelayCommand(CanExecute = nameof(IsThinking))]
@@ -448,53 +515,89 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanUndo))]
     private async Task Undo()
     {
-        await StopAsync();
-        if (IsVsComputer)
+        if (IsLearning || !CanUndo)
         {
-            if (GameMode == GameMode.ComputerVsComputer)
+            return;
+        }
+
+        await _transitionGate.WaitAsync();
+        try
+        {
+            if (IsLearning || !CanUndo)
             {
-                _game.Undo();
+                return;
             }
-            else
+
+            await StopAsync();
+            if (IsVsComputer)
             {
-                do
+                if (GameMode == GameMode.ComputerVsComputer)
                 {
                     _game.Undo();
                 }
-                while (_game.CanUndo && !IsHumanTurn());
+                else
+                {
+                    do
+                    {
+                        _game.Undo();
+                    }
+                    while (_game.CanUndo && !IsHumanTurn());
+                }
+
+                IsGameModified = true;
+            }
+            else
+            {
+                _game.Undo();
             }
 
-            IsGameModified = true;
+            RestoreClock();
+            _engine.ResetBookTracker();
+            Start();
         }
-        else
+        finally
         {
-            _game.Undo();
+            _transitionGate.Release();
         }
-
-        RestoreClock();
-        _engine.ResetBookTracker();
-        Start();
     }
 
     [RelayCommand(CanExecute = nameof(CanRedo))]
     private async Task Redo()
     {
-        await StopAsync();
-        if (IsVsComputer)
+        if (IsLearning || !CanRedo)
         {
-            do
+            return;
+        }
+
+        await _transitionGate.WaitAsync();
+        try
+        {
+            if (IsLearning || !CanRedo)
+            {
+                return;
+            }
+
+            await StopAsync();
+            if (IsVsComputer)
+            {
+                do
+                {
+                    _game.Redo();
+                }
+                while (_game.CanRedo && !IsHumanTurn());
+            }
+            else
             {
                 _game.Redo();
             }
-            while (_game.CanRedo && !IsHumanTurn());
-        }
-        else
-        {
-            _game.Redo();
-        }
 
-        RestoreClock();
-        Start();
+            RestoreClock();
+            Start();
+        }
+        finally
+        {
+            _transitionGate.Release();
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanChangeGame))]
@@ -531,36 +634,56 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanChangeGame))]
     private async Task AddGameToBook()
     {
+        if (IsLearning)
+        {
+            return;
+        }
+
         if (_game.Ply < 2)
         {
             _dialogs.ShowError("Play at least two moves before adding the game to the opening book.");
             return;
         }
 
-        if (!await _dialogs.ConfirmAsync("Add this game to the opening book?"))
+        await _transitionGate.WaitAsync();
+        try
         {
-            return;
-        }
-
-        GameResult? result = _game.IsGameOver
-            ? _game.Winner switch
+            if (IsLearning)
             {
-                Player.Black => GameResult.BlackWins,
-                Player.White => GameResult.WhiteWins,
-                _ => GameResult.Draw,
+                return;
             }
-            : await _dialogs.AskGameResultAsync();
-        if (result is null)
-        {
-            return;
-        }
 
-        await StopAsync();
-        BookUpdate update = await _engine.AddGameToBookAsync(_game.PlayedMoves.ToList(), result.Value);
-        _notice = update.Saved
-            ? $"The game was added to the opening book ({update.NodeCount:N0} positions)."
-            : "The opening book could not be saved.";
-        Start();
+            await StopAsync();
+            if (!await _dialogs.ConfirmAsync("Add this game to the opening book?"))
+            {
+                Start();
+                return;
+            }
+
+            GameResult? result = _game.IsGameOver
+                ? _game.Winner switch
+                {
+                    Player.Black => GameResult.BlackWins,
+                    Player.White => GameResult.WhiteWins,
+                    _ => GameResult.Draw,
+                }
+                : await _dialogs.AskGameResultAsync();
+            if (result is null)
+            {
+                Start();
+                return;
+            }
+
+            BookUpdate update = await _engine.AddGameToBookAsync(_game.PlayedMoves.ToList(), result.Value);
+            _notice = update.Saved
+                ? $"The game was added to the opening book ({update.NodeCount:N0} positions)."
+                : "The opening book could not be saved.";
+            Start();
+        }
+        finally
+        {
+            _transitionGate.Release();
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanLearn))]
@@ -594,11 +717,24 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private async Task LearnAsync(BookLearningKind kind)
     {
-        await StopAsync();
         using var cancel = new CancellationTokenSource();
-        _learningCancel = cancel;
-        IsLearning = true;
-        Status = "Book learning…";
+        await _transitionGate.WaitAsync();
+        try
+        {
+            if (IsLearning)
+            {
+                return;
+            }
+
+            await StopAsync();
+            _learningCancel = cancel;
+            IsLearning = true;
+            Status = "Book learning…";
+        }
+        finally
+        {
+            _transitionGate.Release();
+        }
 
         var progress = new Progress<BookLearningProgress>(p =>
         {
@@ -635,12 +771,25 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _engine.ResetBookTracker();
         _notice = $"{outcome} {summary.PositionsEvaluated:N0} positions searched, {summary.GamesPlayed:N0} games played, " +
             $"{summary.NodeCount:N0} positions in the book.{(summary.Saved ? "" : " The opening book could not be saved.")}";
-        Start();
+        await _transitionGate.WaitAsync();
+        try
+        {
+            Start();
+        }
+        finally
+        {
+            _transitionGate.Release();
+        }
     }
 
-    private SearchLimits LearningLimits() => Settings.Mode == TimeControlMode.FixedDepth
-        ? SearchLimits.FixedDepth(Settings.Depth)
-        : SearchLimits.TimePerMove(TimeSpan.FromSeconds(Settings.SecondsPerMove));
+    private SearchLimits LearningLimits()
+    {
+        int threads = Settings.ThreadsFor(_engine.Threads);
+        return (Settings.Mode == TimeControlMode.FixedDepth
+            ? SearchLimits.FixedDepth(Settings.Depth, useOpeningBook: true, Settings.HashBits)
+            : SearchLimits.TimePerMove(TimeSpan.FromSeconds(Settings.SecondsPerMove), useOpeningBook: true, Settings.HashBits))
+            with { Threads = threads };
+    }
 
     private static string Describe(BookLearningProgress progress) => progress.Stage switch
     {
@@ -652,8 +801,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private async Task StopAsync()
     {
-        _cancel?.Cancel();
-        await Idle;
+        while (!Idle.IsCompleted)
+        {
+            _cancel?.Cancel();
+            await Idle;
+        }
     }
 
     private async Task RunAsync()
@@ -753,6 +905,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         // The clock timer keeps ticking down the computer's time while it thinks, for display.
         // After the search the clock is set from this starting value, so the time is charged only once.
+        int clockGeneration = _clockGeneration;
         TimeSpan computerTime = player == Player.Black ? _blackTimeLeft : _whiteTimeLeft;
         SearchLimits limits = Settings.ToLimits(computerTime, Settings.ThreadsFor(_engine.Threads));
 
@@ -784,20 +937,23 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _isWaitingForNaturalDelay = true;
             await WaitForNaturalDelayAsync(searchTime, cancel.Token, moveNow.Token);
 
-            TimeSpan timeLeft = computerTime > searchTime ? computerTime - searchTime : TimeSpan.Zero;
-            if (player == Player.Black)
+            if (clockGeneration == _clockGeneration)
             {
-                _blackTimeLeft = timeLeft;
-            }
-            else
-            {
-                _whiteTimeLeft = timeLeft;
-            }
+                TimeSpan timeLeft = computerTime > searchTime ? computerTime - searchTime : TimeSpan.Zero;
+                if (player == Player.Black)
+                {
+                    _blackTimeLeft = timeLeft;
+                }
+                else
+                {
+                    _whiteTimeLeft = timeLeft;
+                }
 
-            if (_lastTickTimestamp != 0)
-            {
-                // Restart the tick interval so the opponent is not charged for the computer's last slice.
-                _lastTickTimestamp = Stopwatch.GetTimestamp();
+                if (_lastTickTimestamp != 0)
+                {
+                    // Restart the tick interval so the opponent is not charged for the computer's last slice.
+                    _lastTickTimestamp = Stopwatch.GetTimestamp();
+                }
             }
 
             _soundService.Play(SoundType.Move);
@@ -827,6 +983,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     // Moves that took longer are played at once, and Move Now skips the wait.
     private async Task WaitForNaturalDelayAsync(TimeSpan searchTime, CancellationToken cancel, CancellationToken moveNow)
     {
+        cancel.ThrowIfCancellationRequested();
         int remainingMs = ComputerDelayMs - (int)searchTime.TotalMilliseconds;
         if (remainingMs <= 0 || moveNow.IsCancellationRequested)
         {
@@ -842,6 +999,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             // Move Now: play the move at once
         }
+        cancel.ThrowIfCancellationRequested();
     }
 
     private void Refresh()
@@ -947,8 +1105,16 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         StatusText = prefix + (statusText ?? status);
     }
 
+    private void NotifyClockChanged()
+    {
+        OnPropertyChanged(nameof(BlackClockText));
+        OnPropertyChanged(nameof(WhiteClockText));
+        OnPropertyChanged(nameof(ClockText));
+    }
+
     private void ResetClock()
     {
+        _clockGeneration++;
         _blackTimeLeft = Settings.GameTime;
         _whiteTimeLeft = Settings.GameTime;
         _timeLeftAtPly.Clear();
@@ -958,38 +1124,76 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
 
         _lastTickTimestamp = 0;
-        _hasHumanContinuedOnTime = false;
+        _continuedOnTime = null;
         _isTimeoutPrompting = false;
-        OnPropertyChanged(nameof(BlackClockText));
-        OnPropertyChanged(nameof(WhiteClockText));
-        OnPropertyChanged(nameof(ClockText));
+        NotifyClockChanged();
     }
 
     private void RestoreClock()
     {
+        _clockGeneration++;
         if (_timeLeftAtPly.TryGetValue(_game.Ply, out var clock))
         {
             (_blackTimeLeft, _whiteTimeLeft) = clock;
         }
 
+        if ((_continuedOnTime == Player.Black && _blackTimeLeft > TimeSpan.Zero)
+            || (_continuedOnTime == Player.White && _whiteTimeLeft > TimeSpan.Zero))
+        {
+            _continuedOnTime = null;
+        }
+
         _lastTickTimestamp = Stopwatch.GetTimestamp();
+        NotifyClockChanged();
     }
 
     private void OnClockTimerTick(object? state)
     {
+        if (Volatile.Read(ref _disposed))
+        {
+            return;
+        }
+
         if (_syncContext != null && SynchronizationContext.Current != _syncContext)
         {
-            _syncContext.Post(_ => TickClock(), null);
+            try
+            {
+                _syncContext.Post(_ => TickClockSafe(), null);
+            }
+            catch (InvalidOperationException)
+            {
+            }
         }
         else
         {
-            TickClock();
+            TickClockSafe();
+        }
+    }
+
+    private void TickClockSafe()
+    {
+        if (Volatile.Read(ref _disposed) || Interlocked.Exchange(ref _ticking, 1) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            if (!Volatile.Read(ref _disposed))
+            {
+                TickClock();
+            }
+        }
+        finally
+        {
+            Volatile.Write(ref _ticking, 0);
         }
     }
 
     private void TickClock()
     {
-        if (_isTimeoutPrompting ||
+        if (IsLearning ||
+            _isTimeoutPrompting ||
             Settings.Mode != TimeControlMode.TimePerGame ||
             IsGameOver ||
             _game.Ply == 0)
@@ -1024,7 +1228,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         if (active == Player.Black)
         {
-            if (GameMode == GameMode.HumanVsComputer && _hasHumanContinuedOnTime)
+            if (GameMode == GameMode.HumanVsComputer && _continuedOnTime == Player.Black)
             {
                 _blackTimeLeft = TimeSpan.Zero;
             }
@@ -1034,6 +1238,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 if (_blackTimeLeft <= TimeSpan.Zero)
                 {
                     _blackTimeLeft = TimeSpan.Zero;
+                    NotifyClockChanged();
                     _ = HandleTimeoutAsync(Player.Black);
                     return;
                 }
@@ -1041,7 +1246,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         else
         {
-            if (GameMode == GameMode.ComputerVsHuman && _hasHumanContinuedOnTime)
+            if (GameMode == GameMode.ComputerVsHuman && _continuedOnTime == Player.White)
             {
                 _whiteTimeLeft = TimeSpan.Zero;
             }
@@ -1051,20 +1256,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 if (_whiteTimeLeft <= TimeSpan.Zero)
                 {
                     _whiteTimeLeft = TimeSpan.Zero;
+                    NotifyClockChanged();
                     _ = HandleTimeoutAsync(Player.White);
                     return;
                 }
             }
         }
 
-        OnPropertyChanged(nameof(BlackClockText));
-        OnPropertyChanged(nameof(WhiteClockText));
-        OnPropertyChanged(nameof(ClockText));
+        NotifyClockChanged();
     }
 
     internal async Task HandleTimeoutAsync(Player timedOut)
     {
-        if (IsGameOver || _isTimeoutPrompting)
+        if (IsLearning || IsGameOver || _isTimeoutPrompting)
         {
             return;
         }
@@ -1073,7 +1277,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         bool isHumanTimedOut = (GameMode == GameMode.HumanVsComputer && timedOut == Player.Black) ||
                                (GameMode == GameMode.ComputerVsHuman && timedOut == Player.White);
 
-        if (isHumanTimedOut && !_hasHumanContinuedOnTime)
+        if (isHumanTimedOut && _continuedOnTime != timedOut)
         {
             _isTimeoutPrompting = true;
             bool continuePlaying = false;
@@ -1088,20 +1292,33 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
             if (continuePlaying)
             {
-                _hasHumanContinuedOnTime = true;
+                _continuedOnTime = timedOut;
                 IsGameModified = true;
                 return;
             }
         }
 
-        // Ending the game here stops the clock ticks from firing the timeout again.
-        _lostOnTime = timedOut;
-        await StopAsync();
-        if (GameMode != GameMode.ComputerVsComputer)
+        await _transitionGate.WaitAsync();
+        try
         {
-            _soundService.Play(isHumanTimedOut ? SoundType.Loss : SoundType.Win);
+            if (IsGameOver)
+            {
+                return;
+            }
+
+            // Ending the game here stops the clock ticks from firing the timeout again.
+            _lostOnTime = timedOut;
+            await StopAsync();
+            if (GameMode != GameMode.ComputerVsComputer)
+            {
+                _soundService.Play(isHumanTimedOut ? SoundType.Loss : SoundType.Win);
+            }
+            Start();
         }
-        Start();
+        finally
+        {
+            _transitionGate.Release();
+        }
     }
 
     private static string FormatClock(TimeSpan span) =>

@@ -23,6 +23,9 @@
     <ProjectReference Include="..\Egaroucid.Engine\Egaroucid.Engine.csproj" />
     <ProjectReference Include="..\Stello.Engine\Stello.Engine.csproj" />
     <ProjectReference Include="..\tools\Stello.Benchmark\Stello.Benchmark.csproj" />
+    <ProjectReference Include="..\tools\Stello.Trainer\Stello.Trainer.csproj">
+      <Aliases>Trainer</Aliases>
+    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>

@@ -29,7 +29,12 @@ TranspositionTable::TranspositionTable(uint32_t bits)
 void TranspositionTable::clear() noexcept {
     generation_ = static_cast<uint16_t>(generation_ + 1U);
     if (generation_ == 0) {
-        std::memset(slots_.get(), 0, count_ * sizeof(Slot));
+        for (size_t i = 0; i < count_; ++i) {
+            slots_[i].sequence.store(0ULL, std::memory_order_relaxed);
+            for (auto& word : slots_[i].words) {
+                word.store(0ULL, std::memory_order_relaxed);
+            }
+        }
         generation_ = 1;
     }
 }

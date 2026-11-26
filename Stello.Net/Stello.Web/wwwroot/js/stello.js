@@ -11,14 +11,21 @@ window.stello = (() => {
         },
 
         beep() {
-            audio ??= new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audio.createOscillator();
-            const gain = audio.createGain();
-            oscillator.frequency.value = 880;
-            gain.gain.value = 0.1;
-            oscillator.connect(gain).connect(audio.destination);
-            oscillator.start();
-            oscillator.stop(audio.currentTime + 0.1);
+            const Ctx = window.AudioContext || window.webkitAudioContext;
+            if (!Ctx) {
+                return;
+            }
+            try {
+                audio ??= new Ctx();
+                const oscillator = audio.createOscillator();
+                const gain = audio.createGain();
+                oscillator.frequency.value = 880;
+                gain.gain.value = 0.1;
+                oscillator.connect(gain).connect(audio.destination);
+                oscillator.start();
+                oscillator.stop(audio.currentTime + 0.1);
+            } catch {
+            }
         },
 
         registerSound(name, bytes) {

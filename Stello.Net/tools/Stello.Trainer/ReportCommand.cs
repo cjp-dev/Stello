@@ -36,8 +36,8 @@ internal static class ReportCommand
         bool useEgaroucid = (options.Text("egaroucid") ?? "on") == "on";
 
         EvalWeights model = EvalWeights.Load(modelPath);
-        Sample[] samples = Enumerable.Range(TrainingData.MinDiscs, TrainingData.MaxDiscs - TrainingData.MinDiscs + 1)
-            .SelectMany(d => TrainingData.Load(data, Split.Test, d, maxPerDiscs)).ToArray();
+        Sample[] samples = FilterNonTerminal(Enumerable.Range(TrainingData.MinDiscs, TrainingData.MaxDiscs - TrainingData.MinDiscs + 1)
+            .SelectMany(d => TrainingData.Load(data, Split.Test, d, maxPerDiscs)));
         if (samples.Length == 0)
         {
             throw new ArgumentException($"{data} holds no test positions (make them with convert).");
@@ -70,19 +70,7 @@ internal static class ReportCommand
         });
 
         int[] all = Enumerable.Range(0, samples.Length).ToArray();
-        var groups = all.GroupBy(i => (64 - samples[i].Discs - 1) / GroupSize)
-            .Where(g => g.Key >= 0)
-            .OrderByDescending(g => g.Key)
-            .Select(g =>
-            {
-                int[] ids = g.ToArray();
-                return new ReportGroup($"{g.Key * GroupSize + 1}-{g.Key * GroupSize + GroupSize}", ids.Length,
-                    ids.Average(i => Math.Abs((double)samples[i].Score)),
-                    Error(ids, modelValues, samples, model.UnitsPerDisc),
-                    Error(ids, stelloOne, samples, FitScale(ids, stelloOne, samples)),
-                    egaroucid is null ? null : Error(ids, egaroucid, samples, 1));
-            })
-            .ToList();
+        var groups = BuildGroups(all, samples, modelValues, model.UnitsPerDisc, stelloOne, egaroucid);
 
         var run = new ReportRun(DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture), Path.GetFileName(modelPath),
             new FileInfo(modelPath).Length, samples.Length, modelPerSecond,
@@ -127,6 +115,31 @@ internal static class ReportCommand
 
         return new ModelError(scale, absolute / ids.Length, Math.Sqrt(squared / ids.Length));
     }
+
+    internal static Sample[] FilterNonTerminal(IEnumerable<Sample> samples) =>
+        samples.Where(s => s.Discs < 64).ToArray();
+
+    internal static List<ReportGroup> BuildGroups(
+        int[] all,
+        Sample[] samples,
+        double[] modelValues,
+        double unitsPerDisc,
+        double[] stelloOne,
+        double[]? egaroucid) =>
+        all.Where(i => samples[i].Discs < 64)
+            .GroupBy(i => (64 - samples[i].Discs - 1) / GroupSize)
+            .Where(g => g.Key >= 0)
+            .OrderByDescending(g => g.Key)
+            .Select(g =>
+            {
+                int[] ids = g.ToArray();
+                return new ReportGroup($"{g.Key * GroupSize + 1}-{g.Key * GroupSize + GroupSize}", ids.Length,
+                    ids.Average(i => Math.Abs((double)samples[i].Score)),
+                    Error(ids, modelValues, samples, unitsPerDisc),
+                    Error(ids, stelloOne, samples, FitScale(ids, stelloOne, samples)),
+                    egaroucid is null ? null : Error(ids, egaroucid, samples, 1));
+            })
+            .ToList();
 
     private static string Markdown(ReportRun run, EvalWeights model)
     {

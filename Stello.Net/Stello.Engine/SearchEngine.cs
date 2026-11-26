@@ -203,15 +203,30 @@ public sealed class SearchEngine
                 : new InvalidOperationException($"The native engine could not be made (status {status}).");
         }
 
-        if (!Options.Ybwc)
+        try
         {
-            Check(StelloNative.SetYbwc(engine, 0));
-        }
+            if (!Options.Ybwc)
+            {
+                Check(StelloNative.SetYbwc(engine, 0));
+            }
 
-        engine.AddMemoryPressure((long)HashBytesPerSlot << HashBits);
-        _signals = StelloNative.CreateSignals();
-        _engine = engine;
-        return (_engine, _signals);
+            var signals = StelloNative.CreateSignals();
+            if (signals.IsInvalid)
+            {
+                signals.Dispose();
+                throw new InvalidOperationException("The native engine could not create its signal handle.");
+            }
+
+            engine.AddMemoryPressure((long)HashBytesPerSlot << HashBits);
+            _signals = signals;
+            _engine = engine;
+            return (_engine, _signals);
+        }
+        catch
+        {
+            engine.Dispose();
+            throw;
+        }
     }
 
     private static void Check(int status)

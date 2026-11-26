@@ -13,7 +13,16 @@ public sealed class LocalStorageBookStore(IJSInProcessRuntime js) : IBookStore
     /// <exception cref="InvalidDataException">The saved book is damaged.</exception>
     public OpeningBook? Load()
     {
-        string? base64 = js.Invoke<string?>("localStorage.getItem", Key);
+        string? base64;
+        try
+        {
+            base64 = js.Invoke<string?>("localStorage.getItem", Key);
+        }
+        catch (JSException)
+        {
+            return null;
+        }
+
         if (base64 is null)
         {
             return null;

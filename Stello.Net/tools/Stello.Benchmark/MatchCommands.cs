@@ -367,18 +367,23 @@ internal static class MatchCommands
             throw new ArgumentException($"opt is only for engine=stello (side \"{text}\").");
         }
 
-        foreach ((string key, bool allowed) in new[]
+        foreach ((string key, bool allowed, string owner) in new[]
         {
-            ("depth", !egaroucidAny), ("level", egaroucidAny), ("book-acc", egaroucid), ("seed", egaroucid), ("eval", engine == EngineKind.Stello),
-            ("book-file", !egaroucidAny), ("time-strict", egaroucid),
-            ("soft-pct", engine == EngineKind.Stello),
-            ("mpc", engine == EngineKind.Stello),
-            ("selective", engine == EngineKind.Stello),
+            ("depth", !egaroucidAny, "engine=stello, stello-v2, stello-v1, edax and edax-avx"),
+            ("level", egaroucidAny, "engine=egaroucid and egaroucid-cpp"),
+            ("book-acc", egaroucid, "engine=egaroucid"),
+            ("seed", egaroucid, "engine=egaroucid"),
+            ("eval", engine == EngineKind.Stello, "engine=stello"),
+            ("book-file", !egaroucidAny, "engine=stello, stello-v2, stello-v1, edax and edax-avx"),
+            ("time-strict", egaroucid, "engine=egaroucid"),
+            ("soft-pct", engine == EngineKind.Stello, "engine=stello"),
+            ("mpc", engine == EngineKind.Stello, "engine=stello"),
+            ("selective", engine == EngineKind.Stello, "engine=stello"),
         })
         {
             if (keys.Contains(key) && !allowed)
             {
-                throw new ArgumentException($"{key} is only for {(egaroucidAny ? "engine=stello, stello-v2, stello-v1, edax and edax-avx" : "engine=egaroucid")} (side \"{text}\").");
+                throw new ArgumentException($"{key} is only for {owner} (side \"{text}\").");
             }
         }
 

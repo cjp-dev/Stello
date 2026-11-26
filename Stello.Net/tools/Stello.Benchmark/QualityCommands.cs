@@ -177,12 +177,12 @@ internal static class QualityCommands
                 {
                     (int time, int index) = tasks[task];
                     BenchmarkPosition position = positions[index];
-                    SearchLimits limits = SearchLimits.TimePerMove(TimeSpan.FromMilliseconds(time), useOpeningBook: false);
                     for (int e = 0; e < players.Length; e++)
                     {
                         players[e].NewGame();
+                        SearchLimits sideLimits = LimitsForSide(time, sides[e]);
                         long started = Stopwatch.GetTimestamp();
-                        SearchResult result = players[e].ChooseMove(position.Board, position.Player, limits, token);
+                        SearchResult result = players[e].ChooseMove(position.Board, position.Player, sideLimits, token);
                         double ms = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
                         int score = position.MoveScores.First(m => m.Move == result.Move.Square).Score;
                         moves[e, task] = (position.Score!.Value - score, result.Kind is ScoreKind.Exact or ScoreKind.WinLossDraw, ms);
@@ -290,4 +290,8 @@ internal static class QualityCommands
 
         return text.ToString();
     }
+
+    internal static SearchLimits LimitsForSide(int timeMs, MatchSide side) =>
+        SearchLimits.TimePerMove(TimeSpan.FromMilliseconds(timeMs), useOpeningBook: false, hashBits: side.HashBits)
+            with { Threads = side.Limits.Threads };
 }

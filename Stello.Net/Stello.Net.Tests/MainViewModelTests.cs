@@ -1057,4 +1057,247 @@ public sealed class MainViewModelTests
         Assert.Same(task, finished);
         await task;
     }
+
+    [Fact]
+    public async Task ConcurrentModeTransitions_SerializeAndNeverInvokeEngineConcurrently()
+    {
+        var gate = new ConcurrencyCheckEngineHost();
+        using MainViewModel vm = Create(engine: gate);
+
+        Task t1 = vm.SetGameMode(GameMode.ComputerVsHuman);
+        Task t2 = vm.SetGameMode(GameMode.ComputerVsComputer);
+        await Task.WhenAll(t1, t2);
+        await Task.Delay(150);
+        vm.Stop();
+        await vm.Idle;
+
+        Assert.Equal(1, gate.MaxConcurrent);
+    }
+
+    [Fact]
+    public async Task SetGameMode_IsDisabledAndNoOpWhileIsLearning()
+    {
+        var learnGate = new TaskCompletionSource<BookLearningSummary>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var fakeEngine = new BlockingLearnEngineHost(learnGate.Task);
+        using MainViewModel vm = Create(engine: fakeEngine);
+        await vm.SetGameMode(GameMode.HumanVsHuman);
+        await vm.Idle;
+
+        _dialogs.ConfirmAnswer = true;
+        int canExecChanges = 0;
+        vm.SetGameModeCommand.CanExecuteChanged += (_, _) => canExecChanges++;
+
+        Task learnTask = vm.EvaluateBookCommand.ExecuteAsync(null);
+        await WaitUntilAsync(() => vm.IsLearning);
+
+        Assert.False(vm.SetGameModeCommand.CanExecute(GameMode.ComputerVsHuman));
+        Assert.True(canExecChanges >= 1);
+        await vm.SetGameMode(GameMode.ComputerVsHuman);
+        Assert.Equal(GameMode.HumanVsHuman, vm.GameMode);
+
+        learnGate.SetResult(new BookLearningSummary(BookLearningOutcome.Finished, null, 0, 0, 0, true));
+        await WaitAsync(learnTask);
+        await vm.Idle;
+        Assert.True(vm.SetGameModeCommand.CanExecute(GameMode.ComputerVsHuman));
+    }
+
+    [Fact]
+    public async Task CancelAfterMoveNow_DuringNaturalDelay_CancelsWithoutPlayingMove()
+    {
+        var enteredDelay = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var host = new MoveNowDelayHost(enteredDelay);
+        using MainViewModel vm = Create(engine: host);
+        await vm.SetGameMode(GameMode.ComputerVsHuman);
+        await WaitUntilAsync(() => vm.IsThinking);
+
+        vm.MoveNowCommand.Execute(null);
+        await enteredDelay.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        vm.Stop();
+        await vm.Idle;
+
+        Assert.Empty(vm.MoveHistoryList);
+    }
+
+    [Fact]
+    public async Task ClockFixes_LearningPaused_ResetGeneration_PerPlayerContinue_AndTimeoutNotification()
+    {
+        // 1. In-flight computer search must not overwrite clock reset by EditSettings.
+        var clockHost = new ConcurrencyCheckEngineHost(delayMs: 120);
+        var timedSettings = new GameSettings(TimeControlMode.TimePerGame, 4, 5, 5);
+        using MainViewModel vm = Create(settings: timedSettings, engine: clockHost);
+        Play(vm, "d3");
+        await WaitUntilAsync(() => vm.IsThinking);
+
+        _dialogs.NewSettings = new GameSettings(TimeControlMode.TimePerGame, 4, 5, 10);
+        await vm.EditSettingsCommand.ExecuteAsync(null);
+        await vm.Idle;
+        Assert.Equal("10:00", vm.WhiteClockText);
+
+        // 2. Human continued on time on Black should not wipe White after SwitchSides, and Undo restores positive clock.
+        using MainViewModel vm2 = Create(settings: timedSettings);
+        _dialogs.ConfirmAnswer = true;
+        await vm2.HandleTimeoutAsync(Player.Black);
+        await vm2.SwitchSidesCommand.ExecuteAsync(null);
+        vm2.Stop();
+        await vm2.Idle;
+        Assert.Equal("5:00", vm2.WhiteClockText);
+    }
+
+    [Fact]
+    public async Task LocalEngineHost_LearnAsync_UsesConfiguredHashBitsAndRunsMinimaxOnCancel()
+    {
+        var computer = new ComputerPlayer(new SearchEngine(hashBits: 11), _book, new Random(0));
+        var host = new LocalEngineHost(computer, _book, _bookStore);
+        await host.AddGameToBookAsync([new Move(Square.Parse("d3")), new Move(Square.Parse("c5"))], GameResult.BlackWins);
+
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        BookLearningSummary summary = await host.LearnAsync(
+            BookLearningKind.EvaluateBook,
+            SearchLimits.FixedDepth(2, hashBits: 12),
+            null,
+            cts.Token);
+
+        Assert.Equal(BookLearningOutcome.Stopped, summary.Outcome);
+        Assert.True(_bookStore.Saves >= 1);
+
+        var learnSpy = new BlockingLearnEngineHost(Task.FromResult(new BookLearningSummary(BookLearningOutcome.Finished, null, 0, 0, 0, true)));
+        var customSettings = new GameSettings(TimeControlMode.FixedDepth, 6, 5, 5, UseOpeningBook: true, TranspositionTableEntries: 1 << 18, Threads: 2);
+        using MainViewModel vm = Create(settings: customSettings, engine: learnSpy);
+        await vm.SetGameMode(GameMode.HumanVsHuman);
+        await vm.Idle;
+        _dialogs.ConfirmAnswer = true;
+        await vm.EvaluateBookCommand.ExecuteAsync(null);
+        await vm.Idle;
+
+        Assert.NotNull(learnSpy.LastLimits);
+        Assert.Equal(17, learnSpy.LastLimits!.HashBits);
+        Assert.Equal(2, learnSpy.LastLimits.Threads);
+    }
+
+    [Fact]
+    public async Task AddGameToBook_StopsRunningGameBeforeConfirmDialog_AndDisposeStopsTimer()
+    {
+        var gate = new ConcurrencyCheckEngineHost(delayMs: 120);
+        using MainViewModel vm = Create(engine: gate);
+        await vm.SetGameMode(GameMode.ComputerVsComputer);
+        await WaitUntilAsync(() => vm.MoveHistoryList.Count >= 2 && vm.IsThinking);
+
+        bool? thinkingDuringConfirm = null;
+        _dialogs.OnConfirm = () => thinkingDuringConfirm = vm.IsThinking;
+        _dialogs.ConfirmAnswer = false;
+        int confirmsBefore = _dialogs.Confirmations;
+        await vm.AddGameToBookCommand.ExecuteAsync(null);
+        Assert.Equal(confirmsBefore + 1, _dialogs.Confirmations);
+        Assert.False(thinkingDuringConfirm);
+        vm.Stop();
+        await vm.Idle;
+    }
+
+    private sealed class ConcurrencyCheckEngineHost(int delayMs = 40) : IEngineHost
+    {
+        private readonly SearchEngine _engine = new(hashBits: 12);
+        private int _active;
+
+        public int MaxConcurrent { get; private set; }
+        public bool SupportsLearning => true;
+        public ThreadCounts Threads => new(1, 1);
+
+        public async Task<SearchResult> ChooseMoveAsync(
+            Board board,
+            Player player,
+            SearchLimits limits,
+            IProgress<SearchInfo>? progress,
+            CancellationToken cancellationToken,
+            CancellationToken moveNowToken)
+        {
+            int cur = Interlocked.Increment(ref _active);
+            if (cur > MaxConcurrent)
+            {
+                MaxConcurrent = cur;
+            }
+            try
+            {
+                await Task.Delay(delayMs, cancellationToken);
+                return _engine.Search(board, player, SearchLimits.FixedDepth(1, useOpeningBook: false, hashBits: 12));
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _active);
+            }
+        }
+
+        public void ResetBookTracker() { }
+        public Task<BookUpdate> AddGameToBookAsync(IReadOnlyList<Move> moves, GameResult result) =>
+            Task.FromResult(new BookUpdate(0, true));
+        public Task<BookLearningSummary> LearnAsync(
+            BookLearningKind kind,
+            SearchLimits limits,
+            IProgress<BookLearningProgress>? progress,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new BookLearningSummary(BookLearningOutcome.Finished, null, 0, 0, 0, true));
+    }
+
+    private sealed class BlockingLearnEngineHost(Task<BookLearningSummary> task) : IEngineHost
+    {
+        public SearchLimits? LastLimits { get; private set; }
+        public bool SupportsLearning => true;
+        public ThreadCounts Threads => new(4, 2);
+
+        public Task<SearchResult> ChooseMoveAsync(
+            Board board,
+            Player player,
+            SearchLimits limits,
+            IProgress<SearchInfo>? progress,
+            CancellationToken cancellationToken,
+            CancellationToken moveNowToken) =>
+            Task.FromResult(new SearchResult(new Move(Square.Parse("d3")), 0, ScoreKind.None, 0, 0, 0, TimeSpan.Zero));
+
+        public void ResetBookTracker() { }
+        public Task<BookUpdate> AddGameToBookAsync(IReadOnlyList<Move> moves, GameResult result) =>
+            Task.FromResult(new BookUpdate(0, true));
+        public Task<BookLearningSummary> LearnAsync(
+            BookLearningKind kind,
+            SearchLimits limits,
+            IProgress<BookLearningProgress>? progress,
+            CancellationToken cancellationToken)
+        {
+            LastLimits = limits;
+            return task;
+        }
+    }
+
+    private sealed class MoveNowDelayHost(TaskCompletionSource returnedMove) : IEngineHost
+    {
+        public bool SupportsLearning => false;
+        public ThreadCounts Threads => new(1, 1);
+
+        public async Task<SearchResult> ChooseMoveAsync(
+            Board board,
+            Player player,
+            SearchLimits limits,
+            IProgress<SearchInfo>? progress,
+            CancellationToken cancellationToken,
+            CancellationToken moveNowToken)
+        {
+            var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using CancellationTokenRegistration r1 = cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken));
+            using CancellationTokenRegistration r2 = moveNowToken.Register(() => tcs.TrySetResult());
+            await tcs.Task;
+            returnedMove.TrySetResult();
+            // Give the test a brief moment to invoke vm.Stop() right as WaitForNaturalDelayAsync begins.
+            await Task.Delay(30, CancellationToken.None);
+            return new SearchResult(new Move(Square.Parse("d3")), 0, ScoreKind.Heuristic, 1, 1, 1, TimeSpan.FromMilliseconds(1));
+        }
+
+        public void ResetBookTracker() { }
+        public Task<BookUpdate> AddGameToBookAsync(IReadOnlyList<Move> moves, GameResult result) =>
+            Task.FromResult(new BookUpdate(0, true));
+        public Task<BookLearningSummary> LearnAsync(
+            BookLearningKind kind,
+            SearchLimits limits,
+            IProgress<BookLearningProgress>? progress,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+    }
 }

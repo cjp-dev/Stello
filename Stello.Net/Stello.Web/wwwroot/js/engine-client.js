@@ -7,6 +7,7 @@ const signalView = signalBuffer ? new Int32Array(signalBuffer) : null;
 
 let worker = null;
 let nextId = 1;
+let activeSearchId = null;
 // What the worker's 'init' answered: { version, mode: 'threaded' | 'single', threads } (see engine-worker.js).
 let engineInfo = null;
 const pending = new Map();
@@ -16,6 +17,7 @@ function rejectPending(message) {
         reject(new Error(message));
     }
     pending.clear();
+    activeSearchId = null;
 }
 
 function post(command, args, includeBuffer = false) {
@@ -23,7 +25,11 @@ function post(command, args, includeBuffer = false) {
         Atomics.store(signalView, 0, 0);
     }
     const id = nextId++;
-    const response = new Promise((resolve, reject) => pending.set(id, { resolve, reject }));
+    const searchId = command === 'search' ? (args[1] ?? id) : null;
+    if (command === 'search') {
+        activeSearchId = searchId;
+    }
+    const response = new Promise((resolve, reject) => pending.set(id, { resolve, reject, searchId }));
     const message = { id, command, args };
     if (includeBuffer && signalBuffer) {
         message.signalBuffer = signalBuffer;
@@ -45,7 +51,9 @@ export function start(progressTarget, hashBits, threads = 1) {
         }
         const message = e.data;
         if (message.type === 'progress') {
-            progressTarget.invokeMethodAsync('OnProgress', message.json);
+            if (message.id === activeSearchId) {
+                progressTarget.invokeMethodAsync('OnProgress', message.id, message.json);
+            }
             return;
         }
         if (message.type === 'info') {
@@ -55,6 +63,9 @@ export function start(progressTarget, hashBits, threads = 1) {
         const request = pending.get(message.id);
         if (request) {
             pending.delete(message.id);
+            if (request.searchId !== null && request.searchId === activeSearchId) {
+                activeSearchId = null;
+            }
             if (message.error !== undefined) {
                 request.reject(new Error(message.error));
             } else {

@@ -3,12 +3,14 @@
 #include "cli/bench.hpp"
 #include "core/bits.hpp"
 #include "core/board.hpp"
+#include "core/cpu.hpp"
 #include "core/square.hpp"
 #include "search/engine.hpp"
 #include "search/limits.hpp"
 #include "search/options.hpp"
 #include "search/pool.hpp"
 #include "search/table.hpp"
+#include "search/ybwc.hpp"
 
 #include <array>
 #include <atomic>
@@ -708,6 +710,77 @@ STELLO_TEST(phase2_root_split_brother_cut_and_split_heartbeats) {
         for (size_t i = 1; i < report_times_ms.size(); ++i) {
             const int64_t gap = report_times_ms[i] - report_times_ms[i - 1];
             STELLO_CHECK_MSG(gap <= max_gap_ms, "gap=" + std::to_string(gap) + "ms");
+        }
+    }
+}
+
+STELLO_TEST(split_point_flags_pool_rollback_tt_wrap_and_cpu_detect_are_safe) {
+    // C1: SplitPoint STOP_BIT and CUT_BIT transition atomically without losing either flag.
+    search::SplitPoint parent{};
+    search::SplitPoint child{};
+    child.parent = &parent;
+    STELLO_CHECK(!child.is_stopped());
+    STELLO_CHECK(!child.is_cut());
+    STELLO_CHECK(!child.stopped());
+
+    child.request_stop();
+    STELLO_CHECK(child.is_stopped());
+    STELLO_CHECK(!child.is_cut());
+    STELLO_CHECK(child.stopped());
+
+    child.request_cut();
+    STELLO_CHECK(child.is_stopped());
+    STELLO_CHECK(child.is_cut());
+
+    search::SplitPoint grandchild{};
+    grandchild.parent = &parent;
+    parent.request_stop();
+    STELLO_CHECK(grandchild.stopped());
+    STELLO_CHECK(!grandchild.is_cut());
+
+    // C4: Scope recovers cleanly when a spawned job throws inside the worker.
+    {
+        search::ThreadPool<uint32_t> pool(2, &search::std_spawner, []() { return uint32_t{0}; });
+        bool threw = false;
+        try {
+            pool.scope([](const search::Scope<uint32_t>& scope) {
+                (void)scope.try_spawn([](uint32_t&) { throw std::runtime_error("worker boom"); });
+            });
+        } catch (const std::runtime_error&) {
+            threw = true;
+        }
+        STELLO_CHECK(threw);
+        const uint32_t ok = pool.scope([](const search::Scope<uint32_t>& scope) -> uint32_t {
+            (void)scope.try_spawn([](uint32_t& s) { s = 7; });
+            return 1U;
+        });
+        STELLO_CHECK_EQ(ok, 1U);
+    }
+
+    // 1C.1: Wrapping TranspositionTable generation clears slots safely using atomics.
+    {
+        search::TranspositionTable tt(4);
+        tt.store(1ULL, 2ULL, 0, 4, search::Bound::Exact, 12, 19);
+        for (uint32_t i = 0; i < 65536U; ++i) {
+            tt.clear();
+        }
+        STELLO_CHECK(!tt.get(1ULL, 2ULL, 0).has_value());
+    }
+
+    // 1C.6: Concurrent CPU feature queries synchronize via CAS without races.
+    {
+        std::vector<std::thread> readers;
+        readers.reserve(4);
+        for (int i = 0; i < 4; ++i) {
+            readers.emplace_back([]() {
+                for (int k = 0; k < 200; ++k) {
+                    (void)cpu::fast_pext();
+                    (void)cpu::has_avx2_bmi2();
+                }
+            });
+        }
+        for (auto& t : readers) {
+            t.join();
         }
     }
 }

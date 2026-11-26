@@ -285,6 +285,26 @@ public class BookLearnerTests
             new SearchEngine(hashBits: 12).Search(Board.Initial, Player.Black, Quick, onlyMoves: Square.Parse("a1").Bit));
     }
 
+    [Fact]
+    public void AddGame_RejectsPassOnGameOverAndLeavesBookUnchangedOnLaterIllegalMove()
+    {
+        OpeningBook book = OpeningBook.CreateEmpty();
+        BookLearner learner = Learner(book);
+        learner.AddGame(Moves("d3 c5"), GameResult.BlackWins);
+        int baselineNodes = book.NodeCount;
+
+        // Invalid later move fails upfront without mutating the book with earlier legal moves.
+        List<Move> badLater = [.. Moves("d3 c3 c4"), new Move(Square.Parse("a1"))];
+        Assert.Throws<ArgumentException>(() => learner.AddGame(badLater, GameResult.BlackWins));
+        Assert.Equal(baselineNodes, book.NodeCount);
+        Assert.False(book.Contains(Board.Initial.Play(Player.Black, Square.Parse("d3")).Play(Player.White, Square.Parse("c3")), Player.Black));
+
+        // Game-over board (9-ply wipeout, well within MaxGameDepth): neither side has a legal move, so Move.Pass is illegal.
+        List<Move> played = [.. Moves("d3 c3 b3 d2 e1 d6 d7 e3 f4"), Move.Pass];
+        Assert.Throws<ArgumentException>(() => learner.AddGame(played, GameResult.BlackWins));
+        Assert.Equal(baselineNodes, book.NodeCount);
+    }
+
     private static BookLearner Learner(OpeningBook book) => new(book, new SearchEngine(hashBits: 12), Quick, new Random(0));
 
     private static List<Move> Moves(string text) => BookTestData.Moves(text);

@@ -178,11 +178,17 @@ self.addEventListener('message', async e => {
                 result = currentInfo();
                 reportedThreadCount = result.threads;
                 break;
-            // args: the JSON of a MoveRequest; returns the JSON of a MoveResponse (EngineProtocol).
-            case 'search':
+            // args: the JSON of a MoveRequest and optional searchId; returns the JSON of a MoveResponse (EngineProtocol).
+            case 'search': {
                 await loaded;
-                result = engine.search(await prepare(args[0]), host);
+                const searchId = args[1] ?? id;
+                const searchHost = {
+                    progress: json => self.postMessage({ type: 'progress', id: searchId, json }),
+                    signal: host.signal,
+                };
+                result = engine.search(await prepare(args[0]), searchHost);
                 break;
+            }
             default: throw new Error(`Unknown engine command: ${command}`);
         }
         self.postMessage({ type: 'response', id, result });

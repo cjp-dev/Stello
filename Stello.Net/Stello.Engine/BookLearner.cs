@@ -65,10 +65,20 @@ public sealed class BookLearner
             return;
         }
 
+        // Validate every move before mutating the book so a bad later move never leaves partial entries behind.
+        int limit = Math.Min(moves.Count, MaxGameDepth + 1);
+        Board probeBoard = Apply(Board.Initial, Player.Black, moves[0]);
+        Player probePlayer = Player.White;
+        for (int ply = 1; ply < limit; ply++)
+        {
+            probeBoard = Apply(probeBoard, probePlayer, moves[ply]);
+            probePlayer = probePlayer.Opponent();
+        }
+
         Board board = Apply(Board.Initial, Player.Black, moves[0]);
         Player player = Player.White;
 
-        for (int ply = 1; ply < moves.Count && ply <= MaxGameDepth; ply++)
+        for (int ply = 1; ply < limit; ply++)
         {
             Move move = moves[ply];
             Board next = Apply(board, player, move);
@@ -248,15 +258,13 @@ public sealed class BookLearner
 
     private static Board Apply(Board board, Player player, Move move)
     {
-        if (move.Square is { } square)
+        if (!OpeningBook.IsLegal(board, player, move))
         {
-            return board.IsLegal(player, square)
-                ? board.Play(player, square)
-                : throw new ArgumentException($"{square} is not a legal move for {player}.", nameof(move));
+            throw move.Square is { } square
+                ? new ArgumentException($"{square} is not a legal move for {player}.", nameof(move))
+                : new ArgumentException($"{player} cannot pass in this position.", nameof(move));
         }
 
-        return !board.HasLegalMove(player)
-            ? board
-            : throw new ArgumentException($"{player} has a legal move and cannot pass.", nameof(move));
+        return move.Square is { } sq ? board.Play(player, sq) : board;
     }
 }

@@ -112,7 +112,7 @@ constexpr size_t kWorkerStackSize = 1048576; // 1 MiB per worker thread
 
 std::atomic<int32_t> g_boot_lock{0};
 alignas(16) uint8_t g_boot_stack[16384];
-pthread_t g_main_pthread{0};
+std::atomic<pthread_t> g_main_pthread{};
 
 void* dummy_pthread_entry(void*) {
     return nullptr;
@@ -166,8 +166,14 @@ EMSCRIPTEN_KEEPALIVE int32_t stello_wasm_init(
 
         std::shared_ptr<const stello::eval::EvalWeights> pattern;
         if (has_eval != 0) {
+            if (eval_ptr == nullptr && eval_len > 0) {
+                g_result = "Evaluation weights pointer cannot be null.";
+                return -1;
+            }
             stello::eval::EvalError err;
-            auto weights = stello::eval::EvalWeights::read(std::span<const uint8_t>(eval_ptr, eval_len), &err);
+            auto weights = stello::eval::EvalWeights::read(
+                std::span<const uint8_t>(eval_ptr != nullptr ? eval_ptr : reinterpret_cast<const uint8_t*>(""), eval_len),
+                &err);
             if (!weights.has_value()) {
                 g_result = err.message();
                 return -1;
@@ -177,6 +183,8 @@ EMSCRIPTEN_KEEPALIVE int32_t stello_wasm_init(
             (void)stello::eval::EvalWeights::built_in();
         }
 
+        // Release any previous hash tables before allocating new ones in linear WASM memory.
+        g_state.reset();
         auto engine = make_engine(hash_bits, pattern);
         g_state = EngineState{std::move(pattern), std::move(engine)};
         return 0;
@@ -192,6 +200,10 @@ EMSCRIPTEN_KEEPALIVE int32_t stello_wasm_init(
 EMSCRIPTEN_KEEPALIVE int32_t stello_wasm_search(const char* req_ptr, size_t req_len) noexcept {
     try {
         g_result.clear();
+        if (req_ptr == nullptr && req_len > 0) {
+            g_result = "Request pointer cannot be null.";
+            return -1;
+        }
         const std::string_view json(req_ptr != nullptr ? req_ptr : "", req_len);
         const auto parsed = stello::wasm::read_request(json);
         if (!parsed.ok) {
@@ -204,6 +216,7 @@ EMSCRIPTEN_KEEPALIVE int32_t stello_wasm_search(const char* req_ptr, size_t req_
         }
 
         if (g_state->engine->hash_bits() != parsed.request.hash_bits) {
+            g_state->engine.reset();
             g_state->engine = make_engine(parsed.request.hash_bits, g_state->pattern);
         }
 
@@ -252,7 +265,7 @@ EMSCRIPTEN_KEEPALIVE void stello_wasm_pool_worker() noexcept {
 
 #ifdef __EMSCRIPTEN_PTHREADS__
 EMSCRIPTEN_KEEPALIVE void stello_wasm_record_main() noexcept {
-    g_main_pthread = pthread_self();
+    g_main_pthread.store(pthread_self(), std::memory_order_release);
 }
 
 EMSCRIPTEN_KEEPALIVE uintptr_t stello_wasm_boot_lock_ptr() noexcept {
@@ -264,24 +277,43 @@ EMSCRIPTEN_KEEPALIVE uintptr_t stello_wasm_boot_stack_top() noexcept {
 }
 
 EMSCRIPTEN_KEEPALIVE uintptr_t stello_wasm_worker_prepare() noexcept {
+    const pthread_t main_pt = g_main_pthread.load(std::memory_order_acquire);
+    if (main_pt == pthread_t{}) {
+        return 0;
+    }
+
     // Give pthread_create a valid temporary __pthread_self() before switching to the worker's own pthread_t.
-    __set_thread_state(g_main_pthread, 0, 0, 1);
+    __set_thread_state(main_pt, 0, 0, 1);
 
     pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    pthread_attr_setstacksize(&attr, kWorkerStackSize);
+    if (pthread_attr_init(&attr) != 0) {
+        return 0;
+    }
+    if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0
+        || pthread_attr_setstacksize(&attr, kWorkerStackSize) != 0)
+    {
+        pthread_attr_destroy(&attr);
+        return 0;
+    }
 
-    pthread_t pt{0};
-    pthread_create(&pt, &attr, &dummy_pthread_entry, nullptr);
+    pthread_t pt{};
+    const int create_rc = pthread_create(&pt, &attr, &dummy_pthread_entry, nullptr);
     pthread_attr_destroy(&attr);
+    if (create_rc != 0) {
+        return 0;
+    }
 
     pthread_attr_t actual;
-    pthread_getattr_np(pt, &actual);
+    if (pthread_getattr_np(pt, &actual) != 0) {
+        return 0;
+    }
     void* stack_addr = nullptr;
     size_t stack_size = 0;
-    pthread_attr_getstack(&actual, &stack_addr, &stack_size);
+    const int stack_rc = pthread_attr_getstack(&actual, &stack_addr, &stack_size);
     pthread_attr_destroy(&actual);
+    if (stack_rc != 0 || stack_addr == nullptr || stack_size == 0) {
+        return 0;
+    }
 
     const uintptr_t stack_base = reinterpret_cast<uintptr_t>(stack_addr);
     const uintptr_t stack_top = (stack_base + stack_size) & ~uintptr_t{15};

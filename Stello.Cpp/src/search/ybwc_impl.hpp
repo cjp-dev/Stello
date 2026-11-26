@@ -30,13 +30,13 @@ private:
 
 /// Marks a split point stopped on early unwind/return before `finish()` is called.
 struct StopUnlessFinished {
-    std::atomic<bool>& stop;
+    SplitPoint& point;
     bool finished{false};
 
-    explicit StopUnlessFinished(std::atomic<bool>& s) noexcept : stop(s) {}
+    explicit StopUnlessFinished(SplitPoint& p) noexcept : point(p) {}
     ~StopUnlessFinished() noexcept {
         if (!finished) {
-            stop.store(true, std::memory_order_relaxed);
+            point.request_stop();
         }
     }
 
@@ -168,11 +168,11 @@ AbortVoid Kernel<UseAvx2>::split(
         uint64_t fail_highs = 0;
 
         const auto body = [&](const Scope<ThreadState>& scope) -> AbortVoid {
-            StopUnlessFinished guard(point.stop);
+            StopUnlessFinished guard(point);
             uint64_t rest = pending;
 
             while (rest != 0) {
-                if (point.stop.load(std::memory_order_relaxed)) {
+                if (point.is_stopped()) {
                     break;
                 }
 
@@ -194,8 +194,7 @@ AbortVoid Kernel<UseAvx2>::split(
                                 const int32_t score = Kernel<UseAvx2>::child_null_window(task, child, window_alpha);
                                 results[i].store(score, std::memory_order_relaxed);
                                 if (score > window_alpha) {
-                                    point.cut.store(true, std::memory_order_relaxed);
-                                    point.stop.store(true, std::memory_order_relaxed);
+                                    point.request_cut();
                                 }
                             } catch (Abort) {
                             }
@@ -204,8 +203,7 @@ AbortVoid Kernel<UseAvx2>::split(
                             if (res.is_ok()) {
                                 results[i].store(res.value, std::memory_order_relaxed);
                                 if (res.value > window_alpha) {
-                                    point.cut.store(true, std::memory_order_relaxed);
-                                    point.stop.store(true, std::memory_order_relaxed);
+                                    point.request_cut();
                                 }
                             }
 #endif
@@ -230,7 +228,7 @@ AbortVoid Kernel<UseAvx2>::split(
                         || caller_stop->is_move_now()
                         || (prev_split != nullptr && prev_split->stopped())
                         || (s.elapsed_ms() >= setup.hard_limit_ms);
-                    if (!external_stop && point.cut.load(std::memory_order_relaxed)) {
+                    if (!external_stop && point.is_cut()) {
                         break;
                     }
                     abort_caught = a;
@@ -252,7 +250,7 @@ AbortVoid Kernel<UseAvx2>::split(
                         || caller_stop->is_move_now()
                         || (prev_split != nullptr && prev_split->stopped())
                         || (s.elapsed_ms() >= setup.hard_limit_ms);
-                    if (!external_stop && point.cut.load(std::memory_order_relaxed)) {
+                    if (!external_stop && point.is_cut()) {
                         break;
                     }
                     return make_abort<AbortStatus>(a);
@@ -263,8 +261,7 @@ AbortVoid Kernel<UseAvx2>::split(
                 if (score > window_alpha) {
                     fail_highs |= bit;
                     scores[i] = score;
-                    point.cut.store(true, std::memory_order_relaxed);
-                    point.stop.store(true, std::memory_order_relaxed);
+                    point.request_cut();
                     break;
                 }
 
@@ -276,7 +273,7 @@ AbortVoid Kernel<UseAvx2>::split(
         };
 
         const auto poll = [&]() {
-            if (!point.stop.load(std::memory_order_relaxed)) {
+            if (!point.is_stopped()) {
                 const Duration now = caller_clock();
                 const Duration el = (now > setup.start) ? (now - setup.start) : Duration::zero();
                 const int64_t elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(el).count();
@@ -285,7 +282,7 @@ AbortVoid Kernel<UseAvx2>::split(
                     || (prev_split != nullptr && prev_split->stopped())
                     || elapsed_ms >= setup.hard_limit_ms)
                 {
-                    point.stop.store(true, std::memory_order_relaxed);
+                    point.request_stop();
                 }
             }
             s.maybe_report_heartbeat();
@@ -322,7 +319,7 @@ AbortVoid Kernel<UseAvx2>::split(
         }
 
         // Brothers stopped without a cutoff here: an ancestor split point, signal, or hard limit stopped the search.
-        if (missing && !point.cut.load(std::memory_order_relaxed)) {
+        if (missing && !point.is_cut()) {
             STELLO_RETURN_ABORT_IN_STATUS(s.stop->is_cancelled() ? Abort::Cancelled : Abort::Stop);
         }
 

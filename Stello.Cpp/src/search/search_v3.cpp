@@ -124,10 +124,10 @@ STELLO_FORCEINLINE void Kernel<true>::build_eval_base(
     const __m256i* const own = reinterpret_cast<const __m256i*>(next_is_black ? cur.black.data() : cur.white.data());
     const __m256i* const opp = reinterpret_cast<const __m256i*>(next_is_black ? cur.white.data() : cur.black.data());
     __m256i* const dst = reinterpret_cast<__m256i*>(out.data());
-    dst[0] = _mm256_add_epi16(_mm256_add_epi16(opp[0], opp[0]), own[0]);
-    dst[1] = _mm256_add_epi16(_mm256_add_epi16(opp[1], opp[1]), own[1]);
-    dst[2] = _mm256_add_epi16(_mm256_add_epi16(opp[2], opp[2]), own[2]);
-    dst[3] = _mm256_add_epi16(_mm256_add_epi16(opp[3], opp[3]), own[3]);
+    _mm256_storeu_si256(dst + 0, _mm256_add_epi16(_mm256_add_epi16(opp[0], opp[0]), own[0]));
+    _mm256_storeu_si256(dst + 1, _mm256_add_epi16(_mm256_add_epi16(opp[1], opp[1]), own[1]));
+    _mm256_storeu_si256(dst + 2, _mm256_add_epi16(_mm256_add_epi16(opp[2], opp[2]), own[2]));
+    _mm256_storeu_si256(dst + 3, _mm256_add_epi16(_mm256_add_epi16(opp[3], opp[3]), own[3]));
 }
 
 template <>
@@ -157,10 +157,10 @@ STELLO_FORCEINLINE int32_t Kernel<true>::sum_eval_after_move(
 ) noexcept {
     const __m256i* const base = reinterpret_cast<const __m256i*>(parent_base.data());
     const __m256i* const sq = reinterpret_cast<const __m256i*>(set.square_deltas(square));
-    __m256i l0 = _mm256_add_epi16(base[0], _mm256_add_epi16(sq[0], sq[0]));
-    __m256i l1 = _mm256_add_epi16(base[1], _mm256_add_epi16(sq[1], sq[1]));
-    __m256i l2 = _mm256_add_epi16(base[2], _mm256_add_epi16(sq[2], sq[2]));
-    __m256i l3 = _mm256_add_epi16(base[3], _mm256_add_epi16(sq[3], sq[3]));
+    __m256i l0 = _mm256_add_epi16(_mm256_loadu_si256(base + 0), _mm256_add_epi16(sq[0], sq[0]));
+    __m256i l1 = _mm256_add_epi16(_mm256_loadu_si256(base + 1), _mm256_add_epi16(sq[1], sq[1]));
+    __m256i l2 = _mm256_add_epi16(_mm256_loadu_si256(base + 2), _mm256_add_epi16(sq[2], sq[2]));
+    __m256i l3 = _mm256_add_epi16(_mm256_loadu_si256(base + 3), _mm256_add_epi16(sq[3], sq[3]));
 
     uint64_t rem = flips;
     while (rem != 0) {

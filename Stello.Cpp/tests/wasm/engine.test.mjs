@@ -253,3 +253,20 @@ test('deep endgame solves (> 64 KiB stack) complete without trapping or corrupti
     assert.ok(resM3.Square >= 0);
     assert.equal(((m3.black | m3.white) & (1n << BigInt(resM3.Square))), 0n);
 });
+
+test('C6/1C.5: negative TimePerMove TimeTicks is rejected, negative TimePerGame succeeds, and re-init frees previous state', () => {
+    engine.init(undefined, 19);
+    const pos = positions('midgame.txt').get('g01e48');
+    assert.throws(
+        () => run(request(pos, { mode: 1, timeMs: -5 })),
+        /negative/i);
+    const ot = run(request(pos, { mode: 2, depth: 0, timeMs: -1500 }));
+    assert.ok(ot.Square >= 0);
+    assert.equal(((pos.black | pos.white) & (1n << BigInt(ot.Square))), 0n);
+    // Re-init repeatedly with 22-bit tables should succeed cleanly without doubling memory footprint.
+    engine.init(undefined, 20);
+    engine.init(undefined, 20);
+    const afterReinit = run(request(pos, { depth: 4, hashBits: 20 }));
+    assert.equal(afterReinit.Depth, 4);
+    engine.init(undefined, 19);
+});

@@ -7,6 +7,10 @@
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Stello.Net.Tests" />
+  </ItemGroup>
+
   <!-- Publish compiles the app's .NET code to WebAssembly (needs: dotnet workload install wasm-tools). -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <RunAOTCompilation>true</RunAOTCompilation>

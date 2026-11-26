@@ -227,7 +227,13 @@ AbortVoid Kernel<UseAvx2>::iterate(
         if (limits.mode() == TimeControlMode::TimePerGame && best.depth > 0) {
             const time::TimeBudget est_budget = time::for_solver(limits, budget, s.elapsed_ms(), s.soft_time_percent);
             const int64_t rem_solve_ms = est_budget.hard_ms - s.elapsed_ms();
-            const int64_t capped_rem_ms = (std::min)(rem_solve_ms, budget.hard_ms * 4);
+            if (rem_solve_ms <= 0) {
+                STELLO_RETURN_OK_VOID();
+            }
+            const int64_t max_budget = (budget.hard_ms <= (std::numeric_limits<int64_t>::max)() / 4)
+                ? (budget.hard_ms * 4)
+                : (std::numeric_limits<int64_t>::max)();
+            const int64_t capped_rem_ms = (std::min)(rem_solve_ms, max_budget);
             const int64_t est_ms = estimate_wld_ms(
                 empties,
                 empties - 8,
@@ -256,6 +262,11 @@ AbortVoid Kernel<UseAvx2>::iterate(
 
     if (wld.score == 0 || s.stop_iterating(limits, budget, 0)) {
         STELLO_RETURN_OK_VOID();
+    }
+
+    if (keep_midgame_move && best.mv >= 0) {
+        const std::array<int32_t, 1> front{best.mv};
+        detail::move_to_front(root_moves, front);
     }
 
     const int32_t alpha = (wld.score > 0) ? (wld.score - 1) : -65;
@@ -291,17 +302,25 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::solve_iteration(
     const Board board_copy = board;
     const size_t count = root_moves.size();
     const Best start_best = best;
+    const int32_t end_mpc_stage = s.end_mpc_stage;
+    const int32_t hash_get_height = s.hash_get_height;
+    const int32_t hash_put_height = s.hash_put_height;
     std::array<int32_t, MAX_MOVES> order{};
     std::copy_n(root_moves.data(), count, order.data());
 
     return active_helpers.pool->scope([&](const Scope<ThreadState>& scope) -> AbortResult<ScoreMove> {
+        StopHelpers stop_helpers(stop_flag);
         for (size_t i = 0; i < helper_count; ++i) {
             const bool started = scope.try_spawn(
-                [active_helpers, &stop_flag, board_copy, player, alpha, beta, kind, order, count, start_best, i](
+                [active_helpers, &stop_flag, board_copy, player, alpha, beta, kind, order, count, start_best,
+                 end_mpc_stage, hash_get_height, hash_put_height, i](
                     ThreadState& state
                 ) {
                     FlagStop flag(stop_flag);
                     Searcher helper = active_helpers.searcher(state, flag);
+                    helper.end_mpc_stage = end_mpc_stage;
+                    helper.hash_get_height = hash_get_height;
+                    helper.hash_put_height = hash_put_height;
                     auto moves = order;
                     Best local_best = start_best;
                     std::rotate(
@@ -339,7 +358,6 @@ AbortResult<ScoreMove> Kernel<UseAvx2>::solve_iteration(
             }
         }
 
-        StopHelpers stop_helpers(stop_flag);
         return solve_root(s, board_copy, player, alpha, beta, kind, root_moves, best);
     });
 }
@@ -371,6 +389,7 @@ AbortResult<bool> Kernel<UseAvx2>::lazy_smp_midgame(
     std::copy_n(root_moves.data(), count, order.data());
 
     return smp_helpers.pool->scope([&](const Scope<ThreadState>& scope) -> AbortResult<bool> {
+        StopHelpers stop_helpers(stop_flag);
         const size_t lazy = s.ybwc ? lazy_smp_helpers(smp_helpers.count) : smp_helpers.count;
         for (size_t i = 0; i < lazy; ++i) {
             const int32_t ahead = 1 + static_cast<int32_t>(std::countr_zero(static_cast<uint32_t>(i) + 1U));
@@ -433,7 +452,6 @@ AbortResult<bool> Kernel<UseAvx2>::lazy_smp_midgame(
             }
         }
 
-        StopHelpers stop_helpers(stop_flag);
         return midgame_iterations(s, board_copy, player, limits, budget, root_moves, best, &main_look);
     });
 }

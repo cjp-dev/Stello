@@ -67,7 +67,13 @@ internal sealed record MatchSummary(int Pairs, double PointsB, double Score, dou
         double variance = pairs.Count > 1 ? scores.Sum(s => (s - mean) * (s - mean)) / (pairs.Count - 1) : 0;
         double margin = 1.96 * Math.Sqrt(variance / pairs.Count);
         double discs = pairs.Average(pair => (pair.AFirst.DiscsB + pair.BFirst.DiscsB) / 2.0);
-        return new MatchSummary(pairs.Count, pairs.Sum(pair => pair.PointsB), mean, mean - margin, mean + margin, discs);
+        return new MatchSummary(
+            pairs.Count,
+            pairs.Sum(pair => pair.PointsB),
+            mean,
+            Math.Clamp(mean - margin, 0.0, 1.0),
+            Math.Clamp(mean + margin, 0.0, 1.0),
+            discs);
     }
 }
 
@@ -117,7 +123,7 @@ internal sealed record MatchSide(
     string? Description = null,
     Search.SearchOptions? Options = null)
 {
-    public IMatchPlayer NewPlayer() => CreatePlayer?.Invoke() ?? new StelloMatchPlayer(HashBits, Book);
+    public IMatchPlayer NewPlayer() => CreatePlayer?.Invoke() ?? new StelloMatchPlayer(HashBits, Book, Options);
 }
 
 /// <summary>

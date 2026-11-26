@@ -45,7 +45,16 @@ public sealed class BrowserDialogService(IJSInProcessRuntime js, ShellDialogs di
         Buttons = ["OK"],
     });
 
-    public void Beep() => js.InvokeVoid("stello.beep");
+    public void Beep()
+    {
+        try
+        {
+            js.InvokeVoid("stello.beep");
+        }
+        catch (JSException)
+        {
+        }
+    }
 
     /// <returns>The text the user entered, or null if the user cancelled.</returns>
     public async Task<string?> AskTextAsync(string message, string text)

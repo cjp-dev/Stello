@@ -255,7 +255,7 @@ internal static class BenchCommands
             Console.WriteLine($"    {line}");
         }
 
-        if (oldMs > 0)
+        if (oldMs > 0 && ms > 0)
         {
             Console.WriteLine($"  time {Seconds(ms)} against {Seconds(oldMs)} ({(oldMs / ms - 1) * 100:+0.0;-0.0;0.0} % speed).");
         }

@@ -1168,4 +1168,61 @@ STELLO_TEST(microbench_portable_and_v3_parity_tests) {
     }
 }
 
+STELLO_TEST(phase1_c2_c3_c5_search_and_time_regression_tests) {
+    // C2: ybwc=false multi-threaded solve helpers inherit end_mpc_stage & hash heights cleanly on losing/winning FFOs.
+    {
+        SearchOptions opts;
+        opts.ybwc = false;
+        search::SearchEngine engine(18, opts);
+        for (const char* id : {"40", "41", "43"}) {
+            const auto [board, player] = find_bench_pos("ffo-40-59.txt", id);
+            engine.clear_hash();
+            const auto res = engine.search_simple(board, player, *SearchLimits::solve().with_threads(4));
+            STELLO_CHECK(res.kind == ScoreKind::Exact);
+            STELLO_CHECK(res.mv.square.has_value());
+            STELLO_CHECK((board.legal_moves(player) & res.mv.square->bit()) != 0ULL);
+        }
+    }
+
+    // C3: Losing endgame (FFO #43 = -12, WLD < 0) keeps heuristic move order / exact solve on 1t and 4t.
+    {
+        const auto [board, player] = find_bench_pos("ffo-40-59.txt", "43");
+        for (const uint32_t threads : {uint32_t{1}, uint32_t{4}}) {
+            search::SearchEngine engine(18);
+            const auto res = engine.search_simple(board, player, *SearchLimits::solve().with_threads(threads));
+            STELLO_CHECK_EQ(res.score, -12);
+            STELLO_CHECK(res.kind == ScoreKind::Exact);
+            STELLO_CHECK(res.mv.square.has_value());
+            STELLO_CHECK((board.legal_moves(player) & res.mv.square->bit()) != 0ULL);
+        }
+    }
+
+    // C5: Huge and negative time bounds never trigger signed overflow or out-of-order soft/hard budgets.
+    {
+        constexpr int64_t huge = (std::numeric_limits<int64_t>::max)();
+        const time::TimeBudget g_huge = time::for_game(huge, 60);
+        STELLO_CHECK(g_huge.hard_ms > 0 && g_huge.hard_ms <= time::MAX_TIME_MS);
+        STELLO_CHECK(g_huge.soft_ms >= 0 && g_huge.soft_ms <= g_huge.hard_ms);
+
+        const time::TimeBudget g_neg = time::for_game(-5000, 20);
+        STELLO_CHECK(g_neg.hard_ms >= 0 && g_neg.soft_ms >= 0 && g_neg.soft_ms <= g_neg.hard_ms);
+        STELLO_CHECK(time::for_game(-5000, 6).hard_ms > 0);
+
+        const auto half_max_limits = SearchLimits::time_per_move_ms(huge / 2);
+        const time::TimeBudget m_huge = time::for_midgame(half_max_limits, 60);
+        STELLO_CHECK(m_huge.hard_ms > 0 && m_huge.hard_ms <= time::MAX_TIME_MS);
+        STELLO_CHECK(m_huge.soft_ms >= 0 && m_huge.soft_ms <= m_huge.hard_ms);
+
+        const auto overtime_limits = SearchLimits::time_per_game_ms(100);
+        const time::TimeBudget e_overtime = time::for_endgame(overtime_limits, m_huge, huge / 2);
+        STELLO_CHECK(e_overtime.soft_ms >= 0 && e_overtime.soft_ms <= e_overtime.hard_ms);
+        STELLO_CHECK(e_overtime.hard_ms <= time::MAX_TIME_MS);
+
+        const time::TimeBudget soft_clamped =
+            time::TimeBudget{50, 1000}.with_soft_percent(std::optional<int32_t>{150}, 200);
+        STELLO_CHECK_EQ(soft_clamped.soft_ms, 1000);
+        STELLO_CHECK_EQ(soft_clamped.hard_ms, 1000);
+    }
+}
+
 } // namespace stello::tests

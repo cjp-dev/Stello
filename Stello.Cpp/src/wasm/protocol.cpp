@@ -352,6 +352,11 @@ ReadRequestResult read_request(std::string_view json) {
         return out;
     }
 
+    if (mode == TimeControlMode::TimePerMove && time_ticks < 0) {
+        out.error = "Time cannot be negative for time per move.";
+        return out;
+    }
+
     const int64_t time_ms = time_ticks / 10'000LL;
     const auto base_limits = SearchLimits::from_parts(mode, static_cast<int32_t>(depth_raw), time_ms);
     if (!base_limits.has_value()) {

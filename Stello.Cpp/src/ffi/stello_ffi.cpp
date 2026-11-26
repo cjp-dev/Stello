@@ -79,7 +79,8 @@ STELLO_API StelloEngine* stello_engine_create(
     try {
         if (hash_bits < 10 || hash_bits > 26
             || probcut_percent < -1 || probcut_percent > 100'000
-            || soft_time_percent < -1 || soft_time_percent > 100) {
+            || soft_time_percent < -1 || soft_time_percent > 100
+            || (eval == nullptr && eval_length > 0)) {
             set_status(status, STELLO_INVALID_ARGUMENT);
             return nullptr;
         }

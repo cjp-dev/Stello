@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+extern alias Trainer;
 
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
@@ -701,5 +702,63 @@ public sealed class StelloV30FactAttribute : FactAttribute
         {
             Skip = "Set STELLO_V30_LIBRARY to a separately built and renamed Stello 3.0 library.";
         }
+    }
+}
+
+public sealed class Phase1CliRegressionTests
+{
+    [Fact]
+    public void MidQuality_LimitsForSide_PreservesThreadsAndHashBits()
+    {
+        MatchSide side = Stello.Benchmark.MatchCommands.ParseSide("engine=stello,time-ms=100,threads=4,hash-bits=16", allowLibrary: false);
+        SearchLimits effective = Stello.Benchmark.QualityCommands.LimitsForSide(250, side);
+
+        Assert.Equal(4, effective.Threads);
+        Assert.Equal(16, effective.HashBits);
+        Assert.Equal(TimeSpan.FromMilliseconds(250), effective.Time);
+    }
+
+    [Fact]
+    public void MatchCommands_SideOptionErrorNamesCorrectEngine()
+    {
+        var evalEx = Assert.Throws<ArgumentException>(() =>
+            Stello.Benchmark.MatchCommands.ParseSide("engine=stello-v2,depth=4,eval=foo.bin"));
+        Assert.Contains("engine=stello", evalEx.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("engine=egaroucid", evalEx.Message, StringComparison.Ordinal);
+
+        var seedEx = Assert.Throws<ArgumentException>(() =>
+            Stello.Benchmark.MatchCommands.ParseSide("engine=egaroucid-cpp,level=4,seed=1"));
+        Assert.Contains("engine=egaroucid", seedEx.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("engine=stello", seedEx.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MpcCommand_RejectsTo56SoFixedDepthNeverHitsZero()
+    {
+        var ex = Assert.Throws<ArgumentException>(() => Trainer::Stello.Trainer.MpcCommand.Run(["--to", "56"]));
+        Assert.Contains("55", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ReportCommand_Excludes64DiscPositionsFromBuckets()
+    {
+        var fullBoard = new Trainer::Stello.Trainer.Sample(0xFFFF_FFFF_0000_0000UL, 0x0000_0000_FFFF_FFFFUL, 4);
+        var twoEmpty = new Trainer::Stello.Trainer.Sample(0xFFFF_FFFF_0000_0000UL, 0x0000_0000_FFFF_FFFCUL, -2);
+
+        Trainer::Stello.Trainer.Sample[] filtered = Trainer::Stello.Trainer.ReportCommand.FilterNonTerminal([fullBoard, twoEmpty]);
+        Assert.Single(filtered);
+        Assert.Equal(62, filtered[0].Discs);
+
+        List<Trainer::Stello.Trainer.ReportGroup> groups = Trainer::Stello.Trainer.ReportCommand.BuildGroups(
+            [0, 1],
+            [fullBoard, twoEmpty],
+            [0.0, -64.0],
+            32.0,
+            [0.0, -2.0],
+            null);
+
+        Trainer::Stello.Trainer.ReportGroup group = Assert.Single(groups);
+        Assert.Equal("1-5", group.Empties);
+        Assert.Equal(1, group.Positions);
     }
 }

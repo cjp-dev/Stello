@@ -26,7 +26,7 @@ STELLO_NOINLINE int32_t Direct::sum_pext(uint64_t own, uint64_t opponent, const 
     }
     return sum;
 #else
-    return sum_portable(own, opponent, {weights, SIZE_MAX});
+    return sum_portable(own, opponent, weights);
 #endif
 }
 

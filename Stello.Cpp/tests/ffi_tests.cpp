@@ -243,4 +243,11 @@ STELLO_TEST(ffi_callbacks_and_signals) {
     STELLO_CHECK(reports >= 20u);
 }
 
+STELLO_TEST(ffi_rejects_null_eval_with_nonzero_length) {
+    int32_t status = STELLO_OK;
+    StelloEngine* engine = stello_engine_create(12, 1, -1, -1, nullptr, 16, &status);
+    STELLO_CHECK(engine == nullptr);
+    STELLO_CHECK_EQ(status, STELLO_INVALID_ARGUMENT);
+}
+
 } // namespace stello::tests

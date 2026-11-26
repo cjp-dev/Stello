@@ -207,4 +207,35 @@ Defaults: `hash-bits=19` for Stello (`stello`, `stello-v4`) and `hash-bits=21` f
 - `Stello.Net.Tests`: `116/116` passed.
 - `Egaroucid.Engine.Tests`: `114 passed, 0 failed, 8 skipped` (`39.74 s`; skipped tests are the optional `TaggedV30_*` reference DLL tests).
 - All 5 C++ presets (`clang-release`, `clang-native`, `msvc-release`, `msvc-native`, `clang-sanitized`): `0` compiler warnings, `3/3` ctest tests passed (`stello_tests`, `stello_cli_version`, `stello_cli_microbench`).
+
+## Phase 1: Bug Fixing (Gate P1 Complete)
+
+### 1. Summary of Fixes & Regression Coverage
+
+- **C++20 Engine (`Stello.Cpp`) — 6 confirmed bugs (`C1–C6`) + 6 defensive hardenings (`1C.1–1C.6`):**
+  - `C1` (`src/search/ybwc.hpp`, `ybwc_impl.hpp`): merged `SplitPoint` `stop` and `cut` flags into a single atomic `uint8_t state` bitmask (`STOP_BIT = 1`, `CUT_BIT = 2`) updated via `fetch_or(..., relaxed)`.
+  - `C2` (`src/search/engine_impl.hpp`): copied `end_mpc_stage`, `hash_get_height`, and `hash_put_height` into `solve_iteration` Lazy SMP helper searchers when `ybwc = false`.
+  - `C3` (`src/search/engine_impl.hpp`): restored `best.mv` to `root_moves[0]` via `detail::move_to_front` before the exact pass when `keep_midgame_move` holds (`wld.score < 0` on heuristic root).
+  - `C4` (`src/search/pool.hpp`, `engine_impl.hpp`): built `UniqueTask` and pushed into `jobs` before incrementing `tasks_->running` / decrementing `idle`, and constructed `StopHelpers` before helper spawn loops.
+  - `C5` (`src/search/time.hpp`, `engine_impl.hpp`): clamped time budgets at `MAX_TIME_MS = INT64_MAX / 1024` and guarded signed arithmetic in `for_game`, `for_midgame`, `for_endgame`, `with_soft_percent`, and `iterate`.
+  - `C6` & `1C.5` (`src/wasm/wasm_exports.cpp`, `protocol.cpp`, `stello_wasm.js`): rejected null+nonzero spans, rejected negative `TimeTicks` for `TimePerMove` (preserving `TimePerGame` overtime), made `g_main_pthread` atomic and checked `pthread_*` return values (propagating `0` to throw in JS), and freed previous engine state before reallocating on init/`hash_bits` changes.
+  - `1C.1–1C.4`, `1C.6`: replaced `std::memset` on live atomics in `TranspositionTable::clear()`, switched `Kernel<true>::build_eval_base` / `sum_eval_after_move` to `_mm256_storeu_si256` / `_mm256_loadu_si256`, added pointer `Direct::sum_portable` overload eliminating `{weights, SIZE_MAX}` in `patterns_bmi2.cpp`, guarded `eval == nullptr && eval_length > 0` in `stello_engine_create`, and made `cpu::detect()` synchronize with `compare_exchange_strong`.
+- **.NET, Desktop, Web & CLI (`Stello.Net`) — 13 confirmed bugs (`N1–N13`) + 8 defensive hardenings (`1C.7–1C.14`):**
+  - `N1`, `N2`, `N4`, `N7`, `N8`, `1C.8`, `1C.9` (`MainViewModel.cs`, `LocalEngineHost.cs`): serialized state transitions via `_transitionGate` and looping `StopAsync()`, restricted `SetGameMode` via `CanChangeGame` + `IsLearning`, checked `cancel` before `moveNow` in `WaitForNaturalDelayAsync`, fixed clock ticks during `IsLearning` + `_clockGeneration` + per-player `_continuedOnTime` + immediate `0:00` notification before timeout prompt, guarded `_clockTimer` with `_disposed`/`_ticking` + null `SynchronizationContext` safety, stopped games before confirmation dialogs in `AddGameToBook()`, forwarded `HashBits`/`Threads` to `LearningLimits()`, and ran `learner.Minimax()` before saving a stopped learning run.
+  - `N3`, `N4`, `N5`, `N13`, `1C.10` (`Stello.Web`, `engine-worker.js`, `engine-client.js`, `stello.js`): caught `JSException` in `LocalStorageBookStore.Load()` and `BrowserDialogService.Beep()`, guarded `AudioContext`, wrapped `BrowserGameFileService.SaveAsync()` `JSException` in `IOException`, cancelled immediately (with `signal(2)`) during the 300 ms MoveNow grace window, correlated `progress` reports by `searchId`, and validated `MoveNowResult` against legal moves.
+  - `N6`, `N9–N12`, `1C.7`, `1C.11–1C.14` (`BookLearner.cs`, `BookMatch.cs`, `SearchEngine.cs`, `QualityCommands.cs`, `MatchCommands.cs`, `BenchCommands.cs`, `MpcCommand.cs`, `ReportCommand.cs`): validated all plies upfront with `OpeningBook.IsLegal` in `AddGame`, forwarded `MatchSide.Options` and clamped 95 % CIs to `[0, 1]`, checked `CreateSignals` / `SetYbwc` failure disposal in `SearchEngine`, applied per-side `Threads` & `HashBits` in `mid-quality`, fixed `MatchCommands` option owner errors and `BenchCommands` `ms > 0` guard, capped `mpc --to` at `55`, and filtered 64-disc terminal boards in `ReportCommand`.
+
+### 2. Gate P1 Verification & C3 Parity
+
+- **C++ presets (`clang-release`, `clang-native`, `msvc-release`, `msvc-native`, `clang-sanitized`):** `0` compiler warnings, `3/3` ctests passed each (`52/52` `stello_tests`, `stello_cli_version`, `stello_cli_microbench`; zero ASan/UBSan findings).
+- **`.NET` Release build (with Emscripten WASM single + threaded rebuilds):** `0 Warning(s), 0 Error(s)`.
+- **`.NET` & WASM test suites (post-final-edit):**
+  - `Stello.Engine.Tests`: `521 passed, 0 failed, 0 skipped` (`7 s`).
+  - `Stello.Net.Tests`: `127 passed, 0 failed, 0 skipped` (`18 s`, including new `MainViewModelTests` & `WebHostTests`).
+  - `Egaroucid.Engine.Tests`: `118 passed, 0 failed, 8 skipped` (`34 s`, optional `TaggedV30_*` reference DLL tests skipped).
+  - WASM Node tests (`engine.test.mjs`, `engine-mt.test.mjs`): `20/20 passed, 0 failed` (`3.76 s`).
+- **C3 parity check:**
+  - `mid-bench --depth 12` vs `v5.0-ref/midgame-depth12.json`: `identical` across all `100` searches (`8,120,201` nodes in `0.651 s`, `12.47M` nps).
+  - `solve-bench --from 40 --to 49` vs `v5.0-ref/ffo-40-49.json`: `identical` across all `10` searches (`1,070,469,669` nodes in `16.7 s`, `64.17M` nps, `All scores and moves are correct`).
+  - No signature regeneration or extra Gate P1 match required.
 - WASM Node tests (`node --test Stello.Cpp/tests/wasm/engine.test.mjs Stello.Cpp/tests/wasm/engine-mt.test.mjs`): `19/19` passed (`3.77 s`).

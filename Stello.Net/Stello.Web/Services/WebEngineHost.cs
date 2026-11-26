@@ -36,7 +36,9 @@ public sealed class WebEngineHost : IEngineHost
     private int _workerThreads;
     private IJSInProcessObjectReference? _client;
     private Task _started;
-    private Action<SearchInfo>? _progress;
+    private Action<long, SearchInfo>? _progress;
+    private long _searchId;
+    private long _activeSearchId;
 
     /// <param name="threads">The browser's thread counts (navigator.hardwareConcurrency).</param>
     /// <param name="startThreads">The threads of the first searches (the saved setting), for the worker's first engine.</param>
@@ -94,39 +96,69 @@ public sealed class WebEngineHost : IEngineHost
 
         IJSInProcessObjectReference client = await StartedAsync();
 
+        long searchId = Interlocked.Increment(ref _searchId);
+        Volatile.Write(ref _activeSearchId, searchId);
         SearchInfo? last = null;
-        var stopped = new TaskCompletionSource<bool>();
+        var stopped = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         using CancellationTokenRegistration cancelled = cancellationToken.Register(() => stopped.TrySetResult(false));
         using CancellationTokenRegistration movedNow = moveNowToken.Register(() => stopped.TrySetResult(true));
 
-        _progress = info =>
+        _progress = (id, info) =>
         {
+            if (id != Volatile.Read(ref _activeSearchId))
+            {
+                return;
+            }
             last = info;
             progress?.Report(info);
         };
-        Task<string> search = client.InvokeAsync<string>("call", "search", EngineProtocol.WriteRequest(board, player, limits)).AsTask();
+        Task<string> search = client.InvokeAsync<string>("call", "search", EngineProtocol.WriteRequest(board, player, limits), searchId).AsTask();
         try
         {
             if (await Task.WhenAny(search, stopped.Task) == search)
             {
-                return EngineProtocol.ReadResult(await Searched(search, client));
+                string raw = await Searched(search, client);
+                cancellationToken.ThrowIfCancellationRequested();
+                return EngineProtocol.ReadResult(raw);
             }
 
             bool isMoveNow = await stopped.Task;
             bool signaled = client.Invoke<bool>("signal", isMoveNow ? 1 : 2);
             if (signaled)
             {
-                Task completed = await Task.WhenAny(search, Task.Delay(300));
+                Task completed;
+                if (isMoveNow)
+                {
+                    using var graceCancel = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    using CancellationTokenRegistration cancelDuringGrace = cancellationToken.Register(() =>
+                    {
+                        try
+                        {
+                            client.Invoke<bool>("signal", 2);
+                        }
+                        catch (JSException)
+                        {
+                        }
+                    });
+                    completed = await Task.WhenAny(search, Task.Delay(300, graceCancel.Token));
+                    graceCancel.Cancel();
+                }
+                else
+                {
+                    completed = await Task.WhenAny(search, Task.Delay(300));
+                }
                 if (completed == search)
                 {
-                    if (!isMoveNow)
+                    if (!isMoveNow || cancellationToken.IsCancellationRequested)
                     {
                         Forget(search);
                         throw new OperationCanceledException(cancellationToken);
                     }
                     try
                     {
-                        return EngineProtocol.ReadResult(await search);
+                        string raw = await search;
+                        cancellationToken.ThrowIfCancellationRequested();
+                        return EngineProtocol.ReadResult(raw);
                     }
                     catch (JSException)
                     {
@@ -137,7 +169,7 @@ public sealed class WebEngineHost : IEngineHost
 
             Forget(search);
             Restart(client);
-            if (!isMoveNow)
+            if (!isMoveNow || cancellationToken.IsCancellationRequested)
             {
                 throw new OperationCanceledException(cancellationToken);
             }
@@ -146,7 +178,11 @@ public sealed class WebEngineHost : IEngineHost
         }
         finally
         {
-            _progress = null;
+            if (Volatile.Read(ref _activeSearchId) == searchId)
+            {
+                Volatile.Write(ref _activeSearchId, 0);
+                _progress = null;
+            }
         }
     }
 
@@ -167,7 +203,14 @@ public sealed class WebEngineHost : IEngineHost
         throw new NotSupportedException("Book learning is only available in the desktop version.");
 
     [JSInvokable]
-    public void OnProgress(string json) => _progress?.Invoke(EngineProtocol.ReadProgress(json));
+    public void OnProgress(long searchId, string json)
+    {
+        if (searchId != Volatile.Read(ref _activeSearchId))
+        {
+            return;
+        }
+        _progress?.Invoke(searchId, EngineProtocol.ReadProgress(json));
+    }
 
     private static void Forget(Task task) =>
         task.ContinueWith(static t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);

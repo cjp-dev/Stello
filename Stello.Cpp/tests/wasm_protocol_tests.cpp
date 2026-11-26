@@ -62,6 +62,7 @@ STELLO_TEST(wasm_protocol_rejects_invalid_requests) {
         R"({"Black":"1","White":2,"Player":0,"Mode":0,"Depth":4})",
         R"({"White":2,"Player":0,"Mode":0,"Depth":4})",
         R"({"Black\"":1,"White":2,"Player":0,"Mode":0,"Depth":4})",
+        R"({"Black":1,"White":2,"Player":0,"Mode":1,"Depth":0,"TimeTicks":-10000})",
     };
     for (const auto json : kBadRequests) {
         const auto res = wasm::read_request(json);
