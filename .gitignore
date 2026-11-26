@@ -391,4 +391,8 @@ Stello.Cpp/build/
 Stello.Cpp/out/
 Stello.Cpp/ref/
 
+# Clang PGO artifacts
+*.profraw
+*.profdata
+
 edax-reversi-AVX-master

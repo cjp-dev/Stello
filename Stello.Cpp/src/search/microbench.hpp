@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/cpu.hpp"
+
 #include <cstdint>
 #include <string_view>
 #include <vector>
@@ -25,6 +27,6 @@ struct MicrobenchStats {
 
 std::vector<std::string_view> microbench_names();
 
-std::vector<MicrobenchStats> run_microbench(const MicrobenchOptions& opts, bool use_avx2);
+std::vector<MicrobenchStats> run_microbench(const MicrobenchOptions& opts, cpu::CpuTier tier);
 
 } // namespace stello::search

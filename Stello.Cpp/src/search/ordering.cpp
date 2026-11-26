@@ -68,6 +68,10 @@ void MoveOrdering::order(
     Player player,
     const Board& board
 ) const noexcept {
+    if (moves.size() <= 1) {
+        return;
+    }
+
     size_t start = 0;
     if (hash_move >= 0) {
         for (size_t idx = 0; idx < moves.size(); ++idx) {
@@ -79,21 +83,30 @@ void MoveOrdering::order(
         }
     }
 
-    std::array<int32_t, 64> keys{};
+    if (moves.size() - start <= 1) {
+        return;
+    }
+
+    std::array<int32_t, 64> keys;
     if (previous_move >= 0) {
-        const size_t row = response_row(player, previous_move);
+        const int32_t* const row_ptr = responses_->data() + response_row(player, previous_move);
         auto rest = moves.subspan(start);
+        int32_t any_nonzero = 0;
         for (size_t idx = 0; idx < rest.size(); ++idx) {
-            keys[idx] = (*responses_)[row + static_cast<size_t>(rest[idx])];
+            const int32_t k = row_ptr[static_cast<size_t>(rest[idx])];
+            keys[idx] = k;
+            any_nonzero |= k;
         }
 
-        const size_t count = rest.size();
-        sort_descending(rest, std::span<int32_t>(keys.data(), count));
+        if (any_nonzero != 0) {
+            const size_t count = rest.size();
+            sort_descending(rest, std::span<int32_t>(keys.data(), count));
 
-        size_t i = 0;
-        while (moves.size() - start >= 2 && keys[i] != 0) {
-            ++start;
-            ++i;
+            size_t i = 0;
+            while (moves.size() - start >= 2 && keys[i] != 0) {
+                ++start;
+                ++i;
+            }
         }
     }
 
@@ -138,8 +151,8 @@ std::array<int8_t, 64> square_scores(const Board& board, Player player) noexcept
 void sort_descending(std::span<int32_t> moves, std::span<int32_t> keys) noexcept {
     const size_t count = moves.size();
     assert(count <= 64 && keys.size() == count);
-    std::array<int32_t, 64> sorted_moves{};
-    std::array<int32_t, 64> sorted_keys{};
+    std::array<int32_t, 64> sorted_moves;
+    std::array<int32_t, 64> sorted_keys;
 
     for (size_t i = 0; i < count; ++i) {
         const int32_t key = keys[i];

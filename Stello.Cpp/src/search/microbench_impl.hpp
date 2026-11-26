@@ -71,13 +71,14 @@ struct BoardPair {
 
 struct alignas(32) EvalSample {
     eval::PatternState state{};
-    alignas(32) std::array<uint16_t, eval::MAX_PATTERN_FEATURES> parent_base{};
     uint64_t own{0};
     uint64_t opp{0};
     uint64_t flips{0};
     uint32_t square{0};
-    Player player{Player::Black};
-    const int16_t* weights{nullptr};
+    uint32_t discs{0};
+    bool is_even_disc{false};
+    const int32_t* weights{nullptr};
+    const int32_t* child_weights{nullptr};
 };
 
 STELLO_NOINLINE inline std::array<BoardPair, 16> make_classic_ring() noexcept {
@@ -147,18 +148,17 @@ STELLO_NOINLINE inline std::vector<EvalSample> make_eval_samples(size_t count) {
     std::vector<EvalSample> out(count);
     for (size_t i = 0; i < count; ++i) {
         EvalSample& s = out[i];
-        s.player = (i & 1U) == 0U ? Player::Black : Player::White;
         s.own = raw[i].own;
         s.opp = raw[i].opp;
-        const Board board = Board::from_own(s.player, s.own, s.opp);
-        s.state = set.state_of(board.black(), board.white());
-        set.build_base(s.state, s.player == Player::White, s.parent_base);
+        s.discs = static_cast<uint32_t>(std::popcount(s.own | s.opp));
+        s.is_even_disc = (s.discs & 1U) == 0U;
+        s.state = set.state_of_node(s.own, s.opp, s.discs);
         const uint64_t legal = bits::legal_moves(s.own, s.opp);
         s.square = static_cast<uint32_t>(std::countr_zero(legal));
         s.flips = bits::flips(s.own, s.opp, s.square);
-        const uint32_t discs = static_cast<uint32_t>(std::popcount(s.own | s.opp)) + 1U;
-        const size_t stage = ew.stage_of((std::min)(discs, 64U));
-        s.weights = ew.stage_weights(stage).data();
+        const uint32_t child_discs = (std::min)(s.discs + 1U, 64U);
+        s.weights = ew.packed_weights_for_discs(s.discs);
+        s.child_weights = ew.packed_weights_for_discs(child_discs);
     }
     return out;
 }
@@ -234,7 +234,7 @@ MicrobenchStats measure_64(
     return stats;
 }
 
-template <bool UseAvx2>
+template <cpu::CpuTier Tier>
 std::vector<MicrobenchStats> run_kernel(const MicrobenchOptions& opts) {
     endgame::stable::init();
     const eval::EvalWeights& ew = eval::EvalWeights::built_in();
@@ -255,7 +255,35 @@ std::vector<MicrobenchStats> run_kernel(const MicrobenchOptions& opts) {
             [&](uint32_t sq, uint64_t i) noexcept -> uint64_t {
                 const BoardPair& b = classic[static_cast<size_t>(i & 15U)];
                 const uint64_t bit = uint64_t{1} << sq;
-                return Kernel<UseAvx2>::flips(b.own & ~bit, b.opp & ~bit, sq);
+                return Kernel<Tier>::flips(b.own & ~bit, b.opp & ~bit, sq);
+            }));
+    }
+
+    if (want("flips_smartclr")) {
+        results.push_back(measure_64("flips_smartclr", opts.warmup, opts.repeats, opts.verbose,
+            [&](uint32_t sq, uint64_t i) noexcept -> uint64_t {
+                const BoardPair& b = classic[static_cast<size_t>(i & 15U)];
+                const uint64_t bit = uint64_t{1} << sq;
+#if STELLO_HAS_X86_64_V3 && defined(__AVX2__)
+                if constexpr (Tier != cpu::CpuTier::Portable) {
+                    return endgame::bits::flips_avx2_smartclr(b.own & ~bit, b.opp & ~bit, sq);
+                }
+#endif
+                return Kernel<Tier>::flips(b.own & ~bit, b.opp & ~bit, sq);
+            }));
+    }
+
+    if (want("flips_gfni")) {
+        results.push_back(measure_64("flips_gfni", opts.warmup, opts.repeats, opts.verbose,
+            [&](uint32_t sq, uint64_t i) noexcept -> uint64_t {
+                const BoardPair& b = classic[static_cast<size_t>(i & 15U)];
+                const uint64_t bit = uint64_t{1} << sq;
+#if STELLO_HAS_X86_64_V4 && STELLO_TU_HAS_AVX512_V4
+                if constexpr (Tier == cpu::CpuTier::V4) {
+                    return endgame::bits::flips_avx512_gfni(b.own & ~bit, b.opp & ~bit, sq);
+                }
+#endif
+                return Kernel<Tier>::flips(b.own & ~bit, b.opp & ~bit, sq);
             }));
     }
 
@@ -281,7 +309,7 @@ std::vector<MicrobenchStats> run_kernel(const MicrobenchOptions& opts) {
                 const BoardPair& b = classic[static_cast<size_t>(i & 15U)];
                 const uint64_t bit = uint64_t{1} << sq;
                 return static_cast<uint64_t>(static_cast<int64_t>(
-                    unwrap_i32(Kernel<UseAvx2>::last1(searcher, b.own & ~bit, 63, sq))));
+                    unwrap_i32(Kernel<Tier>::last1(searcher, b.own & ~bit, 63, sq))));
             }));
     }
 
@@ -289,7 +317,7 @@ std::vector<MicrobenchStats> run_kernel(const MicrobenchOptions& opts) {
         results.push_back(measure_64("legal_moves", opts.warmup, opts.repeats, opts.verbose,
             [&](uint32_t s, uint64_t i) noexcept -> uint64_t {
                 const BoardPair& b = midboards[static_cast<size_t>((s + i) & 15U)];
-                return Kernel<UseAvx2>::legal_moves(b.own, b.opp);
+                return Kernel<Tier>::legal_moves(b.own, b.opp);
             }));
     }
 
@@ -305,8 +333,21 @@ std::vector<MicrobenchStats> run_kernel(const MicrobenchOptions& opts) {
         results.push_back(measure_64("legal_and_potential", opts.warmup, opts.repeats, opts.verbose,
             [&](uint32_t s, uint64_t i) noexcept -> uint64_t {
                 const BoardPair& b = midboards[static_cast<size_t>((s + i) & 15U)];
-                return Kernel<UseAvx2>::legal_moves(b.own, b.opp)
-                     + static_cast<uint64_t>(static_cast<int64_t>(bits::potential_mobility(b.own, b.opp)));
+                uint64_t leg = 0;
+                int32_t pot = 0;
+                Kernel<Tier>::legal_and_potential(b.own, b.opp, leg, pot);
+                return leg + static_cast<uint64_t>(static_cast<int64_t>(pot));
+            }));
+    }
+
+    if (want("dual_legal_moves")) {
+        results.push_back(measure_64("dual_legal_moves", opts.warmup, opts.repeats, opts.verbose,
+            [&](uint32_t s, uint64_t i) noexcept -> uint64_t {
+                const BoardPair& b = midboards[static_cast<size_t>((s + i) & 15U)];
+                uint64_t m1 = 0;
+                uint64_t m2 = 0;
+                Kernel<Tier>::dual_legal_moves(b.own, b.opp, m1, m2);
+                return m1 ^ m2;
             }));
     }
 
@@ -314,7 +355,52 @@ std::vector<MicrobenchStats> run_kernel(const MicrobenchOptions& opts) {
         results.push_back(measure_64("stable_of", opts.warmup, opts.repeats, opts.verbose,
             [&](uint32_t s, uint64_t i) noexcept -> uint64_t {
                 const BoardPair& b = midboards[static_cast<size_t>((s + i) & 63U)];
-                return endgame::stable::of(b.own, b.opp);
+                return Kernel<Tier>::stable_of(b.own, b.opp);
+            }));
+    }
+
+    if (want("transpose")) {
+        results.push_back(measure_64("transpose", opts.warmup, opts.repeats, opts.verbose,
+            [&](uint32_t s, uint64_t i) noexcept -> uint64_t {
+                const BoardPair& b = midboards[static_cast<size_t>((s + i) & 63U)];
+                return Kernel<Tier>::transpose(b.own);
+            }));
+    }
+
+    if (want("horizontal_mirror")) {
+        results.push_back(measure_64("horizontal_mirror", opts.warmup, opts.repeats, opts.verbose,
+            [&](uint32_t s, uint64_t i) noexcept -> uint64_t {
+                const BoardPair& b = midboards[static_cast<size_t>((s + i) & 63U)];
+#if STELLO_HAS_X86_64_V4 && STELLO_TU_HAS_AVX512_V4
+                if constexpr (Tier == cpu::CpuTier::V4) {
+                    return endgame::bits::horizontal_mirror_gfni(b.own);
+                }
+#endif
+                return endgame::bits::horizontal_mirror_portable(b.own);
+            }));
+    }
+
+    if (want("hash_board")) {
+        results.push_back(measure_64("hash_board", opts.warmup, opts.repeats, opts.verbose,
+            [&](uint32_t s, uint64_t i) noexcept -> uint64_t {
+                const BoardPair& b = midboards[static_cast<size_t>((s + i) & 63U)];
+#if STELLO_HAS_X86_64_V3 && (defined(__SSE4_2__) || defined(__AVX2__))
+                if constexpr (Tier != cpu::CpuTier::Portable) {
+                    return endgame::bits::crc32c_hash_board(b.own, b.opp);
+                }
+#endif
+                uint64_t hash = b.own * 0x9E37'79B9'7F4A'7C15ULL;
+                hash ^= std::rotl(b.opp * 0xC2B2'AE3D'27D4'EB4FULL, 31);
+                return hash * 0xD6E8'FEB8'6659'FD93ULL;
+            }));
+    }
+
+    if (want("eval_state_of")) {
+        results.push_back(measure_64("eval_state_of", opts.warmup, opts.repeats, opts.verbose,
+            [&](uint32_t s, uint64_t i) noexcept -> uint64_t {
+                const EvalSample& sample = eval_samples[static_cast<size_t>((s + i) & 15U)];
+                const eval::PatternState st = Kernel<Tier>::eval_state_of_node(set, sample.own, sample.opp, sample.discs);
+                return st.features[0];
             }));
     }
 
@@ -323,7 +409,7 @@ std::vector<MicrobenchStats> run_kernel(const MicrobenchOptions& opts) {
             [&](uint32_t s, uint64_t i) noexcept -> uint64_t {
                 const EvalSample& sample = eval_samples[static_cast<size_t>((s + i) & 15U)];
                 return static_cast<uint64_t>(static_cast<int64_t>(
-                    Kernel<UseAvx2>::sum_eval_state(set, sample.state, sample.player, sample.weights)));
+                    Kernel<Tier>::sum_eval_state(set, sample.state, sample.weights, !sample.is_even_disc)));
             }));
     }
 
@@ -332,7 +418,9 @@ std::vector<MicrobenchStats> run_kernel(const MicrobenchOptions& opts) {
             [&](uint32_t s, uint64_t i) noexcept -> uint64_t {
                 const EvalSample& sample = eval_samples[static_cast<size_t>((s + i) & 15U)];
                 return static_cast<uint64_t>(static_cast<int64_t>(
-                    Kernel<UseAvx2>::sum_eval_after_move(set, sample.parent_base, sample.square, sample.flips, sample.weights)));
+                    Kernel<Tier>::sum_eval_after_move(
+                        set, sample.state, sample.is_even_disc, sample.square, sample.flips,
+                        sample.child_weights, sample.is_even_disc)));
             }));
     }
 
@@ -341,8 +429,9 @@ std::vector<MicrobenchStats> run_kernel(const MicrobenchOptions& opts) {
         results.push_back(measure_64("eval_advance", opts.warmup, opts.repeats, opts.verbose,
             [&](uint32_t s, uint64_t i) noexcept -> uint64_t {
                 const EvalSample& sample = eval_samples[static_cast<size_t>((s + i) & 15U)];
-                Kernel<UseAvx2>::advance_eval_state(set, next_state, sample.state, sample.player, sample.square, sample.flips);
-                return static_cast<uint64_t>(next_state.black[0]) + static_cast<uint64_t>(next_state.white[0]);
+                Kernel<Tier>::advance_eval_state(
+                    set, next_state, sample.state, sample.is_even_disc, sample.square, sample.flips);
+                return static_cast<uint64_t>(next_state.features[0]) + static_cast<uint64_t>(next_state.features[16]);
             }));
     }
 

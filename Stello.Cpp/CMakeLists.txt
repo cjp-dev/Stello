@@ -17,6 +17,8 @@ option(STELLO_BUILD_CLI "Build the stello-cpp CLI benchmark executable" ON)
 option(STELLO_BUILD_TESTS "Build the Stello C++ test executable" ON)
 option(STELLO_BUILD_WASM "Build the WebAssembly engine module (Emscripten)" OFF)
 option(STELLO_WASM_THREADS "Build multi-threaded WebAssembly engine with pthreads" OFF)
+option(STELLO_PGO_GENERATE "Build Clang instrumentation-PGO training binary" OFF)
+set(STELLO_PGO_USE "" CACHE FILEPATH "Optional path to merged .profdata for Clang PGO")
 set(STELLO_WASM_OUT_DIR "" CACHE PATH "Optional output directory for stello_wasm.js and stello_wasm_bg.wasm")
 
 if(WIN32)
@@ -71,6 +73,7 @@ add_library(stello_core STATIC
     src/search/ordering.cpp
     src/search/search_portable.cpp
     src/search/search_v3.cpp
+    src/search/search_v4.cpp
     src/search/table.cpp
     src/search/ybwc.cpp
 )
@@ -86,11 +89,17 @@ if(NOT EMSCRIPTEN AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64|X86_6
             COMPILE_OPTIONS "-mbmi2"
         )
         set_source_files_properties(src/search/search_v3.cpp PROPERTIES
-            COMPILE_OPTIONS "-mavx2;-mbmi;-mbmi2;-mpopcnt;-mlzcnt;-mno-avx512f"
+            COMPILE_OPTIONS "-mavx2;-mbmi;-mbmi2;-mpopcnt;-mlzcnt;-msse4.2;-mno-avx512f"
+        )
+        set_source_files_properties(src/search/search_v4.cpp PROPERTIES
+            COMPILE_OPTIONS "-mavx512f;-mavx512vl;-mavx512cd;-mavx512dq;-mavx512bw;-mgfni;-mavx2;-mbmi;-mbmi2;-mpopcnt;-mlzcnt;-msse4.2;-mprefer-vector-width=256"
         )
     elseif(MSVC)
         set_source_files_properties(src/search/search_v3.cpp PROPERTIES
             COMPILE_OPTIONS "/arch:AVX2"
+        )
+        set_source_files_properties(src/search/search_v4.cpp PROPERTIES
+            COMPILE_OPTIONS "/arch:AVX512;/vlen=256"
         )
     endif()
 endif()
@@ -98,6 +107,16 @@ if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_SYSTEM_PROCESSOR MA
     # MSVC <atomic> tags _Atomic_storage with gnu::target("cx16"); without -mcx16 Clang keeps
     # 1-byte relaxed loads out-of-line on every leaf evaluation instead of folding to movb.
     target_compile_options(stello_core PUBLIC -mcx16)
+endif()
+if(NOT EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if(STELLO_PGO_GENERATE)
+        add_compile_options(-fprofile-instr-generate)
+        add_link_options(-fprofile-instr-generate)
+    elseif(NOT "${STELLO_PGO_USE}" STREQUAL "")
+        get_filename_component(_stello_pgo_prof "${STELLO_PGO_USE}" ABSOLUTE)
+        add_compile_options("-fprofile-instr-use=${_stello_pgo_prof}" -Wno-profile-instr-out-of-date -Wno-profile-instr-unprofiled)
+        add_link_options("-fprofile-instr-use=${_stello_pgo_prof}")
+    endif()
 endif()
 if(NOT WIN32 AND NOT EMSCRIPTEN)
     find_package(Threads REQUIRED)
@@ -218,6 +237,7 @@ if(STELLO_BUILD_TESTS AND NOT EMSCRIPTEN)
     add_executable(stello_tests
         tests/test_main.cpp
         tests/bits_avx2_tests.cpp
+        tests/bits_avx512_tests.cpp
         tests/parity_tests.cpp
         tests/search_tests.cpp
         tests/threads_tests.cpp
@@ -228,11 +248,17 @@ if(STELLO_BUILD_TESTS AND NOT EMSCRIPTEN)
     if(NOT EMSCRIPTEN AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64|X86_64)$")
         if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
             set_source_files_properties(tests/bits_avx2_tests.cpp PROPERTIES
-                COMPILE_OPTIONS "-mavx2;-mbmi;-mbmi2;-mpopcnt;-mlzcnt;-mno-avx512f"
+                COMPILE_OPTIONS "-mavx2;-mbmi;-mbmi2;-mpopcnt;-mlzcnt;-msse4.2;-mno-avx512f"
+            )
+            set_source_files_properties(tests/bits_avx512_tests.cpp PROPERTIES
+                COMPILE_OPTIONS "-mavx512f;-mavx512vl;-mavx512cd;-mavx512dq;-mavx512bw;-mgfni;-mavx2;-mbmi;-mbmi2;-mpopcnt;-mlzcnt;-msse4.2;-mprefer-vector-width=256"
             )
         elseif(MSVC)
             set_source_files_properties(tests/bits_avx2_tests.cpp PROPERTIES
                 COMPILE_OPTIONS "/arch:AVX2"
+            )
+            set_source_files_properties(tests/bits_avx512_tests.cpp PROPERTIES
+                COMPILE_OPTIONS "/arch:AVX512;/vlen=256"
             )
         endif()
     endif()

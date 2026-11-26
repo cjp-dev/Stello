@@ -23,7 +23,11 @@ constexpr uint8_t kUnknown = 0;
 constexpr uint8_t kInitializedFlag = 1 << 0;
 constexpr uint8_t kFastPextFlag = 1 << 1;
 constexpr uint8_t kAvx2Bmi2Flag = 1 << 2;
+constexpr uint8_t kSse42Flag = 1 << 3;
+constexpr uint8_t kGfniFlag = 1 << 4;
+constexpr uint8_t kAvx512V4Flag = 1 << 5;
 
+std::atomic<uint8_t> g_hw_state{kUnknown};
 std::atomic<uint8_t> g_state{kUnknown};
 
 #if STELLO_X86_64_CPUID
@@ -73,37 +77,43 @@ bool slow_pext() noexcept {
 uint8_t detect_features() noexcept {
     int leaf0[4]{};
     query_cpuid(0, 0, leaf0);
-    if (static_cast<uint32_t>(leaf0[0]) < 7U) {
-        return kInitializedFlag;
+    const uint32_t max_leaf = static_cast<uint32_t>(leaf0[0]);
+
+    int leaf1[4]{};
+    query_cpuid(1, 0, leaf1);
+    const uint32_t leaf1_ecx = static_cast<uint32_t>(leaf1[2]);
+    const bool has_sse42_hw = (leaf1_ecx & (1U << 20)) != 0;
+    const bool has_popcnt = (leaf1_ecx & (1U << 23)) != 0;
+    const bool has_osxsave = (leaf1_ecx & (1U << 27)) != 0;
+    const bool has_avx = (leaf1_ecx & (1U << 28)) != 0;
+
+    uint8_t flags = kInitializedFlag;
+    if (has_sse42_hw) {
+        flags = static_cast<uint8_t>(flags | kSse42Flag);
+    }
+    if (max_leaf < 7U) {
+        return flags;
     }
 
     int leaf7[4]{};
     query_cpuid(7, 0, leaf7);
     const uint32_t leaf7_ebx = static_cast<uint32_t>(leaf7[1]);
+    const uint32_t leaf7_ecx = static_cast<uint32_t>(leaf7[2]);
     const bool has_bmi1 = (leaf7_ebx & (1U << 3)) != 0;
     const bool has_avx2 = (leaf7_ebx & (1U << 5)) != 0;
     const bool has_bmi2 = (leaf7_ebx & (1U << 8)) != 0;
+    const bool has_gfni_hw = (leaf7_ecx & (1U << 8)) != 0;
     const bool fast_pext_hw = has_bmi2 && !slow_pext();
 
-    uint8_t flags = kInitializedFlag;
     if (fast_pext_hw) {
         flags = static_cast<uint8_t>(flags | kFastPextFlag);
     }
-    if (!fast_pext_hw || !has_bmi1 || !has_avx2) {
+    if (!fast_pext_hw || !has_bmi1 || !has_avx2 || !has_popcnt || !has_osxsave || !has_avx) {
         return flags;
     }
 
-    int leaf1[4]{};
-    query_cpuid(1, 0, leaf1);
-    const uint32_t leaf1_ecx = static_cast<uint32_t>(leaf1[2]);
-    const bool has_popcnt = (leaf1_ecx & (1U << 23)) != 0;
-    const bool has_osxsave = (leaf1_ecx & (1U << 27)) != 0;
-    const bool has_avx = (leaf1_ecx & (1U << 28)) != 0;
-    if (!has_popcnt || !has_osxsave || !has_avx) {
-        return flags;
-    }
-
-    if ((read_xcr0() & 0x6ULL) != 0x6ULL) {
+    const uint64_t xcr0 = read_xcr0();
+    if ((xcr0 & 0x6ULL) != 0x6ULL) {
         return flags;
     }
 
@@ -116,8 +126,25 @@ uint8_t detect_features() noexcept {
     int ext1[4]{};
     query_cpuid(static_cast<int>(0x8000'0001U), 0, ext1);
     const bool has_lzcnt = (static_cast<uint32_t>(ext1[2]) & (1U << 5)) != 0;
-    if (has_lzcnt) {
-        flags = static_cast<uint8_t>(flags | kAvx2Bmi2Flag);
+    if (!has_lzcnt) {
+        return flags;
+    }
+    flags = static_cast<uint8_t>(flags | kAvx2Bmi2Flag);
+
+    if (has_gfni_hw) {
+        flags = static_cast<uint8_t>(flags | kGfniFlag);
+    }
+
+    const bool has_avx512f = (leaf7_ebx & (1U << 16)) != 0;
+    const bool has_avx512dq = (leaf7_ebx & (1U << 17)) != 0;
+    const bool has_avx512cd = (leaf7_ebx & (1U << 28)) != 0;
+    const bool has_avx512bw = (leaf7_ebx & (1U << 30)) != 0;
+    const bool has_avx512vl = (leaf7_ebx & (1U << 31)) != 0;
+    const bool os_avx512 = (xcr0 & 0xE6ULL) == 0xE6ULL;
+    if (has_sse42_hw && has_gfni_hw && has_avx512f && has_avx512dq && has_avx512cd && has_avx512bw
+        && has_avx512vl && os_avx512)
+    {
+        flags = static_cast<uint8_t>(flags | kAvx512V4Flag);
     }
     return flags;
 }
@@ -130,8 +157,21 @@ uint8_t detect_features() noexcept {
 
 #endif
 
-STELLO_NOINLINE uint8_t detect() noexcept {
+uint8_t hw_flags() noexcept {
+    const uint8_t cached = g_hw_state.load(std::memory_order_relaxed);
+    if (cached != kUnknown) {
+        return cached;
+    }
     const uint8_t detected = detect_features();
+    uint8_t expected = kUnknown;
+    if (g_hw_state.compare_exchange_strong(expected, detected, std::memory_order_relaxed)) {
+        return detected;
+    }
+    return expected;
+}
+
+STELLO_NOINLINE uint8_t detect() noexcept {
+    const uint8_t detected = hw_flags();
     uint8_t expected = kUnknown;
     if (g_state.compare_exchange_strong(expected, detected, std::memory_order_relaxed)) {
         return detected;
@@ -153,12 +193,61 @@ bool fast_pext() noexcept {
     return (feature_flags() & kFastPextFlag) != 0;
 }
 
+bool has_sse42() noexcept {
+    return (feature_flags() & kSse42Flag) != 0;
+}
+
 bool has_avx2_bmi2() noexcept {
     return (feature_flags() & kAvx2Bmi2Flag) != 0;
 }
 
+bool has_avx512_v4() noexcept {
+    return (feature_flags() & kAvx512V4Flag) != 0;
+}
+
+bool has_gfni() noexcept {
+    return (feature_flags() & kGfniFlag) != 0;
+}
+
+CpuTier active_tier() noexcept {
+    const uint8_t flags = feature_flags();
+    if ((flags & kAvx512V4Flag) != 0) {
+        return CpuTier::V4;
+    }
+    if ((flags & kAvx2Bmi2Flag) != 0) {
+        return CpuTier::V3;
+    }
+    return CpuTier::Portable;
+}
+
+bool set_forced_tier(std::optional<CpuTier> tier) noexcept {
+    const uint8_t hw = hw_flags();
+    if (!tier.has_value()) {
+        g_state.store(hw, std::memory_order_relaxed);
+        return true;
+    }
+    switch (*tier) {
+        case CpuTier::Portable:
+            g_state.store(kInitializedFlag, std::memory_order_relaxed);
+            return true;
+        case CpuTier::V3:
+            if ((hw & kAvx2Bmi2Flag) == 0) {
+                return false;
+            }
+            g_state.store(static_cast<uint8_t>(hw & ~kAvx512V4Flag), std::memory_order_relaxed);
+            return true;
+        case CpuTier::V4:
+            if ((hw & kAvx512V4Flag) == 0) {
+                return false;
+            }
+            g_state.store(hw, std::memory_order_relaxed);
+            return true;
+    }
+    return false;
+}
+
 void set_portable_only(bool portable) noexcept {
-    g_state.store(portable ? kInitializedFlag : detect_features(), std::memory_order_relaxed);
+    (void)set_forced_tier(portable ? std::optional<CpuTier>(CpuTier::Portable) : std::nullopt);
 }
 
 } // namespace stello::cpu

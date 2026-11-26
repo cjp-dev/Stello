@@ -3,6 +3,7 @@
 #include "core/bits.hpp"
 #include "core/board.hpp"
 #include "core/compiler.hpp"
+#include "core/cpu.hpp"
 #include "core/square.hpp"
 #include "endgame/bits.hpp"
 #include "endgame/local.hpp"
@@ -132,11 +133,12 @@ struct ThreadState {
 };
 
 struct EndMove {
-    uint32_t square{0};
-    uint64_t flips{0};
-    int32_t value{0};
-    uint64_t replies{endgame::bits::LEGAL_UNDEFINED};
+    uint32_t square;
+    int32_t value;
+    uint64_t flips;
+    uint64_t replies;
 };
+static_assert(sizeof(EndMove) == 24);
 
 struct Best {
     int32_t mv{-1};
@@ -249,7 +251,14 @@ public:
     AbortResult<int32_t> end_window(uint64_t own, uint64_t opponent, int32_t alpha, int32_t beta, int32_t empties, bool passed);
     AbortResult<int32_t> solve_shallow(uint64_t own, uint64_t opponent, int32_t alpha, int32_t beta, int32_t empties, bool passed);
     AbortResult<int32_t> end_deep(uint64_t own, uint64_t opponent, int32_t alpha, int32_t empties, bool passed, uint64_t legal);
-    AbortResult<int32_t> ordering_value(uint64_t own, uint64_t opponent, int32_t depth, int32_t alpha, int32_t beta);
+    AbortResult<int32_t> ordering_value(
+        uint64_t own,
+        uint64_t opponent,
+        int32_t depth,
+        int32_t alpha,
+        int32_t beta,
+        uint64_t known_legal = endgame::bits::LEGAL_UNDEFINED
+    );
     AbortResult<int32_t> last4(uint64_t own, uint64_t opponent, int32_t alpha);
     AbortResult<int32_t> last3(uint64_t own, uint64_t opponent, int32_t alpha, uint32_t p0, uint32_t p1, uint32_t p2, uint64_t empties4);
     AbortResult<int32_t> last2(uint64_t own, uint64_t opponent, int32_t alpha, uint32_t p0, uint32_t p1);
@@ -321,7 +330,7 @@ public:
     ScoreKind report_kind{ScoreKind::None};
 
 private:
-    template <bool UseAvx2>
+    template <cpu::CpuTier Tier>
     friend struct Kernel;
 
     AbortVoid order_by_evaluation(std::span<int32_t> list, int32_t hash_move, const Board& board, Player player);

@@ -321,6 +321,21 @@ PatternShape::PatternShape(std::string name, std::span<const uint32_t> squares)
 
     size_ = pow3(static_cast<uint32_t>(squares_.size()));
     make_fold(squares_, size_, fold_, representatives_);
+    swap12_.resize(size_);
+    for (size_t index = 0; index < size_; ++index) {
+        size_t rest = index;
+        uint32_t swapped = 0;
+        uint32_t power = 1U;
+        for (size_t i = 0; i < squares_.size(); ++i) {
+            const size_t d = rest % 3U;
+            rest /= 3U;
+            if (d != 0) {
+                swapped += static_cast<uint32_t>((3U - d) * power);
+            }
+            power *= 3U;
+        }
+        swap12_[index] = swapped;
+    }
     parts_ = make_parts(squares_);
     placements_ = find_placements(squares_);
 }
@@ -519,6 +534,32 @@ int32_t Direct::sum_portable(uint64_t own, uint64_t opponent, const int16_t* wei
     return sum;
 }
 
+int32_t Direct::sum_portable_pair(
+    uint64_t own,
+    uint64_t opponent,
+    const int32_t* pair_weights,
+    bool odd_slot
+) const noexcept {
+    int32_t sum = 0;
+    const auto add_part_group = [&](const PartGroup& group) noexcept {
+        const size_t n_features = group.offsets.size();
+        const size_t cnt = group.count;
+        for (size_t f = 0; f < n_features; ++f) {
+            uint32_t idx = group.offsets[f];
+            const size_t base = f * cnt;
+            for (size_t k = 0; k < cnt; ++k) {
+                idx += part_digits(group.parts[base + k], own, opponent);
+            }
+            const int32_t packed = pair_weights[idx];
+            sum += odd_slot ? static_cast<int16_t>(packed >> 16) : static_cast<int16_t>(static_cast<uint16_t>(packed));
+        }
+    };
+    for (const auto& group : groups_) {
+        add_part_group(group);
+    }
+    return sum;
+}
+
 } // namespace detail
 
 PatternSet::PatternSet(std::string name, std::vector<PatternShape> shapes)
@@ -555,9 +596,59 @@ PatternSet::PatternSet(std::string name, std::vector<PatternShape> shapes)
     direct_ = detail::Direct::build(shapes_, features_);
 
     assert(features_.size() <= MAX_PATTERN_FEATURES);
-    for (size_t f = 0; f < features_.size(); ++f) {
-        const auto& feat = features_[f];
-        feature_offsets_[f] = feat.offset;
+    pack_shape_order_.resize(shapes_.size());
+    for (size_t s = 0; s < shapes_.size(); ++s) {
+        pack_shape_order_[s] = s;
+    }
+    std::stable_sort(pack_shape_order_.begin(), pack_shape_order_.end(), [&](size_t a, size_t b) {
+        return shapes_[a].size() < shapes_[b].size();
+    });
+
+    pack_shape_offsets_.assign(shapes_.size(), 0);
+    std::vector<uint16_t> shape_sub_offset(shapes_.size(), 0);
+    std::vector<detail::Feature> packed_features;
+    packed_features.reserve(features_.size());
+
+    uint32_t base_offset = 0;
+    uint32_t bucket_span = 0;
+    uint8_t slot_begin = 0;
+    uint8_t slot_cursor = 0;
+    for (size_t s : pack_shape_order_) {
+        const size_t sz = shapes_[s].size();
+        if (slot_cursor > slot_begin && bucket_span + sz > 65535U) {
+            eval_buckets_.push_back(EvalBucket{slot_begin, static_cast<uint8_t>(slot_cursor - slot_begin), base_offset});
+            base_offset += bucket_span;
+            bucket_span = 0;
+            slot_begin = slot_cursor;
+        }
+        pack_shape_offsets_[s] = base_offset + bucket_span;
+        shape_sub_offset[s] = static_cast<uint16_t>(bucket_span);
+        bucket_span += static_cast<uint32_t>(sz);
+
+        for (const auto& feat : features_) {
+            if (feat.shape == s) {
+                detail::Feature pf = feat;
+                pf.offset = static_cast<uint32_t>(pack_shape_offsets_[s]);
+                packed_features.push_back(pf);
+                slot_feature_offsets_[slot_cursor] = base_offset;
+                ++slot_cursor;
+            }
+        }
+    }
+    if (slot_cursor > slot_begin) {
+        eval_buckets_.push_back(EvalBucket{slot_begin, static_cast<uint8_t>(slot_cursor - slot_begin), base_offset});
+    }
+    assert(slot_cursor == features_.size());
+    packed_direct_ = detail::Direct::build(shapes_, packed_features);
+
+    for (size_t slot = 0; slot < packed_features.size(); ++slot) {
+        const auto& feat = packed_features[slot];
+        const uint16_t sub = shape_sub_offset[feat.shape];
+        const size_t sz = shapes_[feat.shape].size();
+        initial_state_.features[slot] = sub;
+        all_1_state_.features[slot] = static_cast<uint16_t>(sub + (sz - 1U) / 2U);
+        all_2_state_.features[slot] = static_cast<uint16_t>(sub + (sz - 1U));
+
         const auto shape_squares = shapes_[feat.shape].squares();
         uint32_t power = 1U;
         for (size_t pos = 0; pos < shape_squares.size(); ++pos) {
@@ -570,24 +661,24 @@ PatternSet::PatternSet(std::string name, std::vector<PatternShape> shapes)
                 }
             }
             assert(original_sq < 64U);
-            assert(square_deltas_[original_sq][f] == 0);
-            square_deltas_[original_sq][f] = static_cast<uint16_t>(power);
+            assert(slot_deltas_[original_sq][slot] == 0);
+            slot_deltas_[original_sq][slot] = static_cast<uint16_t>(power);
             power *= 3U;
         }
     }
 
     uint16_t sparse_pos = 0;
     for (uint32_t sq = 0; sq < 64U; ++sq) {
-        square_sparse_offsets_[sq] = sparse_pos;
-        for (size_t f = 0; f < features_.size(); ++f) {
-            const uint16_t d = square_deltas_[sq][f];
+        slot_sparse_offsets_[sq] = sparse_pos;
+        for (size_t slot = 0; slot < packed_features.size(); ++slot) {
+            const uint16_t d = slot_deltas_[sq][slot];
             if (d != 0) {
-                square_sparse_deltas_.push_back(SquareFeatureDelta{static_cast<uint16_t>(f), d});
+                slot_sparse_deltas_.push_back(SquareFeatureDelta{static_cast<uint16_t>(slot), d});
                 ++sparse_pos;
             }
         }
     }
-    square_sparse_offsets_[64] = sparse_pos;
+    slot_sparse_offsets_[64] = sparse_pos;
 }
 
 const PatternSet& PatternSet::classic11() {
@@ -659,137 +750,288 @@ void PatternSet::indices(uint64_t own, uint64_t opponent, std::span<uint32_t> ou
     }
 }
 
-PatternState PatternSet::state_of(uint64_t black, uint64_t white) const noexcept {
-    std::array<uint64_t, symmetry::COUNT> turned_black{};
-    std::array<uint64_t, symmetry::COUNT> turned_white{};
-    for (size_t s : symmetries_) {
-        turned_black[s] = symmetry::apply(black, s);
-        turned_white[s] = symmetry::apply(white, s);
-    }
+PatternState PatternSet::state_of(uint64_t digit1, uint64_t digit2) const noexcept {
+    const uint64_t empty = ~(digit1 | digit2);
+    const uint32_t c0 = static_cast<uint32_t>(std::popcount(empty));
+    const uint32_t c1 = static_cast<uint32_t>(std::popcount(digit1));
+    const uint32_t c2 = static_cast<uint32_t>(std::popcount(digit2));
 
+#ifdef __wasm_simd128__
     PatternState out{};
-    for (size_t f = 0; f < features_.size(); ++f) {
-        const auto& feat = features_[f];
-        const uint64_t tb = turned_black[feat.symmetry];
-        const uint64_t tw = turned_white[feat.symmetry];
-        uint32_t b_sum = 0;
-        uint32_t w_sum = 0;
-        for (size_t i = feat.part_begin; i < feat.part_end; ++i) {
-            const auto& part = parts_[i];
-            b_sum += static_cast<uint32_t>(part.digits[part.extract(tb)]);
-            w_sum += static_cast<uint32_t>(part.digits[part.extract(tw)]);
+    auto accum_mask = [&](uint64_t mask, v128_t& a0, v128_t& a1, v128_t& a2, v128_t& a3,
+                          v128_t& a4, v128_t& a5, v128_t& a6, v128_t& a7) noexcept {
+        while (mask != 0) {
+            const uint32_t bit = static_cast<uint32_t>(std::countr_zero(mask));
+            mask &= mask - 1U;
+            const uint16_t* const d = slot_deltas_[bit].data();
+            a0 = wasm_i16x8_add(a0, wasm_v128_load(d + 0));
+            a1 = wasm_i16x8_add(a1, wasm_v128_load(d + 8));
+            a2 = wasm_i16x8_add(a2, wasm_v128_load(d + 16));
+            a3 = wasm_i16x8_add(a3, wasm_v128_load(d + 24));
+            a4 = wasm_i16x8_add(a4, wasm_v128_load(d + 32));
+            a5 = wasm_i16x8_add(a5, wasm_v128_load(d + 40));
+            a6 = wasm_i16x8_add(a6, wasm_v128_load(d + 48));
+            a7 = wasm_i16x8_add(a7, wasm_v128_load(d + 56));
         }
-        out.black[f] = static_cast<uint16_t>(b_sum);
-        out.white[f] = static_cast<uint16_t>(w_sum);
+    };
+    v128_t a0 = wasm_i16x8_splat(0), a1 = wasm_i16x8_splat(0), a2 = wasm_i16x8_splat(0), a3 = wasm_i16x8_splat(0);
+    v128_t a4 = wasm_i16x8_splat(0), a5 = wasm_i16x8_splat(0), a6 = wasm_i16x8_splat(0), a7 = wasm_i16x8_splat(0);
+    v128_t b0 = wasm_i16x8_splat(0), b1 = wasm_i16x8_splat(0), b2 = wasm_i16x8_splat(0), b3 = wasm_i16x8_splat(0);
+    v128_t b4 = wasm_i16x8_splat(0), b5 = wasm_i16x8_splat(0), b6 = wasm_i16x8_splat(0), b7 = wasm_i16x8_splat(0);
+
+    if (c0 >= c1 && c0 >= c2) {
+        accum_mask(digit1, a0, a1, a2, a3, a4, a5, a6, a7);
+        accum_mask(digit2, b0, b1, b2, b3, b4, b5, b6, b7);
+        const uint16_t* const base = initial_state_.features.data();
+        auto store0 = [&](size_t off, v128_t va, v128_t vb) noexcept {
+            wasm_v128_store(out.features.data() + off,
+                wasm_i16x8_add(wasm_v128_load(base + off), wasm_i16x8_add(va, wasm_i16x8_add(vb, vb))));
+        };
+        store0(0, a0, b0); store0(8, a1, b1); store0(16, a2, b2); store0(24, a3, b3);
+        store0(32, a4, b4); store0(40, a5, b5); store0(48, a6, b6); store0(56, a7, b7);
+    } else if (c1 >= c2) {
+        accum_mask(digit2, a0, a1, a2, a3, a4, a5, a6, a7);
+        accum_mask(empty, b0, b1, b2, b3, b4, b5, b6, b7);
+        const uint16_t* const base = all_1_state_.features.data();
+        auto store1 = [&](size_t off, v128_t va, v128_t vb) noexcept {
+            wasm_v128_store(out.features.data() + off,
+                wasm_i16x8_sub(wasm_i16x8_add(wasm_v128_load(base + off), va), vb));
+        };
+        store1(0, a0, b0); store1(8, a1, b1); store1(16, a2, b2); store1(24, a3, b3);
+        store1(32, a4, b4); store1(40, a5, b5); store1(48, a6, b6); store1(56, a7, b7);
+    } else {
+        accum_mask(digit1, a0, a1, a2, a3, a4, a5, a6, a7);
+        accum_mask(empty, b0, b1, b2, b3, b4, b5, b6, b7);
+        const uint16_t* const base = all_2_state_.features.data();
+        auto store2 = [&](size_t off, v128_t va, v128_t vb) noexcept {
+            wasm_v128_store(out.features.data() + off,
+                wasm_i16x8_sub(wasm_v128_load(base + off), wasm_i16x8_add(va, wasm_i16x8_add(vb, vb))));
+        };
+        store2(0, a0, b0); store2(8, a1, b1); store2(16, a2, b2); store2(24, a3, b3);
+        store2(32, a4, b4); store2(40, a5, b5); store2(48, a6, b6); store2(56, a7, b7);
     }
     return out;
+#else
+    PatternState out{};
+    if (c0 >= c1 && c0 >= c2) {
+        out = initial_state_;
+        uint64_t rem = digit1;
+        while (rem != 0) {
+            const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
+            rem &= rem - 1U;
+            for (const auto& entry : square_sparse_deltas(bit)) {
+                out.features[entry.feature] = static_cast<uint16_t>(out.features[entry.feature] + entry.delta);
+            }
+        }
+        rem = digit2;
+        while (rem != 0) {
+            const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
+            rem &= rem - 1U;
+            for (const auto& entry : square_sparse_deltas(bit)) {
+                out.features[entry.feature] = static_cast<uint16_t>(out.features[entry.feature] + 2U * entry.delta);
+            }
+        }
+    } else if (c1 >= c2) {
+        out = all_1_state_;
+        uint64_t rem = digit2;
+        while (rem != 0) {
+            const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
+            rem &= rem - 1U;
+            for (const auto& entry : square_sparse_deltas(bit)) {
+                out.features[entry.feature] = static_cast<uint16_t>(out.features[entry.feature] + entry.delta);
+            }
+        }
+        rem = empty;
+        while (rem != 0) {
+            const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
+            rem &= rem - 1U;
+            for (const auto& entry : square_sparse_deltas(bit)) {
+                out.features[entry.feature] = static_cast<uint16_t>(out.features[entry.feature] - entry.delta);
+            }
+        }
+    } else {
+        out = all_2_state_;
+        uint64_t rem = digit1;
+        while (rem != 0) {
+            const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
+            rem &= rem - 1U;
+            for (const auto& entry : square_sparse_deltas(bit)) {
+                out.features[entry.feature] = static_cast<uint16_t>(out.features[entry.feature] - entry.delta);
+            }
+        }
+        rem = empty;
+        while (rem != 0) {
+            const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
+            rem &= rem - 1U;
+            for (const auto& entry : square_sparse_deltas(bit)) {
+                out.features[entry.feature] = static_cast<uint16_t>(out.features[entry.feature] - 2U * entry.delta);
+            }
+        }
+    }
+    return out;
+#endif
 }
+
+#ifdef __wasm_simd128__
+namespace {
+
+STELLO_FORCEINLINE void advance_lanes_wasm(
+    const uint16_t* in,
+    const std::array<std::array<uint16_t, MAX_PATTERN_FEATURES>, 64>& deltas,
+    bool mover_is_even_disc,
+    uint32_t square,
+    uint64_t flips,
+    v128_t& l0, v128_t& l1, v128_t& l2, v128_t& l3,
+    v128_t& l4, v128_t& l5, v128_t& l6, v128_t& l7
+) noexcept {
+    const uint16_t* const sq = deltas[square].data();
+    if (mover_is_even_disc) {
+        l0 = wasm_i16x8_add(wasm_v128_load(in + 0), wasm_v128_load(sq + 0));
+        l1 = wasm_i16x8_add(wasm_v128_load(in + 8), wasm_v128_load(sq + 8));
+        l2 = wasm_i16x8_add(wasm_v128_load(in + 16), wasm_v128_load(sq + 16));
+        l3 = wasm_i16x8_add(wasm_v128_load(in + 24), wasm_v128_load(sq + 24));
+        l4 = wasm_i16x8_add(wasm_v128_load(in + 32), wasm_v128_load(sq + 32));
+        l5 = wasm_i16x8_add(wasm_v128_load(in + 40), wasm_v128_load(sq + 40));
+        l6 = wasm_i16x8_add(wasm_v128_load(in + 48), wasm_v128_load(sq + 48));
+        l7 = wasm_i16x8_add(wasm_v128_load(in + 56), wasm_v128_load(sq + 56));
+        uint64_t rem = flips;
+        while (rem != 0) {
+            const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
+            rem &= rem - 1U;
+            const uint16_t* const d = deltas[bit].data();
+            l0 = wasm_i16x8_sub(l0, wasm_v128_load(d + 0));
+            l1 = wasm_i16x8_sub(l1, wasm_v128_load(d + 8));
+            l2 = wasm_i16x8_sub(l2, wasm_v128_load(d + 16));
+            l3 = wasm_i16x8_sub(l3, wasm_v128_load(d + 24));
+            l4 = wasm_i16x8_sub(l4, wasm_v128_load(d + 32));
+            l5 = wasm_i16x8_sub(l5, wasm_v128_load(d + 40));
+            l6 = wasm_i16x8_sub(l6, wasm_v128_load(d + 48));
+            l7 = wasm_i16x8_sub(l7, wasm_v128_load(d + 56));
+        }
+    } else {
+        auto init2 = [&](size_t off) noexcept {
+            const v128_t s = wasm_v128_load(sq + off);
+            return wasm_i16x8_add(wasm_v128_load(in + off), wasm_i16x8_add(s, s));
+        };
+        l0 = init2(0);
+        l1 = init2(8);
+        l2 = init2(16);
+        l3 = init2(24);
+        l4 = init2(32);
+        l5 = init2(40);
+        l6 = init2(48);
+        l7 = init2(56);
+        uint64_t rem = flips;
+        while (rem != 0) {
+            const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
+            rem &= rem - 1U;
+            const uint16_t* const d = deltas[bit].data();
+            l0 = wasm_i16x8_add(l0, wasm_v128_load(d + 0));
+            l1 = wasm_i16x8_add(l1, wasm_v128_load(d + 8));
+            l2 = wasm_i16x8_add(l2, wasm_v128_load(d + 16));
+            l3 = wasm_i16x8_add(l3, wasm_v128_load(d + 24));
+            l4 = wasm_i16x8_add(l4, wasm_v128_load(d + 32));
+            l5 = wasm_i16x8_add(l5, wasm_v128_load(d + 40));
+            l6 = wasm_i16x8_add(l6, wasm_v128_load(d + 48));
+            l7 = wasm_i16x8_add(l7, wasm_v128_load(d + 56));
+        }
+    }
+}
+
+} // namespace
+#endif
 
 void PatternSet::advance_state(
     PatternState& next,
     const PatternState& cur,
-    bool mover_is_black,
+    bool mover_is_even_disc,
     uint32_t square,
     uint64_t flips
 ) const noexcept {
 #ifdef __wasm_simd128__
-    const uint16_t* const m_in = mover_is_black ? cur.black.data() : cur.white.data();
-    const uint16_t* const o_in = mover_is_black ? cur.white.data() : cur.black.data();
-    uint16_t* const m_out = mover_is_black ? next.black.data() : next.white.data();
-    uint16_t* const o_out = mover_is_black ? next.white.data() : next.black.data();
-
-    v128_t f0 = wasm_i16x8_splat(0);
-    v128_t f1 = wasm_i16x8_splat(0);
-    v128_t f2 = wasm_i16x8_splat(0);
-    v128_t f3 = wasm_i16x8_splat(0);
-    v128_t f4 = wasm_i16x8_splat(0);
-    v128_t f5 = wasm_i16x8_splat(0);
-    v128_t f6 = wasm_i16x8_splat(0);
-    v128_t f7 = wasm_i16x8_splat(0);
-    uint64_t rem = flips;
-    while (rem != 0) {
-        const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
-        rem &= rem - 1U;
-        const uint16_t* const d = square_deltas_[bit].data();
-        f0 = wasm_i16x8_add(f0, wasm_v128_load(d + 0));
-        f1 = wasm_i16x8_add(f1, wasm_v128_load(d + 8));
-        f2 = wasm_i16x8_add(f2, wasm_v128_load(d + 16));
-        f3 = wasm_i16x8_add(f3, wasm_v128_load(d + 24));
-        f4 = wasm_i16x8_add(f4, wasm_v128_load(d + 32));
-        f5 = wasm_i16x8_add(f5, wasm_v128_load(d + 40));
-        f6 = wasm_i16x8_add(f6, wasm_v128_load(d + 48));
-        f7 = wasm_i16x8_add(f7, wasm_v128_load(d + 56));
-    }
-
-    const uint16_t* const sq = square_deltas_[square].data();
-    wasm_v128_store(m_out + 0, wasm_i16x8_add(wasm_v128_load(m_in + 0), wasm_i16x8_add(wasm_v128_load(sq + 0), f0)));
-    wasm_v128_store(m_out + 8, wasm_i16x8_add(wasm_v128_load(m_in + 8), wasm_i16x8_add(wasm_v128_load(sq + 8), f1)));
-    wasm_v128_store(m_out + 16, wasm_i16x8_add(wasm_v128_load(m_in + 16), wasm_i16x8_add(wasm_v128_load(sq + 16), f2)));
-    wasm_v128_store(m_out + 24, wasm_i16x8_add(wasm_v128_load(m_in + 24), wasm_i16x8_add(wasm_v128_load(sq + 24), f3)));
-    wasm_v128_store(m_out + 32, wasm_i16x8_add(wasm_v128_load(m_in + 32), wasm_i16x8_add(wasm_v128_load(sq + 32), f4)));
-    wasm_v128_store(m_out + 40, wasm_i16x8_add(wasm_v128_load(m_in + 40), wasm_i16x8_add(wasm_v128_load(sq + 40), f5)));
-    wasm_v128_store(m_out + 48, wasm_i16x8_add(wasm_v128_load(m_in + 48), wasm_i16x8_add(wasm_v128_load(sq + 48), f6)));
-    wasm_v128_store(m_out + 56, wasm_i16x8_add(wasm_v128_load(m_in + 56), wasm_i16x8_add(wasm_v128_load(sq + 56), f7)));
-
-    wasm_v128_store(o_out + 0, wasm_i16x8_sub(wasm_v128_load(o_in + 0), f0));
-    wasm_v128_store(o_out + 8, wasm_i16x8_sub(wasm_v128_load(o_in + 8), f1));
-    wasm_v128_store(o_out + 16, wasm_i16x8_sub(wasm_v128_load(o_in + 16), f2));
-    wasm_v128_store(o_out + 24, wasm_i16x8_sub(wasm_v128_load(o_in + 24), f3));
-    wasm_v128_store(o_out + 32, wasm_i16x8_sub(wasm_v128_load(o_in + 32), f4));
-    wasm_v128_store(o_out + 40, wasm_i16x8_sub(wasm_v128_load(o_in + 40), f5));
-    wasm_v128_store(o_out + 48, wasm_i16x8_sub(wasm_v128_load(o_in + 48), f6));
-    wasm_v128_store(o_out + 56, wasm_i16x8_sub(wasm_v128_load(o_in + 56), f7));
+    v128_t l0{}, l1{}, l2{}, l3{}, l4{}, l5{}, l6{}, l7{};
+    advance_lanes_wasm(
+        cur.features.data(), slot_deltas_, mover_is_even_disc, square, flips,
+        l0, l1, l2, l3, l4, l5, l6, l7);
+    uint16_t* const out = next.features.data();
+    wasm_v128_store(out + 0, l0);  wasm_v128_store(out + 8, l1);
+    wasm_v128_store(out + 16, l2); wasm_v128_store(out + 24, l3);
+    wasm_v128_store(out + 32, l4); wasm_v128_store(out + 40, l5);
+    wasm_v128_store(out + 48, l6); wasm_v128_store(out + 56, l7);
 #else
     next = cur;
-    uint16_t* const mover = mover_is_black ? next.black.data() : next.white.data();
-    uint16_t* const other = mover_is_black ? next.white.data() : next.black.data();
-
-    for (const auto& entry : square_sparse_deltas(square)) {
-        mover[entry.feature] = static_cast<uint16_t>(mover[entry.feature] + entry.delta);
-    }
-    uint64_t rem = flips;
-    while (rem != 0) {
-        const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
-        rem &= rem - 1U;
-        for (const auto& entry : square_sparse_deltas(bit)) {
-            mover[entry.feature] = static_cast<uint16_t>(mover[entry.feature] + entry.delta);
-            other[entry.feature] = static_cast<uint16_t>(other[entry.feature] - entry.delta);
+    uint16_t* const out = next.features.data();
+    if (mover_is_even_disc) {
+        for (const auto& entry : square_sparse_deltas(square)) {
+            out[entry.feature] = static_cast<uint16_t>(out[entry.feature] + entry.delta);
         }
-    }
-#endif
-}
-
-void PatternSet::build_base(
-    const PatternState& state,
-    bool next_own_is_black,
-    std::array<uint16_t, MAX_PATTERN_FEATURES>& out
-) const noexcept {
-    const uint16_t* const own = next_own_is_black ? state.black.data() : state.white.data();
-    const uint16_t* const opp = next_own_is_black ? state.white.data() : state.black.data();
-#ifdef __wasm_simd128__
-    for (size_t f = 0; f < MAX_PATTERN_FEATURES; f += 8U) {
-        const v128_t v_own = wasm_v128_load(own + f);
-        const v128_t v_opp = wasm_v128_load(opp + f);
-        wasm_v128_store(out.data() + f, wasm_i16x8_add(wasm_i16x8_add(v_opp, v_opp), v_own));
-    }
-#else
-    const size_t n = features_.size();
-    for (size_t f = 0; f < n; ++f) {
-        out[f] = static_cast<uint16_t>(own[f] + 2U * opp[f]);
+        uint64_t rem = flips;
+        while (rem != 0) {
+            const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
+            rem &= rem - 1U;
+            for (const auto& entry : square_sparse_deltas(bit)) {
+                out[entry.feature] = static_cast<uint16_t>(out[entry.feature] - entry.delta);
+            }
+        }
+    } else {
+        for (const auto& entry : square_sparse_deltas(square)) {
+            out[entry.feature] = static_cast<uint16_t>(out[entry.feature] + 2U * entry.delta);
+        }
+        uint64_t rem = flips;
+        while (rem != 0) {
+            const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
+            rem &= rem - 1U;
+            for (const auto& entry : square_sparse_deltas(bit)) {
+                out[entry.feature] = static_cast<uint16_t>(out[entry.feature] + entry.delta);
+            }
+        }
     }
 #endif
 }
 
 namespace {
 
-#ifdef __wasm_simd128__
+template <bool OddSlot>
+STELLO_FORCEINLINE int32_t unpack_packed_weight(int32_t packed) noexcept {
+    if constexpr (OddSlot) {
+        return static_cast<int16_t>(packed >> 16);
+    } else {
+        return static_cast<int16_t>(static_cast<uint16_t>(packed));
+    }
+}
 
+template <bool OddSlot>
+STELLO_FORCEINLINE int32_t sum_flat_scalar(
+    size_t n_features,
+    const uint32_t* offsets,
+    const uint16_t* loc,
+    const int32_t* w
+) noexcept {
+    int32_t s0 = 0;
+    int32_t s1 = 0;
+    int32_t s2 = 0;
+    int32_t s3 = 0;
+    size_t k = 0;
+    for (; k + 4U <= n_features; k += 4U) {
+        s0 += unpack_packed_weight<OddSlot>(w[offsets[k] + loc[k]]);
+        s1 += unpack_packed_weight<OddSlot>(w[offsets[k + 1U] + loc[k + 1U]]);
+        s2 += unpack_packed_weight<OddSlot>(w[offsets[k + 2U] + loc[k + 2U]]);
+        s3 += unpack_packed_weight<OddSlot>(w[offsets[k + 3U] + loc[k + 3U]]);
+    }
+    for (; k < n_features; ++k) {
+        s0 += unpack_packed_weight<OddSlot>(w[offsets[k] + loc[k]]);
+    }
+    return s0 + s1 + s2 + s3;
+}
+
+#ifdef __wasm_simd128__
+template <bool OddSlot>
 STELLO_FORCEINLINE int32_t sum_local_wasm(
     size_t n_features,
     const uint32_t* offsets,
     v128_t l0, v128_t l1, v128_t l2, v128_t l3,
     v128_t l4, v128_t l5, v128_t l6, v128_t l7,
-    const int16_t* w
+    const int32_t* w
 ) noexcept {
     alignas(16) uint32_t indices[MAX_PATTERN_FEATURES];
     auto add_chunk = [&](size_t base, v128_t vec) noexcept {
@@ -811,145 +1053,75 @@ STELLO_FORCEINLINE int32_t sum_local_wasm(
     int32_t s3 = 0;
     size_t f = 0;
     for (; f + 4U <= n_features; f += 4U) {
-        s0 += w[indices[f]];
-        s1 += w[indices[f + 1U]];
-        s2 += w[indices[f + 2U]];
-        s3 += w[indices[f + 3U]];
+        s0 += unpack_packed_weight<OddSlot>(w[indices[f]]);
+        s1 += unpack_packed_weight<OddSlot>(w[indices[f + 1U]]);
+        s2 += unpack_packed_weight<OddSlot>(w[indices[f + 2U]]);
+        s3 += unpack_packed_weight<OddSlot>(w[indices[f + 3U]]);
     }
     for (; f < n_features; ++f) {
-        s0 += w[indices[f]];
+        s0 += unpack_packed_weight<OddSlot>(w[indices[f]]);
     }
     return s0 + s1 + s2 + s3;
 }
-
-#else
-
-int32_t sum_local_indices(
-    size_t n_features,
-    const uint32_t* offsets,
-    const uint16_t* local,
-    const int16_t* w
-) noexcept {
-    int32_t s0 = 0;
-    int32_t s1 = 0;
-    int32_t s2 = 0;
-    int32_t s3 = 0;
-    size_t f = 0;
-    for (; f + 4U <= n_features; f += 4U) {
-        s0 += w[offsets[f] + local[f]];
-        s1 += w[offsets[f + 1U] + local[f + 1U]];
-        s2 += w[offsets[f + 2U] + local[f + 2U]];
-        s3 += w[offsets[f + 3U] + local[f + 3U]];
-    }
-    for (; f < n_features; ++f) {
-        s0 += w[offsets[f] + local[f]];
-    }
-    return s0 + s1 + s2 + s3;
-}
-
 #endif
 
 } // namespace
 
 int32_t PatternSet::sum_weights_from_state(
     const PatternState& state,
-    bool own_is_black,
-    std::span<const int16_t> weights
+    const int32_t* packed_pair_weights,
+    bool odd_slot
 ) const noexcept {
-    assert(weights.size() == raw_size_);
-    const uint16_t* const own = own_is_black ? state.black.data() : state.white.data();
-    const uint16_t* const opp = own_is_black ? state.white.data() : state.black.data();
     const size_t n = features_.size();
-    const uint32_t* const off = feature_offsets_.data();
-    const int16_t* const w = weights.data();
-#ifdef __wasm_simd128__
-    auto make_local = [&](size_t f) noexcept {
-        const v128_t v_own = wasm_v128_load(own + f);
-        const v128_t v_opp = wasm_v128_load(opp + f);
-        return wasm_i16x8_add(wasm_i16x8_add(v_opp, v_opp), v_own);
-    };
-    return sum_local_wasm(
-        n,
-        off,
-        make_local(0), make_local(8), make_local(16), make_local(24),
-        make_local(32), make_local(40), make_local(48), make_local(56),
-        w);
-#else
-    int32_t s0 = 0;
-    int32_t s1 = 0;
-    int32_t s2 = 0;
-    int32_t s3 = 0;
-    size_t f = 0;
-    for (; f + 4U <= n; f += 4U) {
-        s0 += w[off[f] + own[f] + 2U * opp[f]];
-        s1 += w[off[f + 1U] + own[f + 1U] + 2U * opp[f + 1U]];
-        s2 += w[off[f + 2U] + own[f + 2U] + 2U * opp[f + 2U]];
-        s3 += w[off[f + 3U] + own[f + 3U] + 2U * opp[f + 3U]];
-    }
-    for (; f < n; ++f) {
-        s0 += w[off[f] + own[f] + 2U * opp[f]];
-    }
-    return s0 + s1 + s2 + s3;
-#endif
+    const uint32_t* const off = slot_feature_offsets_.data();
+    const uint16_t* const loc = state.features.data();
+    return odd_slot
+        ? sum_flat_scalar<true>(n, off, loc, packed_pair_weights)
+        : sum_flat_scalar<false>(n, off, loc, packed_pair_weights);
 }
 
 int32_t PatternSet::sum_weights_after_move(
-    const std::array<uint16_t, MAX_PATTERN_FEATURES>& parent_base,
+    const PatternState& cur,
+    bool mover_is_even_disc,
     uint32_t square,
     uint64_t flips,
-    std::span<const int16_t> weights
+    const int32_t* packed_child_pair_weights,
+    bool child_odd_slot
 ) const noexcept {
-    assert(weights.size() == raw_size_);
 #ifdef __wasm_simd128__
-    const uint16_t* const base = parent_base.data();
-    const uint16_t* const sq = square_deltas_[square].data();
-    auto init_lane = [&](size_t f) noexcept {
-        const v128_t s = wasm_v128_load(sq + f);
-        return wasm_i16x8_add(wasm_v128_load(base + f), wasm_i16x8_add(s, s));
-    };
-    v128_t l0 = init_lane(0);
-    v128_t l1 = init_lane(8);
-    v128_t l2 = init_lane(16);
-    v128_t l3 = init_lane(24);
-    v128_t l4 = init_lane(32);
-    v128_t l5 = init_lane(40);
-    v128_t l6 = init_lane(48);
-    v128_t l7 = init_lane(56);
-
-    uint64_t rem = flips;
-    while (rem != 0) {
-        const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
-        rem &= rem - 1U;
-        const uint16_t* const d = square_deltas_[bit].data();
-        l0 = wasm_i16x8_add(l0, wasm_v128_load(d + 0));
-        l1 = wasm_i16x8_add(l1, wasm_v128_load(d + 8));
-        l2 = wasm_i16x8_add(l2, wasm_v128_load(d + 16));
-        l3 = wasm_i16x8_add(l3, wasm_v128_load(d + 24));
-        l4 = wasm_i16x8_add(l4, wasm_v128_load(d + 32));
-        l5 = wasm_i16x8_add(l5, wasm_v128_load(d + 40));
-        l6 = wasm_i16x8_add(l6, wasm_v128_load(d + 48));
-        l7 = wasm_i16x8_add(l7, wasm_v128_load(d + 56));
-    }
-    return sum_local_wasm(
-        features_.size(),
-        feature_offsets_.data(),
-        l0, l1, l2, l3, l4, l5, l6, l7,
-        weights.data());
+    v128_t l0{}, l1{}, l2{}, l3{}, l4{}, l5{}, l6{}, l7{};
+    advance_lanes_wasm(
+        cur.features.data(), slot_deltas_, mover_is_even_disc, square, flips,
+        l0, l1, l2, l3, l4, l5, l6, l7);
+    const size_t n = features_.size();
+    const uint32_t* const off = slot_feature_offsets_.data();
+    return child_odd_slot
+        ? sum_local_wasm<true>(n, off, l0, l1, l2, l3, l4, l5, l6, l7, packed_child_pair_weights)
+        : sum_local_wasm<false>(n, off, l0, l1, l2, l3, l4, l5, l6, l7, packed_child_pair_weights);
 #else
-    std::array<uint16_t, MAX_PATTERN_FEATURES> local = parent_base;
-    for (const auto& entry : square_sparse_deltas(square)) {
-        local[entry.feature] = static_cast<uint16_t>(local[entry.feature] + 2U * entry.delta);
-    }
-    uint64_t rem = flips;
-    while (rem != 0) {
-        const uint32_t bit = static_cast<uint32_t>(std::countr_zero(rem));
-        rem &= rem - 1U;
-        for (const auto& entry : square_sparse_deltas(bit)) {
-            local[entry.feature] = static_cast<uint16_t>(local[entry.feature] + entry.delta);
-        }
-    }
-    return sum_local_indices(features_.size(), feature_offsets_.data(), local.data(), weights.data());
+    PatternState local;
+    advance_state(local, cur, mover_is_even_disc, square, flips);
+    const size_t n = features_.size();
+    const uint32_t* const off = slot_feature_offsets_.data();
+    const uint16_t* const loc = local.features.data();
+    return child_odd_slot
+        ? sum_flat_scalar<true>(n, off, loc, packed_child_pair_weights)
+        : sum_flat_scalar<false>(n, off, loc, packed_child_pair_weights);
 #endif
+}
+
+int32_t PatternSet::sum_weights_packed(
+    uint64_t digit1,
+    uint64_t digit2,
+    const int32_t* packed_pair_weights,
+    bool odd_slot
+) const noexcept {
+#if (defined(__x86_64__) || defined(_M_X64)) && !defined(__EMSCRIPTEN__)
+    if (cpu::fast_pext()) {
+        return packed_direct_.sum_pext_pair(digit1, digit2, packed_pair_weights, odd_slot);
+    }
+#endif
+    return packed_direct_.sum_portable_pair(digit1, digit2, packed_pair_weights, odd_slot);
 }
 
 int32_t PatternSet::sum_weights(uint64_t own, uint64_t opponent, std::span<const int16_t> weights) const noexcept {

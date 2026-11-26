@@ -121,17 +121,108 @@ std::optional<EvalWeights> EvalWeights::create(
     std::copy_n(stage_of_discs.data(), 65, weights.stage_of_discs_.data());
     weights.units_per_disc_ = units_per_disc;
     weights.stages_ = stage_tables.size();
-    weights.weights_.reserve(stage_tables.size() * set->raw_size());
-    for (const auto& tbl : stage_tables) {
-        weights.weights_.insert(weights.weights_.end(), tbl.begin(), tbl.end());
+
+    constexpr uint32_t kNoSlot = (std::numeric_limits<uint32_t>::max)();
+    weights.stage_even_slot_.assign(weights.stages_, kNoSlot);
+    weights.stage_odd_slot_.assign(weights.stages_, kNoSlot);
+    uint32_t next_even = 0;
+    uint32_t next_odd = 0;
+    for (uint32_t discs = 0; discs <= 64U; ++discs) {
+        const size_t st = static_cast<size_t>(weights.stage_of_discs_[discs]);
+        if ((discs & 1U) == 0U) {
+            if (weights.stage_even_slot_[st] == kNoSlot) {
+                weights.stage_even_slot_[st] = next_even++;
+            }
+        } else {
+            if (weights.stage_odd_slot_[st] == kNoSlot) {
+                weights.stage_odd_slot_[st] = next_odd++;
+            }
+        }
     }
+
+    const size_t num_pairs = static_cast<size_t>((std::max)(next_even, next_odd));
+    const size_t raw_size = set->raw_size();
+    weights.weights_.assign(num_pairs * raw_size, 0);
+    const auto shapes = set->shapes();
+    const auto raw_offsets = set->offsets();
+    const auto& shape_order = set->pack_shape_order();
+
+    for (size_t st = 0; st < weights.stages_; ++st) {
+        const int16_t* const src_stage = stage_tables[st].data();
+        if (weights.stage_even_slot_[st] != kNoSlot) {
+            int32_t* const dst = weights.weights_.data() + static_cast<size_t>(weights.stage_even_slot_[st]) * raw_size;
+            for (const size_t s : shape_order) {
+                const size_t sz = shapes[s].size();
+                const int16_t* const src_shape = src_stage + raw_offsets[s];
+                int32_t* const dst_shape = dst + set->pack_shape_offset(s);
+                for (size_t r = 0; r < sz; ++r) {
+                    const uint32_t lo = static_cast<uint16_t>(src_shape[r]);
+                    dst_shape[r] = static_cast<int32_t>((static_cast<uint32_t>(dst_shape[r]) & 0xFFFF0000U) | lo);
+                }
+            }
+        }
+        if (weights.stage_odd_slot_[st] != kNoSlot) {
+            int32_t* const dst = weights.weights_.data() + static_cast<size_t>(weights.stage_odd_slot_[st]) * raw_size;
+            for (const size_t s : shape_order) {
+                const size_t sz = shapes[s].size();
+                const int16_t* const src_shape = src_stage + raw_offsets[s];
+                int32_t* const dst_shape = dst + set->pack_shape_offset(s);
+                const auto sw = shapes[s].swap12();
+                for (size_t r = 0; r < sz; ++r) {
+                    const uint32_t hi = static_cast<uint32_t>(static_cast<uint16_t>(src_shape[r])) << 16;
+                    const size_t dr = sw[r];
+                    dst_shape[dr] = static_cast<int32_t>((static_cast<uint32_t>(dst_shape[dr]) & 0x0000FFFFU) | hi);
+                }
+            }
+        }
+    }
+
+    for (uint32_t discs = 0; discs <= 64U; ++discs) {
+        const size_t st = static_cast<size_t>(weights.stage_of_discs_[discs]);
+        const uint32_t pair_idx = ((discs & 1U) == 0U) ? weights.stage_even_slot_[st] : weights.stage_odd_slot_[st];
+        weights.parity_ptrs_[discs] = weights.weights_.data() + static_cast<size_t>(pair_idx) * raw_size;
+    }
+
     if (!mobility_tables.empty()) {
         weights.mob_weights_.reserve(mobility_tables.size() * MOBILITY_WEIGHTS_PER_STAGE);
-        for (const auto& mob : mobility_tables) {
+        for (size_t st = 0; st < weights.stages_; ++st) {
+            const auto& mob = mobility_tables[st];
             weights.mob_weights_.insert(weights.mob_weights_.end(), mob.begin(), mob.end());
         }
     }
     return weights;
+}
+
+std::vector<int16_t> EvalWeights::stage_weights_copy(size_t stage) const {
+    assert(stage < stages_);
+    const size_t raw_size = set_->raw_size();
+    std::vector<int16_t> out(raw_size, 0);
+    const auto shapes = set_->shapes();
+    const auto raw_offsets = set_->offsets();
+    constexpr uint32_t kNoSlot = (std::numeric_limits<uint32_t>::max)();
+    if (stage_even_slot_[stage] != kNoSlot) {
+        const int32_t* const src = weights_.data() + static_cast<size_t>(stage_even_slot_[stage]) * raw_size;
+        for (const size_t s : set_->pack_shape_order()) {
+            const size_t sz = shapes[s].size();
+            const int32_t* const src_shape = src + set_->pack_shape_offset(s);
+            int16_t* const dst_shape = out.data() + raw_offsets[s];
+            for (size_t r = 0; r < sz; ++r) {
+                dst_shape[r] = static_cast<int16_t>(static_cast<uint16_t>(src_shape[r]));
+            }
+        }
+    } else if (stage_odd_slot_[stage] != kNoSlot) {
+        const int32_t* const src = weights_.data() + static_cast<size_t>(stage_odd_slot_[stage]) * raw_size;
+        for (const size_t s : set_->pack_shape_order()) {
+            const size_t sz = shapes[s].size();
+            const int32_t* const src_shape = src + set_->pack_shape_offset(s);
+            int16_t* const dst_shape = out.data() + raw_offsets[s];
+            const auto sw = shapes[s].swap12();
+            for (size_t r = 0; r < sz; ++r) {
+                dst_shape[r] = static_cast<int16_t>(src_shape[sw[r]] >> 16);
+            }
+        }
+    }
+    return out;
 }
 
 const EvalWeights& EvalWeights::built_in() {

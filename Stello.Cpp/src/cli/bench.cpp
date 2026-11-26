@@ -80,10 +80,22 @@ bool engine_options(const Options& options, SearchOptions& search_out, std::stri
     text_out.clear();
 
     if (const auto cpu_opt = options.text("cpu")) {
-        if (*cpu_opt == "portable") {
-            stello::cpu::set_portable_only(true);
-        } else if (*cpu_opt != "auto") {
-            error_out = "--cpu must be auto or portable.";
+        if (*cpu_opt == "auto") {
+            (void)stello::cpu::set_forced_tier(std::nullopt);
+        } else if (*cpu_opt == "portable") {
+            (void)stello::cpu::set_forced_tier(stello::cpu::CpuTier::Portable);
+        } else if (*cpu_opt == "v3") {
+            if (!stello::cpu::set_forced_tier(stello::cpu::CpuTier::V3)) {
+                error_out = "--cpu v3 requested, but this CPU lacks x86-64-v3 (AVX2+BMI2) support.";
+                return false;
+            }
+        } else if (*cpu_opt == "v4") {
+            if (!stello::cpu::set_forced_tier(stello::cpu::CpuTier::V4)) {
+                error_out = "--cpu v4 requested, but this CPU lacks x86-64-v4 (AVX-512VL/CD/DQ/BW + GFNI) support.";
+                return false;
+            }
+        } else {
+            error_out = "--cpu must be auto, portable, v3, or v4.";
             return false;
         }
     }

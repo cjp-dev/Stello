@@ -2,97 +2,239 @@
 
 #include "search/kernel.hpp"
 
-#include <array>
 #include <bit>
 #include <cstdint>
 #include <utility>
+
+#if (defined(__x86_64__) || defined(_M_X64)) && !defined(__EMSCRIPTEN__) && defined(__AVX2__)
+#include "endgame/bits_avx2.hpp"
+#endif
+#if STELLO_TU_HAS_AVX512_V4
+#include "endgame/bits_avx512.hpp"
+#endif
 
 namespace stello::search {
 
 namespace detail::last {
 
-struct LastLines {
-    uint64_t column{0};
-    uint64_t column_multiplier{0};
-    uint64_t diagonal{0};
-    uint64_t anti_diagonal{0};
+STELLO_FORCEINLINE int32_t last_flip_count(uint64_t own, uint32_t square) noexcept {
+    return static_cast<int32_t>((endgame::bits::simul_last_flip_portable(own, square) & 0xFFU) >> 1U);
+}
+
+struct LastStats {
+    uint64_t nodes{0};
+    uint64_t evaluations{0};
 };
 
-constexpr std::array<LastLines, 64> make_last_lines() noexcept {
-    std::array<LastLines, 64> lines{};
-    for (int32_t square = 0; square < 64; ++square) {
-        const int32_t col = square & 7;
-        const int32_t row = square >> 3;
-        LastLines line{};
-        for (int32_t r = 0; r < 8; ++r) {
-            line.column |= uint64_t{1} << (r * 8 + col);
-            line.column_multiplier |= uint64_t{1} << (56 - col - 7 * r);
-            const int32_t c_diag = col + (r - row);
-            if (c_diag >= 0 && c_diag < 8) {
-                line.diagonal |= uint64_t{1} << (r * 8 + c_diag);
-            }
-            const int32_t c_anti = col - (r - row);
-            if (c_anti >= 0 && c_anti < 8) {
-                line.anti_diagonal |= uint64_t{1} << (r * 8 + c_anti);
+STELLO_FORCEINLINE AbortVoid flush_last_stats(Searcher& s, const LastStats& st) {
+    s.nodes += st.nodes;
+    s.evaluations += st.evaluations;
+    if (s.nodes >= s.next_abort_check) [[unlikely]] {
+        s.next_abort_check = s.nodes + 1024;
+        return s.check_abort();
+    }
+    STELLO_RETURN_OK_VOID();
+}
+
+template <cpu::CpuTier Tier>
+STELLO_FORCEINLINE uint64_t probe_flips_fast(uint64_t own, uint64_t opponent, uint32_t square) noexcept {
+#if STELLO_HAS_X86_64_V4 && STELLO_TU_HAS_AVX512_V4
+    if constexpr (Tier == cpu::CpuTier::V4) {
+        const __m128i op = _mm_set_epi64x(static_cast<int64_t>(opponent), static_cast<int64_t>(own));
+        const __m128i fv = endgame::bits::flips_avx512cd_v128(op, square);
+        if (_mm_testz_si128(fv, fv)) {
+            return 0ULL;
+        }
+        return endgame::bits::reduce_flip_v128(fv);
+    }
+#endif
+#if STELLO_HAS_X86_64_V3 && defined(__AVX2__)
+    if constexpr (Tier != cpu::CpuTier::Portable) {
+        const __m128i op = _mm_set_epi64x(static_cast<int64_t>(opponent), static_cast<int64_t>(own));
+        const __m128i fv = endgame::bits::flips_avx2_v128_smartclr(op, square);
+        if (_mm_testz_si128(fv, fv)) {
+            return 0ULL;
+        }
+        return endgame::bits::reduce_flip_v128(fv);
+    }
+#endif
+    return Kernel<Tier>::flips(own, opponent, square);
+}
+
+template <cpu::CpuTier Tier>
+STELLO_FORCEINLINE int32_t last1_fast(LastStats& st, uint64_t own, int32_t alpha, uint32_t square) noexcept {
+    const uint16_t op_flip = Kernel<Tier>::simul_last_flip(own, square);
+    const int32_t p2 = static_cast<int32_t>(op_flip & 0xFFU);
+    int32_t score = 2 * static_cast<int32_t>(std::popcount(own)) - 62 + p2;
+    st.evaluations += 1;
+    if (p2 != 0) {
+        st.nodes += 1;
+        return score;
+    }
+
+    st.nodes += 2;
+    const int32_t pass_score = score - 2;
+    if (score <= 0) {
+        score = pass_score;
+    }
+    if (score > alpha) {
+        const int32_t o2 = static_cast<int32_t>(op_flip >> 8U);
+        if (o2 != 0) {
+            score = pass_score - o2;
+        }
+    }
+    return score;
+}
+
+template <cpu::CpuTier Tier>
+inline int32_t last2_fast(
+    LastStats& st,
+    uint64_t own,
+    uint64_t opponent,
+    int32_t alpha,
+    uint32_t p0,
+    uint32_t p1
+) noexcept {
+    using endgame::bits::FLIP_NEIGHBOURS;
+    using endgame::bits::score_with_empties;
+
+    st.nodes += 1;
+    int32_t v = 0;
+    const uint64_t f0 = ((FLIP_NEIGHBOURS[p0] & opponent) != 0)
+        ? probe_flips_fast<Tier>(own, opponent, p0)
+        : 0ULL;
+
+    if (f0 != 0) {
+        v = last1_fast<Tier>(st, opponent ^ f0, alpha, p1);
+        if (v > alpha && (FLIP_NEIGHBOURS[p1] & opponent) != 0) {
+            const uint64_t f1 = probe_flips_fast<Tier>(own, opponent, p1);
+            if (f1 != 0) {
+                const int32_t g = last1_fast<Tier>(st, opponent ^ f1, alpha, p0);
+                if (g < v) {
+                    v = g;
+                }
             }
         }
-        lines[static_cast<size_t>(square)] = line;
+        return v;
     }
-    return lines;
-}
 
-constexpr std::array<std::array<uint8_t, 256>, 8> make_last_flip_counts() noexcept {
-    std::array<std::array<uint8_t, 256>, 8> counts{};
-    for (int32_t place = 0; place < 8; ++place) {
-        for (int32_t own = 0; own < 256; ++own) {
-            uint8_t count = 0;
-            uint8_t run = 0;
-            int32_t i = place + 1;
-            while (i < 8 && (own & (1 << i)) == 0) {
-                ++run;
-                ++i;
-            }
-            if (i < 8) {
-                count = static_cast<uint8_t>(count + run);
-            }
+    const uint64_t f1 = ((FLIP_NEIGHBOURS[p1] & opponent) != 0)
+        ? probe_flips_fast<Tier>(own, opponent, p1)
+        : 0ULL;
+    if (f1 != 0) {
+        return last1_fast<Tier>(st, opponent ^ f1, alpha, p0);
+    }
 
-            run = 0;
-            i = place - 1;
-            while (i >= 0 && (own & (1 << i)) == 0) {
-                ++run;
-                --i;
+    st.nodes += 1;
+    alpha = -alpha - 1;
+    const uint64_t g0 = probe_flips_fast<Tier>(opponent, own, p0);
+    if (g0 != 0) {
+        v = last1_fast<Tier>(st, own ^ g0, alpha, p1);
+        if (v > alpha) {
+            const uint64_t g1 = probe_flips_fast<Tier>(opponent, own, p1);
+            if (g1 != 0) {
+                const int32_t g = last1_fast<Tier>(st, own ^ g1, alpha, p0);
+                if (g < v) {
+                    v = g;
+                }
             }
-            if (i >= 0) {
-                count = static_cast<uint8_t>(count + run);
-            }
-            counts[static_cast<size_t>(place)][static_cast<size_t>(own)] = count;
+        }
+    } else {
+        const uint64_t g1 = probe_flips_fast<Tier>(opponent, own, p1);
+        if (g1 != 0) {
+            v = last1_fast<Tier>(st, own ^ g1, alpha, p0);
+        } else {
+            st.evaluations += 1;
+            v = score_with_empties(own, 2);
         }
     }
-    return counts;
+    return -v;
 }
 
-inline constexpr auto LAST_LINES = make_last_lines();
-inline constexpr auto LAST_FLIP_COUNTS = make_last_flip_counts();
+template <cpu::CpuTier Tier>
+inline int32_t last3_fast(
+    LastStats& st,
+    uint64_t own,
+    uint64_t opponent,
+    int32_t alpha,
+    uint32_t p0,
+    uint32_t p1,
+    uint32_t p2,
+    uint64_t empties4
+) noexcept {
+    using endgame::bits::FLIP_NEIGHBOURS;
+    using endgame::bits::is_lone_empty;
+    using endgame::bits::score_with_odd_empties;
 
-STELLO_FORCEINLINE int32_t last_flip_count(uint64_t own, uint32_t square) noexcept {
-    const uint32_t col = square & 7U;
-    const uint32_t row = square >> 3U;
-    own &= ~(uint64_t{1} << square);
-    auto line = [&](uint64_t mask, uint64_t mult) noexcept -> size_t {
-        return static_cast<size_t>(((own & mask) * mult) >> 56U);
-    };
-    const LastLines& lines = LAST_LINES[static_cast<size_t>(square)];
-    return static_cast<int32_t>(
-        LAST_FLIP_COUNTS[col][static_cast<size_t>((own >> (8U * row)) & 0xFFULL)]
-        + LAST_FLIP_COUNTS[row][line(lines.column, lines.column_multiplier)]
-        + LAST_FLIP_COUNTS[col][line(lines.diagonal, 0x0101'0101'0101'0101ULL)]
-        + LAST_FLIP_COUNTS[col][line(lines.anti_diagonal, 0x0101'0101'0101'0101ULL)]);
+    if (is_lone_empty(p2, empties4)) {
+        std::swap(p2, p0);
+    } else if (is_lone_empty(p1, empties4)) {
+        std::swap(p1, p0);
+    }
+
+    uint64_t p = own;
+    uint64_t o = opponent;
+    int32_t v = -END_INFINITY;
+    int32_t pol = 1;
+
+    for (;;) {
+        st.nodes += 1;
+
+        if ((FLIP_NEIGHBOURS[p0] & o) != 0) {
+            const uint64_t f = probe_flips_fast<Tier>(p, o, p0);
+            if (f != 0) {
+                v = last2_fast<Tier>(st, o ^ f, p ^ f ^ (uint64_t{1} << p0), alpha, p1, p2);
+                if (alpha < v) {
+                    return v * pol;
+                }
+            }
+        }
+
+        if ((FLIP_NEIGHBOURS[p1] & o) != 0) {
+            const uint64_t f = probe_flips_fast<Tier>(p, o, p1);
+            if (f != 0) {
+                const int32_t g = last2_fast<Tier>(st, o ^ f, p ^ f ^ (uint64_t{1} << p1), alpha, p2, p0);
+                if (alpha < g) {
+                    return g * pol;
+                }
+                if (g > v) {
+                    v = g;
+                }
+            }
+        }
+
+        if ((FLIP_NEIGHBOURS[p2] & o) != 0) {
+            const uint64_t f = probe_flips_fast<Tier>(p, o, p2);
+            if (f != 0) {
+                const int32_t g = last2_fast<Tier>(st, o ^ f, p ^ f ^ (uint64_t{1} << p2), alpha, p1, p0);
+                const int32_t best = (g > v) ? g : v;
+                return best * pol;
+            }
+        }
+
+        if (v > -END_INFINITY) {
+            return v * pol;
+        }
+
+        std::swap(p, o);
+        alpha = -alpha - 1;
+        pol = -pol;
+        if (pol >= 0) {
+            break;
+        }
+    }
+
+    st.evaluations += 1;
+    return score_with_odd_empties(own, 3);
 }
 
-} // namespace detail::last
-
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::last4(Searcher& s, uint64_t own, uint64_t opponent, int32_t alpha) {
+template <cpu::CpuTier Tier>
+inline int32_t last4_fast(
+    LastStats& st,
+    uint64_t own,
+    uint64_t opponent,
+    int32_t alpha
+) noexcept {
     using endgame::bits::FLIP_NEIGHBOURS;
     using endgame::bits::lone_empties;
     using endgame::bits::score_with_empties;
@@ -126,24 +268,24 @@ AbortResult<int32_t> Kernel<UseAvx2>::last4(Searcher& s, uint64_t own, uint64_t 
     int32_t pol = 1;
 
     for (;;) {
-        STELLO_TRY_VOID_I32(s.count_node());
+        st.nodes += 1;
 
         if ((FLIP_NEIGHBOURS[p0] & o) != 0) {
-            const uint64_t f = flips(p, o, p0);
+            const uint64_t f = probe_flips_fast<Tier>(p, o, p0);
             if (f != 0) {
-                STELLO_TRY_ASSIGN_EXISTING_I32(v, last3(s, o ^ f, p ^ f ^ (uint64_t{1} << p0), alpha, p1, p2, p3, empties));
+                v = last3_fast<Tier>(st, o ^ f, p ^ f ^ (uint64_t{1} << p0), alpha, p1, p2, p3, empties);
                 if (alpha >= v) {
-                    STELLO_RETURN_OK_R(int32_t, v * pol);
+                    return v * pol;
                 }
             }
         }
 
         if ((FLIP_NEIGHBOURS[p1] & o) != 0) {
-            const uint64_t f = flips(p, o, p1);
+            const uint64_t f = probe_flips_fast<Tier>(p, o, p1);
             if (f != 0) {
-                STELLO_TRY_ASSIGN_I32(const int32_t g, last3(s, o ^ f, p ^ f ^ (uint64_t{1} << p1), alpha, p0, p2, p3, empties));
+                const int32_t g = last3_fast<Tier>(st, o ^ f, p ^ f ^ (uint64_t{1} << p1), alpha, p0, p2, p3, empties);
                 if (alpha >= g) {
-                    STELLO_RETURN_OK_R(int32_t, g * pol);
+                    return g * pol;
                 }
                 if (g < v) {
                     v = g;
@@ -152,11 +294,11 @@ AbortResult<int32_t> Kernel<UseAvx2>::last4(Searcher& s, uint64_t own, uint64_t 
         }
 
         if ((FLIP_NEIGHBOURS[p2] & o) != 0) {
-            const uint64_t f = flips(p, o, p2);
+            const uint64_t f = probe_flips_fast<Tier>(p, o, p2);
             if (f != 0) {
-                STELLO_TRY_ASSIGN_I32(const int32_t g, last3(s, o ^ f, p ^ f ^ (uint64_t{1} << p2), alpha, p0, p1, p3, empties));
+                const int32_t g = last3_fast<Tier>(st, o ^ f, p ^ f ^ (uint64_t{1} << p2), alpha, p0, p1, p3, empties);
                 if (alpha >= g) {
-                    STELLO_RETURN_OK_R(int32_t, g * pol);
+                    return g * pol;
                 }
                 if (g < v) {
                     v = g;
@@ -165,16 +307,16 @@ AbortResult<int32_t> Kernel<UseAvx2>::last4(Searcher& s, uint64_t own, uint64_t 
         }
 
         if ((FLIP_NEIGHBOURS[p3] & o) != 0) {
-            const uint64_t f = flips(p, o, p3);
+            const uint64_t f = probe_flips_fast<Tier>(p, o, p3);
             if (f != 0) {
-                STELLO_TRY_ASSIGN_I32(const int32_t g, last3(s, o ^ f, p ^ f ^ (uint64_t{1} << p3), alpha, p0, p1, p2, empties));
+                const int32_t g = last3_fast<Tier>(st, o ^ f, p ^ f ^ (uint64_t{1} << p3), alpha, p0, p1, p2, empties);
                 const int32_t best = (g < v) ? g : v;
-                STELLO_RETURN_OK_R(int32_t, best * pol);
+                return best * pol;
             }
         }
 
         if (v < END_INFINITY) {
-            STELLO_RETURN_OK_R(int32_t, v * pol);
+            return v * pol;
         }
 
         std::swap(p, o);
@@ -185,12 +327,22 @@ AbortResult<int32_t> Kernel<UseAvx2>::last4(Searcher& s, uint64_t own, uint64_t 
         }
     }
 
-    s.evaluations += 1;
-    STELLO_RETURN_OK_R(int32_t, -score_with_empties(own, 4));
+    st.evaluations += 1;
+    return -score_with_empties(own, 4);
 }
 
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::last3(
+} // namespace detail::last
+
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::last4(Searcher& s, uint64_t own, uint64_t opponent, int32_t alpha) {
+    detail::last::LastStats st{};
+    const int32_t score = detail::last::last4_fast<Tier>(st, own, opponent, alpha);
+    STELLO_TRY_VOID_I32(detail::last::flush_last_stats(s, st));
+    STELLO_RETURN_OK_R(int32_t, score);
+}
+
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::last3(
     Searcher& s,
     uint64_t own,
     uint64_t opponent,
@@ -200,74 +352,14 @@ AbortResult<int32_t> Kernel<UseAvx2>::last3(
     uint32_t p2,
     uint64_t empties4
 ) {
-    using endgame::bits::FLIP_NEIGHBOURS;
-    using endgame::bits::is_lone_empty;
-    using endgame::bits::score_with_odd_empties;
-
-    if (is_lone_empty(p2, empties4)) {
-        std::swap(p2, p0);
-    } else if (is_lone_empty(p1, empties4)) {
-        std::swap(p1, p0);
-    }
-
-    uint64_t p = own;
-    uint64_t o = opponent;
-    int32_t v = -END_INFINITY;
-    int32_t pol = 1;
-
-    for (;;) {
-        STELLO_TRY_VOID_I32(s.count_node());
-
-        if ((FLIP_NEIGHBOURS[p0] & o) != 0) {
-            const uint64_t f = flips(p, o, p0);
-            if (f != 0) {
-                STELLO_TRY_ASSIGN_EXISTING_I32(v, last2(s, o ^ f, p ^ f ^ (uint64_t{1} << p0), alpha, p1, p2));
-                if (alpha < v) {
-                    STELLO_RETURN_OK_R(int32_t, v * pol);
-                }
-            }
-        }
-
-        if ((FLIP_NEIGHBOURS[p1] & o) != 0) {
-            const uint64_t f = flips(p, o, p1);
-            if (f != 0) {
-                STELLO_TRY_ASSIGN_I32(const int32_t g, last2(s, o ^ f, p ^ f ^ (uint64_t{1} << p1), alpha, p2, p0));
-                if (alpha < g) {
-                    STELLO_RETURN_OK_R(int32_t, g * pol);
-                }
-                if (g > v) {
-                    v = g;
-                }
-            }
-        }
-
-        if ((FLIP_NEIGHBOURS[p2] & o) != 0) {
-            const uint64_t f = flips(p, o, p2);
-            if (f != 0) {
-                STELLO_TRY_ASSIGN_I32(const int32_t g, last2(s, o ^ f, p ^ f ^ (uint64_t{1} << p2), alpha, p1, p0));
-                const int32_t best = (g > v) ? g : v;
-                STELLO_RETURN_OK_R(int32_t, best * pol);
-            }
-        }
-
-        if (v > -END_INFINITY) {
-            STELLO_RETURN_OK_R(int32_t, v * pol);
-        }
-
-        std::swap(p, o);
-        alpha = -alpha - 1;
-        pol = -pol;
-        if (pol >= 0) {
-            break;
-        }
-    }
-
-    s.evaluations += 1;
-    STELLO_RETURN_OK_R(int32_t, score_with_odd_empties(own, 3));
+    detail::last::LastStats st{};
+    const int32_t score = detail::last::last3_fast<Tier>(st, own, opponent, alpha, p0, p1, p2, empties4);
+    STELLO_TRY_VOID_I32(detail::last::flush_last_stats(s, st));
+    STELLO_RETURN_OK_R(int32_t, score);
 }
 
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::last2(
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::last2(
     Searcher& s,
     uint64_t own,
     uint64_t opponent,
@@ -275,79 +367,17 @@ AbortResult<int32_t> Kernel<UseAvx2>::last2(
     uint32_t p0,
     uint32_t p1
 ) {
-    using endgame::bits::FLIP_NEIGHBOURS;
-    using endgame::bits::score_with_empties;
-
-    STELLO_TRY_VOID_I32(s.count_node());
-    int32_t v = 0;
-    const uint64_t f0 = ((FLIP_NEIGHBOURS[p0] & opponent) != 0) ? flips(own, opponent, p0) : 0ULL;
-
-    if (f0 != 0) {
-        STELLO_TRY_ASSIGN_EXISTING_I32(v, last1(s, opponent ^ f0, alpha, p1));
-        if (v > alpha && (FLIP_NEIGHBOURS[p1] & opponent) != 0) {
-            const uint64_t f1 = flips(own, opponent, p1);
-            if (f1 != 0) {
-                STELLO_TRY_ASSIGN_I32(const int32_t g, last1(s, opponent ^ f1, alpha, p0));
-                if (g < v) {
-                    v = g;
-                }
-            }
-        }
-    } else {
-        const uint64_t f1 = ((FLIP_NEIGHBOURS[p1] & opponent) != 0) ? flips(own, opponent, p1) : 0ULL;
-        if (f1 != 0) {
-            STELLO_TRY_ASSIGN_EXISTING_I32(v, last1(s, opponent ^ f1, alpha, p0));
-        } else {
-            STELLO_TRY_VOID_I32(s.count_node());
-            alpha = -alpha - 1;
-            const uint64_t g0 = flips(opponent, own, p0);
-            if (g0 != 0) {
-                STELLO_TRY_ASSIGN_EXISTING_I32(v, last1(s, own ^ g0, alpha, p1));
-                if (v > alpha) {
-                    const uint64_t g1 = flips(opponent, own, p1);
-                    if (g1 != 0) {
-                        STELLO_TRY_ASSIGN_I32(const int32_t g, last1(s, own ^ g1, alpha, p0));
-                        if (g < v) {
-                            v = g;
-                        }
-                    }
-                }
-            } else {
-                const uint64_t g1 = flips(opponent, own, p1);
-                if (g1 != 0) {
-                    STELLO_TRY_ASSIGN_EXISTING_I32(v, last1(s, own ^ g1, alpha, p0));
-                } else {
-                    s.evaluations += 1;
-                    v = score_with_empties(own, 2);
-                }
-            }
-            v = -v;
-        }
-    }
-
-    STELLO_RETURN_OK_R(int32_t, v);
+    detail::last::LastStats st{};
+    const int32_t score = detail::last::last2_fast<Tier>(st, own, opponent, alpha, p0, p1);
+    STELLO_TRY_VOID_I32(detail::last::flush_last_stats(s, st));
+    STELLO_RETURN_OK_R(int32_t, score);
 }
 
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::last1(Searcher& s, uint64_t own, int32_t alpha, uint32_t square) {
-    STELLO_TRY_VOID_I32(s.count_node());
-    int32_t flipped = detail::last::last_flip_count(own, square);
-    int32_t score = 2 * (static_cast<int32_t>(std::popcount(own)) + flipped + 1) - 64;
-    if (flipped == 0) {
-        STELLO_TRY_VOID_I32(s.count_node());
-        const int32_t pass_score = score - 2;
-        if (score <= 0) {
-            score = pass_score;
-        }
-        if (score > alpha) {
-            flipped = detail::last::last_flip_count(~own, square);
-            if (flipped != 0) {
-                score = pass_score - 2 * flipped;
-            }
-        }
-    }
-
-    s.evaluations += 1;
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::last1(Searcher& s, uint64_t own, int32_t alpha, uint32_t square) {
+    detail::last::LastStats st{};
+    const int32_t score = detail::last::last1_fast<Tier>(st, own, alpha, square);
+    STELLO_TRY_VOID_I32(detail::last::flush_last_stats(s, st));
     STELLO_RETURN_OK_R(int32_t, score);
 }
 

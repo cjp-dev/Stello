@@ -25,9 +25,10 @@ inline constexpr std::array<uint64_t, 4> QUADRANTS = {
 inline constexpr size_t DEEP_MOVES = MAX_MOVES;
 inline constexpr size_t LOCAL_MOVES = static_cast<size_t>(END_LOCAL_EMPTIES);
 
+template <cpu::CpuTier Tier>
 inline std::optional<int32_t> stability_cut(uint64_t own, uint64_t opponent, int32_t alpha, int32_t empties) {
     if (alpha >= endgame::bits::STABILITY_THRESHOLD_NWS[static_cast<size_t>(64 - empties)]) {
-        const int32_t limit = 64 - 2 * static_cast<int32_t>(std::popcount(endgame::stable::of(opponent, own)));
+        const int32_t limit = 64 - 2 * static_cast<int32_t>(std::popcount(Kernel<Tier>::stable_of(opponent, own)));
         if (limit <= alpha) {
             return limit;
         }
@@ -35,25 +36,39 @@ inline std::optional<int32_t> stability_cut(uint64_t own, uint64_t opponent, int
     return std::nullopt;
 }
 
-inline std::pair<uint64_t, uint64_t> child_pos(uint64_t own, uint64_t opponent, const EndMove& mv) noexcept {
+struct LocalMove {
+    uint64_t flips;
+    uint64_t replies;
+    int32_t value;
+    uint16_t square;
+    uint16_t slot;
+};
+static_assert(sizeof(LocalMove) == 24);
+
+template <typename MoveT>
+inline std::pair<uint64_t, uint64_t> child_pos(uint64_t own, uint64_t opponent, const MoveT& mv) noexcept {
     return {opponent ^ mv.flips, own ^ mv.flips ^ (uint64_t{1} << mv.square)};
 }
 
-template <bool UseAvx2>
-inline bool fill_end_moves(uint64_t own, uint64_t opponent, uint64_t legal, std::span<EndMove> moves) noexcept {
+template <cpu::CpuTier Tier, typename MoveT = EndMove>
+inline bool fill_end_moves(uint64_t own, uint64_t opponent, uint64_t legal, std::span<MoveT> moves) noexcept {
     for (size_t idx = 0; idx < moves.size(); ++idx) {
         const uint32_t square = static_cast<uint32_t>(std::countr_zero(legal));
         legal &= (legal - 1ULL);
-        const uint64_t flipped = Kernel<UseAvx2>::flips(own, opponent, square);
+        const uint64_t flipped = Kernel<Tier>::flips(own, opponent, square);
         if (flipped == opponent) {
             return true;
         }
-        moves[idx] = EndMove{square, flipped, 0, endgame::bits::LEGAL_UNDEFINED};
+        moves[idx].square = static_cast<decltype(moves[idx].square)>(square);
+        moves[idx].value = 0;
+        moves[idx].flips = flipped;
+        moves[idx].replies = endgame::bits::LEGAL_UNDEFINED;
     }
     return false;
 }
 
-inline void swap_next_best(std::span<EndMove> moves, size_t start) noexcept {
+template <typename MoveT>
+inline void swap_next_best(std::span<MoveT> moves, size_t start) noexcept {
     size_t top = start;
     for (size_t i = start + 1; i < moves.size(); ++i) {
         if (moves[i].value > moves[top].value) {
@@ -65,7 +80,8 @@ inline void swap_next_best(std::span<EndMove> moves, size_t start) noexcept {
     }
 }
 
-inline size_t undone_first(std::span<EndMove> moves, uint64_t done) noexcept {
+template <typename MoveT>
+inline size_t undone_first(std::span<MoveT> moves, uint64_t done) noexcept {
     size_t remaining = 0;
     for (size_t i = 0; i < moves.size(); ++i) {
         if ((done & (uint64_t{1} << moves[i].square)) == 0) {
@@ -106,8 +122,8 @@ inline size_t make_end_children(
 
 } // namespace detail::endgame_search
 
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::solve_child(
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::solve_child(
     Searcher& s,
     uint64_t own,
     uint64_t opponent,
@@ -121,8 +137,8 @@ AbortResult<int32_t> Kernel<UseAvx2>::solve_child(
     return end_window(s, own, opponent, alpha, beta, empties, false);
 }
 
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::end_null(
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::end_null(
     Searcher& s,
     uint64_t own,
     uint64_t opponent,
@@ -139,8 +155,8 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_null(
     return end_deep(s, own, opponent, alpha, empties, false, legal);
 }
 
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::end_window(
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::end_window(
     Searcher& s,
     uint64_t own,
     uint64_t opponent,
@@ -167,7 +183,7 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_window(
     }
 
     if (!passed && beta >= endgame::bits::STABILITY_THRESHOLD[static_cast<size_t>(64 - empties)]) {
-        const int32_t limit = 64 - 2 * static_cast<int32_t>(std::popcount(endgame::stable::of(opponent, own)));
+        const int32_t limit = 64 - 2 * static_cast<int32_t>(std::popcount(stable_of(opponent, own)));
         if (limit <= alpha) {
             STELLO_RETURN_OK_R(int32_t, limit);
         }
@@ -211,9 +227,9 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_window(
     }
 
     const size_t count = static_cast<size_t>(std::popcount(legal));
-    std::array<EndMove, DEEP_MOVES> list{};
+    std::array<EndMove, DEEP_MOVES> list;
     std::span<EndMove> moves(list.data(), count);
-    if (fill_end_moves<UseAvx2>(own, opponent, legal, moves)) {
+    if (fill_end_moves<Tier>(own, opponent, legal, moves)) {
         STELLO_RETURN_OK_R(int32_t, 64);
     }
 
@@ -236,7 +252,6 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_window(
         const int32_t depth = (std::min)(empties >> 3, 2);
         const int32_t order_alpha = -(std::min)(beta + 8, 64);
         const int32_t order_beta = -(std::max)(alpha - 12, -64);
-        const uint64_t empty = ~(own | opponent);
 
         for (auto& mv : moves) {
             if (static_cast<int32_t>(mv.square) == hash_move) {
@@ -245,11 +260,13 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_window(
             }
 
             const auto [child_own, child_opponent] = child_pos(own, opponent, mv);
-            mv.replies = legal_moves(child_own, child_opponent);
-            const uint64_t child_empty = empty & ~(uint64_t{1} << mv.square);
-            STELLO_TRY_ASSIGN_I32(const int32_t ov, ordering_value(s, child_own, child_opponent, depth, order_alpha, order_beta));
+            int32_t pot = 0;
+            legal_and_potential(child_own, child_opponent, mv.replies, pot);
+            STELLO_TRY_ASSIGN_I32(
+                const int32_t ov,
+                ordering_value(s, child_own, child_opponent, depth, order_alpha, order_beta, mv.replies));
             mv.value = (ORDER_OFFSET - endgame::bits::weighted_moves(mv.replies)) * ORDER_MOBILITY
-                     + (ORDER_OFFSET - endgame::bits::potential_mobility(child_opponent, child_empty)) * ORDER_POTENTIAL_MOBILITY
+                     + (ORDER_OFFSET - pot) * ORDER_POTENTIAL_MOBILITY
                      + (64 - ov) * (ORDER_VALUE + depth * ORDER_VALUE_DEEP);
         }
     }
@@ -301,8 +318,8 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_window(
     STELLO_RETURN_OK_R(int32_t, best);
 }
 
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::end_deep(
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::end_deep(
     Searcher& s,
     uint64_t own,
     uint64_t opponent,
@@ -332,7 +349,7 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_deep(
     }
 
     if (!passed) {
-        if (const auto cut = stability_cut(own, opponent, alpha, empties)) {
+        if (const auto cut = stability_cut<Tier>(own, opponent, alpha, empties)) {
             STELLO_RETURN_OK_R(int32_t, *cut);
         }
     }
@@ -360,9 +377,9 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_deep(
     }
 
     const size_t count = static_cast<size_t>(std::popcount(legal));
-    std::array<EndMove, DEEP_MOVES> list{};
+    std::array<EndMove, DEEP_MOVES> list;
     std::span<EndMove> moves(list.data(), count);
-    if (fill_end_moves<UseAvx2>(own, opponent, legal, moves)) {
+    if (fill_end_moves<Tier>(own, opponent, legal, moves)) {
         STELLO_RETURN_OK_R(int32_t, 64);
     }
 
@@ -373,6 +390,10 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_deep(
 
     if (empties >= END_ETC_MIN_EMPTIES) {
         const int32_t required_child_depth = (s.end_mpc_stage > 0) ? s.end_mpc_stage : (empties - 1);
+        for (const auto& mv : moves) {
+            const auto [child_own, child_opponent] = child_pos(own, opponent, mv);
+            s.endgame_table->prefetch(child_own, child_opponent, 0);
+        }
         for (const auto& mv : moves) {
             const auto [child_own, child_opponent] = child_pos(own, opponent, mv);
             const auto entry = s.endgame_table->get_at_root(child_own, child_opponent, 0, s.root_empties);
@@ -426,7 +447,9 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_deep(
 
                 const auto [child_own, child_opponent] = child_pos(own, opponent, mv);
                 mv.replies = legal_moves(child_own, child_opponent);
-                STELLO_TRY_ASSIGN_I32(const int32_t ov, ordering_value(s, child_own, child_opponent, depth, order_alpha, order_beta));
+                STELLO_TRY_ASSIGN_I32(
+                    const int32_t ov,
+                    ordering_value(s, child_own, child_opponent, depth, order_alpha, order_beta, mv.replies));
                 mv.value = (ORDER_OFFSET - endgame::bits::weighted_moves(mv.replies)) * ORDER_NULL_MOBILITY
                          + (64 - ov) * (ORDER_NULL_VALUE + depth * ORDER_NULL_VALUE_DEEP);
             }
@@ -466,8 +489,8 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_deep(
     STELLO_RETURN_OK_R(int32_t, best);
 }
 
-template <bool UseAvx2>
-AbortResult<std::optional<int32_t>> Kernel<UseAvx2>::try_end_probcut(
+template <cpu::CpuTier Tier>
+AbortResult<std::optional<int32_t>> Kernel<Tier>::try_end_probcut(
     Searcher& s,
     uint64_t own,
     uint64_t opponent,
@@ -487,12 +510,11 @@ AbortResult<std::optional<int32_t>> Kernel<UseAvx2>::try_end_probcut(
     STELLO_TRY_VOID_R(std::optional<int32_t>, s.count_node());
     s.evaluations += 1;
 
-    const eval::PatternState eval_state = s.pattern->set().state_of(own, opponent);
     const uint32_t discs = 64U - static_cast<uint32_t>(empties);
-    const size_t stage = s.pattern->stage_of(discs);
-    const int16_t* const w = s.pattern->stage_weights(stage).data();
+    const eval::PatternState eval_state = eval_state_of_node(s.pattern->set(), own, opponent, discs);
+    const int32_t* const w = s.pattern->packed_weights_for_discs(discs);
     const int32_t static0 = eval_state_score(
-        *s.pattern, eval_state, Player::Black, own, opponent, stage, w);
+        *s.pattern, eval_state, own, opponent, discs, w);
 
     const auto normalize_score = [](int32_t sc) noexcept -> int32_t {
         if (sc >= WIN_SCORE - 64) {
@@ -538,8 +560,8 @@ AbortResult<std::optional<int32_t>> Kernel<UseAvx2>::try_end_probcut(
     STELLO_RETURN_OK_R(std::optional<int32_t>, std::nullopt);
 }
 
-template <bool UseAvx2>
-AbortVoid Kernel<UseAvx2>::split_endgame(
+template <cpu::CpuTier Tier>
+AbortVoid Kernel<Tier>::split_endgame(
     Searcher& s,
     uint64_t own,
     uint64_t opponent,
@@ -554,7 +576,7 @@ AbortVoid Kernel<UseAvx2>::split_endgame(
 ) {
     using namespace detail::endgame_search;
 
-    std::array<EndgameChild, DEEP_MOVES> children{};
+    std::array<EndgameChild, DEEP_MOVES> children;
     const size_t child_count = make_end_children(own, opponent, empties, moves, from, done, children);
     if (child_count > 0) {
         return split(s, std::span<const EndgameChild>(children.data(), child_count), alpha, beta, best, best_move);
@@ -562,22 +584,25 @@ AbortVoid Kernel<UseAvx2>::split_endgame(
     STELLO_RETURN_OK_VOID();
 }
 
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::ordering_value(
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::ordering_value(
     Searcher& s,
     uint64_t own,
     uint64_t opponent,
     int32_t depth,
     int32_t alpha,
-    int32_t beta
+    int32_t beta,
+    uint64_t known_legal
 ) {
     STELLO_TRY_VOID_I32(s.count_node());
     if (depth == 0) {
         s.evaluations += 1;
-        STELLO_RETURN_OK_R(int32_t, eval::disc_score(*s.pattern, own, opponent));
+        STELLO_RETURN_OK_R(int32_t, disc_score(*s.pattern, own, opponent, known_legal));
     }
 
-    uint64_t legal = legal_moves(own, opponent);
+    uint64_t legal = (known_legal != endgame::bits::LEGAL_UNDEFINED)
+        ? known_legal
+        : legal_moves(own, opponent);
     if (legal == 0) {
         if (legal_moves(opponent, own) == 0) {
             s.evaluations += 1;
@@ -610,8 +635,8 @@ AbortResult<int32_t> Kernel<UseAvx2>::ordering_value(
     STELLO_RETURN_OK_R(int32_t, best);
 }
 
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::end_local(
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::end_local(
     Searcher& s,
     uint64_t own,
     uint64_t opponent,
@@ -628,7 +653,7 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_local(
 
     STELLO_TRY_VOID_I32(s.count_node());
     if (!passed) {
-        if (const auto cut = stability_cut(own, opponent, alpha, empties)) {
+        if (const auto cut = stability_cut<Tier>(own, opponent, alpha, empties)) {
             STELLO_RETURN_OK_R(int32_t, *cut);
         }
     }
@@ -647,9 +672,9 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_local(
     }
 
     const size_t count = static_cast<size_t>(std::popcount(legal));
-    std::array<EndMove, LOCAL_MOVES> list{};
-    std::span<EndMove> moves(list.data(), count);
-    if (fill_end_moves<UseAvx2>(own, opponent, legal, moves)) {
+    std::array<LocalMove, LOCAL_MOVES> list;
+    std::span<LocalMove> moves(list.data(), count);
+    if (fill_end_moves<Tier, LocalMove>(own, opponent, legal, moves)) {
         STELLO_RETURN_OK_R(int32_t, 64);
     }
 
@@ -660,6 +685,7 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_local(
         for (auto& mv : moves) {
             const auto [child_own, child_opponent] = child_pos(own, opponent, mv);
             const size_t slot = s.endgame->local.slot(child_own, child_opponent, empties - 1);
+            mv.slot = static_cast<uint16_t>(slot);
             const auto stored = s.endgame->local.get(slot);
             if (stored.matches(child_own, child_opponent)) {
                 if (alpha < stored.lower) {
@@ -695,15 +721,18 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_local(
 
             mv.value = (ORDER_OFFSET - replies) * ORDER_LOCAL_MOBILITY;
         }
+    } else {
+        const auto [child_own, child_opponent] = child_pos(own, opponent, moves[0]);
+        moves[0].slot = static_cast<uint16_t>(s.endgame->local.slot(child_own, child_opponent, empties - 1));
     }
 
     const size_t undone = undone_first(moves, done);
-    std::span<EndMove> remaining = moves.subspan(0, undone);
+    std::span<LocalMove> remaining = moves.subspan(0, undone);
     for (size_t i = 0; i < remaining.size(); ++i) {
         swap_next_best(remaining, i);
-        const EndMove mv = remaining[i];
+        const LocalMove mv = remaining[i];
         const auto [child_own, child_opponent] = child_pos(own, opponent, mv);
-        const size_t slot = s.endgame->local.slot(child_own, child_opponent, empties - 1);
+        const size_t slot = static_cast<size_t>(mv.slot);
         STELLO_TRY_ASSIGN_I32(
             const int32_t sc,
             end_local(s, child_own, child_opponent, -alpha - 1, false, mv.replies, empties - 1));
@@ -721,8 +750,8 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_local(
     STELLO_RETURN_OK_R(int32_t, best);
 }
 
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::end_simple(
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::end_simple(
     Searcher& s,
     uint64_t own,
     uint64_t opponent,
@@ -739,7 +768,7 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_simple(
 
     STELLO_TRY_VOID_I32(s.count_node());
     if (!passed) {
-        if (const auto cut = stability_cut(own, opponent, alpha, empties)) {
+        if (const auto cut = stability_cut<Tier>(own, opponent, alpha, empties)) {
             STELLO_RETURN_OK_R(int32_t, *cut);
         }
     }
@@ -758,9 +787,9 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_simple(
     }
 
     const size_t count = static_cast<size_t>(std::popcount(legal));
-    std::array<EndMove, LOCAL_MOVES> list{};
-    std::span<EndMove> moves(list.data(), count);
-    if (fill_end_moves<UseAvx2>(own, opponent, legal, moves)) {
+    std::array<LocalMove, LOCAL_MOVES> list;
+    std::span<LocalMove> moves(list.data(), count);
+    if (fill_end_moves<Tier, LocalMove>(own, opponent, legal, moves)) {
         STELLO_RETURN_OK_R(int32_t, 64);
     }
 
@@ -773,6 +802,7 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_simple(
             mv.value = ((par & endgame::bits::QUADRANT_BIT[mv.square]) != 0) ? ORDER_SIMPLE_PARITY : 0;
             const auto [child_own, child_opponent] = child_pos(own, opponent, mv);
             const size_t slot = s.endgame->local.slot(child_own, child_opponent, empties - 1);
+            mv.slot = static_cast<uint16_t>(slot);
             const auto stored = s.endgame->local.get(slot);
             if (stored.matches(child_own, child_opponent)) {
                 if (alpha < stored.lower) {
@@ -808,15 +838,18 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_simple(
 
             mv.value += (ORDER_OFFSET - replies) * ORDER_SIMPLE_MOBILITY;
         }
+    } else {
+        const auto [child_own, child_opponent] = child_pos(own, opponent, moves[0]);
+        moves[0].slot = static_cast<uint16_t>(s.endgame->local.slot(child_own, child_opponent, empties - 1));
     }
 
     const size_t undone = undone_first(moves, done);
-    std::span<EndMove> remaining = moves.subspan(0, undone);
+    std::span<LocalMove> remaining = moves.subspan(0, undone);
     for (size_t i = 0; i < remaining.size(); ++i) {
         swap_next_best(remaining, i);
-        const EndMove mv = remaining[i];
+        const LocalMove mv = remaining[i];
         const auto [child_own, child_opponent] = child_pos(own, opponent, mv);
-        const size_t slot = s.endgame->local.slot(child_own, child_opponent, empties - 1);
+        const size_t slot = static_cast<size_t>(mv.slot);
         STELLO_TRY_ASSIGN_I32(
             const int32_t sc,
             end_simple(s, child_own, child_opponent, -alpha - 1, false, mv.replies, empties - 1));
@@ -834,8 +867,8 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_simple(
     STELLO_RETURN_OK_R(int32_t, best);
 }
 
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::end_fast(
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::end_fast(
     Searcher& s,
     uint64_t own,
     uint64_t opponent,
@@ -847,7 +880,7 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_fast(
 
     STELLO_TRY_VOID_I32(s.count_node());
     if (!passed) {
-        if (const auto cut = stability_cut(own, opponent, alpha, empties)) {
+        if (const auto cut = stability_cut<Tier>(own, opponent, alpha, empties)) {
             STELLO_RETURN_OK_R(int32_t, *cut);
         }
     }
@@ -897,8 +930,8 @@ AbortResult<int32_t> Kernel<UseAvx2>::end_fast(
     STELLO_RETURN_OK_R(int32_t, best);
 }
 
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::solve_shallow(
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::solve_shallow(
     Searcher& s,
     uint64_t own,
     uint64_t opponent,
@@ -966,8 +999,8 @@ AbortResult<int32_t> Kernel<UseAvx2>::solve_shallow(
     STELLO_RETURN_OK_R(int32_t, -s_pass);
 }
 
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::solve_last2(
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::solve_last2(
     Searcher& s,
     uint64_t own,
     uint64_t opponent,
@@ -1012,22 +1045,18 @@ AbortResult<int32_t> Kernel<UseAvx2>::solve_last2(
     STELLO_RETURN_OK_R(int32_t, -s_pass);
 }
 
-template <bool UseAvx2>
-int32_t Kernel<UseAvx2>::solve_last(Searcher& s, uint64_t own, uint64_t opponent, uint64_t empty) noexcept {
+template <cpu::CpuTier Tier>
+int32_t Kernel<Tier>::solve_last(Searcher& s, uint64_t own, uint64_t /*opponent*/, uint64_t empty) noexcept {
     s.evaluations += 1;
     const uint32_t square = static_cast<uint32_t>(std::countr_zero(empty));
-    const uint64_t bit = uint64_t{1} << square;
-
-    const uint64_t f1 = flips(own, opponent, square);
-    if (f1 != 0) {
-        return final_score(own | f1 | bit, opponent & ~f1);
+    const uint16_t op_flip = simul_last_flip(own, square);
+    const int32_t p2 = static_cast<int32_t>(op_flip & 0xFFU);
+    const int32_t score = 2 * static_cast<int32_t>(std::popcount(own)) - 62 + p2;
+    if (p2 != 0) {
+        return score;
     }
-
-    const uint64_t f2 = flips(opponent, own, square);
-    if (f2 != 0) {
-        return final_score(own & ~f2, opponent | f2 | bit);
-    }
-    return final_score(own, opponent);
+    const int32_t neg_o = -static_cast<int32_t>(op_flip >> 8U);
+    return score + neg_o - static_cast<int32_t>((neg_o | (score - 1)) < 0) * 2;
 }
 
 } // namespace stello::search

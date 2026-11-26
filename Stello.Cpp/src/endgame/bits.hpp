@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/compiler.hpp"
+
 #include <array>
 #include <bit>
 #include <cstdint>
@@ -196,6 +198,51 @@ inline uint64_t flips(uint64_t own, uint64_t opponent, uint32_t square) noexcept
 }
 
 inline uint64_t legal_moves(uint64_t p, uint64_t o) noexcept {
+#ifdef __wasm_simd128__
+    const v128_t p_v = wasm_i64x2_splat(static_cast<int64_t>(p));
+    const v128_t pp = wasm_i8x16_shuffle(p_v, p_v, 0, 1, 2, 3, 4, 5, 6, 7, 15, 14, 13, 12, 11, 10, 9, 8);
+    const v128_t o_v = wasm_i64x2_splat(static_cast<int64_t>(o));
+    const v128_t oo = wasm_i8x16_shuffle(o_v, o_v, 0, 1, 2, 3, 4, 5, 6, 7, 15, 14, 13, 12, 11, 10, 9, 8);
+    const v128_t moo = wasm_v128_and(oo, wasm_i64x2_splat(0x7E7E'7E7E'7E7E'7E7ELL));
+    const v128_t occupied = wasm_v128_or(pp, oo);
+
+    // shift=+1
+    v128_t mm = wasm_i32x4_add(wasm_v128_and(wasm_i8x16_add(pp, pp), moo), moo);
+    // shift=-1
+    v128_t r1 = wasm_v128_andnot(moo, wasm_i8x16_add(occupied, occupied));
+    r1 = wasm_v128_and(r1, wasm_i64x2_make(0x0E0E'0E0E'0E0E'0E0ELL, 0x7070'7070'7070'7070LL));
+    r1 = wasm_u8x16_min(r1, wasm_i64x2_make(0x0808'0808'0808'0808LL, 0x4040'4040'4040'4040LL));
+    v128_t flip = wasm_u8x16_sub_sat(wasm_v128_and(wasm_i8x16_add(moo, r1), pp), r1);
+    mm = wasm_v128_or(mm, wasm_u64x2_shr(flip, 1));
+
+    // shift=-8:+8
+    flip = wasm_v128_and(oo, wasm_i64x2_shl(pp, 8));
+    flip = wasm_v128_or(flip, wasm_v128_and(oo, wasm_i64x2_shl(flip, 8)));
+    v128_t pre = wasm_v128_and(oo, wasm_i64x2_shl(oo, 8));
+    flip = wasm_v128_or(flip, wasm_v128_and(pre, wasm_i64x2_shl(flip, 16)));
+    flip = wasm_v128_or(flip, wasm_v128_and(pre, wasm_i64x2_shl(flip, 16)));
+    mm = wasm_v128_or(mm, wasm_i64x2_shl(flip, 8));
+
+    // shift=-9:+7
+    flip = wasm_v128_and(moo, wasm_i64x2_shl(pp, 7));
+    flip = wasm_v128_or(flip, wasm_v128_and(moo, wasm_i64x2_shl(flip, 7)));
+    pre = wasm_v128_and(moo, wasm_i64x2_shl(moo, 7));
+    flip = wasm_v128_or(flip, wasm_v128_and(pre, wasm_i64x2_shl(flip, 14)));
+    flip = wasm_v128_or(flip, wasm_v128_and(pre, wasm_i64x2_shl(flip, 14)));
+    mm = wasm_v128_or(mm, wasm_i64x2_shl(flip, 7));
+
+    // shift=+9:-7
+    flip = wasm_v128_and(moo, wasm_u64x2_shr(pp, 7));
+    flip = wasm_v128_or(flip, wasm_v128_and(moo, wasm_u64x2_shr(flip, 7)));
+    pre = wasm_u64x2_shr(pre, 7);
+    flip = wasm_v128_or(flip, wasm_v128_and(pre, wasm_u64x2_shr(flip, 14)));
+    flip = wasm_v128_or(flip, wasm_v128_and(pre, wasm_u64x2_shr(flip, 14)));
+    mm = wasm_v128_or(mm, wasm_u64x2_shr(flip, 7));
+
+    mm = wasm_v128_andnot(mm, occupied);
+    const v128_t mm_rev = wasm_i8x16_shuffle(mm, mm, 15, 14, 13, 12, 11, 10, 9, 8, 0, 1, 2, 3, 4, 5, 6, 7);
+    return static_cast<uint64_t>(wasm_i64x2_extract_lane(wasm_v128_or(mm, mm_rev), 0));
+#else
     const uint64_t m_o = o & 0x7e7e'7e7e'7e7e'7e7eULL;
     uint64_t flip1 = m_o & (p << 1);
     uint64_t flip7 = m_o & (p << 7);
@@ -241,6 +288,7 @@ inline uint64_t legal_moves(uint64_t p, uint64_t o) noexcept {
     flip8 |= pre8 & (flip8 >> 16);
     moves |= (flip1 >> 1) | (flip7 >> 7) | (flip9 >> 9) | (flip8 >> 8);
     return moves & ~(p | o);
+#endif
 }
 
 inline uint64_t lone_empties(uint64_t own, uint64_t opponent) noexcept {
@@ -292,6 +340,158 @@ inline int32_t score_with_odd_empties(uint64_t own, int32_t empties) noexcept {
     int32_t score = static_cast<int32_t>(std::popcount(own)) * 2 + empties;
     score += (((score >> 5) & 2) - 1) * empties;
     return score - 64;
+}
+
+namespace last_flip_detail {
+
+constexpr uint16_t cf_entry_1d(uint32_t len, uint32_t place, uint32_t pattern) noexcept {
+    uint32_t p_flips = 0;
+    uint32_t o_flips = 0;
+    if (place + 2U < len) {
+        const uint32_t first = (pattern >> (place + 1U)) & 1U;
+        for (uint32_t i = place + 2U; i < len; ++i) {
+            if (((pattern >> i) & 1U) != first) {
+                const uint32_t count = i - place - 1U;
+                if (first == 0U) {
+                    p_flips += count;
+                } else {
+                    o_flips += count;
+                }
+                break;
+            }
+        }
+    }
+    if (place >= 2U) {
+        const uint32_t first = (pattern >> (place - 1U)) & 1U;
+        for (int32_t i = static_cast<int32_t>(place) - 2; i >= 0; --i) {
+            if (((pattern >> static_cast<uint32_t>(i)) & 1U) != first) {
+                const uint32_t count = place - 1U - static_cast<uint32_t>(i);
+                if (first == 0U) {
+                    p_flips += count;
+                } else {
+                    o_flips += count;
+                }
+                break;
+            }
+        }
+    }
+    return static_cast<uint16_t>(((o_flips * 2U) << 8U) | (p_flips * 2U));
+}
+
+struct PortableLastLines {
+    uint64_t col_mask{0};
+    uint64_t col_mult{0};
+    uint64_t d1_mask{0};
+    uint64_t d2_mask{0};
+    uint16_t d1_ofs{2048};
+    uint16_t d2_ofs{2048};
+    uint8_t d1_shift{56};
+    uint8_t d2_shift{56};
+};
+
+inline constexpr size_t PORTABLE_CF_SIZE =
+    2048U + 1U + (3U * 8U) + (4U * 16U) + (5U * 32U) + (6U * 64U) + (7U * 128U);
+
+constexpr uint16_t short_diag_offset(uint32_t len, uint32_t local_idx) noexcept {
+    if (len < 3U) {
+        return 2048U;
+    }
+    if (len == 8U) {
+        return static_cast<uint16_t>(local_idx * 256U);
+    }
+    uint32_t base = 2049U;
+    for (uint32_t l = 3U; l < len; ++l) {
+        base += l * (1U << l);
+    }
+    return static_cast<uint16_t>(base + local_idx * (1U << len));
+}
+
+constexpr std::array<uint16_t, PORTABLE_CF_SIZE> make_portable_cf() noexcept {
+    std::array<uint16_t, PORTABLE_CF_SIZE> cf{};
+    for (uint32_t place = 0; place < 8U; ++place) {
+        for (uint32_t pat = 0; pat < 256U; ++pat) {
+            cf[place * 256U + pat] = cf_entry_1d(8U, place, pat);
+        }
+    }
+    cf[2048] = 0;
+    for (uint32_t len = 3U; len <= 7U; ++len) {
+        const uint32_t size = 1U << len;
+        for (uint32_t place = 0; place < len; ++place) {
+            const uint32_t ofs = short_diag_offset(len, place);
+            for (uint32_t pat = 0; pat < size; ++pat) {
+                cf[ofs + pat] = cf_entry_1d(len, place, pat);
+            }
+        }
+    }
+    return cf;
+}
+
+constexpr std::array<PortableLastLines, 64> make_portable_last_lines() noexcept {
+    std::array<PortableLastLines, 64> lines{};
+    for (int32_t square = 0; square < 64; ++square) {
+        const int32_t col = square & 7;
+        const int32_t row = square >> 3;
+        PortableLastLines entry{};
+        for (int32_t r = 0; r < 8; ++r) {
+            entry.col_mask |= uint64_t{1} << (r * 8 + col);
+            entry.col_mult |= uint64_t{1} << (56 - col - 7 * r);
+        }
+
+        const int32_t d1_c0 = (row > col) ? 0 : (col - row);
+        const int32_t d1_c1 = (col - row + 7 < 7) ? (col - row + 7) : 7;
+        const uint32_t d1_len = static_cast<uint32_t>(d1_c1 - d1_c0 + 1);
+        if (d1_len >= 3U) {
+            for (int32_t c = d1_c0; c <= d1_c1; ++c) {
+                const int32_t r = row + (c - col);
+                entry.d1_mask |= uint64_t{1} << (r * 8 + c);
+            }
+            entry.d1_shift = static_cast<uint8_t>(56 + d1_c0);
+            entry.d1_ofs = short_diag_offset(d1_len, static_cast<uint32_t>(col - d1_c0));
+        }
+
+        const int32_t sum_cr = col + row;
+        const int32_t d2_c0 = (sum_cr > 7) ? (sum_cr - 7) : 0;
+        const int32_t d2_c1 = (sum_cr < 7) ? sum_cr : 7;
+        const uint32_t d2_len = static_cast<uint32_t>(d2_c1 - d2_c0 + 1);
+        if (d2_len >= 3U) {
+            for (int32_t c = d2_c0; c <= d2_c1; ++c) {
+                const int32_t r = sum_cr - c;
+                entry.d2_mask |= uint64_t{1} << (r * 8 + c);
+            }
+            entry.d2_shift = static_cast<uint8_t>(56 + d2_c0);
+            entry.d2_ofs = short_diag_offset(d2_len, static_cast<uint32_t>(col - d2_c0));
+        }
+
+        lines[static_cast<size_t>(square)] = entry;
+    }
+    return lines;
+}
+
+inline constexpr auto PORTABLE_CF = make_portable_cf();
+inline constexpr auto PORTABLE_LAST_LINES = make_portable_last_lines();
+
+} // namespace last_flip_detail
+
+/// Branchless simultaneous (2*O_flips << 8) | (2*P_flips) lookup for square `square` (portable & WASM).
+STELLO_FORCEINLINE uint16_t simul_last_flip_portable(uint64_t own, uint32_t square) noexcept {
+    const uint32_t col = square & 7U;
+    const uint32_t row8 = square & 56U;
+    const auto& pl = last_flip_detail::PORTABLE_LAST_LINES[static_cast<size_t>(square)];
+    uint16_t op_flip = last_flip_detail::PORTABLE_CF[col * 256U + static_cast<uint32_t>((own >> row8) & 0xFFULL)];
+    op_flip = static_cast<uint16_t>(
+        op_flip + last_flip_detail::PORTABLE_CF[(row8 << 5U) + static_cast<uint32_t>(((own & pl.col_mask) * pl.col_mult) >> 56U)]);
+    op_flip = static_cast<uint16_t>(
+        op_flip + last_flip_detail::PORTABLE_CF[pl.d1_ofs + static_cast<uint32_t>(((own & pl.d1_mask) * 0x0101'0101'0101'0101ULL) >> pl.d1_shift)]);
+    op_flip = static_cast<uint16_t>(
+        op_flip + last_flip_detail::PORTABLE_CF[pl.d2_ofs + static_cast<uint32_t>(((own & pl.d2_mask) * 0x0101'0101'0101'0101ULL) >> pl.d2_shift)]);
+    return op_flip;
+}
+
+/// Bitwise horizontal mirror across files A-H (portable implementation).
+STELLO_FORCEINLINE uint64_t horizontal_mirror_portable(uint64_t x) noexcept {
+    x = ((x >> 1U) & 0x5555'5555'5555'5555ULL) | ((x & 0x5555'5555'5555'5555ULL) << 1U);
+    x = ((x >> 2U) & 0x3333'3333'3333'3333ULL) | ((x & 0x3333'3333'3333'3333ULL) << 2U);
+    return ((x >> 4U) & 0x0F0F'0F0F'0F0F'0F0FULL) | ((x & 0x0F0F'0F0F'0F0F'0F0FULL) << 4U);
 }
 
 } // namespace stello::endgame::bits

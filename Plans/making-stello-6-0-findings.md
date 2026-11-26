@@ -239,3 +239,120 @@ Defaults: `hash-bits=19` for Stello (`stello`, `stello-v4`) and `hash-bits=21` f
   - `solve-bench --from 40 --to 49` vs `v5.0-ref/ffo-40-49.json`: `identical` across all `10` searches (`1,070,469,669` nodes in `16.7 s`, `64.17M` nps, `All scores and moves are correct`).
   - No signature regeneration or extra Gate P1 match required.
 - WASM Node tests (`node --test Stello.Cpp/tests/wasm/engine.test.mjs Stello.Cpp/tests/wasm/engine-mt.test.mjs`): `19/19` passed (`3.77 s`).
+
+---
+
+## Phase 2: Speed (No Change in Nodes — Gate P2 Complete)
+
+### 1. Summary of Kept Optimizations (`2.1`–`2.6` & Extra Phase-2 Items `2.E1`–`2.E6`)
+
+- **2.1 & `2.E1` / `2.E5` (Evaluation Overhaul — [patterns.hpp](../Stello.Cpp/src/eval/patterns.hpp), [patterns.cpp](../Stello.Cpp/src/eval/patterns.cpp), [patterns_bmi2.cpp](../Stello.Cpp/src/eval/patterns_bmi2.cpp), [eval_avx2_detail.hpp](../Stello.Cpp/src/search/eval_avx2_detail.hpp)):**
+  - Replaced dual `(black, white)` 256 B arrays with single ternary `alignas(32) uint16_t features[64]` (`PatternState`, 128 B = `4 × ymm`) plus baked sub-table offsets, `all_1_state_` / `all_2_state_` sparse state init, even/odd-interleaved `int32_t` packed pair weights with 4-byte aligned `VPGATHERDD`, branchless BMI2 `PEXT` `sum_pext_pair`, unscaled `eval::raw_skip_threshold` leaf comparisons in `search_inc`, and removal of unused `min_mob`/`own_mobility_weight`/`opp_mobility_weight`.
+  - Replaced dynamic bucket iteration in portable/WASM eval with compile-time `sum_flat_scalar<OddSlot>` and zero-STLF WASM `advance_lanes_wasm` + `sum_local_wasm<OddSlot>`.
+- **`2.E2`, `2.E3`, `2.E4`, `2.E6` (Search & TT Micro-Architecture — [ordering.cpp](../Stello.Cpp/src/search/ordering.cpp), [table.hpp](../Stello.Cpp/src/search/table.hpp), [table.cpp](../Stello.Cpp/src/search/table.cpp), [endgame/search_impl.hpp](../Stello.Cpp/src/endgame/search_impl.hpp)):**
+  - Compact 24 B `EndMove`/`LocalMove` with cached `uint16_t slot`, uninitialized stack move arrays, branchless child rank-sort in `ordering.cpp`, and trivially-copyable TT `Slot` (`uint64_t[8]` + `std::atomic_ref<uint64_t>`, removing redundant `std::construct_at` init loops).
+- **2.2 (Compact 64 KB Stability & Bit Utils — [stable.hpp](../Stello.Cpp/src/endgame/stable.hpp), [stable.cpp](../Stello.Cpp/src/endgame/stable.cpp), [bits_avx2.hpp](../Stello.Cpp/src/endgame/bits_avx2.hpp)):**
+  - Replaced 1 MB edge tables with single 64 KB `g_edge_table[65536]` (`EDGE_STABILITY`), SSE2 `_mm_movemask_epi8` A/H column extraction, vectorized AVX2 `full_lines_avx2` + `stable_of_avx2` using `_mm_testc_si128`, and 3-instruction AVX2 `transpose_avx2`.
+- **2.3 (Bitboards, `__vectorcall`, Midgame Caching, WASM SIMD128 — [compiler.hpp](../Stello.Cpp/src/core/compiler.hpp), [bits.hpp](../Stello.Cpp/src/endgame/bits.hpp), [bits_avx2.hpp](../Stello.Cpp/src/endgame/bits_avx2.hpp), [engine_impl.hpp](../Stello.Cpp/src/search/engine_impl.hpp)):**
+  - Merged ray tables into single-cache-line `alignas(64) LrMask LR_MASK[64]`, added `STELLO_VECTORCALL` on Win64 hot helpers, AVX2 `legal_and_potential_avx2`, midgame `search_inc_deep` flip caching (`look >= 4`) + `known_legal` pass-through, and WASM `<wasm_simd128.h>` `wasm_i8x16_shuffle` `legal_moves`.
+- **2.4 (`SIMULLASTFLIP` & `last4..1` — [bits.hpp](../Stello.Cpp/src/endgame/bits.hpp), [bits_avx2.hpp](../Stello.Cpp/src/endgame/bits_avx2.hpp), [last_impl.hpp](../Stello.Cpp/src/endgame/last_impl.hpp)):**
+  - Implemented branchless `simul_last_flip_portable` + 3-lookup BMI2 `simul_last_flip_bmi2`, updated `solve_last`, and refactored `last4..1` (`noexcept` `last4_fast..last1_fast`, deferred `LastStats` flushed at `last4` / public wrappers, partial-reduction `__m128i` `probe_flips_fast` + `!_mm_testz_si128`, exact fail-soft parity).
+- **2.5 (`x86-64-v4` 256-Bit EVEX Dispatch, Zero `zmm` — [cpu.hpp](../Stello.Cpp/src/core/cpu.hpp), [cpu.cpp](../Stello.Cpp/src/core/cpu.cpp), [kernel.hpp](../Stello.Cpp/src/search/kernel.hpp), [bits_avx512.hpp](../Stello.Cpp/src/endgame/bits_avx512.hpp), [search_v4.cpp](../Stello.Cpp/src/search/search_v4.cpp)):**
+  - Extended `CpuTier { Portable, V3, V4 }` with `--cpu auto|portable|v3|v4` (`STELLO_TIER_DISPATCH`), `flips_avx512cd`, `legal_moves_avx512`, `legal_and_potential_avx512`, `stable_of_avx512`, 1-op GFNI `horizontal_mirror_gfni`, and `-mprefer-vector-width=256` / `/arch:AVX512 /vlen=256` (`zmm = 0`).
+- **2.6 (Non-Temporal TT Clear, Pre-ETC Prefetch, `/GS-`, Clang PGO — [search_v3.cpp](../Stello.Cpp/src/search/search_v3.cpp), [table.cpp](../Stello.Cpp/src/search/table.cpp), [CMakePresets.json](../Stello.Cpp/CMakePresets.json), [build_pgo.cmd](../Stello.Cpp/cmake/build_pgo.cmd)):**
+  - Added AVX2 `_mm256_stream_si256` + `_mm_sfence()` TT clear (ASan-guarded), pre-ETC child prefetch loop in `end_deep`, `/GS-` in MSVC Release/Native presets, and reproducible `build_pgo.cmd` workflow.
+
+### 2. Rejected & Deferred Experiments (Measured Decisions)
+
+1. **16-bit `loc[64]` stack store + dynamic 11-bucket scalar eval loop:** Caused 18-cycle Zen 4 store-to-load forwarding stalls; replaced with 4-byte-aligned `VPGATHERDD` (and 32-bit `indices[]` in WASM).
+2. **Explicit 11-pointer unrolled scalar eval sum:** Regressed `eval_sum` to `166.69` cyc (`d12` `0.649 s`); kept `VPGATHERDD` in `v3`/`v4` and `sum_flat_scalar<OddSlot>` in portable.
+3. **`dual_legal_moves_avx2` (`18.16` cyc vs `2 × 9.07` cyc) & staged `min_mob` early branches:** `d14` slowed from `1.689 s` to `1.700 s`; kept sequential `legal_moves` and branchless evaluation.
+4. **`2.E3` insertion sort + `switch` `single_square_score`:** Regressed by `~12 %` due to branch mispredictions vs branchless child rank-sort.
+5. **`2.E4` runtime `concurrent_tt` branching:** Both inline and `STELLO_NOINLINE` variants regressed 1t slightly vs unconditional `std::atomic_ref<uint64_t>`.
+6. **Incremental `FullLines` propagation (2.2):** FFO `#40–49` slowed (`15.92 s` vs `15.85 s`) because `stability_cut` fires infrequently under high empty/score thresholds.
+7. **WASM 21-op `wasm_sum_bytes_diag` `flip_sse_acepck` & 3× `byteswap64` `legal_moves` (2.3):** Regressed WASM `ffo-40-44` by `~66 ms` (`2995.1 → 3061.3 ms`); also A/B tested 64-bit scalar `legal_moves` in WASM (`890.5 ms` `mid-d12` / `3011.9 ms` `ffo-40-44`), which lost to `wasm_i8x16_shuffle` SIMD `legal_moves` (`871.2 ms` / `2913.5 ms`).
+8. **Removing `FLIP_NEIGHBOURS` guards on `last3` moves 2/3 (2.4):** Regressed FFO `#40–49` (`15.20 s` without guards vs `15.12 s` with).
+9. **`LASTFLIP_HIGHCUT` (2.4):** Deferred to Phase 5 because lazy high-cutoff `last1_nws` alters fail-soft scores and pass node counts, breaking Gate P2 exact-node parity.
+10. **256-bit `flips_avx512_gfni` (2.5):** Measured `6.36` cyc vs `4.08` cyc for `flips_avx512cd`; kept `flips_avx512cd` (and kept `horizontal_mirror_gfni` at `0.37` cyc).
+11. **LUT-free 256-bit AVX-512CD `last1_fast` on `v4` (2.5):** Measured `solve_1 = 9.02` cyc (`ffo-40-49` `14.61 s`) vs 3-lookup BMI2 `simul_last_flip_bmi2` (`solve_1 = 6.95–7.09` cyc, `ffo-40-49` `14.04 s`) on Zen 4 7800X3D.
+12. **Hardware `CRC32C` (`_mm_crc32_u64`) TT hash & unconditional entry TT prefetching (2.5/2.6):** `CRC32C` measured `1.58–1.69` cyc vs `0.93` cyc multiply-mix; entry TT prefetching regressed `d14` (`1.620 → 1.697 s`) and `ffo-40-49` (`14.04 → 14.07 s`) on the 96 MB L3 7800X3D.
+
+### 3. `stello-cpp microbench` Final Per-Primitive Cycles (`clang-release`, `repeats=500,000`, `warmup=1,000`)
+
+All shared primitive checksums matched identically across `--cpu portable`, `--cpu v3`, and `--cpu v4` (`hash_board` compares portable mul-mix vs SSE4.2 `crc32c`).
+
+| Primitive | Phase 0 `v3` | Phase 2 `portable` | Phase 2 `v3` (`AVX2`) | Phase 2 `v4` (`AVX-512VL`) | `v4` vs P0 `v3` |
+|---|---:|---:|---:|---:|---:|
+| `flips` | `6.35` | `18.12` | `6.62` | **`4.08`** | **−35.7 %** |
+| `last_flip_count` | `4.54` | `6.85` | `7.40` | `7.17` | +57.9 %* |
+| `solve_1` | `7.99` | `13.22` | `7.23` | **`6.95`** | **−13.0 %** |
+| `legal_moves` | `9.28` | `31.66` | `9.07` | **`8.07`** | **−13.0 %** |
+| `potential_mobility` | `6.50` | `18.09` | `6.65` | **`5.80`** | **−10.8 %** |
+| `legal_and_potential` | `15.86` | `41.51` | `11.45` | **`9.63`** | **−39.3 %** |
+| `dual_legal_moves` | — | `28.80` | `18.16` | **`15.54`** | — |
+| `stable_of` | `31.08` | `33.36` | `14.99` | **`13.69`** | **−56.0 %** |
+| `transpose` | — | `5.06` | `2.34` | **`2.33`** | — |
+| `horizontal_mirror` | — | `3.28` | `3.21` | **`0.37`** | **−88.5 %** (vs `v3`) |
+| `hash_board` | — | **`0.93`** | `1.58` | `1.61` | — |
+| `eval_state_of` | — | `510.78` | `40.55` | **`40.52`** | — |
+| `eval_sum` | `162.28` | `140.17` | `120.71` | **`116.90`** | **−28.0 %** |
+| `eval_after_move` | `162.96` | `206.41` | `145.80` | **`141.53`** | **−13.2 %** |
+| `eval_advance` | `28.60` | `62.20` | **`6.58`** | `6.61` | **−76.9 %** |
+
+\* `last_flip_count` now delegates to full `simul_last_flip` (`solve_1` uses that single lookup to replace both `last_flip_count` passes + score logic, cutting net `solve_1` cycles by `−13.0 %`).
+
+### 4. `.NET` FFI Benchmarks vs Phase 0 (`v5.0-ref/`, `hash-bits=19`)
+
+| Benchmark | Positions | Threads | Phase 2 Nodes | Phase 2 Time | Phase 2 NPS | Phase 0 Time | Speedup | Parity |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| `midgame-depth10` | 100 | 1 | 3,083,842 | **0.229 s** | 13.48M | 0.237 s | **+3.5 %** | `100/100 identical` |
+| `midgame-depth12` | 100 | 1 | 8,120,201 | **0.587 s** | 13.84M | 0.631 s | **+7.6 %** | `100/100 identical` |
+| `midgame-depth14` | 100 | 1 | 22,875,227 | **1.646 s** | 13.90M | 1.780 s | **+8.2 %** | `100/100 identical` |
+| `midgame-depth16` | 100 | 1 | 60,566,022 | **4.333 s** | 13.98M | 4.549 s | **+5.0 %** | `100/100 identical` |
+| `midgame-depth16-8t` | 100 | 8 | 83,751,776 | **1.420 s** | 59.00M | 1.526 s | **+7.5 %** | Non-det MT |
+| `midgame-depth16-16t` | 100 | 16 | 102,427,394 | **1.363 s** | 75.16M | 1.426 s | **+4.6 %** | Non-det MT |
+| `midgame-random-depth8` | 1,000 | 1 | 8,699,892 | **0.613 s** | 14.19M | 0.640 s | **+4.4 %** | `1000/1000 identical` |
+| `midgame-handover-depth12` | 300 | 1 | 297,050,433 | **3.872 s** | 76.72M | 4.531 s | **+17.0 %** | `298/300` (`C3` fix*) |
+| `ffo-40-49` | 10 | 1 | 1,070,469,669 | **14.1 s** | 76.04M | 16.664 s | **+18.4 %** | `10/10 identical` |
+| `ffo-40-49-8t` | 10 | 8 | 1,159,505,480 | **2.591 s** | 447.56M | 3.114 s | **+20.2 %** | `10/10 exact` |
+| `ffo-40-49-16t` | 10 | 16 | 1,319,777,355 | **2.172 s** | 607.70M | 2.629 s | **+21.0 %** | `10/10 exact` |
+| `ffo-50-59-8t` | 10 | 8 | 38,002,855,330 | **90.2 s** | 421.16M | 105.095 s | **+16.5 %** | `10/10 exact` |
+| `ffo-50-59-16t` | 10 | 16 | 40,280,874,692 | **70.8 s** | 568.78M | 93.144 s | **+31.5 %** | `10/10 exact` |
+
+\* On `midgame-handover-depth12`, `298/300` match `v5.0-ref` identically; `r00100e19` (`2,165,217 → 798,646` nodes, `e6`, `-58`) and `r00196e18` (`8,124,978 → 2,910,248` nodes, `h2`, `-40`) keep identical move and score with fewer nodes due to Phase 1 bugfix `C3` (`keep_midgame_move` root restoration before the exact solve). `stello-v5` reproduces `303,631,734` while Phase 2 `portable`, `v3`, and `v4` all identically visit `297,050,433` nodes (`5.872 s` / `4.084 s` / `3.816 s`).
+
+### 5. WebAssembly ST/MT Sizes & Node.js Benchmarks vs Phase 0 (`v24.19.0`, `hash-bits=19`)
+
+- **Artifact sizes (raw / gzip / brotli):**
+  - `engine/stello_wasm.js`: `10,543` / `2,757` / `2,459` B
+  - `engine/stello_wasm_bg.wasm`: `9,164,312` / `8,982,297` / `8,960,826` B (`+5.9 KB` brotli vs Phase 0)
+  - `engine-mt/stello_wasm.js`: `10,543` / `2,757` / `2,459` B
+  - `engine-mt/stello_wasm_bg.wasm`: `9,194,463` / `8,993,998` / `8,974,354` B (`+10.0 KB` brotli vs Phase 0)
+
+| Variant | `mid-d10` (`3,083,842` 1t) | `mid-d12` (`8,120,201` 1t) | `ffo-40-44` (`122,045,591` 1t) |
+|---|---|---|---|
+| `ST 1t` | **`329.4 / 331.6 ms`** (`9.36M` nps, **+14.2 %** vs `376.3 ms`) | **`871.2 / 875.6 ms`** (`9.32M` nps, **+13.9 %** vs `992.1 ms`) | **`2913.5 / 2919.2 ms`** (`41.89M` nps, **+2.8 %** vs `2995.1 ms`) |
+| `MT 1t` | **`335.1 / 339.4 ms`** (`9.20M` nps, **+15.1 %** vs `385.8 ms`) | **`880.7 / 885.0 ms`** (`9.22M` nps, **+16.1 %** vs `1022.2 ms`) | **`2902.5 / 2908.5 ms`** (`42.05M` nps, **+3.5 %** vs `3003.5 ms`) |
+| `MT 4t` | **`262.6 / 277.8 ms`** (`19.18M` nps, **+10.9 %** vs `291.1 ms`) | **`579.5 / 602.6 ms`** (`21.83M` nps, **+12.1 %** vs `649.4 ms`) | **`1072.2 / 1111.7 ms`** (`130.56M` nps, **+3.2 %** vs `1106.2 ms`) |
+
+### 6. Compiler Flags (`/GS-`), Reproducible Clang PGO, & Zero-ZMM Audit
+
+- **MSVC `/GS-` (`msvc-release`):** `mid-bench d14` `1.894 → 1.838 s` (`+3.0 %`), `solve-bench ffo-40-49` `15.00 → 14.81 s` (`+1.3 %`).
+- **Clang instrumentation PGO ([build_pgo.cmd](../Stello.Cpp/cmake/build_pgo.cmd)):** `mid-bench d14` `1.644 → 1.623 s` (`+1.3 %`), `ffo-40-49` `13.99 s` (`#40` at `100.14M` nps).
+- **`llvm-objdump -d` `zmm` audit:** `0` `zmm` instructions across `Stello.Cpp/build/windows-ffi/stello_engine.dll`, `clang-release/{stello-cpp.exe,stello_engine.dll}`, `msvc-release/{stello-cpp.exe,stello_engine.dll}`, and `clang-native/stello-cpp.exe`.
+
+### 7. Phase 2 Verification Match (`100 ms`, `1t`, `starts-v6.txt`, `1,174` Games, `book=off`)
+
+| Side B vs Side A (`stello-v5`) | Score (95 % CI) | W / D / L | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | NPS (A / B) | Max Time (A / B) | Wall Time |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `stello` (`Phase 2`) | **49.1 %** (`47.4–50.8 %`) | `+476 =201 −497` | **−6** (`−18 to +6`) | 15.0 % | `0.0 ± 0.2` | `17.29 / 17.36` | `20.4 / 20.6` | `19.23M / 21.10M` (**+9.7 %**) | `125 / 104 ms` | [6m 12s](benchmark-results/match_p2_v6_vs_v5_100ms_1t.md) |
+
+### 8. Gate P2 Full Verification Record
+
+- **C++ presets (`clang-release`, `clang-native`, `msvc-release`, `msvc-native`, `clang-sanitized`):** `0` compiler warnings, `3/3` ctests passed each (all `105` parity signatures verified across `Portable`, `V3`, and `V4`, plus `bits_avx2_tests`, `bits_avx512_tests`, and ASan/UBSan clean).
+- **`.NET` Release build (with FFI & WASM ST/MT rebuilds):** `0 Warning(s), 0 Error(s)`, `zmm = 0`.
+- **`.NET` & WASM test suites (post-final-edit):**
+  - `Stello.Engine.Tests`: `521 passed, 0 failed, 0 skipped` (`7 s`).
+  - `Stello.Net.Tests`: `127 passed, 0 failed, 0 skipped` (`18 s`).
+  - `Egaroucid.Engine.Tests`: `118 passed, 0 failed, 8 skipped` (`38 s`, optional `TaggedV30_*` reference DLL tests skipped).
+  - WASM Node tests (`engine.test.mjs`, `engine-mt.test.mjs`): `20/20 passed, 0 failed` (`3.63 s`).

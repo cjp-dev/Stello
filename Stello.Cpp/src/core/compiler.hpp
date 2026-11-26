@@ -11,6 +11,20 @@
 #define STELLO_NOINLINE __attribute__((noinline))
 #endif
 
+#if defined(_WIN32) && (defined(_M_X64) || defined(__x86_64__)) && !defined(__EMSCRIPTEN__)
+#define STELLO_VECTORCALL __vectorcall
+#else
+#define STELLO_VECTORCALL
+#endif
+
+#if (defined(__x86_64__) || defined(_M_X64)) && defined(__AVX512VL__) && defined(__AVX512CD__) \
+    && defined(__AVX512DQ__) && defined(__AVX512BW__) \
+    && (defined(__GFNI__) || (defined(_MSC_VER) && !defined(__clang__))) && !defined(__EMSCRIPTEN__)
+#define STELLO_TU_HAS_AVX512_V4 1
+#else
+#define STELLO_TU_HAS_AVX512_V4 0
+#endif
+
 namespace stello {
 
 inline constexpr int32_t wrapping_add(int32_t a, int32_t b) noexcept {

@@ -4,7 +4,12 @@
 
 #if STELLO_HAS_X86_64_V3
 namespace stello::search::detail::microbench {
-extern template std::vector<MicrobenchStats> run_kernel<true>(const MicrobenchOptions& opts);
+extern template std::vector<MicrobenchStats> run_kernel<cpu::CpuTier::V3>(const MicrobenchOptions& opts);
+} // namespace stello::search::detail::microbench
+#endif
+#if STELLO_HAS_X86_64_V4
+namespace stello::search::detail::microbench {
+extern template std::vector<MicrobenchStats> run_kernel<cpu::CpuTier::V4>(const MicrobenchOptions& opts);
 } // namespace stello::search::detail::microbench
 #endif
 
@@ -18,7 +23,7 @@ namespace stello::search {
 namespace detail {
 
 bool fill_end_moves_for_test(uint64_t own, uint64_t opponent, uint64_t legal, std::span<EndMove> moves) noexcept {
-    return endgame_search::fill_end_moves<false>(own, opponent, legal, moves);
+    return endgame_search::fill_end_moves<cpu::CpuTier::Portable>(own, opponent, legal, moves);
 }
 
 size_t undone_first_for_test(std::span<EndMove> moves, uint64_t done) noexcept {
@@ -35,9 +40,9 @@ int32_t last_flip_count_for_test(uint64_t own, uint32_t square) noexcept {
 
 } // namespace detail
 
-template struct Kernel<false>;
+template struct Kernel<cpu::CpuTier::Portable>;
 
-template AbortVoid Kernel<false>::split<MidgameChild>(
+template AbortVoid Kernel<cpu::CpuTier::Portable>::split<MidgameChild>(
     Searcher&,
     std::span<const MidgameChild>,
     int32_t,
@@ -47,7 +52,7 @@ template AbortVoid Kernel<false>::split<MidgameChild>(
     bool
 );
 
-template AbortVoid Kernel<false>::split<EndgameChild>(
+template AbortVoid Kernel<cpu::CpuTier::Portable>::split<EndgameChild>(
     Searcher&,
     std::span<const EndgameChild>,
     int32_t,
@@ -60,27 +65,38 @@ template AbortVoid Kernel<false>::split<EndgameChild>(
 std::vector<std::string_view> microbench_names() {
     return {
         "flips",
+        "flips_smartclr",
+        "flips_gfni",
         "last_flip_count",
         "solve_1",
         "legal_moves",
         "potential_mobility",
         "legal_and_potential",
+        "dual_legal_moves",
         "stable_of",
+        "transpose",
+        "horizontal_mirror",
+        "hash_board",
+        "eval_state_of",
         "eval_sum",
         "eval_after_move",
         "eval_advance",
     };
 }
 
-std::vector<MicrobenchStats> run_microbench(const MicrobenchOptions& opts, bool use_avx2) {
-#if STELLO_HAS_X86_64_V3
-    if (use_avx2) {
-        return detail::microbench::run_kernel<true>(opts);
+std::vector<MicrobenchStats> run_microbench(const MicrobenchOptions& opts, cpu::CpuTier tier) {
+#if STELLO_HAS_X86_64_V4
+    if (tier == cpu::CpuTier::V4) {
+        return detail::microbench::run_kernel<cpu::CpuTier::V4>(opts);
     }
-#else
-    (void)use_avx2;
 #endif
-    return detail::microbench::run_kernel<false>(opts);
+#if STELLO_HAS_X86_64_V3
+    if (tier == cpu::CpuTier::V3) {
+        return detail::microbench::run_kernel<cpu::CpuTier::V3>(opts);
+    }
+#endif
+    (void)tier;
+    return detail::microbench::run_kernel<cpu::CpuTier::Portable>(opts);
 }
 
 } // namespace stello::search

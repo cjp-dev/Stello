@@ -48,13 +48,17 @@ struct StopUnlessFinished {
 
 } // namespace detail::ybwc_impl
 
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::child_null_window(
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::child_null_window(
     Searcher& searcher,
     const MidgameChild& child,
     int32_t alpha
 ) {
-    const eval::PatternState child_eval = searcher.pattern->set().state_of(child.board.black(), child.board.white());
+    const eval::PatternState child_eval = eval_state_of_node(
+        searcher.pattern->set(),
+        child.board.discs(child.player),
+        child.board.discs(opponent(child.player)),
+        64U - child.board.empty_count());
     STELLO_TRY_ASSIGN_I32(
         const ScoreMove res,
         search_inc(searcher, child.board, child.player, child.look, child.ply, child.mv, -alpha - 1, -alpha, child_eval));
@@ -62,8 +66,8 @@ AbortResult<int32_t> Kernel<UseAvx2>::child_null_window(
     STELLO_RETURN_OK_R(int32_t, -res.score);
 }
 
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::child_window(
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::child_window(
     Searcher& searcher,
     const MidgameChild& child,
     int32_t alpha,
@@ -71,7 +75,11 @@ AbortResult<int32_t> Kernel<UseAvx2>::child_window(
     int32_t /*null_score*/
 ) {
     // Principal variation re-search matches single-threaded `Searcher::search`: window starts from `alpha`.
-    const eval::PatternState child_eval = searcher.pattern->set().state_of(child.board.black(), child.board.white());
+    const eval::PatternState child_eval = eval_state_of_node(
+        searcher.pattern->set(),
+        child.board.discs(child.player),
+        child.board.discs(opponent(child.player)),
+        64U - child.board.empty_count());
     STELLO_TRY_ASSIGN_I32(
         const ScoreMove res,
         search_inc(searcher, child.board, child.player, child.look, child.ply, child.mv, -beta, -alpha, child_eval));
@@ -79,8 +87,8 @@ AbortResult<int32_t> Kernel<UseAvx2>::child_window(
     STELLO_RETURN_OK_R(int32_t, -res.score);
 }
 
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::child_null_window(
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::child_null_window(
     Searcher& searcher,
     const EndgameChild& child,
     int32_t alpha
@@ -89,8 +97,8 @@ AbortResult<int32_t> Kernel<UseAvx2>::child_null_window(
     STELLO_RETURN_OK_R(int32_t, -sc);
 }
 
-template <bool UseAvx2>
-AbortResult<int32_t> Kernel<UseAvx2>::child_window(
+template <cpu::CpuTier Tier>
+AbortResult<int32_t> Kernel<Tier>::child_window(
     Searcher& searcher,
     const EndgameChild& child,
     int32_t alpha,
@@ -103,9 +111,9 @@ AbortResult<int32_t> Kernel<UseAvx2>::child_window(
     STELLO_RETURN_OK_R(int32_t, -sc);
 }
 
-template <bool UseAvx2>
+template <cpu::CpuTier Tier>
 template <typename ChildT>
-AbortVoid Kernel<UseAvx2>::split(
+AbortVoid Kernel<Tier>::split(
     Searcher& s,
     std::span<const ChildT> children,
     int32_t alpha,
@@ -191,7 +199,7 @@ AbortVoid Kernel<UseAvx2>::split(
 
 #if STELLO_ABORT_EXCEPTIONS
                             try {
-                                const int32_t score = Kernel<UseAvx2>::child_null_window(task, child, window_alpha);
+                                const int32_t score = Kernel<Tier>::child_null_window(task, child, window_alpha);
                                 results[i].store(score, std::memory_order_relaxed);
                                 if (score > window_alpha) {
                                     point.request_cut();
@@ -199,7 +207,7 @@ AbortVoid Kernel<UseAvx2>::split(
                             } catch (Abort) {
                             }
 #else
-                            const AbortResult<int32_t> res = Kernel<UseAvx2>::child_null_window(task, child, window_alpha);
+                            const AbortResult<int32_t> res = Kernel<Tier>::child_null_window(task, child, window_alpha);
                             if (res.is_ok()) {
                                 results[i].store(res.value, std::memory_order_relaxed);
                                 if (res.value > window_alpha) {

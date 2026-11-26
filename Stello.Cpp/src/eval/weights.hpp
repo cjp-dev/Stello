@@ -63,10 +63,12 @@ public:
         return static_cast<size_t>(stage_of_discs_[discs]);
     }
 
-    std::span<const int16_t> stage_weights(size_t stage) const noexcept {
-        const size_t size = set_->raw_size();
-        return {weights_.data() + stage * size, size};
+    const int32_t* packed_weights_for_discs(uint32_t discs) const noexcept {
+        return parity_ptrs_[discs];
     }
+
+    /// Reconstructs raw un-bucketed, un-permuted stage weights (for test verification without doubling RAM).
+    std::vector<int16_t> stage_weights_copy(size_t stage) const;
 
     std::span<const int16_t> stage_mobility_weights(size_t stage) const noexcept {
         if (mob_weights_.empty()) {
@@ -85,13 +87,21 @@ public:
         return static_cast<int32_t>(m[om]) + static_cast<int32_t>(m[MOBILITY_SLOTS_PER_SIDE + pm]);
     }
 
+    int32_t mobility_bonus_for_discs(uint32_t discs, uint32_t own_mobility, uint32_t opponent_mobility) const noexcept {
+        return mobility_bonus(stage_of(discs), own_mobility, opponent_mobility);
+    }
+
     int32_t evaluate(uint64_t own, uint64_t opponent) const noexcept {
-        const size_t stage = stage_of(static_cast<uint32_t>(std::popcount(own | opponent)));
-        int32_t sum = set_->sum_weights(own, opponent, stage_weights(stage));
+        const uint32_t discs = static_cast<uint32_t>(std::popcount(own | opponent));
+        const int32_t* const pw = parity_ptrs_[discs];
+        const bool is_odd = (discs & 1U) != 0U;
+        int32_t sum = !is_odd
+            ? set_->sum_weights_packed(own, opponent, pw, false)
+            : set_->sum_weights_packed(opponent, own, pw, true);
         if (!mob_weights_.empty()) {
             const uint32_t om = static_cast<uint32_t>(std::popcount(stello::bits::legal_moves(own, opponent)));
             const uint32_t pm = static_cast<uint32_t>(std::popcount(stello::bits::legal_moves(opponent, own)));
-            sum += mobility_bonus(stage, om, pm);
+            sum += mobility_bonus(stage_of(discs), om, pm);
         }
         return sum;
     }
@@ -101,8 +111,11 @@ private:
     std::array<uint8_t, 65> stage_of_discs_{};
     int32_t units_per_disc_{0};
     size_t stages_{0};
-    std::vector<int16_t> weights_;
+    std::vector<int32_t> weights_;
     std::vector<int16_t> mob_weights_;
+    std::array<const int32_t*, 65> parity_ptrs_{};
+    std::vector<uint32_t> stage_even_slot_;
+    std::vector<uint32_t> stage_odd_slot_;
 };
 
 } // namespace stello::eval

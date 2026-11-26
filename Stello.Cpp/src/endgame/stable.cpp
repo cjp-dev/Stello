@@ -18,8 +18,7 @@ constexpr uint8_t STATE_UNINIT = 0;
 constexpr uint8_t STATE_BUILDING = 1;
 constexpr uint8_t STATE_READY = 2;
 
-alignas(64) std::array<uint64_t, 256U * 256U> g_row_tables{};
-alignas(64) std::array<uint64_t, 256U * 256U> g_column_tables{};
+alignas(64) std::array<uint8_t, 256U * 256U> g_edge_table{};
 std::atomic<uint8_t> g_edges_state{STATE_UNINIT};
 
 std::pair<int32_t, int32_t> play_on_line(int32_t p, int32_t o, int32_t place) noexcept {
@@ -92,19 +91,8 @@ STELLO_NOINLINE void build_edges_slow() noexcept {
                 }
 
                 const int32_t st = line_stability(static_cast<int32_t>(b), static_cast<int32_t>(w), memo);
-                uint64_t r = 0;
-                uint64_t c = 0;
-                for (int place = 0; place < 8; ++place) {
-                    if (((st >> place) & 1) != 0) {
-                        r |= uint64_t{1} << place;
-                        c |= uint64_t{1} << (place * 8);
-                    }
-                }
-
-                g_row_tables[b * 256U + w] = r;
-                g_row_tables[w * 256U + b] = r;
-                g_column_tables[b * 256U + w] = c;
-                g_column_tables[w * 256U + b] = c;
+                g_edge_table[b * 256U + w] = static_cast<uint8_t>(st & static_cast<int32_t>(b));
+                g_edge_table[w * 256U + b] = static_cast<uint8_t>(st & static_cast<int32_t>(w));
             }
         }
 
@@ -121,10 +109,6 @@ inline void ensure_edges() noexcept {
     if (g_edges_state.load(std::memory_order_acquire) != STATE_READY) [[unlikely]] {
         build_edges_slow();
     }
-}
-
-inline size_t column(uint64_t x, uint32_t c) noexcept {
-    return static_cast<size_t>((((x >> c) & 0x0101'0101'0101'0101ULL) * 0x0102'0408'1020'4080ULL) >> 56);
 }
 
 inline uint64_t full_rows(uint64_t full) noexcept {
@@ -169,22 +153,58 @@ void init() noexcept {
     ensure_edges();
 }
 
+const uint8_t* edge_table() noexcept {
+    ensure_edges();
+    return g_edge_table.data();
+}
+
+int32_t edge_stability_count(uint64_t own, uint64_t opponent) noexcept {
+    ensure_edges();
+    const uint32_t packed =
+        static_cast<uint32_t>(g_edge_table[((own & 0xFFU) << 8) | (opponent & 0xFFU)])
+        | (static_cast<uint32_t>(g_edge_table[((own >> 56) << 8) | (opponent >> 56)]) << 8)
+        | (static_cast<uint32_t>(g_edge_table[(pack_a1a8(own) << 8) | pack_a1a8(opponent)]) << 16)
+        | (static_cast<uint32_t>(g_edge_table[(pack_h1h8(own) << 8) | pack_h1h8(opponent)]) << 24);
+    return static_cast<int32_t>(std::popcount(packed & 0xFFFF'7E7EU));
+}
+
+int32_t corner_stability(uint64_t discs) noexcept {
+    const uint32_t p2187 = static_cast<uint32_t>(std::rotr(discs, 48));
+    uint32_t stable = 0x0081'8100U & p2187;
+    stable |= ((((stable * 5U) >> 1) & 0x0042'4200U) | (stable << 8) | (stable >> 8)) & p2187;
+    return static_cast<int32_t>(std::popcount(stable));
+}
+
+int32_t bit_weighted_count(uint64_t x) noexcept {
+    const uint32_t ah18 = static_cast<uint32_t>(std::rotr(x, 56)) & 0x8181U;
+    return static_cast<int32_t>(std::popcount(x)) + static_cast<int32_t>(std::popcount(ah18));
+}
+
+uint64_t transpose_portable(uint64_t x) noexcept {
+    uint64_t t = (x ^ (x >> 7)) & 0x00AA'00AA'00AA'00AAULL;
+    x = x ^ t ^ (t << 7);
+    t = (x ^ (x >> 14)) & 0x0000'CCCC'0000'CCCCULL;
+    x = x ^ t ^ (t << 14);
+    t = (x ^ (x >> 28)) & 0x0000'0000'F0F0'F0F0ULL;
+    x = x ^ t ^ (t << 28);
+    return x;
+}
+
 uint64_t of(uint64_t own, uint64_t opponent) noexcept {
     ensure_edges();
     uint64_t stable_mask = 0;
     const uint64_t inner = own & 0x007E'7E7E'7E7E'7E00ULL;
 
-    uint64_t found = g_row_tables[(own & 0xFFULL) * 256U + (opponent & 0xFFULL)];
-    found |= g_row_tables[(own >> 56) * 256U + (opponent >> 56)] << 56;
-    found |= g_column_tables[column(own, 0) * 256U + column(opponent, 0)];
-    found |= g_column_tables[column(own, 7) * 256U + column(opponent, 7)] << 7;
+    uint64_t found = static_cast<uint64_t>(g_edge_table[((own & 0xFFULL) << 8) | (opponent & 0xFFULL)])
+                   | (static_cast<uint64_t>(g_edge_table[((own >> 56) << 8) | (opponent >> 56)]) << 56)
+                   | unpack_a2a7(g_edge_table[(pack_a1a8(own) << 8) | pack_a1a8(opponent)])
+                   | unpack_h2h7(g_edge_table[(pack_h1h8(own) << 8) | pack_h1h8(opponent)]);
 
     const uint64_t discs = own | opponent;
     const uint64_t full_h = full_rows(discs);
     const uint64_t full_v = full_columns(discs);
     const auto [full_d7, full_d9] = full_diagonals(discs);
-    found |= full_h & full_v & full_d7 & full_d9;
-    found &= own;
+    found |= full_h & full_v & full_d7 & full_d9 & inner;
 
     while ((found & ~stable_mask) != 0) {
         stable_mask |= found;

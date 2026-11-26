@@ -39,6 +39,7 @@ public:
     std::span<const size_t> placements() const noexcept { return placements_; }
     std::span<const uint32_t> fold() const noexcept { return fold_; }
     std::span<const uint32_t> representatives() const noexcept { return representatives_; }
+    std::span<const uint32_t> swap12() const noexcept { return swap12_; }
 
     uint32_t index(uint64_t own, uint64_t opponent) const noexcept;
     uint32_t slow_index(uint64_t own, uint64_t opponent) const noexcept;
@@ -51,6 +52,7 @@ private:
     std::vector<size_t> placements_;
     std::vector<uint32_t> fold_;
     std::vector<uint32_t> representatives_;
+    std::vector<uint32_t> swap12_;
 };
 
 namespace detail {
@@ -89,6 +91,18 @@ public:
     STELLO_NOINLINE int32_t sum_portable(uint64_t own, uint64_t opponent, std::span<const int16_t> weights) const noexcept;
     STELLO_NOINLINE int32_t sum_portable(uint64_t own, uint64_t opponent, const int16_t* weights) const noexcept;
     STELLO_NOINLINE int32_t sum_pext(uint64_t own, uint64_t opponent, const int16_t* weights) const noexcept;
+    STELLO_NOINLINE int32_t sum_portable_pair(
+        uint64_t own,
+        uint64_t opponent,
+        const int32_t* pair_weights,
+        bool odd_slot
+    ) const noexcept;
+    STELLO_NOINLINE int32_t sum_pext_pair(
+        uint64_t own,
+        uint64_t opponent,
+        const int32_t* pair_weights,
+        bool odd_slot
+    ) const noexcept;
 
 private:
     template <size_t N>
@@ -111,11 +125,20 @@ struct SquareFeatureDelta {
     uint16_t delta{0};
 };
 
-struct alignas(32) PatternState {
-    std::array<uint16_t, MAX_PATTERN_FEATURES> black{};
-    std::array<uint16_t, MAX_PATTERN_FEATURES> white{};
+struct EvalBucket {
+    uint8_t begin{0};
+    uint8_t count{0};
+    uint32_t base_offset{0};
 };
 
+struct alignas(32) PatternState {
+    std::array<uint16_t, MAX_PATTERN_FEATURES> features{};
+};
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma warning(push)
+#pragma warning(disable : 4324)
+#endif
 class PatternSet {
 public:
     PatternSet(std::string name, std::vector<PatternShape> shapes);
@@ -128,12 +151,18 @@ public:
     const PatternShape& shape_of(size_t feature) const noexcept { return shapes_[features_[feature].shape]; }
     size_t symmetry_of(size_t feature) const noexcept { return features_[feature].symmetry; }
 
-    const uint16_t* square_deltas(uint32_t square) const noexcept { return square_deltas_[square].data(); }
-    const uint32_t* feature_offsets() const noexcept { return feature_offsets_.data(); }
+    std::span<const EvalBucket> eval_buckets() const noexcept { return eval_buckets_; }
+    const std::vector<size_t>& pack_shape_order() const noexcept { return pack_shape_order_; }
+    size_t pack_shape_offset(size_t shape_index) const noexcept { return pack_shape_offsets_[shape_index]; }
+    const PatternState& initial_state() const noexcept { return initial_state_; }
+    const PatternState& all_1_state() const noexcept { return all_1_state_; }
+    const PatternState& all_2_state() const noexcept { return all_2_state_; }
+    const uint32_t* slot_offsets() const noexcept { return slot_feature_offsets_.data(); }
+    const uint16_t* square_deltas(uint32_t square) const noexcept { return slot_deltas_[square].data(); }
     std::span<const SquareFeatureDelta> square_sparse_deltas(uint32_t square) const noexcept {
-        const size_t begin = square_sparse_offsets_[square];
-        const size_t end = square_sparse_offsets_[square + 1U];
-        return {square_sparse_deltas_.data() + begin, end - begin};
+        const size_t begin = slot_sparse_offsets_[square];
+        const size_t end = slot_sparse_offsets_[square + 1U];
+        return {slot_sparse_deltas_.data() + begin, end - begin};
     }
 
     static const PatternSet& classic11();
@@ -142,31 +171,37 @@ public:
     static const PatternSet* by_name(std::string_view name) noexcept;
 
     void indices(uint64_t own, uint64_t opponent, std::span<uint32_t> out) const noexcept;
-    PatternState state_of(uint64_t black, uint64_t white) const noexcept;
+    PatternState state_of(uint64_t digit1, uint64_t digit2) const noexcept;
+    PatternState state_of_node(uint64_t own, uint64_t opponent, uint32_t discs) const noexcept {
+        return (discs & 1U) == 0U ? state_of(own, opponent) : state_of(opponent, own);
+    }
     void advance_state(
         PatternState& next,
         const PatternState& cur,
-        bool mover_is_black,
+        bool mover_is_even_disc,
         uint32_t square,
         uint64_t flips
     ) const noexcept;
-    void build_base(
-        const PatternState& state,
-        bool next_own_is_black,
-        std::array<uint16_t, MAX_PATTERN_FEATURES>& out
-    ) const noexcept;
     int32_t sum_weights_from_state(
         const PatternState& state,
-        bool own_is_black,
-        std::span<const int16_t> weights
+        const int32_t* packed_pair_weights,
+        bool odd_slot
     ) const noexcept;
     int32_t sum_weights_after_move(
-        const std::array<uint16_t, MAX_PATTERN_FEATURES>& parent_base,
+        const PatternState& cur,
+        bool mover_is_even_disc,
         uint32_t square,
         uint64_t flips,
-        std::span<const int16_t> weights
+        const int32_t* packed_child_pair_weights,
+        bool child_odd_slot
     ) const noexcept;
 
+    int32_t sum_weights_packed(
+        uint64_t digit1,
+        uint64_t digit2,
+        const int32_t* packed_pair_weights,
+        bool odd_slot
+    ) const noexcept;
     int32_t sum_weights(uint64_t own, uint64_t opponent, std::span<const int16_t> weights) const noexcept;
     int32_t sum_weights_portable(uint64_t own, uint64_t opponent, std::span<const int16_t> weights) const noexcept;
     int32_t sum_weights_pext(uint64_t own, uint64_t opponent, std::span<const int16_t> weights) const noexcept;
@@ -180,10 +215,20 @@ private:
     std::vector<size_t> symmetries_;
     std::vector<PatternShape::Part> parts_;
     detail::Direct direct_;
-    alignas(32) std::array<std::array<uint16_t, MAX_PATTERN_FEATURES>, 64> square_deltas_{};
-    alignas(32) std::array<uint32_t, MAX_PATTERN_FEATURES> feature_offsets_{};
-    std::array<uint16_t, 65> square_sparse_offsets_{};
-    std::vector<SquareFeatureDelta> square_sparse_deltas_;
+    detail::Direct packed_direct_;
+    std::vector<size_t> pack_shape_order_;
+    std::vector<size_t> pack_shape_offsets_;
+    std::vector<EvalBucket> eval_buckets_;
+    PatternState initial_state_{};
+    PatternState all_1_state_{};
+    PatternState all_2_state_{};
+    alignas(32) std::array<std::array<uint16_t, MAX_PATTERN_FEATURES>, 64> slot_deltas_{};
+    alignas(32) std::array<uint32_t, MAX_PATTERN_FEATURES> slot_feature_offsets_{};
+    std::array<uint16_t, 65> slot_sparse_offsets_{};
+    std::vector<SquareFeatureDelta> slot_sparse_deltas_;
 };
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma warning(pop)
+#endif
 
 } // namespace stello::eval

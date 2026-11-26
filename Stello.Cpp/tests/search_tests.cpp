@@ -444,10 +444,10 @@ STELLO_TEST(endgame_shallow_and_unit_regressions) {
     // undone_first_keeps_decided_moves_out_of_the_sort
     {
         std::array<search::EndMove, 4> moves = {{
-            {1, 0, -5, 0},
-            {2, 0, 100, 0},
-            {3, 0, 5, 0},
-            {4, 0, 200, 0},
+            {1, -5, 0, 0},
+            {2, 100, 0, 0},
+            {3, 5, 0, 0},
+            {4, 200, 0, 0},
         }};
         const size_t order_count = search::detail::undone_first_for_test(moves, (uint64_t{1} << 2) | (uint64_t{1} << 4));
         STELLO_CHECK_EQ(order_count, size_t{2});
@@ -649,42 +649,59 @@ STELLO_TEST(stello_v3_all_105_signatures_match_baseline) {
     const auto mid_positions = load_bench_file("midgame.txt");
     const auto ffo_positions = load_bench_file("ffo-40-59.txt");
 
-    search::SearchEngine engine(19);
-    size_t mid_count = 0;
-    size_t ffo_count = 0;
+    const cpu::CpuTier saved_tier = cpu::active_tier();
+    struct RestoreTier {
+        cpu::CpuTier tier;
+        ~RestoreTier() { (void)cpu::set_forced_tier(tier); }
+    } restore_tier{saved_tier};
 
-    for (const auto& line : lines) {
-        if (line.empty() || line[0] == '#') {
-            continue;
-        }
-        const auto fields = split_char(line, ' ');
-        STELLO_CHECK_EQ(fields.size(), size_t{8});
-
-        const auto& catalog = (fields[0] == "midgame.txt") ? mid_positions : ffo_positions;
-        const auto it = std::find_if(catalog.begin(), catalog.end(), [&](const auto& p) { return p.id == fields[1]; });
-        STELLO_CHECK_MSG(it != catalog.end(), line);
-
-        SearchLimits limits = SearchLimits::solve();
-        if (fields[2] != "solve") {
-            STELLO_CHECK(fields[2].rfind("depth=", 0) == 0);
-            const int32_t depth = std::stoi(fields[2].substr(6));
-            limits = SearchLimits::fixed_depth(depth);
-            ++mid_count;
-        } else {
-            ++ffo_count;
-        }
-
-        engine.clear_hash();
-        const SearchResult res = engine.search_simple(it->board, it->player, limits);
-        const std::string actual = fields[0] + " " + fields[1] + " " + fields[2] + " "
-                                 + res.mv.to_string() + " " + std::to_string(res.score) + " "
-                                 + std::string(score_kind_name(res.kind)) + " "
-                                 + std::to_string(res.depth) + " " + std::to_string(res.nodes);
-        STELLO_CHECK_EQ_MSG(actual, line, fields[1]);
+    std::vector<cpu::CpuTier> tiers = {cpu::CpuTier::Portable};
+    if (cpu::has_avx2_bmi2()) {
+        tiers.push_back(cpu::CpuTier::V3);
+    }
+    if (cpu::has_avx512_v4()) {
+        tiers.push_back(cpu::CpuTier::V4);
     }
 
-    STELLO_CHECK_EQ(mid_count, size_t{100});
-    STELLO_CHECK_EQ(ffo_count, size_t{5});
+    for (const cpu::CpuTier tier : tiers) {
+        STELLO_CHECK(cpu::set_forced_tier(tier));
+        search::SearchEngine engine(19);
+        size_t mid_count = 0;
+        size_t ffo_count = 0;
+
+        for (const auto& line : lines) {
+            if (line.empty() || line[0] == '#') {
+                continue;
+            }
+            const auto fields = split_char(line, ' ');
+            STELLO_CHECK_EQ(fields.size(), size_t{8});
+
+            const auto& catalog = (fields[0] == "midgame.txt") ? mid_positions : ffo_positions;
+            const auto it = std::find_if(catalog.begin(), catalog.end(), [&](const auto& p) { return p.id == fields[1]; });
+            STELLO_CHECK_MSG(it != catalog.end(), line);
+
+            SearchLimits limits = SearchLimits::solve();
+            if (fields[2] != "solve") {
+                STELLO_CHECK(fields[2].rfind("depth=", 0) == 0);
+                const int32_t depth = std::stoi(fields[2].substr(6));
+                limits = SearchLimits::fixed_depth(depth);
+                ++mid_count;
+            } else {
+                ++ffo_count;
+            }
+
+            engine.clear_hash();
+            const SearchResult res = engine.search_simple(it->board, it->player, limits);
+            const std::string actual = fields[0] + " " + fields[1] + " " + fields[2] + " "
+                                     + res.mv.to_string() + " " + std::to_string(res.score) + " "
+                                     + std::string(score_kind_name(res.kind)) + " "
+                                     + std::to_string(res.depth) + " " + std::to_string(res.nodes);
+            STELLO_CHECK_EQ_MSG(actual, line, fields[1]);
+        }
+
+        STELLO_CHECK_EQ(mid_count, size_t{100});
+        STELLO_CHECK_EQ(ffo_count, size_t{5});
+    }
 }
 
 // ---- Random endings & interactive/time tests ----
@@ -1145,7 +1162,7 @@ STELLO_TEST(microbench_portable_and_v3_parity_tests) {
     opts.verbose = true;
 
     const auto expected_names = search::microbench_names();
-    const auto portable = search::run_microbench(opts, false);
+    const auto portable = search::run_microbench(opts, cpu::CpuTier::Portable);
     STELLO_CHECK_EQ(portable.size(), expected_names.size());
     for (size_t i = 0; i < portable.size(); ++i) {
         const auto& s = portable[i];
@@ -1157,14 +1174,23 @@ STELLO_TEST(microbench_portable_and_v3_parity_tests) {
         STELLO_CHECK_EQ(s.per_sample.size(), size_t{64});
     }
 
-    if (search::dispatch_v3()) {
-        const auto v3 = search::run_microbench(opts, true);
-        STELLO_CHECK_EQ(v3.size(), portable.size());
-        for (size_t i = 0; i < v3.size(); ++i) {
-            STELLO_CHECK_EQ(v3[i].name, portable[i].name);
-            STELLO_CHECK_EQ(v3[i].checksum, portable[i].checksum);
-            STELLO_CHECK(std::isfinite(v3[i].mean_cycles) && v3[i].mean_cycles >= 0.0);
+    auto check_tier = [&](cpu::CpuTier tier) {
+        const auto res = search::run_microbench(opts, tier);
+        STELLO_CHECK_EQ(res.size(), portable.size());
+        for (size_t i = 0; i < res.size(); ++i) {
+            STELLO_CHECK_EQ(res[i].name, portable[i].name);
+            if (res[i].name != "hash_board") {
+                STELLO_CHECK_EQ_MSG(res[i].checksum, portable[i].checksum, std::string(res[i].name));
+            }
+            STELLO_CHECK(std::isfinite(res[i].mean_cycles) && res[i].mean_cycles >= 0.0);
         }
+    };
+
+    if (cpu::has_avx2_bmi2()) {
+        check_tier(cpu::CpuTier::V3);
+    }
+    if (cpu::has_avx512_v4()) {
+        check_tier(cpu::CpuTier::V4);
     }
 }
 

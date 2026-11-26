@@ -34,7 +34,7 @@
       "displayName": "Clang Native (Zen 4 -march=native, LTO, scalar flips)",
       "inherits": "clang-release",
       "cacheVariables": {
-        "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG -flto -march=native",
+        "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG -flto -march=native -mprefer-vector-width=256",
         "CMAKE_EXE_LINKER_FLAGS_RELEASE": "-flto -fuse-ld=lld",
         "CMAKE_SHARED_LINKER_FLAGS_RELEASE": "-flto -fuse-ld=lld"
       }
@@ -45,7 +45,7 @@
       "inherits": "base-release",
       "cacheVariables": {
         "CMAKE_CXX_COMPILER": "cl",
-        "CMAKE_CXX_FLAGS_RELEASE": "/O2 /Ob3 /GL /Gw /DNDEBUG",
+        "CMAKE_CXX_FLAGS_RELEASE": "/O2 /Ob3 /GL /Gw /GS- /DNDEBUG",
         "CMAKE_EXE_LINKER_FLAGS_RELEASE": "/LTCG",
         "CMAKE_SHARED_LINKER_FLAGS_RELEASE": "/LTCG",
         "CMAKE_STATIC_LINKER_FLAGS_RELEASE": "/LTCG"
@@ -56,7 +56,7 @@
       "displayName": "MSVC Native (/arch:AVX2, /GL /LTCG)",
       "inherits": "msvc-release",
       "cacheVariables": {
-        "CMAKE_CXX_FLAGS_RELEASE": "/O2 /Ob3 /GL /Gw /arch:AVX2 /DNDEBUG"
+        "CMAKE_CXX_FLAGS_RELEASE": "/O2 /Ob3 /GL /Gw /GS- /arch:AVX2 /DNDEBUG"
       }
     },
     {

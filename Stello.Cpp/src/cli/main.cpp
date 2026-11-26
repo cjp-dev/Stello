@@ -32,15 +32,15 @@ constexpr const char* kUsage =
     "  version                   The engine version.\n"
     "  perft [--depth 8]         Perft from the start position to every depth up to --depth (a pass counts as one move),\n"
     "                            with the time of each depth.\n"
-    "  eval-split [<folder>] [--max-per-discs 20000|all] [--eval <file>] [--cpu auto|portable]\n"
+    "  eval-split [<folder>] [--max-per-discs 20000|all] [--eval <file>] [--cpu auto|portable|v3|v4]\n"
     "                            Stello 2's evaluation over the trainer's test split (test-dNN.bin).\n"
     "  solve-bench [--positions <file>] [--from 40] [--to 44] [--passes 1] [--hash-bits 19] [--eval <file>]\n"
-    "              [--out <file.json>] [--cpu auto|portable] [--threads 1] [--ybwc on|off]\n"
+    "              [--out <file.json>] [--cpu auto|portable|v3|v4] [--threads 1] [--ybwc on|off]\n"
     "                            Solve benchmark positions and check exact scores/moves.\n"
     "  mid-bench [--positions <file>] [--depth 10] [--passes 3] [--hash-bits 19] [--eval <file>]\n"
-    "            [--selective on|off] [--probcut-pct N] [--out <file.json>] [--cpu auto|portable] [--threads 1] [--ybwc on|off]\n"
+    "            [--selective on|off] [--probcut-pct N] [--out <file.json>] [--cpu auto|portable|v3|v4] [--threads 1] [--ybwc on|off]\n"
     "                            Search midgame benchmark positions to a fixed depth.\n"
-    "  microbench [--cpu auto|portable] [--repeats 500000] [--warmup 1000] [--only <name>] [--verbose on|off]\n"
+    "  microbench [--cpu auto|portable|v3|v4] [--repeats 500000] [--warmup 1000] [--only <name>] [--verbose on|off]\n"
     "                            Measure per-primitive CPU cycles (min < mean +/- stddev < max).\n";
 
 constexpr uint64_t kFnvOffset = 14'695'981'039'346'656'037ULL;
@@ -81,14 +81,28 @@ std::optional<uint64_t> parse_u64(std::string_view text) noexcept {
 
 bool apply_cpu_option(std::optional<std::string_view> cpu_opt, std::string& error_out) {
     if (!cpu_opt.has_value() || *cpu_opt == "auto") {
-        stello::cpu::set_portable_only(false);
+        (void)stello::cpu::set_forced_tier(std::nullopt);
         return true;
     }
     if (*cpu_opt == "portable") {
-        stello::cpu::set_portable_only(true);
+        (void)stello::cpu::set_forced_tier(stello::cpu::CpuTier::Portable);
         return true;
     }
-    error_out = "--cpu must be auto or portable.";
+    if (*cpu_opt == "v3") {
+        if (!stello::cpu::set_forced_tier(stello::cpu::CpuTier::V3)) {
+            error_out = "--cpu v3 requested, but this CPU lacks x86-64-v3 (AVX2+BMI2) support.";
+            return false;
+        }
+        return true;
+    }
+    if (*cpu_opt == "v4") {
+        if (!stello::cpu::set_forced_tier(stello::cpu::CpuTier::V4)) {
+            error_out = "--cpu v4 requested, but this CPU lacks x86-64-v4 (AVX-512VL/CD/DQ/BW + GFNI) support.";
+            return false;
+        }
+        return true;
+    }
+    error_out = "--cpu must be auto, portable, v3, or v4.";
     return false;
 }
 
@@ -314,14 +328,20 @@ int cmd_microbench(std::span<const std::string_view> args, std::string& error_ou
         }
     }
 
-    const bool use_avx2 = stello::search::dispatch_v3();
+    const stello::cpu::CpuTier tier = stello::search::dispatch_tier();
+    const char* tier_label = "portable";
+    if (tier == stello::cpu::CpuTier::V4) {
+        tier_label = "v4/avx512vl";
+    } else if (tier == stello::cpu::CpuTier::V3) {
+        tier_label = "v3/avx2";
+    }
     std::printf(
         "microbench (cpu=%s, repeats=%llu, warmup=%llu, units=CPU cycles)\n",
-        use_avx2 ? "v3/avx2" : "portable",
+        tier_label,
         static_cast<unsigned long long>(mb_opts.repeats),
         static_cast<unsigned long long>(mb_opts.warmup));
 
-    const auto results = stello::search::run_microbench(mb_opts, use_avx2);
+    const auto results = stello::search::run_microbench(mb_opts, tier);
     for (const auto& r : results) {
         std::printf(
             "%-20.*s %6.2f < %6.2f +/- %5.2f < %6.2f  [checksum %016llx]\n",

@@ -17,87 +17,145 @@
 
 #if (defined(__x86_64__) || defined(_M_X64)) && !defined(__EMSCRIPTEN__)
 #define STELLO_HAS_X86_64_V3 1
+#define STELLO_HAS_X86_64_V4 1
 #else
 #define STELLO_HAS_X86_64_V3 0
+#define STELLO_HAS_X86_64_V4 0
 #endif
 
 namespace stello::search {
 
-inline bool dispatch_v3() noexcept {
+inline cpu::CpuTier dispatch_tier() noexcept {
 #if STELLO_HAS_X86_64_V3
-    return cpu::has_avx2_bmi2();
+    return cpu::active_tier();
 #else
-    return false;
+    return cpu::CpuTier::Portable;
 #endif
 }
 
-template <bool UseAvx2>
+template <cpu::CpuTier Tier>
 struct Kernel {
     static STELLO_FORCEINLINE uint64_t flips(uint64_t own, uint64_t opponent, uint32_t square) noexcept;
     static STELLO_FORCEINLINE uint64_t legal_moves(uint64_t own, uint64_t opponent) noexcept;
+    static STELLO_FORCEINLINE void dual_legal_moves(
+        uint64_t own,
+        uint64_t opponent,
+        uint64_t& own_out,
+        uint64_t& opp_out
+    ) noexcept;
+    static STELLO_FORCEINLINE void legal_and_potential(
+        uint64_t own,
+        uint64_t opponent,
+        uint64_t& legal_out,
+        int32_t& pot_out
+    ) noexcept;
+    static STELLO_FORCEINLINE uint64_t stable_of(uint64_t own, uint64_t opponent) noexcept;
+    static STELLO_FORCEINLINE uint64_t transpose(uint64_t x) noexcept;
+    static STELLO_FORCEINLINE uint16_t simul_last_flip(uint64_t own, uint32_t square) noexcept;
     static STELLO_FORCEINLINE Board play_unchecked(const Board& board, Player player, uint32_t square) noexcept;
 
+    static STELLO_FORCEINLINE eval::PatternState eval_state_of(
+        const eval::PatternSet& set,
+        uint64_t digit1,
+        uint64_t digit2
+    ) noexcept;
+    static STELLO_FORCEINLINE eval::PatternState eval_state_of_node(
+        const eval::PatternSet& set,
+        uint64_t own,
+        uint64_t opponent,
+        uint32_t discs
+    ) noexcept {
+        return (discs & 1U) == 0U ? eval_state_of(set, own, opponent) : eval_state_of(set, opponent, own);
+    }
     static STELLO_FORCEINLINE void advance_eval_state(
         const eval::PatternSet& set,
         eval::PatternState& next,
         const eval::PatternState& cur,
-        Player mover,
+        bool mover_is_even_disc,
         uint32_t square,
         uint64_t flips
-    ) noexcept;
-    static STELLO_FORCEINLINE void build_eval_base(
-        const eval::PatternSet& set,
-        const eval::PatternState& cur,
-        Player next_own,
-        std::array<uint16_t, eval::MAX_PATTERN_FEATURES>& out
     ) noexcept;
     static STELLO_FORCEINLINE int32_t sum_eval_state(
         const eval::PatternSet& set,
         const eval::PatternState& cur,
-        Player own,
-        const int16_t* weights
+        const int32_t* packed_pair_weights,
+        bool odd_slot
     ) noexcept;
     static STELLO_FORCEINLINE int32_t sum_eval_after_move(
         const eval::PatternSet& set,
-        const std::array<uint16_t, eval::MAX_PATTERN_FEATURES>& parent_base,
+        const eval::PatternState& cur,
+        bool mover_is_even_disc,
         uint32_t square,
         uint64_t flips,
-        const int16_t* weights
+        const int32_t* packed_child_pair_weights,
+        bool child_odd_slot
     ) noexcept;
-    static STELLO_FORCEINLINE int32_t eval_after_move_score(
+    static STELLO_FORCEINLINE int32_t disc_score(
         const eval::EvalWeights& weights,
-        const std::array<uint16_t, eval::MAX_PATTERN_FEATURES>& parent_base,
-        size_t child_stage,
-        const int16_t* child_w,
+        uint64_t own,
+        uint64_t opponent,
+        uint64_t known_own_legal = endgame::bits::LEGAL_UNDEFINED
+    ) noexcept {
+        const uint32_t discs = static_cast<uint32_t>(std::popcount(own | opponent));
+        const int32_t* const pw = weights.packed_weights_for_discs(discs);
+        const bool is_odd = (discs & 1U) != 0U;
+        int32_t sum = !is_odd
+            ? weights.set().sum_weights_packed(own, opponent, pw, false)
+            : weights.set().sum_weights_packed(opponent, own, pw, true);
+        if (weights.has_mobility()) {
+            uint32_t m_own = 0;
+            uint32_t m_opp = 0;
+            if (known_own_legal != endgame::bits::LEGAL_UNDEFINED) {
+                m_own = static_cast<uint32_t>(std::popcount(known_own_legal));
+                m_opp = static_cast<uint32_t>(std::popcount(legal_moves(opponent, own)));
+            } else {
+                m_own = static_cast<uint32_t>(std::popcount(legal_moves(own, opponent)));
+                m_opp = static_cast<uint32_t>(std::popcount(legal_moves(opponent, own)));
+            }
+            sum += weights.mobility_bonus_for_discs(discs, m_own, m_opp);
+        }
+        return std::clamp(sum / weights.units_per_disc(), -64, 64);
+    }
+    static STELLO_FORCEINLINE int32_t eval_after_move_score_bounded(
+        const eval::EvalWeights& weights,
+        const eval::PatternState& cur,
+        bool mover_is_even_disc,
+        uint32_t child_discs,
+        const int32_t* child_w,
+        int32_t skip_thresh,
+        int32_t current_best,
         uint64_t own,
         uint64_t other,
         uint32_t square,
         uint64_t move_flips
     ) noexcept {
-        int32_t raw = sum_eval_after_move(weights.set(), parent_base, square, move_flips, child_w);
+        int32_t raw = sum_eval_after_move(
+            weights.set(), cur, mover_is_even_disc, square, move_flips, child_w, mover_is_even_disc);
         if (weights.has_mobility()) {
             const uint64_t child_own = other ^ move_flips;
             const uint64_t child_other = own | move_flips | (uint64_t{1} << square);
             const uint32_t m_own = static_cast<uint32_t>(std::popcount(legal_moves(child_own, child_other)));
             const uint32_t m_opp = static_cast<uint32_t>(std::popcount(legal_moves(child_other, child_own)));
-            raw += weights.mobility_bonus(child_stage, m_own, m_opp);
+            raw += weights.mobility_bonus_for_discs(child_discs, m_own, m_opp);
         }
-        return eval::clamp_pattern_score(weights, raw);
+        if (raw >= skip_thresh) {
+            return current_best;
+        }
+        return -eval::clamp_pattern_score(weights, raw);
     }
     static STELLO_FORCEINLINE int32_t eval_state_score(
         const eval::EvalWeights& weights,
         const eval::PatternState& cur,
-        Player own_player,
         uint64_t own,
         uint64_t opponent,
-        size_t stage,
-        const int16_t* stage_w
+        uint32_t discs,
+        const int32_t* stage_w
     ) noexcept {
-        int32_t raw = sum_eval_state(weights.set(), cur, own_player, stage_w);
+        int32_t raw = sum_eval_state(weights.set(), cur, stage_w, (discs & 1U) != 0U);
         if (weights.has_mobility()) {
             const uint32_t m_own = static_cast<uint32_t>(std::popcount(legal_moves(own, opponent)));
             const uint32_t m_opp = static_cast<uint32_t>(std::popcount(legal_moves(opponent, own)));
-            raw += weights.mobility_bonus(stage, m_own, m_opp);
+            raw += weights.mobility_bonus_for_discs(discs, m_own, m_opp);
         }
         return eval::clamp_pattern_score(weights, raw);
     }
@@ -155,7 +213,21 @@ struct Kernel {
         int32_t previous_move,
         int32_t alpha,
         int32_t beta,
-        const eval::PatternState& eval_state
+        const eval::PatternState& eval_state,
+        uint64_t known_legal = endgame::bits::LEGAL_UNDEFINED
+    );
+    static STELLO_NOINLINE AbortResult<ScoreMove> search_inc_deep(
+        Searcher& s,
+        const Board& board,
+        Player player,
+        int32_t look,
+        int32_t ply,
+        int32_t alpha,
+        int32_t beta,
+        const eval::PatternState& eval_state,
+        uint64_t moves,
+        int32_t hash_move,
+        bool hash_put
     );
     static AbortResult<ScoreMove> solve_root(
         Searcher& s,
@@ -318,7 +390,8 @@ struct Kernel {
         uint64_t opponent,
         int32_t depth,
         int32_t alpha,
-        int32_t beta
+        int32_t beta,
+        uint64_t known_legal = endgame::bits::LEGAL_UNDEFINED
     );
     static AbortResult<std::optional<int32_t>> try_end_probcut(
         Searcher& s,
@@ -425,8 +498,8 @@ struct Kernel {
     );
 };
 
-extern template struct Kernel<false>;
-extern template AbortVoid Kernel<false>::split<MidgameChild>(
+extern template struct Kernel<cpu::CpuTier::Portable>;
+extern template AbortVoid Kernel<cpu::CpuTier::Portable>::split<MidgameChild>(
     Searcher&,
     std::span<const MidgameChild>,
     int32_t,
@@ -435,7 +508,7 @@ extern template AbortVoid Kernel<false>::split<MidgameChild>(
     int32_t&,
     bool
 );
-extern template AbortVoid Kernel<false>::split<EndgameChild>(
+extern template AbortVoid Kernel<cpu::CpuTier::Portable>::split<EndgameChild>(
     Searcher&,
     std::span<const EndgameChild>,
     int32_t,
@@ -447,43 +520,64 @@ extern template AbortVoid Kernel<false>::split<EndgameChild>(
 
 #if STELLO_HAS_X86_64_V3
 template <>
-uint64_t Kernel<true>::flips(uint64_t own, uint64_t opponent, uint32_t square) noexcept;
+uint64_t Kernel<cpu::CpuTier::V3>::flips(uint64_t own, uint64_t opponent, uint32_t square) noexcept;
 template <>
-uint64_t Kernel<true>::legal_moves(uint64_t own, uint64_t opponent) noexcept;
+uint64_t Kernel<cpu::CpuTier::V3>::legal_moves(uint64_t own, uint64_t opponent) noexcept;
 template <>
-void Kernel<true>::advance_eval_state(
+void Kernel<cpu::CpuTier::V3>::dual_legal_moves(
+    uint64_t own,
+    uint64_t opponent,
+    uint64_t& own_out,
+    uint64_t& opp_out
+) noexcept;
+template <>
+void Kernel<cpu::CpuTier::V3>::legal_and_potential(
+    uint64_t own,
+    uint64_t opponent,
+    uint64_t& legal_out,
+    int32_t& pot_out
+) noexcept;
+template <>
+uint64_t Kernel<cpu::CpuTier::V3>::stable_of(uint64_t own, uint64_t opponent) noexcept;
+template <>
+uint64_t Kernel<cpu::CpuTier::V3>::transpose(uint64_t x) noexcept;
+template <>
+uint16_t Kernel<cpu::CpuTier::V3>::simul_last_flip(uint64_t own, uint32_t square) noexcept;
+template <>
+eval::PatternState Kernel<cpu::CpuTier::V3>::eval_state_of(
+    const eval::PatternSet& set,
+    uint64_t digit1,
+    uint64_t digit2
+) noexcept;
+template <>
+void Kernel<cpu::CpuTier::V3>::advance_eval_state(
     const eval::PatternSet& set,
     eval::PatternState& next,
     const eval::PatternState& cur,
-    Player mover,
+    bool mover_is_even_disc,
     uint32_t square,
     uint64_t flips
 ) noexcept;
 template <>
-void Kernel<true>::build_eval_base(
+int32_t Kernel<cpu::CpuTier::V3>::sum_eval_state(
     const eval::PatternSet& set,
     const eval::PatternState& cur,
-    Player next_own,
-    std::array<uint16_t, eval::MAX_PATTERN_FEATURES>& out
+    const int32_t* packed_pair_weights,
+    bool odd_slot
 ) noexcept;
 template <>
-int32_t Kernel<true>::sum_eval_state(
+int32_t Kernel<cpu::CpuTier::V3>::sum_eval_after_move(
     const eval::PatternSet& set,
     const eval::PatternState& cur,
-    Player own,
-    const int16_t* weights
-) noexcept;
-template <>
-int32_t Kernel<true>::sum_eval_after_move(
-    const eval::PatternSet& set,
-    const std::array<uint16_t, eval::MAX_PATTERN_FEATURES>& parent_base,
+    bool mover_is_even_disc,
     uint32_t square,
     uint64_t flips,
-    const int16_t* weights
+    const int32_t* packed_child_pair_weights,
+    bool child_odd_slot
 ) noexcept;
 
-extern template struct Kernel<true>;
-extern template AbortVoid Kernel<true>::split<MidgameChild>(
+extern template struct Kernel<cpu::CpuTier::V3>;
+extern template AbortVoid Kernel<cpu::CpuTier::V3>::split<MidgameChild>(
     Searcher&,
     std::span<const MidgameChild>,
     int32_t,
@@ -492,7 +586,86 @@ extern template AbortVoid Kernel<true>::split<MidgameChild>(
     int32_t&,
     bool
 );
-extern template AbortVoid Kernel<true>::split<EndgameChild>(
+extern template AbortVoid Kernel<cpu::CpuTier::V3>::split<EndgameChild>(
+    Searcher&,
+    std::span<const EndgameChild>,
+    int32_t,
+    int32_t,
+    int32_t&,
+    int32_t&,
+    bool
+);
+#endif
+
+#if STELLO_HAS_X86_64_V4
+template <>
+uint64_t Kernel<cpu::CpuTier::V4>::flips(uint64_t own, uint64_t opponent, uint32_t square) noexcept;
+template <>
+uint64_t Kernel<cpu::CpuTier::V4>::legal_moves(uint64_t own, uint64_t opponent) noexcept;
+template <>
+void Kernel<cpu::CpuTier::V4>::dual_legal_moves(
+    uint64_t own,
+    uint64_t opponent,
+    uint64_t& own_out,
+    uint64_t& opp_out
+) noexcept;
+template <>
+void Kernel<cpu::CpuTier::V4>::legal_and_potential(
+    uint64_t own,
+    uint64_t opponent,
+    uint64_t& legal_out,
+    int32_t& pot_out
+) noexcept;
+template <>
+uint64_t Kernel<cpu::CpuTier::V4>::stable_of(uint64_t own, uint64_t opponent) noexcept;
+template <>
+uint64_t Kernel<cpu::CpuTier::V4>::transpose(uint64_t x) noexcept;
+template <>
+uint16_t Kernel<cpu::CpuTier::V4>::simul_last_flip(uint64_t own, uint32_t square) noexcept;
+template <>
+eval::PatternState Kernel<cpu::CpuTier::V4>::eval_state_of(
+    const eval::PatternSet& set,
+    uint64_t digit1,
+    uint64_t digit2
+) noexcept;
+template <>
+void Kernel<cpu::CpuTier::V4>::advance_eval_state(
+    const eval::PatternSet& set,
+    eval::PatternState& next,
+    const eval::PatternState& cur,
+    bool mover_is_even_disc,
+    uint32_t square,
+    uint64_t flips
+) noexcept;
+template <>
+int32_t Kernel<cpu::CpuTier::V4>::sum_eval_state(
+    const eval::PatternSet& set,
+    const eval::PatternState& cur,
+    const int32_t* packed_pair_weights,
+    bool odd_slot
+) noexcept;
+template <>
+int32_t Kernel<cpu::CpuTier::V4>::sum_eval_after_move(
+    const eval::PatternSet& set,
+    const eval::PatternState& cur,
+    bool mover_is_even_disc,
+    uint32_t square,
+    uint64_t flips,
+    const int32_t* packed_child_pair_weights,
+    bool child_odd_slot
+) noexcept;
+
+extern template struct Kernel<cpu::CpuTier::V4>;
+extern template AbortVoid Kernel<cpu::CpuTier::V4>::split<MidgameChild>(
+    Searcher&,
+    std::span<const MidgameChild>,
+    int32_t,
+    int32_t,
+    int32_t&,
+    int32_t&,
+    bool
+);
+extern template AbortVoid Kernel<cpu::CpuTier::V4>::split<EndgameChild>(
     Searcher&,
     std::span<const EndgameChild>,
     int32_t,
@@ -504,3 +677,24 @@ extern template AbortVoid Kernel<true>::split<EndgameChild>(
 #endif
 
 } // namespace stello::search
+
+#if STELLO_HAS_X86_64_V4
+#define STELLO_TIER_DISPATCH(method, ...)                                                    \
+    switch (::stello::search::dispatch_tier()) {                                             \
+        case ::stello::cpu::CpuTier::V4:                                                     \
+            return ::stello::search::Kernel<::stello::cpu::CpuTier::V4>::method(__VA_ARGS__); \
+        case ::stello::cpu::CpuTier::V3:                                                     \
+            return ::stello::search::Kernel<::stello::cpu::CpuTier::V3>::method(__VA_ARGS__); \
+        default:                                                                             \
+            return ::stello::search::Kernel<::stello::cpu::CpuTier::Portable>::method(__VA_ARGS__); \
+    }
+#elif STELLO_HAS_X86_64_V3
+#define STELLO_TIER_DISPATCH(method, ...)                                                    \
+    if (::stello::search::dispatch_tier() == ::stello::cpu::CpuTier::V3) {                   \
+        return ::stello::search::Kernel<::stello::cpu::CpuTier::V3>::method(__VA_ARGS__);     \
+    }                                                                                        \
+    return ::stello::search::Kernel<::stello::cpu::CpuTier::Portable>::method(__VA_ARGS__)
+#else
+#define STELLO_TIER_DISPATCH(method, ...) \
+    return ::stello::search::Kernel<::stello::cpu::CpuTier::Portable>::method(__VA_ARGS__)
+#endif

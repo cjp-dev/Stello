@@ -242,12 +242,7 @@ SearchOutcome Searcher::run(
     const SearchLimits& limits,
     std::optional<uint64_t> only_moves
 ) {
-#if STELLO_HAS_X86_64_V3
-    if (dispatch_v3()) {
-        return Kernel<true>::run(*this, board, player, limits, only_moves);
-    }
-#endif
-    return Kernel<false>::run(*this, board, player, limits, only_moves);
+    STELLO_TIER_DISPATCH(run, *this, board, player, limits, only_moves);
 }
 
 AbortVoid Searcher::iterate(
@@ -257,12 +252,7 @@ AbortVoid Searcher::iterate(
     std::span<int32_t> root_moves,
     Best& best
 ) {
-#if STELLO_HAS_X86_64_V3
-    if (dispatch_v3()) {
-        return Kernel<true>::iterate(*this, board, player, limits, root_moves, best);
-    }
-#endif
-    return Kernel<false>::iterate(*this, board, player, limits, root_moves, best);
+    STELLO_TIER_DISPATCH(iterate, *this, board, player, limits, root_moves, best);
 }
 
 AbortResult<ScoreMove> Searcher::solve_iteration(
@@ -274,12 +264,7 @@ AbortResult<ScoreMove> Searcher::solve_iteration(
     std::span<int32_t> root_moves,
     Best& best
 ) {
-#if STELLO_HAS_X86_64_V3
-    if (dispatch_v3()) {
-        return Kernel<true>::solve_iteration(*this, board, player, alpha, beta, kind, root_moves, best);
-    }
-#endif
-    return Kernel<false>::solve_iteration(*this, board, player, alpha, beta, kind, root_moves, best);
+    STELLO_TIER_DISPATCH(solve_iteration, *this, board, player, alpha, beta, kind, root_moves, best);
 }
 
 AbortResult<bool> Searcher::lazy_smp_midgame(
@@ -291,12 +276,7 @@ AbortResult<bool> Searcher::lazy_smp_midgame(
     std::span<int32_t> root_moves,
     Best& best
 ) {
-#if STELLO_HAS_X86_64_V3
-    if (dispatch_v3()) {
-        return Kernel<true>::lazy_smp_midgame(*this, smp_helpers, board, player, limits, budget, root_moves, best);
-    }
-#endif
-    return Kernel<false>::lazy_smp_midgame(*this, smp_helpers, board, player, limits, budget, root_moves, best);
+    STELLO_TIER_DISPATCH(lazy_smp_midgame, *this, smp_helpers, board, player, limits, budget, root_moves, best);
 }
 
 AbortResult<bool> Searcher::midgame_iterations(
@@ -308,12 +288,7 @@ AbortResult<bool> Searcher::midgame_iterations(
     Best& best,
     std::atomic<int32_t>* main_look
 ) {
-#if STELLO_HAS_X86_64_V3
-    if (dispatch_v3()) {
-        return Kernel<true>::midgame_iterations(*this, board, player, limits, budget, root_moves, best, main_look);
-    }
-#endif
-    return Kernel<false>::midgame_iterations(*this, board, player, limits, budget, root_moves, best, main_look);
+    STELLO_TIER_DISPATCH(midgame_iterations, *this, board, player, limits, budget, root_moves, best, main_look);
 }
 
 AbortVoid Searcher::search_root(
@@ -323,12 +298,7 @@ AbortVoid Searcher::search_root(
     std::span<int32_t> root_moves,
     Best& best
 ) {
-#if STELLO_HAS_X86_64_V3
-    if (dispatch_v3()) {
-        return Kernel<true>::search_root(*this, board, player, look, root_moves, best);
-    }
-#endif
-    return Kernel<false>::search_root(*this, board, player, look, root_moves, best);
+    STELLO_TIER_DISPATCH(search_root, *this, board, player, look, root_moves, best);
 }
 
 AbortResult<ScoreMove> Searcher::search(
@@ -340,12 +310,7 @@ AbortResult<ScoreMove> Searcher::search(
     int32_t alpha,
     int32_t beta
 ) {
-#if STELLO_HAS_X86_64_V3
-    if (dispatch_v3()) {
-        return Kernel<true>::search(*this, board, player, look, ply, previous_move, alpha, beta);
-    }
-#endif
-    return Kernel<false>::search(*this, board, player, look, ply, previous_move, alpha, beta);
+    STELLO_TIER_DISPATCH(search, *this, board, player, look, ply, previous_move, alpha, beta);
 }
 
 AbortVoid Searcher::order_by_evaluation(
@@ -354,12 +319,7 @@ AbortVoid Searcher::order_by_evaluation(
     const Board& board,
     Player player
 ) {
-#if STELLO_HAS_X86_64_V3
-    if (dispatch_v3()) {
-        return Kernel<true>::order_by_evaluation(*this, list, hash_move, board, player);
-    }
-#endif
-    return Kernel<false>::order_by_evaluation(*this, list, hash_move, board, player);
+    STELLO_TIER_DISPATCH(order_by_evaluation, *this, list, hash_move, board, player);
 }
 
 AbortVoid Searcher::split_midgame(
@@ -373,12 +333,7 @@ AbortVoid Searcher::split_midgame(
     int32_t& best,
     int32_t& best_move
 ) {
-#if STELLO_HAS_X86_64_V3
-    if (dispatch_v3()) {
-        return Kernel<true>::split_midgame(*this, board, player, look, ply, tail, alpha, beta, best, best_move);
-    }
-#endif
-    return Kernel<false>::split_midgame(*this, board, player, look, ply, tail, alpha, beta, best, best_move);
+    STELLO_TIER_DISPATCH(split_midgame, *this, board, player, look, ply, tail, alpha, beta, best, best_move);
 }
 
 AbortResult<std::optional<int32_t>> Searcher::try_probcut(
@@ -390,12 +345,7 @@ AbortResult<std::optional<int32_t>> Searcher::try_probcut(
     int32_t alpha,
     int32_t beta
 ) {
-#if STELLO_HAS_X86_64_V3
-    if (dispatch_v3()) {
-        return Kernel<true>::try_probcut(*this, board, player, look, ply, previous_move, alpha, beta);
-    }
-#endif
-    return Kernel<false>::try_probcut(*this, board, player, look, ply, previous_move, alpha, beta);
+    STELLO_TIER_DISPATCH(try_probcut, *this, board, player, look, ply, previous_move, alpha, beta);
 }
 
 AbortResult<std::optional<int32_t>> Searcher::probcut_searches(
@@ -410,12 +360,7 @@ AbortResult<std::optional<int32_t>> Searcher::probcut_searches(
     int32_t error0,
     int32_t static0
 ) {
-#if STELLO_HAS_X86_64_V3
-    if (dispatch_v3()) {
-        return Kernel<true>::probcut_searches(*this, board, player, shallow_look, ply, previous_move, alpha, beta, error, error0, static0);
-    }
-#endif
-    return Kernel<false>::probcut_searches(*this, board, player, shallow_look, ply, previous_move, alpha, beta, error, error0, static0);
+    STELLO_TIER_DISPATCH(probcut_searches, *this, board, player, shallow_look, ply, previous_move, alpha, beta, error, error0, static0);
 }
 
 AbortResult<ScoreMove> Searcher::solve_root(
@@ -427,21 +372,11 @@ AbortResult<ScoreMove> Searcher::solve_root(
     std::span<int32_t> root_moves,
     Best& best
 ) {
-#if STELLO_HAS_X86_64_V3
-    if (dispatch_v3()) {
-        return Kernel<true>::solve_root(*this, board, player, alpha, beta, kind, root_moves, best);
-    }
-#endif
-    return Kernel<false>::solve_root(*this, board, player, alpha, beta, kind, root_moves, best);
+    STELLO_TIER_DISPATCH(solve_root, *this, board, player, alpha, beta, kind, root_moves, best);
 }
 
 AbortResult<int32_t> Searcher::evaluate_leaf(const Board& board, Player player) {
-#if STELLO_HAS_X86_64_V3
-    if (dispatch_v3()) {
-        return Kernel<true>::evaluate_leaf(*this, board, player);
-    }
-#endif
-    return Kernel<false>::evaluate_leaf(*this, board, player);
+    STELLO_TIER_DISPATCH(evaluate_leaf, *this, board, player);
 }
 
 bool Searcher::stop_iterating(const SearchLimits& limits, time::TimeBudget budget, int32_t next_look) const noexcept {
