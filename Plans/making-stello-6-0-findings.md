@@ -17,7 +17,7 @@ Working notes, benchmark baselines, and gate records for [making-stello-6-0-plan
 
 ## Phase 0 — Set-up, the 5.0 Baseline, and Native External Match Harnesses
 
-*(Items 1–5, `v5.0-ref/` benchmarks, WASM 5.0 ST/MT baseline, and external FFO `#40–59` benchmarks completed; `starts-v6.txt` baseline matches `#1`–`#26` completed and paused after Match `#26` pending user go for the remaining 4 `2,000 ms 8t` matches `#27`–`#30`.)*
+*(Gate P0 complete: Items 1–5, `v5.0-ref/` benchmarks, WASM 5.0 ST/MT baseline, external FFO `#40–59` benchmarks, and all `30/30` `starts-v6.txt` baseline matches [`35,220` games] completed and verified.)*
 
 ### 1. Preserved 5.0 Reference Engine (`stello-v5`)
 
@@ -165,7 +165,7 @@ Defaults: `hash-bits=19` for Stello (`stello`, `stello-v4`) and `hash-bits=21` f
 
 ### 6. Phase 0 Baseline Matches (`starts-v6.txt`, `1,174` Games Each, `book=off`, Side B = `Stello 5.0`)
 
-*(Paused after Match `#26` per user request; running remaining 4 `2,000 ms 8t` matches `#27`–`#30` sequentially.)*
+*(Complete: all `30/30` matches = `35,220` games recorded on `starts-v6.txt`.)*
 
 | # | Opponent | Time | Threads | Score (95 % CI) | W / D / L | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | NPS (A / B) | Wall Time |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
@@ -198,8 +198,9 @@ Defaults: `hash-bits=19` for Stello (`stello`, `stello-v4`) and `hash-bits=21` f
 | 27 | `Stello 4.0` (`v4`) | 2,000 ms | 8t | **63.1 %** (61.1–65.1 %) | `+604 =273 −297` | **+93** (+78 to +108) | 100.0 % | +1.1 ± 0.2 | 23.36 / 25.95 | 26.5 / 27.2 | 92.13M / 113.11M | [12h 50m](benchmark-results/match_p0_v5_vs_v4_2000ms_8t.md) |
 | 28 | `Egaroucid` (`egaroucid-cpp`) | 2,000 ms | 8t | **48.1 %** (46.2–50.0 %) | `+389 =351 −434` | **−13** (−27 to 0) | 2.5 % | −0.1 ± 0.1 | 29.19 / 26.63 | 26.9 / 27.5 | 111.03M / 154.09M | [12h 50m](benchmark-results/match_p0_v5_vs_egaroucid_cpp_2000ms_8t.md) |
 | 29 | `Edax` (`edax`) | 2,000 ms | 8t | **41.1 %** (39.4–42.8 %) | `+295 =375 −504` | **−63** (−75 to −50) | 0.0 % | −0.7 ± 0.1 | 32.80 / 26.86 | 27.8 / 27.5 | 353.39M / 166.89M | [12h 35m](benchmark-results/match_p0_v5_vs_edax_2000ms_8t.md) |
+| 30 | `Edax AVX` (`edax-avx`) | 2,000 ms | 8t | **41.7 %** (39.8–43.6 %) | `+308 =363 −503` | **−58** (−72 to −45) | 0.0 % | −0.7 ± 0.1 | 32.90 / 26.87 | 27.8 / 27.6 | 369.00M / 169.43M | [12h 33m](benchmark-results/match_p0_v5_vs_edax_avx_2000ms_8t.md) |
 
-### 7. Test Verification (Phase 0 Setup Complete, Matches Paused After #18)
+### 7. Test Verification (Gate P0 Complete)
 
 - `.NET Release build` (`-p:StelloWasmEngine=false`): `0 Warning(s), 0 Error(s)`.
 - `Stello.Engine.Tests`: `519/519` passed.
