@@ -688,6 +688,7 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc(
 ) {
     using namespace detail::midgame;
 
+    const uint64_t nodes_start = s.nodes;
     STELLO_TRY_VOID_R(ScoreMove, s.count_node());
 
     const Player opp = opponent(player);
@@ -721,19 +722,20 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc(
     }
 
     if (hash_get) {
+        const uint8_t req_sel = (s.probcut_errors == nullptr) ? SEL_EXACT : SEL_MIDGAME_MPC;
         if (const auto entry = s.midgame_table->get_at_root(own, other, tag, s.root_empties)) {
             if (entry->mv >= 0 && entry->mv < 64 && (moves & (uint64_t{1} << entry->mv)) != 0) {
-                const int32_t value = static_cast<int32_t>(entry->value);
-                if (static_cast<int32_t>(entry->depth) >= look) {
-                    bool cut = false;
-                    switch (entry->bound) {
-                        case Bound::Exact: cut = true; break;
-                        case Bound::Upper: cut = (value <= alpha); break;
-                        case Bound::Lower: cut = (value >= beta); break;
-                        case Bound::None: cut = false; break;
+                if (static_cast<int32_t>(entry->depth) >= look && entry->selectivity >= req_sel) {
+                    const int32_t lo = static_cast<int32_t>(entry->lower);
+                    const int32_t hi = static_cast<int32_t>(entry->upper);
+                    if (lo > TT_SCORE_MIN && lo >= beta) {
+                        STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{lo, static_cast<int32_t>(entry->mv)}));
                     }
-                    if (cut) {
-                        STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{value, static_cast<int32_t>(entry->mv)}));
+                    if (hi < TT_SCORE_MAX && hi <= alpha) {
+                        STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{hi, static_cast<int32_t>(entry->mv)}));
+                    }
+                    if (lo == hi) {
+                        STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{lo, static_cast<int32_t>(entry->mv)}));
                     }
                 }
                 hash_move = static_cast<int32_t>(entry->mv);
@@ -779,7 +781,6 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc(
     int32_t best = -INFINITY_SCORE;
     int32_t best_move = -1;
     int32_t skip_thresh = (std::numeric_limits<int32_t>::max)() / 2;
-    Bound bound = Bound::Lower;
     const int32_t alpha_start = alpha;
 
     for (size_t index = 0; index < list.size(); ++index) {
@@ -789,13 +790,6 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc(
                 split_midgame(
                     s, board, player, look, ply, list.subspan(index), alpha, beta, best, best_move,
                     eval_state, node_is_even, {}, {}));
-            if (best >= beta) {
-                bound = Bound::Lower;
-            } else if (best > alpha_start) {
-                bound = Bound::Exact;
-            } else {
-                bound = Bound::Upper;
-            }
             break;
         }
 
@@ -838,13 +832,6 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc(
         }
 
         if (score > best) {
-            if (score >= beta) {
-                bound = Bound::Lower;
-            } else if (score > alpha) {
-                bound = Bound::Exact;
-            } else {
-                bound = Bound::Upper;
-            }
             if (score > alpha) {
                 alpha = score;
             }
@@ -860,7 +847,10 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc(
     }
 
     if (hash_put) {
-        s.midgame_table->store_at_root(own, other, tag, stored_look, bound, best, best_move, s.root_empties);
+        const uint8_t req_sel = (s.probcut_errors == nullptr) ? SEL_EXACT : SEL_MIDGAME_MPC;
+        s.midgame_table->store_bounds_at_root(
+            own, other, tag, stored_look, req_sel, alpha_start, beta, best, best_move, s.root_empties,
+            search_cost(s.nodes - nodes_start));
     }
 
     STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{best, best_move}));
@@ -882,11 +872,13 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc_deep(
 ) {
     using namespace detail::midgame;
 
+    const uint64_t nodes_start = s.nodes;
     const Player opp = opponent(player);
     const uint64_t own = board.discs(player);
     const uint64_t other = board.discs(opp);
     const uint32_t node_discs = 64U - board.empty_count();
     const int32_t tag = static_cast<int32_t>(player_index(player));
+    const uint8_t req_sel = (s.probcut_errors == nullptr) ? SEL_EXACT : SEL_MIDGAME_MPC;
     const size_t move_count = static_cast<size_t>(std::popcount(moves));
 
     std::array<int32_t, MAX_MOVES> buffer;
@@ -905,10 +897,11 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc_deep(
             const uint64_t child_other = own | f | (uint64_t{1} << mv);
             if (const auto entry = s.midgame_table->get_at_root(child_own, child_other, opp_tag, s.root_empties)) {
                 if (static_cast<int32_t>(entry->depth) >= look - 1
-                    && entry->bound != Bound::Lower
-                    && -static_cast<int32_t>(entry->value) >= beta)
+                    && entry->selectivity >= req_sel
+                    && entry->upper < TT_SCORE_MAX
+                    && -static_cast<int32_t>(entry->upper) >= beta)
                 {
-                    STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{-static_cast<int32_t>(entry->value), mv}));
+                    STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{-static_cast<int32_t>(entry->upper), mv}));
                 }
             }
         }
@@ -921,7 +914,6 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc_deep(
 
     int32_t best = -INFINITY_SCORE;
     int32_t best_move = -1;
-    Bound bound = Bound::Lower;
     const int32_t alpha_start = alpha;
     bool searched_first = false;
     size_t loop_count = 0;
@@ -1032,13 +1024,6 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc_deep(
                 endgame::bits::LEGAL_UNDEFINED));
         const int32_t score = -res.score;
         s.ordering->record_response(opp, hash_move, res.mv, score <= alpha);
-        if (score >= beta) {
-            bound = Bound::Lower;
-        } else if (score > alpha) {
-            bound = Bound::Exact;
-        } else {
-            bound = Bound::Upper;
-        }
         if (score > alpha) {
             alpha = score;
         }
@@ -1046,7 +1031,9 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc_deep(
         best_move = hash_move;
         if (best >= beta) {
             if (hash_put) {
-                s.midgame_table->store_at_root(own, other, tag, look, bound, best, best_move, s.root_empties);
+                s.midgame_table->store_bounds_at_root(
+                    own, other, tag, look, req_sel, alpha_start, beta, best, best_move, s.root_empties,
+                    search_cost(s.nodes - nodes_start));
             }
             STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{best, best_move}));
         }
@@ -1087,13 +1074,6 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc_deep(
                     alpha, beta, best, best_move, eval_state, node_is_even,
                     std::span<const uint64_t>(sorted_flips.data() + index, loop_count - index),
                     std::span<const uint64_t>(sorted_replies.data() + index, loop_count - index)));
-            if (best >= beta) {
-                bound = Bound::Lower;
-            } else if (best > alpha_start) {
-                bound = Bound::Exact;
-            } else {
-                bound = Bound::Upper;
-            }
             break;
         }
 
@@ -1126,13 +1106,6 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc_deep(
         }
 
         if (score > best) {
-            if (score >= beta) {
-                bound = Bound::Lower;
-            } else if (score > alpha) {
-                bound = Bound::Exact;
-            } else {
-                bound = Bound::Upper;
-            }
             if (score > alpha) {
                 alpha = score;
             }
@@ -1145,7 +1118,9 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc_deep(
     }
 
     if (hash_put) {
-        s.midgame_table->store_at_root(own, other, tag, look, bound, best, best_move, s.root_empties);
+        s.midgame_table->store_bounds_at_root(
+            own, other, tag, look, req_sel, alpha_start, beta, best, best_move, s.root_empties,
+            search_cost(s.nodes - nodes_start));
     }
 
     STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{best, best_move}));

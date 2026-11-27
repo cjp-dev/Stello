@@ -147,7 +147,8 @@ STELLO_TEST(table_keeps_deeper_entry_and_replaces_other) {
     table.store(1, 2, 0, 5, search::Bound::Exact, 100, 7);
     const auto hit = table.get(1, 2, 0);
     STELLO_CHECK(hit.has_value());
-    STELLO_CHECK_EQ(static_cast<int32_t>(hit->value), 100);
+    STELLO_CHECK_EQ(static_cast<int32_t>(hit->lower), 100);
+    STELLO_CHECK_EQ(static_cast<int32_t>(hit->upper), 100);
     STELLO_CHECK_EQ(static_cast<int32_t>(hit->depth), 5);
     STELLO_CHECK_EQ(static_cast<int32_t>(hit->mv), 7);
     STELLO_CHECK(!table.get(1, 2, 1).has_value());
@@ -155,7 +156,8 @@ STELLO_TEST(table_keeps_deeper_entry_and_replaces_other) {
     table.store(1, 2, 0, 3, search::Bound::Lower, 50, 8);
     const auto still_deep = table.get(1, 2, 0);
     STELLO_CHECK(still_deep.has_value());
-    STELLO_CHECK_EQ(static_cast<int32_t>(still_deep->value), 100);
+    STELLO_CHECK_EQ(static_cast<int32_t>(still_deep->lower), 100);
+    STELLO_CHECK_EQ(static_cast<int32_t>(still_deep->upper), 100);
 
     table.clear();
     STELLO_CHECK(!table.get(1, 2, 0).has_value());
@@ -168,7 +170,8 @@ STELLO_TEST(table_entries_before_clear_are_empty_for_replacement) {
     table.store(1, 2, 0, 3, search::Bound::Lower, 50, 8);
     const auto hit = table.get(1, 2, 0);
     STELLO_CHECK(hit.has_value());
-    STELLO_CHECK_EQ(static_cast<int32_t>(hit->value), 50);
+    STELLO_CHECK_EQ(static_cast<int32_t>(hit->lower), 50);
+    STELLO_CHECK_EQ(static_cast<int32_t>(hit->upper), static_cast<int32_t>(search::TT_SCORE_MAX));
     STELLO_CHECK_EQ(static_cast<int32_t>(hit->depth), 3);
     STELLO_CHECK_EQ(static_cast<int32_t>(hit->mv), 8);
 
@@ -187,57 +190,203 @@ STELLO_TEST(table_entries_from_older_root_are_ignored_and_replaced) {
     const size_t target_slot = table.slot_index(old_own, old_opp, 0);
 
     std::vector<uint64_t> others;
-    for (uint64_t seed = 1; seed <= 1'000'000 && others.size() < 2; ++seed) {
+    for (uint64_t seed = 1; seed <= 1'000'000 && others.size() < search::TranspositionTable::WAYS; ++seed) {
         const uint64_t cand = seed * 0x9E37'79B9'7F4A'7C15ULL;
         if (std::popcount(cand) >= 4 && table.slot_index(cand, 0, 0) == target_slot) {
             others.push_back(cand);
         }
     }
-    STELLO_CHECK_EQ(others.size(), size_t{2});
+    STELLO_CHECK_EQ(others.size(), search::TranspositionTable::WAYS);
 
     table.store_at_root(old_own, old_opp, 0, 9, search::Bound::Exact, 100, 7, 64);
-    table.store_at_root(others[0], 0, 0, 2, search::Bound::Lower, 40, 6, 64);
+    for (size_t i = 0; i < search::TranspositionTable::WAYS - 1; ++i) {
+        table.store_at_root(others[i], 0, 0, static_cast<int32_t>(2 + i), search::Bound::Lower, static_cast<int32_t>(40 + i), static_cast<int32_t>(i), 64);
+    }
     STELLO_CHECK(table.get_at_root(old_own, old_opp, 0, 64).has_value());
     STELLO_CHECK(!table.get_at_root(old_own, old_opp, 0, 60).has_value());
 
-    table.store_at_root(others[1], 0, 0, 1, search::Bound::Lower, 50, 8, 60);
-    const auto hit1 = table.get_at_root(others[1], 0, 0, 60);
-    const auto hit0 = table.get_at_root(others[0], 0, 0, 60);
-    STELLO_CHECK(hit1.has_value());
-    STELLO_CHECK_EQ(static_cast<int32_t>(hit1->depth), 1);
-    STELLO_CHECK(hit0.has_value());
-    STELLO_CHECK_EQ(static_cast<int32_t>(hit0->depth), 2);
+    table.store_at_root(others[3], 0, 0, 1, search::Bound::Lower, 50, 8, 60);
+    const auto hit_last = table.get_at_root(others[3], 0, 0, 60);
+    STELLO_CHECK(hit_last.has_value());
+    STELLO_CHECK_EQ(static_cast<int32_t>(hit_last->depth), 1);
+    for (size_t i = 0; i < search::TranspositionTable::WAYS - 1; ++i) {
+        const auto hit = table.get_at_root(others[i], 0, 0, 60);
+        STELLO_CHECK(hit.has_value());
+        STELLO_CHECK_EQ(static_cast<int32_t>(hit->depth), static_cast<int32_t>(2 + i));
+    }
     STELLO_CHECK(!table.get_at_root(old_own, old_opp, 0, 64).has_value());
 }
 
 STELLO_TEST(table_packing_keeps_every_field) {
     struct Case {
-        int16_t value;
-        int8_t depth;
-        search::Bound bound;
+        int16_t lower;
+        int16_t upper;
         int8_t mv;
+        uint8_t depth;
+        uint8_t selectivity;
         uint8_t tag;
+        uint8_t cost;
+        uint8_t date;
+        uint8_t generation;
     };
     const std::array<Case, 4> cases = {{
-        {-32768, -128, search::Bound::Upper, -1, 255},
-        {32767, 127, search::Bound::Exact, 63, 0},
-        {-1, 0, search::Bound::Lower, 0, 1},
-        {0, 60, search::Bound::None, -1, 0},
+        {-32768, 32767, -1, 63, 7, 3, 31, 3, 127},
+        {32767, -32768, 63, 0, 0, 0, 0, 0, 1},
+        {-150, 420, 0, 28, 4, 2, 19, 2, 64},
+        {0, 0, -1, 60, 1, 1, 1, 1, 2},
     }};
     for (const auto& c : cases) {
         search::Entry e;
-        e.own = 0x8000'0000'0000'0001ULL;
-        e.opponent = 42;
-        e.value = c.value;
-        e.depth = c.depth;
-        e.bound = c.bound;
+        e.verify = (uint64_t{40} << search::detail::VERIFY_EMPTIES_SHIFT) | 0x0123'4567'89AB'CDEFULL;
+        e.lower = c.lower;
+        e.upper = c.upper;
         e.mv = c.mv;
+        e.depth = c.depth;
+        e.selectivity = c.selectivity;
         e.tag = c.tag;
-        e.generation = 65535;
-        const auto unpacked = search::Entry::unpack(e.own, e.opponent, e.pack());
+        e.cost = c.cost;
+        e.date = c.date;
+        e.generation = c.generation;
+        const auto unpacked = search::Entry::unpack(e.verify, e.pack());
         STELLO_CHECK(unpacked == e);
+        STELLO_CHECK_EQ(
+            search::detail::writeable_level_packed(e.pack(), c.date),
+            search::detail::writeable_level(e, c.date));
+        const uint8_t other_date = static_cast<uint8_t>((c.date + 1U) & 3U);
+        STELLO_CHECK_EQ(
+            search::detail::writeable_level_packed(e.pack(), other_date),
+            search::detail::writeable_level(e, other_date));
     }
     STELLO_CHECK_EQ(search::Entry{}.pack(), uint64_t{0});
+    STELLO_CHECK(search::Entry::unpack(0, 0) == search::Entry{});
+}
+
+STELLO_TEST(table_dual_bounds_and_composite_level) {
+    search::TranspositionTable table(10);
+    const uint64_t own = 0x1111'2222'3333'4444ULL;
+    const size_t target_slot = table.slot_index(own, 0, search::ENDGAME_TT_TAG);
+
+    // 1. Same-level Lower + Upper merges into [lower, upper] preserving valid move.
+    table.store_bounds_at_root(own, 0, search::ENDGAME_TT_TAG, 16, 7, 40, 50, 50, 12, 64, 5);
+    table.store_bounds_at_root(own, 0, search::ENDGAME_TT_TAG, 16, 7, 80, 90, 80, -1, 64, 9);
+    auto h = table.get_at_root(own, 0, search::ENDGAME_TT_TAG, 64);
+    STELLO_CHECK(h.has_value());
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->lower), 50);
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->upper), 80);
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->mv), 12);
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->cost), 9);
+
+    // 2. Meeting bounds ([50, 80] + fail-low at 50) narrows to exact [50, 50] & keeps Cut move;
+    // contradiction resets cleanly; same-level fail-low updates mv only when prior lower == TT_SCORE_MIN.
+    table.store_bounds_at_root(own, 0, search::ENDGAME_TT_TAG, 16, 7, 50, 51, 50, 15, 64, 3);
+    h = table.get_at_root(own, 0, search::ENDGAME_TT_TAG, 64);
+    STELLO_CHECK(h.has_value());
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->lower), 50);
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->upper), 50);
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->mv), 12);
+    table.store_bounds_at_root(own, 0, search::ENDGAME_TT_TAG, 16, 7, 30, 40, 30, 17, 64, 3);
+    h = table.get_at_root(own, 0, search::ENDGAME_TT_TAG, 64);
+    STELLO_CHECK(h.has_value());
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->lower), static_cast<int32_t>(search::TT_SCORE_MIN));
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->upper), 30);
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->mv), 12);
+    table.store_bounds_at_root(own, 0, search::ENDGAME_TT_TAG, 16, 7, 25, 35, 25, 19, 64, 3);
+    h = table.get_at_root(own, 0, search::ENDGAME_TT_TAG, 64);
+    STELLO_CHECK(h.has_value());
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->mv), 19);
+
+    // 3. Upgrade (new_level > old_level) resets stale bounds while preserving mv if mv == -1, or adopting valid deeper mv even on fail-low.
+    const uint64_t up_own = 0x2222'3333'4444'5555ULL;
+    table.store_bounds_at_root(up_own, 0, search::ENDGAME_TT_TAG, 16, 4, 0, 10, 10, 22, 64, 15);
+    table.store_bounds_at_root(up_own, 0, search::ENDGAME_TT_TAG, 16, 7, -20, -10, -20, -1, 64, 4);
+    h = table.get_at_root(up_own, 0, search::ENDGAME_TT_TAG, 64);
+    STELLO_CHECK(h.has_value());
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->selectivity), 7);
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->lower), static_cast<int32_t>(search::TT_SCORE_MIN));
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->upper), -20);
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->mv), 22);
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->cost), 15);
+    table.store_bounds_at_root(up_own, 0, search::ENDGAME_TT_TAG, 18, 7, -15, -5, -15, 27, 64, 4);
+    h = table.get_at_root(up_own, 0, search::ENDGAME_TT_TAG, 64);
+    STELLO_CHECK(h.has_value());
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->mv), 27);
+
+    // 4. Composite level ordering: empties=28 sel=4 (level=228) outlives empties=14 sel=7 (level=119).
+    table.clear();
+    std::vector<uint64_t> col;
+    for (uint64_t seed = 1; seed <= 1'000'000 && col.size() < 5; ++seed) {
+        const uint64_t cand = seed * 0x9E37'79B9'7F4A'7C15ULL;
+        if (std::popcount(cand) >= 4 && table.slot_index(cand, 0, search::ENDGAME_TT_TAG) == target_slot) {
+            col.push_back(cand);
+        }
+    }
+    STELLO_CHECK_EQ(col.size(), size_t{5});
+    table.store_bounds_at_root(col[0], 0, search::ENDGAME_TT_TAG, 28, 4, 0, 2, 2, 1, 64, 10);
+    table.store_bounds_at_root(col[1], 0, search::ENDGAME_TT_TAG, 14, 7, 0, 2, 2, 2, 64, 25);
+    table.store_bounds_at_root(col[2], 0, search::ENDGAME_TT_TAG, 20, 7, 0, 2, 2, 3, 64, 10);
+    table.store_bounds_at_root(col[3], 0, search::ENDGAME_TT_TAG, 22, 7, 0, 2, 2, 4, 64, 10);
+    table.store_bounds_at_root(col[4], 0, search::ENDGAME_TT_TAG, 18, 7, 0, 2, 2, 5, 64, 10);
+    STELLO_CHECK(table.get(col[0], 0, search::ENDGAME_TT_TAG).has_value());
+    STELLO_CHECK(!table.get(col[1], 0, search::ENDGAME_TT_TAG).has_value());
+}
+
+STELLO_TEST(table_4way_replacement_and_domain_isolation) {
+    search::TranspositionTable table(10);
+    const uint64_t base_own = 0x1111'2222'3333'4444ULL;
+    const size_t target_slot = table.slot_index(base_own, 0, 0);
+
+    constexpr size_t ways = search::TranspositionTable::WAYS;
+    std::vector<uint64_t> colliding;
+    for (uint64_t seed = 1; seed <= 1'000'000 && colliding.size() < ways + 1; ++seed) {
+        const uint64_t cand = seed * 0x9E37'79B9'7F4A'7C15ULL;
+        if (cand != base_own && std::popcount(cand) >= 4 && table.slot_index(cand, 0, 0) == target_slot) {
+            colliding.push_back(cand);
+        }
+    }
+    STELLO_CHECK_EQ(colliding.size(), ways + 1);
+
+    // Advance date for colliding[0] (even with higher depth/cost, stale date gets evicted once overwritten by a current entry).
+    table.store(colliding[0], 0, 0, 12, search::Bound::Exact, 100, 1, 30);
+    table.advance_date();
+    for (size_t i = 1; i < ways; ++i) {
+        table.store(colliding[i], 0, 0, static_cast<int32_t>(4 + i), search::Bound::Lower, static_cast<int32_t>(i), 2, 10);
+    }
+    for (size_t i = 0; i < ways; ++i) {
+        STELLO_CHECK(table.get(colliding[i], 0, 0).has_value());
+    }
+
+    // Extra colliding entry must evict the stale-date entry colliding[0], keeping all current-date entries.
+    table.store(colliding[ways], 0, 0, 3, search::Bound::Upper, -5, 3, 2);
+    STELLO_CHECK(!table.get(colliding[0], 0, 0).has_value());
+    for (size_t i = 1; i <= ways; ++i) {
+        STELLO_CHECK(table.get(colliding[i], 0, 0).has_value());
+    }
+
+    // In-place update: deeper overwrites, equal preserves max(cost), shallower does not overwrite.
+    table.store(colliding[ways], 0, 0, 3, search::Bound::Exact, -4, 4, 8);
+    auto updated = table.get(colliding[ways], 0, 0);
+    STELLO_CHECK(updated.has_value());
+    STELLO_CHECK_EQ(static_cast<int32_t>(updated->lower), -4);
+    STELLO_CHECK_EQ(static_cast<int32_t>(updated->upper), -4);
+    STELLO_CHECK_EQ(static_cast<int32_t>(updated->cost), 8);
+    table.store(colliding[ways], 0, 0, 2, search::Bound::Lower, 99, 5, 1);
+    updated = table.get(colliding[ways], 0, 0);
+    STELLO_CHECK(updated.has_value());
+    STELLO_CHECK_EQ(static_cast<int32_t>(updated->depth), 3);
+    STELLO_CHECK_EQ(static_cast<int32_t>(updated->lower), -4);
+    STELLO_CHECK_EQ(static_cast<int32_t>(updated->upper), -4);
+
+    // Domain isolation: tags 0, 1 (midgame Black/White) and ENDGAME_TT_TAG (2) never collide or alias.
+    table.clear();
+    table.store(base_own, 42, 0, 6, search::Bound::Exact, 111, 10, 5);
+    table.store(base_own, 42, 1, 7, search::Bound::Lower, 222, 11, 6);
+    table.store(base_own, 42, search::ENDGAME_TT_TAG, 18, search::Bound::Exact, -14, 12, 7);
+    const auto h0 = table.get(base_own, 42, 0);
+    const auto h1 = table.get(base_own, 42, 1);
+    const auto h2 = table.get(base_own, 42, search::ENDGAME_TT_TAG);
+    STELLO_CHECK(h0.has_value() && h0->lower == 111 && h0->upper == 111 && h0->mv == 10);
+    STELLO_CHECK(h1.has_value() && h1->lower == 222 && h1->upper == search::TT_SCORE_MAX && h1->mv == 11);
+    STELLO_CHECK(h2.has_value() && h2->lower == -14 && h2->upper == -14 && h2->mv == 12);
 }
 
 // ---- MoveOrdering & Time unit tests ----
@@ -530,7 +679,7 @@ STELLO_TEST(endgame_shallow_and_unit_regressions) {
                 best_move = static_cast<int32_t>(sq);
             }
             s3.endgame_table->store_at_root(
-                child_own, child_opp, 0, static_cast<int32_t>(root_empties) - 1,
+                child_own, child_opp, search::ENDGAME_TT_TAG, static_cast<int32_t>(root_empties) - 1,
                 search::Bound::Exact, -val, -1, root_empties);
             ++index;
         }
@@ -540,7 +689,7 @@ STELLO_TEST(endgame_shallow_and_unit_regressions) {
         const auto deep_res = s3.end_deep(own, opp, 63, 14, true, legal);
         STELLO_CHECK(deep_res.is_ok() && deep_res.value == best_value);
 #endif
-        const auto hit = s3.endgame_table->get_at_root(own, opp, 0, root_empties);
+        const auto hit = s3.endgame_table->get_at_root(own, opp, search::ENDGAME_TT_TAG, root_empties);
         STELLO_CHECK(hit.has_value());
         STELLO_CHECK_EQ(static_cast<int32_t>(hit->mv), best_move);
     }
@@ -639,7 +788,7 @@ STELLO_TEST(persistent_engine_ages_full_table_across_game_positions) {
         player = opponent(player);
     }
 
-    STELLO_CHECK_EQ(total_nodes, uint64_t{1'688'772});
+    STELLO_CHECK_EQ(total_nodes, uint64_t{1'546'315});
 }
 
 // ---- Full 105-signature baseline integration test (Stello 3.1) ----

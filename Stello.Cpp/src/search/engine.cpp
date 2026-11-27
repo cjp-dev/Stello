@@ -134,15 +134,13 @@ SearchEngine::SearchEngine(uint32_t hash_bits, SearchOptions options)
                     (options_.pattern ? *options_.pattern : eval::EvalWeights::built_in()).set().name() == "egaroucid16",
                     (options_.pattern ? *options_.pattern : eval::EvalWeights::built_in()).has_mobility())
               : nullptr),
-      midgame_table_(hash_bits),
-      endgame_table_(hash_bits) {
+      table_(hash_bits) {
     assert(hash_bits >= 10 && hash_bits <= 26 && "hash bits must be 10-26");
     endgame::stable::init();
 }
 
 void SearchEngine::clear_hash() {
-    midgame_table_.clear();
-    endgame_table_.clear();
+    table_.clear();
     main_.endgame.clear();
     if (pool_) {
         pool_->for_each_state([](ThreadState& state) { state.endgame.clear(); });
@@ -155,7 +153,7 @@ Searcher SearchEngine::searcher(
     uint32_t root_empties
 ) {
     const SearchContext ctx = SearchContext::create(
-        options_, probcut_errors_.get(), end_probcut_errors_.get(), midgame_table_, endgame_table_, clock_, root_empties);
+        options_, probcut_errors_.get(), end_probcut_errors_.get(), table_, table_, clock_, root_empties);
     Searcher s(ctx, main_, stop);
     s.progress = std::move(progress);
     s.iteration_done = iteration_done_ ? &iteration_done_ : nullptr;
@@ -173,6 +171,8 @@ SearchOutcome SearchEngine::search(
     if (stop.is_cancelled()) {
         return {false, {}, SearchError::Cancelled};
     }
+
+    table_.advance_date();
 
     const uint32_t root_empties = board.empty_count();
 #if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
@@ -195,7 +195,7 @@ SearchOutcome SearchEngine::search(
     }
 
     const SearchContext context = SearchContext::create(
-        options_, probcut_errors_.get(), end_probcut_errors_.get(), midgame_table_, endgame_table_, clock_, root_empties);
+        options_, probcut_errors_.get(), end_probcut_errors_.get(), table_, table_, clock_, root_empties);
     pool_->for_each_state([](ThreadState& state) { state.ordering.clear_responses(); });
 
     alignas(64) std::atomic<uint64_t> nodes{0};

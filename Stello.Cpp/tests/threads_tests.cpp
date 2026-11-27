@@ -147,12 +147,19 @@ STELLO_TEST(seqlock_many_threads_never_read_a_torn_entry) {
                     if (((seed >> 33) & 1ULL) == 0) {
                         table.store(own, opp, tag, expected.depth, expected.bound, expected.value, expected.mv);
                     } else if (const auto entry = table.get(own, opp, tag)) {
-                        STELLO_CHECK_EQ(entry->own, own);
-                        STELLO_CHECK_EQ(entry->opponent, opp);
+                        STELLO_CHECK_EQ(entry->verify, table.verify_key(own, opp, tag));
                         STELLO_CHECK_EQ(static_cast<int32_t>(entry->tag), tag);
-                        STELLO_CHECK_EQ(static_cast<int32_t>(entry->value), expected.value);
                         STELLO_CHECK_EQ(static_cast<int32_t>(entry->depth), expected.depth);
-                        STELLO_CHECK(entry->bound == expected.bound);
+                        if (expected.bound == search::Bound::Exact) {
+                            STELLO_CHECK_EQ(static_cast<int32_t>(entry->lower), expected.value);
+                            STELLO_CHECK_EQ(static_cast<int32_t>(entry->upper), expected.value);
+                        } else if (expected.bound == search::Bound::Lower) {
+                            STELLO_CHECK_EQ(static_cast<int32_t>(entry->lower), expected.value);
+                            STELLO_CHECK_EQ(static_cast<int32_t>(entry->upper), static_cast<int32_t>(search::TT_SCORE_MAX));
+                        } else {
+                            STELLO_CHECK_EQ(static_cast<int32_t>(entry->lower), static_cast<int32_t>(search::TT_SCORE_MIN));
+                            STELLO_CHECK_EQ(static_cast<int32_t>(entry->upper), expected.value);
+                        }
                         STELLO_CHECK_EQ(static_cast<int32_t>(entry->mv), expected.mv);
                         hits.fetch_add(1, std::memory_order_relaxed);
                     }

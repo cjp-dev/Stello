@@ -171,6 +171,7 @@ AbortResult<int32_t> Kernel<Tier>::end_window(
         return solve_shallow(s, own, opponent, alpha, beta, empties, passed);
     }
 
+    const uint64_t nodes_start = s.nodes;
     STELLO_TRY_VOID_I32(s.count_node());
     const uint64_t legal = legal_moves(own, opponent);
     if (legal == 0) {
@@ -193,27 +194,28 @@ AbortResult<int32_t> Kernel<Tier>::end_window(
     }
 
     int32_t hash_move = -1;
-    const int32_t required_depth = (s.end_mpc_stage > 0) ? s.end_mpc_stage : empties;
-    if (const auto entry = s.endgame_table->get_at_root(own, opponent, 0, s.root_empties)) {
-        if (static_cast<int32_t>(entry->depth) >= required_depth) {
-            const int32_t value = static_cast<int32_t>(entry->value);
-            switch (entry->bound) {
-                case Bound::Exact:
-                    STELLO_RETURN_OK_R(int32_t, value);
-                case Bound::Lower:
-                    if (value > alpha) {
-                        alpha = value;
-                    }
-                    break;
-                default:
-                    if (value < beta) {
-                        beta = value;
-                    }
-                    break;
+    const uint8_t req_sel = (s.end_mpc_stage > 0) ? static_cast<uint8_t>(s.end_mpc_stage) : SEL_EXACT;
+    if (const auto entry = s.endgame_table->get_at_root(own, opponent, ENDGAME_TT_TAG, s.root_empties)) {
+        if (static_cast<int32_t>(entry->depth) >= empties && entry->selectivity >= req_sel) {
+            const int32_t lo = static_cast<int32_t>(entry->lower);
+            const int32_t hi = static_cast<int32_t>(entry->upper);
+            if (lo == hi) {
+                STELLO_RETURN_OK_R(int32_t, lo);
             }
-
+            if (lo > TT_SCORE_MIN && lo >= beta) {
+                STELLO_RETURN_OK_R(int32_t, lo);
+            }
+            if (hi < TT_SCORE_MAX && hi <= alpha) {
+                STELLO_RETURN_OK_R(int32_t, hi);
+            }
+            if (lo > alpha) {
+                alpha = lo;
+            }
+            if (hi < beta) {
+                beta = hi;
+            }
             if (alpha >= beta) {
-                STELLO_RETURN_OK_R(int32_t, value);
+                STELLO_RETURN_OK_R(int32_t, alpha);
             }
         }
         hash_move = static_cast<int32_t>(entry->mv);
@@ -234,15 +236,15 @@ AbortResult<int32_t> Kernel<Tier>::end_window(
     }
 
     if (empties >= END_ETC_MIN_EMPTIES) {
-        const int32_t required_child_depth = (s.end_mpc_stage > 0) ? s.end_mpc_stage : (empties - 1);
         for (const auto& mv : moves) {
             const auto [child_own, child_opponent] = child_pos(own, opponent, mv);
-            if (const auto entry = s.endgame_table->get_at_root(child_own, child_opponent, 0, s.root_empties)) {
-                if (static_cast<int32_t>(entry->depth) >= required_child_depth
-                    && entry->bound != Bound::Lower
-                    && -static_cast<int32_t>(entry->value) >= beta)
+            if (const auto entry = s.endgame_table->get_at_root(child_own, child_opponent, ENDGAME_TT_TAG, s.root_empties)) {
+                if (static_cast<int32_t>(entry->depth) >= empties - 1
+                    && entry->selectivity >= req_sel
+                    && entry->upper < TT_SCORE_MAX
+                    && -static_cast<int32_t>(entry->upper) >= beta)
                 {
-                    STELLO_RETURN_OK_R(int32_t, -static_cast<int32_t>(entry->value));
+                    STELLO_RETURN_OK_R(int32_t, -static_cast<int32_t>(entry->upper));
                 }
             }
         }
@@ -312,9 +314,9 @@ AbortResult<int32_t> Kernel<Tier>::end_window(
         }
     }
 
-    const Bound bound = (best >= beta) ? Bound::Lower : ((best > alpha_start) ? Bound::Exact : Bound::Upper);
-    const int32_t store_depth = (s.end_mpc_stage > 0) ? s.end_mpc_stage : empties;
-    s.endgame_table->store_at_root(own, opponent, 0, store_depth, bound, best, best_move, s.root_empties);
+    s.endgame_table->store_bounds_at_root(
+        own, opponent, ENDGAME_TT_TAG, empties, req_sel, alpha_start, beta, best, best_move, s.root_empties,
+        search_cost(s.nodes - nodes_start));
     STELLO_RETURN_OK_R(int32_t, best);
 }
 
@@ -334,6 +336,7 @@ AbortResult<int32_t> Kernel<Tier>::end_deep(
         return end_local(s, own, opponent, alpha, passed, legal, empties);
     }
 
+    const uint64_t nodes_start = s.nodes;
     STELLO_TRY_VOID_I32(s.count_node());
     if (legal == endgame::bits::LEGAL_UNDEFINED) {
         legal = legal_moves(own, opponent);
@@ -355,15 +358,16 @@ AbortResult<int32_t> Kernel<Tier>::end_deep(
     }
 
     int32_t hash_move = -1;
-    const int32_t required_depth = (s.end_mpc_stage > 0) ? s.end_mpc_stage : empties;
-    if (const auto entry = s.endgame_table->get_at_root(own, opponent, 0, s.root_empties)) {
-        if (static_cast<int32_t>(entry->depth) >= required_depth) {
-            const int32_t value = static_cast<int32_t>(entry->value);
-            if (entry->bound != Bound::Upper && value > alpha) {
-                STELLO_RETURN_OK_R(int32_t, value);
+    const uint8_t req_sel = (s.end_mpc_stage > 0) ? static_cast<uint8_t>(s.end_mpc_stage) : SEL_EXACT;
+    if (const auto entry = s.endgame_table->get_at_root(own, opponent, ENDGAME_TT_TAG, s.root_empties)) {
+        if (static_cast<int32_t>(entry->depth) >= empties && entry->selectivity >= req_sel) {
+            const int32_t lo = static_cast<int32_t>(entry->lower);
+            const int32_t hi = static_cast<int32_t>(entry->upper);
+            if (lo > TT_SCORE_MIN && lo > alpha) {
+                STELLO_RETURN_OK_R(int32_t, lo);
             }
-            if (entry->bound != Bound::Lower && value <= alpha) {
-                STELLO_RETURN_OK_R(int32_t, value);
+            if (hi < TT_SCORE_MAX && hi <= alpha) {
+                STELLO_RETURN_OK_R(int32_t, hi);
             }
         }
         hash_move = static_cast<int32_t>(entry->mv);
@@ -389,27 +393,34 @@ AbortResult<int32_t> Kernel<Tier>::end_deep(
     bool hash_move_searched = false;
 
     if (empties >= END_ETC_MIN_EMPTIES) {
-        const int32_t required_child_depth = (s.end_mpc_stage > 0) ? s.end_mpc_stage : (empties - 1);
         for (const auto& mv : moves) {
             const auto [child_own, child_opponent] = child_pos(own, opponent, mv);
-            s.endgame_table->prefetch(child_own, child_opponent, 0);
+            s.endgame_table->prefetch(child_own, child_opponent, ENDGAME_TT_TAG);
         }
         for (const auto& mv : moves) {
             const auto [child_own, child_opponent] = child_pos(own, opponent, mv);
-            const auto entry = s.endgame_table->get_at_root(child_own, child_opponent, 0, s.root_empties);
-            if (!entry.has_value() || static_cast<int32_t>(entry->depth) < required_child_depth) {
+            const auto entry = s.endgame_table->get_at_root(child_own, child_opponent, ENDGAME_TT_TAG, s.root_empties);
+            if (!entry.has_value()
+                || static_cast<int32_t>(entry->depth) < empties - 1
+                || entry->selectivity < req_sel)
+            {
                 continue;
             }
-            const int32_t value = -static_cast<int32_t>(entry->value);
-            if (entry->bound != Bound::Lower && value > alpha) {
-                STELLO_RETURN_OK_R(int32_t, value);
-            }
-            if (entry->bound != Bound::Upper && value <= alpha) {
-                if (value > best) {
-                    best = value;
-                    best_move = static_cast<int32_t>(mv.square);
+            if (entry->upper < TT_SCORE_MAX) {
+                const int32_t low_bound = -static_cast<int32_t>(entry->upper);
+                if (low_bound > alpha) {
+                    STELLO_RETURN_OK_R(int32_t, low_bound);
                 }
-                done |= uint64_t{1} << mv.square;
+            }
+            if (entry->lower > TT_SCORE_MIN) {
+                const int32_t high_bound = -static_cast<int32_t>(entry->lower);
+                if (high_bound <= alpha) {
+                    if (high_bound > best) {
+                        best = high_bound;
+                        best_move = static_cast<int32_t>(mv.square);
+                    }
+                    done |= uint64_t{1} << mv.square;
+                }
             }
         }
     }
@@ -485,9 +496,9 @@ AbortResult<int32_t> Kernel<Tier>::end_deep(
         }
     }
 
-    const Bound bound = (best > alpha) ? Bound::Lower : Bound::Upper;
-    const int32_t store_depth = (s.end_mpc_stage > 0) ? s.end_mpc_stage : empties;
-    s.endgame_table->store_at_root(own, opponent, 0, store_depth, bound, best, best_move, s.root_empties);
+    s.endgame_table->store_bounds_at_root(
+        own, opponent, ENDGAME_TT_TAG, empties, req_sel, alpha, alpha + 1, best, best_move, s.root_empties,
+        search_cost(s.nodes - nodes_start));
     STELLO_RETURN_OK_R(int32_t, best);
 }
 

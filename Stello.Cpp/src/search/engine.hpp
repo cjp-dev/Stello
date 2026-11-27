@@ -504,16 +504,16 @@ public:
         uint32_t root_empties
     );
 
-    const TranspositionTable& midgame_table() const noexcept { return midgame_table_; }
-    const TranspositionTable& endgame_table() const noexcept { return endgame_table_; }
+    const TranspositionTable& table() const noexcept { return table_; }
+    const TranspositionTable& midgame_table() const noexcept { return table_; }
+    const TranspositionTable& endgame_table() const noexcept { return table_; }
 
 private:
     uint32_t hash_bits_;
     SearchOptions options_;
     std::unique_ptr<ProbCutErrors> probcut_errors_;
     std::unique_ptr<EndProbCutErrors> end_probcut_errors_;
-    TranspositionTable midgame_table_;
-    TranspositionTable endgame_table_;
+    TranspositionTable table_;
     ThreadState main_;
     uint32_t pool_threads_{0};
     std::unique_ptr<ThreadPool<ThreadState>> pool_;
