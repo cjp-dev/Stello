@@ -23,6 +23,10 @@
 #include <optional>
 #include <span>
 
+namespace stello::eval {
+struct PatternState;
+}
+
 namespace stello::search {
 
 inline constexpr int32_t INFINITY_SCORE = 32767;
@@ -38,8 +42,10 @@ inline constexpr int32_t END_ETC_MIN_EMPTIES = 12;
 inline constexpr int32_t END_MPC_STAGES = 6;
 inline constexpr int32_t END_MPC_MIN_EMPTIES = 16;
 inline constexpr int32_t SOLVE_ORDERING_LOOKS = 4;
-inline constexpr int32_t YBWC_MID_MIN_DEPTH = 6;
+inline constexpr int32_t YBWC_MID_MIN_DEPTH = 5;
 inline constexpr int32_t YBWC_END_MIN_EMPTIES = 14;
+inline constexpr size_t SPLIT_MAX_SLAVES = 4;
+inline constexpr size_t SPLIT_MIN_MOVES_TODO = 2;
 
 inline constexpr int32_t ORDER_OFFSET = 38;
 inline constexpr int32_t ORDER_MOBILITY = 35;
@@ -173,6 +179,7 @@ using ProgressCallback = std::function<void(const SearchInfo&)>;
 using IterationDoneCallback = std::function<void(int32_t, int32_t)>;
 
 struct SplitPoint;
+struct SplitEntry;
 struct TaskSetup;
 class Searcher;
 
@@ -277,7 +284,12 @@ public:
     void maybe_report_heartbeat();
     void flush_nodes() noexcept;
 
-    bool may_split() const noexcept { return helpers.has_value() && ybwc; }
+    bool may_split(size_t tail_count = SPLIT_MIN_MOVES_TODO) const noexcept {
+        if (!helpers.has_value() || !ybwc || tail_count < SPLIT_MIN_MOVES_TODO) {
+            return false;
+        }
+        return helpers->pool->has_free_helper(current_split_entry);
+    }
 
     template <typename ChildT>
     STELLO_NOINLINE AbortVoid split(
@@ -289,7 +301,7 @@ public:
         bool is_root = false
     );
 
-    void split_task(const Helpers& h, const SplitPoint* point, const TaskSetup& setup) noexcept;
+    void split_task(const Helpers& h, const SplitPoint* point, const TaskSetup& setup, SplitEntry* entry = nullptr) noexcept;
 
     // Fields readable by search modules and unit tests
     const eval::EvalWeights* pattern{nullptr};
@@ -299,6 +311,8 @@ public:
     const TranspositionTable* endgame_table{nullptr};
     EndgameState* endgame{nullptr};
     MoveOrdering* ordering{nullptr};
+    ThreadState* thread_state{nullptr};
+    Searcher* heartbeat_owner{nullptr};
     ProgressCallback progress;
     IterationDoneCallback* iteration_done{nullptr};
     const StopSignal* stop{nullptr};
@@ -309,6 +323,7 @@ public:
     int32_t end_mpc_stage{0};
     uint32_t root_empties{64};
     const SplitPoint* split_point{nullptr};
+    SplitEntry* current_split_entry{nullptr};
     std::optional<Helpers> helpers;
     std::atomic<uint64_t>* node_sink{nullptr};
     std::atomic<uint64_t>* node_source{nullptr};
@@ -343,7 +358,11 @@ private:
         int32_t alpha,
         int32_t beta,
         int32_t& best,
-        int32_t& best_move
+        int32_t& best_move,
+        const eval::PatternState& eval_state,
+        bool node_is_even,
+        std::span<const uint64_t> tail_flips,
+        std::span<const uint64_t> tail_replies
     );
     STELLO_NOINLINE AbortVoid split_endgame(
         uint64_t own,

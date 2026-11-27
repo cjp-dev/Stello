@@ -1,6 +1,8 @@
 #pragma once
 
 #include "core/board.hpp"
+#include "endgame/bits.hpp"
+#include "eval/patterns.hpp"
 #include "search/abort.hpp"
 #include "search/engine.hpp"
 
@@ -44,10 +46,15 @@ struct MidgameChild {
     int32_t look{0};
     int32_t ply{0};
     int32_t mv{0};
+    const eval::PatternState* parent_eval{nullptr};
+    uint64_t move_flips{0};
+    uint64_t known_legal{endgame::bits::LEGAL_UNDEFINED};
+    bool parent_is_even{false};
 
     AbortResult<int32_t> null_window(Searcher& searcher, int32_t alpha) const;
     AbortResult<int32_t> window(Searcher& searcher, int32_t alpha, int32_t beta, int32_t null_score) const;
     int32_t square() const noexcept { return mv; }
+    int32_t priority() const noexcept { return look; }
 };
 
 /// An endgame child node queued for YBWC split evaluation.
@@ -61,6 +68,7 @@ struct EndgameChild {
     AbortResult<int32_t> null_window(Searcher& searcher, int32_t alpha) const;
     AbortResult<int32_t> window(Searcher& searcher, int32_t alpha, int32_t beta, int32_t null_score) const;
     int32_t square() const noexcept { return mv; }
+    int32_t priority() const noexcept { return empties; }
 };
 
 /// State copied by a worker when branching at a split point.

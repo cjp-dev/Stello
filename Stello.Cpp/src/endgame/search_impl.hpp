@@ -276,7 +276,7 @@ AbortResult<int32_t> Kernel<Tier>::end_window(
     int32_t best_move = -1;
 
     for (size_t i = 0; i < count; ++i) {
-        if (i == 1 && empties > YBWC_END_MIN_EMPTIES && s.may_split()) {
+        if (i >= 1 && empties > YBWC_END_MIN_EMPTIES && s.may_split(count - i)) {
             STELLO_TRY_VOID_I32(split_endgame(s, own, opponent, empties, moves, i, 0, alpha, beta, best, best_move));
             break;
         }
@@ -456,8 +456,9 @@ AbortResult<int32_t> Kernel<Tier>::end_deep(
         }
 
         bool searched = hash_move_searched;
+        uint64_t undone = legal & ~done;
         for (size_t i = 0; i < count; ++i) {
-            if (searched && empties > YBWC_END_MIN_EMPTIES && s.may_split()) {
+            if (searched && empties > YBWC_END_MIN_EMPTIES && s.may_split(static_cast<size_t>(std::popcount(undone)))) {
                 STELLO_TRY_VOID_I32(split_endgame(s, own, opponent, empties, moves, i, done, alpha, alpha + 1, best, best_move));
                 break;
             }
@@ -469,6 +470,7 @@ AbortResult<int32_t> Kernel<Tier>::end_deep(
             }
 
             searched = true;
+            undone &= ~(uint64_t{1} << mv.square);
 
             const auto [child_own, child_opponent] = child_pos(own, opponent, mv);
             STELLO_TRY_ASSIGN_I32(const int32_t sc, end_deep(s, child_own, child_opponent, -alpha - 1, empties - 1, false, mv.replies));

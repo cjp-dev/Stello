@@ -402,12 +402,21 @@ AbortResult<bool> Kernel<Tier>::lazy_smp_midgame(
         for (size_t i = 0; i < lazy; ++i) {
             const int32_t ahead = 1 + static_cast<int32_t>(std::countr_zero(static_cast<uint32_t>(i) + 1U));
             const bool started = scope.try_spawn(
-                [smp_helpers, &stop_flag, &main_look, board_copy, player, order, count, start_best, last_look, ahead](
+                [smp_helpers, &stop_flag, &main_look, board_copy, player, order, count, start_best, last_look, ahead, i](
                     ThreadState& state
                 ) {
                     FlagStop flag(stop_flag);
                     Searcher helper = smp_helpers.searcher(state, flag);
                     auto moves = order;
+                    if (count > 2) {
+                        const size_t rot = (i + 1U) % (count - 1U);
+                        if (rot > 0) {
+                            std::rotate(
+                                moves.begin() + 1,
+                                moves.begin() + 1 + static_cast<std::ptrdiff_t>(rot),
+                                moves.begin() + static_cast<std::ptrdiff_t>(count));
+                        }
+                    }
                     Best local_best = start_best;
                     int32_t look = 0;
 
@@ -429,7 +438,7 @@ AbortResult<bool> Kernel<Tier>::lazy_smp_midgame(
                             if (look == last_look) {
                                 break;
                             }
-                            ++look;
+                            look += (((look + static_cast<int32_t>(i)) & 1) != 0) ? 2 : 1;
                         }
                     } catch (Abort) {
                     }
@@ -450,7 +459,7 @@ AbortResult<bool> Kernel<Tier>::lazy_smp_midgame(
                         if (st.is_err() || look == last_look) {
                             break;
                         }
-                        ++look;
+                        look += (((look + static_cast<int32_t>(i)) & 1) != 0) ? 2 : 1;
                     }
 #endif
                     smp_helpers.finish(helper);
@@ -526,17 +535,22 @@ AbortVoid Kernel<Tier>::search_root(
     size_t improved = 0;
 
     for (size_t i = 0; i < root_moves.size(); ++i) {
-        if (i == 1 && look >= YBWC_MID_MIN_DEPTH && s.may_split()) {
-            const std::span<const int32_t> tail = root_moves.subspan(1);
+        if (i >= 1 && look >= YBWC_MID_MIN_DEPTH && s.may_split(root_moves.size() - i)) {
+            const std::span<const int32_t> tail = root_moves.subspan(i);
             std::array<MidgameChild, MAX_MOVES> children;
             for (size_t c = 0; c < tail.size(); ++c) {
                 const int32_t cmv = tail[c];
+                const uint64_t cf = flips(board.discs(player), board.discs(opp), static_cast<uint32_t>(cmv));
                 children[c] = MidgameChild{
-                    play_unchecked(board, player, static_cast<uint32_t>(cmv)),
+                    board.play_flips(player, static_cast<uint32_t>(cmv), cf),
                     opp,
                     look - 1,
                     1,
                     cmv,
+                    &root_eval,
+                    cf,
+                    endgame::bits::LEGAL_UNDEFINED,
+                    root_is_even,
                 };
             }
 
@@ -546,7 +560,7 @@ AbortVoid Kernel<Tier>::search_root(
             s.report_score = best_score;
             s.report_kind = ScoreKind::Heuristic;
 
-            const int32_t score_after_first = best_score;
+            const int32_t score_before_split = best_score;
             struct CommitMidBest {
                 Best& best;
                 int32_t& best_move;
@@ -558,11 +572,11 @@ AbortVoid Kernel<Tier>::search_root(
                         best = Best{best_move, best_score, ScoreKind::Heuristic, depth};
                     }
                 }
-            } commit{best, best_move, best_score, score_after_first, look + 1};
+            } commit{best, best_move, best_score, score_before_split, look + 1};
 
             STELLO_TRY_VOID_IN_STATUS(
                 s.split(std::span<const MidgameChild>(children.data(), tail.size()), alpha, beta, best_score, best_move, true));
-            if (best_score > score_after_first && best_move != root_moves[0]) {
+            if (best_score > score_before_split && best_move >= 0) {
                 improvements[improved] = best_move;
                 ++improved;
             }
@@ -769,10 +783,12 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc(
     const int32_t alpha_start = alpha;
 
     for (size_t index = 0; index < list.size(); ++index) {
-        if (index == 1 && look >= YBWC_MID_MIN_DEPTH && s.may_split()) {
+        if (index >= 1 && look >= YBWC_MID_MIN_DEPTH && s.may_split(list.size() - index)) {
             STELLO_TRY_VOID_R(
                 ScoreMove,
-                split_midgame(s, board, player, look, ply, list.subspan(1), alpha, beta, best, best_move));
+                split_midgame(
+                    s, board, player, look, ply, list.subspan(index), alpha, beta, best, best_move,
+                    eval_state, node_is_even, {}, {}));
             if (best >= beta) {
                 bound = Bound::Lower;
             } else if (best > alpha_start) {
@@ -999,10 +1015,14 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc_deep(
     const int32_t alpha_start = alpha;
 
     for (size_t index = 0; index < move_count; ++index) {
-        if (index == 1 && look >= YBWC_MID_MIN_DEPTH && s.may_split()) {
+        if (index >= 1 && look >= YBWC_MID_MIN_DEPTH && s.may_split(move_count - index)) {
             STELLO_TRY_VOID_R(
                 ScoreMove,
-                split_midgame(s, board, player, look, ply, list.subspan(1), alpha, beta, best, best_move));
+                split_midgame(
+                    s, board, player, look, ply, list.subspan(index), alpha, beta, best, best_move,
+                    eval_state, node_is_even,
+                    std::span<const uint64_t>(sorted_flips.data() + index, move_count - index),
+                    std::span<const uint64_t>(sorted_replies.data() + index, move_count - index)));
             if (best >= beta) {
                 bound = Bound::Lower;
             } else if (best > alpha_start) {
@@ -1151,18 +1171,34 @@ AbortVoid Kernel<Tier>::split_midgame(
     int32_t alpha,
     int32_t beta,
     int32_t& best,
-    int32_t& best_move
+    int32_t& best_move,
+    const eval::PatternState& eval_state,
+    bool node_is_even,
+    std::span<const uint64_t> tail_flips,
+    std::span<const uint64_t> tail_replies
 ) {
     const Player opp = opponent(player);
+    const uint64_t own = board.discs(player);
+    const uint64_t opp_discs = board.discs(opp);
     std::array<MidgameChild, MAX_MOVES> children;
     for (size_t c = 0; c < tail.size(); ++c) {
         const int32_t child_mv = tail[c];
+        const uint64_t cf = (!tail_flips.empty() && tail_flips[c] != 0)
+            ? tail_flips[c]
+            : flips(own, opp_discs, static_cast<uint32_t>(child_mv));
+        const uint64_t creplies = !tail_replies.empty()
+            ? tail_replies[c]
+            : endgame::bits::LEGAL_UNDEFINED;
         children[c] = MidgameChild{
-            play_unchecked(board, player, static_cast<uint32_t>(child_mv)),
+            board.play_flips(player, static_cast<uint32_t>(child_mv), cf),
             opp,
             look - 1,
             ply + 1,
             child_mv,
+            &eval_state,
+            cf,
+            creplies,
+            node_is_even,
         };
     }
     return split(s, std::span<const MidgameChild>(children.data(), tail.size()), alpha, beta, best, best_move);
@@ -1298,8 +1334,8 @@ AbortResult<ScoreMove> Kernel<Tier>::solve_root(
     size_t improved = 0;
 
     for (size_t i = 0; i < root_moves.size(); ++i) {
-        if (i == 1 && empties > YBWC_END_MIN_EMPTIES && s.may_split()) {
-            const std::span<const int32_t> tail = root_moves.subspan(1);
+        if (i >= 1 && empties > YBWC_END_MIN_EMPTIES && s.may_split(root_moves.size() - i)) {
+            const std::span<const int32_t> tail = root_moves.subspan(i);
             std::array<EndgameChild, MAX_MOVES> children;
             for (size_t c = 0; c < tail.size(); ++c) {
                 const int32_t cmv = tail[c];
@@ -1320,7 +1356,7 @@ AbortResult<ScoreMove> Kernel<Tier>::solve_root(
             s.report_score = (best_move >= 0) ? (best_score * report_scale) : best.score;
             s.report_kind = (best_move >= 0) ? kind : best.kind;
 
-            const int32_t score_after_first = best_score;
+            const int32_t score_before_split = best_score;
             struct CommitSolveBest {
                 Best& best;
                 ScoreKind kind;
@@ -1333,12 +1369,12 @@ AbortResult<ScoreMove> Kernel<Tier>::solve_root(
                         detail::midgame::apply_solve_best(kind, empties, best_move, best_score, best);
                     }
                 }
-            } commit{best, kind, empties, best_move, best_score, score_after_first};
+            } commit{best, kind, empties, best_move, best_score, score_before_split};
 
             STELLO_TRY_VOID_R(
                 ScoreMove,
                 s.split(std::span<const EndgameChild>(children.data(), tail.size()), alpha, beta, best_score, best_move, true));
-            if (best_score > score_after_first && best_move != root_moves[0]) {
+            if (best_score > score_before_split && best_move >= 0) {
                 improvements[improved] = best_move;
                 ++improved;
             }

@@ -28,9 +28,10 @@ AbortResult<int32_t> EndgameChild::window(
     STELLO_TIER_DISPATCH(child_window, searcher, *this, alpha, beta, null_score);
 }
 
-void Searcher::split_task(const Helpers& h, const SplitPoint* point, const TaskSetup& setup) noexcept {
+void Searcher::split_task(const Helpers& h, const SplitPoint* point, const TaskSetup& setup, SplitEntry* entry) noexcept {
     helpers = h;
     split_point = point;
+    current_split_entry = entry;
     hash_get_height = setup.hash_get_height;
     hash_put_height = setup.hash_put_height;
     in_probcut = setup.in_probcut;

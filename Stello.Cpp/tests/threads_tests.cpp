@@ -785,4 +785,128 @@ STELLO_TEST(split_point_flags_pool_rollback_tt_wrap_and_cpu_detect_are_safe) {
     }
 }
 
+STELLO_TEST(phase3_helpful_master_transitions_and_rapid_stop_stress) {
+    // Helpful Master + deep nested splits at 16t with pool thread-count transitions and 1t parity afterward.
+    {
+        const auto ffo = load_bench_file("ffo-40-59.txt");
+        search::SearchEngine single(19);
+        search::SearchEngine engine(19);
+
+        for (const auto& pos : ffo) {
+            if (pos.id != "40" && pos.id != "42" && pos.id != "44") {
+                continue;
+            }
+            engine.clear_hash();
+            const auto outcome = engine.search(
+                pos.board, pos.player, with_threads(SearchLimits::solve(), 16));
+            STELLO_CHECK_MSG(outcome.ok, pos.id + " 16t");
+            STELLO_CHECK(pos.score.has_value());
+            STELLO_CHECK_EQ_MSG(outcome.result.score, *pos.score, pos.id + " 16t");
+            STELLO_CHECK(outcome.result.kind == ScoreKind::Exact);
+        }
+
+        // Random 20-22 empty solves at 16t exercising dynamic SplitNode + Helpful Master work-stealing.
+        uint64_t seed = 0x9E37'79B9'7F4A'7C15ULL;
+        uint32_t checked = 0;
+        while (checked < 6) {
+            const auto pos = random_position(seed, 20U + (checked % 3U));
+            if (!pos.has_value()) {
+                continue;
+            }
+            single.clear_hash();
+            engine.clear_hash();
+            const SearchResult expected = single.search_simple(pos->first, pos->second, SearchLimits::solve());
+            const auto outcome = engine.search(pos->first, pos->second, with_threads(SearchLimits::solve(), 16));
+            STELLO_CHECK(outcome.ok);
+            STELLO_CHECK_EQ(outcome.result.score, expected.score);
+            STELLO_CHECK(outcome.result.kind == expected.kind);
+            ++checked;
+        }
+
+        // Pool transitions 2 -> 8 -> 16 -> 1 -> 8 followed by exact 1t parity check.
+        const auto midgame = load_bench_file("midgame.txt");
+        for (const uint32_t tcount : {2U, 8U, 16U, 1U, 8U}) {
+            engine.clear_hash();
+            const SearchResult res = engine.search_simple(
+                midgame[0].board, midgame[0].player, with_threads(SearchLimits::fixed_depth(9), tcount));
+            STELLO_CHECK_EQ(res.depth, 9);
+            STELLO_CHECK(res.mv.square.has_value());
+            STELLO_CHECK((midgame[0].board.legal_moves(midgame[0].player) & res.mv.square->bit()) != 0ULL);
+        }
+
+        engine.clear_hash();
+        const SearchResult after = engine.search_simple(
+            midgame[3].board, midgame[3].player, SearchLimits::fixed_depth(10));
+        const SearchResult fresh = search::SearchEngine(19).search_simple(
+            midgame[3].board, midgame[3].player, SearchLimits::fixed_depth(10));
+        STELLO_CHECK(after.mv == fresh.mv);
+        STELLO_CHECK_EQ(after.score, fresh.score);
+        STELLO_CHECK_EQ(after.nodes, fresh.nodes);
+        STELLO_CHECK_EQ(after.evaluations, fresh.evaluations);
+    }
+
+    // Rapid repeated Move Now / Cancel stress at 16t on FFO #49.
+    {
+        const auto ffo = load_bench_file("ffo-40-59.txt");
+        const auto* ffo49 = [&]() -> const cli::BenchPosition* {
+            for (const auto& p : ffo) {
+                if (p.id == "49") {
+                    return &p;
+                }
+            }
+            return nullptr;
+        }();
+        STELLO_CHECK(ffo49 != nullptr);
+
+        search::SearchEngine engine(18);
+        (void)engine.search_simple(Board::initial(), Player::Black, with_threads(SearchLimits::fixed_depth(4), 16));
+
+        const int64_t max_lag_ms = STELLO_TESTS_ASAN ? 500 : 200;
+        for (int iter = 0; iter < 6; ++iter) {
+            const bool move_now = (iter % 2 == 0);
+            const int delay_ms = 15 + (iter * 5);
+            search::SearchSignals signals;
+            std::chrono::steady_clock::time_point signalled{};
+            std::thread setter([&]() {
+                std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
+                signalled = std::chrono::steady_clock::now();
+                if (move_now) {
+                    signals.move_now();
+                } else {
+                    signals.cancel();
+                }
+            });
+
+            engine.clear_hash();
+            const auto outcome = engine.search(
+                ffo49->board, ffo49->player, with_threads(SearchLimits::solve(), 16), {}, signals);
+            const auto returned = std::chrono::steady_clock::now();
+            setter.join();
+            const auto lag = std::chrono::duration_cast<std::chrono::milliseconds>(returned - signalled);
+            STELLO_CHECK_MSG(lag.count() < max_lag_ms, "16t lag=" + std::to_string(lag.count()) + "ms");
+            if (move_now) {
+                STELLO_CHECK(outcome.ok);
+                STELLO_CHECK(outcome.result.mv.square.has_value());
+                STELLO_CHECK((ffo49->board.legal_moves(ffo49->player) & outcome.result.mv.square->bit()) != 0ULL);
+            } else {
+                STELLO_CHECK(!outcome.ok);
+                STELLO_CHECK(outcome.error == search::SearchError::Cancelled);
+            }
+        }
+    }
+
+    // High-frequency nested SplitNode lifetime drain stress at 16t (shallow midgame & solves).
+    {
+        const auto midgame = load_bench_file("midgame.txt");
+        search::SearchEngine engine(16);
+        for (size_t i = 0; i < 20; ++i) {
+            const SearchResult res = engine.search_simple(
+                midgame[i].board, midgame[i].player, with_threads(SearchLimits::fixed_depth(10), 16));
+            STELLO_CHECK_EQ(res.depth, 10);
+            STELLO_CHECK(res.mv.square.has_value());
+            STELLO_CHECK((midgame[i].board.legal_moves(midgame[i].player) & res.mv.square->bit()) != 0ULL);
+        }
+    }
+}
+
 } // namespace stello::tests

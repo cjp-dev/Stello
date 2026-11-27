@@ -266,7 +266,11 @@ struct Kernel {
         int32_t alpha,
         int32_t beta,
         int32_t& best,
-        int32_t& best_move
+        int32_t& best_move,
+        const eval::PatternState& eval_state,
+        bool node_is_even,
+        std::span<const uint64_t> tail_flips,
+        std::span<const uint64_t> tail_replies
     );
     static AbortResult<std::optional<int32_t>> try_probcut(
         Searcher& s,

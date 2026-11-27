@@ -398,3 +398,93 @@ Evaluated Priorities 1–4 from [Possible remaining Stello speed optimizations.m
     - `llvm-objdump -d` `zmm` count: `0` across `windows-ffi\stello_engine.dll`, `clang-release\{stello-cpp.exe, stello_engine.dll}`, `msvc-release\stello-cpp.exe`, and `clang-native\stello-cpp.exe`.
     - WASM Node tests (`engine.test.mjs`, `engine-mt.test.mjs`): `20/20 passed, 0 failed`.
     - `.NET` Release build (`0 Warning(s), 0 Error(s)`): `Stello.Engine.Tests` `521 passed, 0 failed`, `Stello.Net.Tests` `127 passed, 0 failed`, `Egaroucid.Engine.Tests` `118 passed, 0 failed, 8 skipped` (`TaggedV30_*`).
+
+---
+
+## Phase 3: Threads (Gate P3 Complete)
+
+### 1. Stage 0 — Preserved Phase 2 Reference & Pre-Phase-3 Baselines
+
+- **Preserved reference engine:** `scratch/p2_final_ref/stello_engine_p2.dll` (built from Phase 2 + addendum commit `5e9dc80`), SHA-256 `7C725B01127453D17B3AC2EC8FCA80A15FE51B2357C025B02CA511C9C4B78A81` (for `engine=stello-lib` Gate P3 matches).
+- **Phase 2 (`5e9dc80`) MT baselines (`clang-release`, `hash-bits=19`, `v4`):**
+  - `FFO #40–49`:
+    - `1t`: `1,070,469,669` nodes in `14.16 s` (`75.62M` nps)
+    - `8t` (x3): `1,155.8M / 1,218.3M / 1,171.1M` (mean `1,181.7M`, `+10.4 %`), `2.522 / 2.666 / 2.566 s` (**mean `2.585 s`**, `5.48×`, `457.2M` nps; `#48` = `287.4M` in `0.687 s`)
+    - `16t` (x3): `1,302.4M / 1,291.5M / 1,323.9M` (mean `1,305.9M`, `+22.0 %`), `2.080 / 2.071 / 2.108 s` (**mean `2.086 s`**, `6.79×`, `625.9M` nps; `#48` = `315.2M` in `0.580 s`)
+  - `FFO #50–59`:
+    - `8t`: `39,053,379,656` nodes in **`92.37 s`** (`422.82M` nps)
+    - `16t`: `42,414,159,067` nodes in **`74.40 s`** (`570.12M` nps)
+  - `mid-d16` (`--passes 3`):
+    - `8t` (x3): `1.403 / 1.427 / 1.417 s` (mean **`1.416 s`**, best `84.12M` nodes, `59.42M` nps)
+    - `16t` (x3): `1.370 / 1.333 / 1.305 s` (mean **`1.336 s`**, best `101.65M` nodes, `76.07M` nps)
+
+### 2. Stage 1 — Fixed the 4 Verified Threading Bottlenecks
+
+1. **`may_split()` idle + move-count guard** across all 6 split sites (`search_root`, `search_inc`, `search_inc_deep`, `solve_root`, `end_window`, `end_deep` via `std::popcount(legal & ~done)`) eliminating heap `ScopeTasks` allocation when workers are busy or `< 2` moves remain.
+2. **Incremental `PatternState` in `MidgameChild`:** passed `const eval::PatternState* parent_eval`, `uint64_t move_flips`, `uint64_t known_legal`, and `bool parent_is_even`, computing `advance_eval_state` lazily inside `child_null_window` / `child_window` instead of from-scratch `eval_state_of_node`.
+3. **Removed 1,024-node shared `node_sink->fetch_add` contention:** flushed thread-local `nodes` to `node_sink` at `>= 65,536` nodes in `check_abort()` + exact flush in `Helpers::finish()`, and cache-line-aligned (`alignas(64)`) `nodes`/`evaluations` counters in `SearchEngine::search()`.
+4. **Decoupled nested locks in `pool.hpp`:** moved `idle.fetch_add` and `scope->finish()` outside `queue_mutex`, and incremented `tasks_->running` prior to locking `queue_mutex` with RAII rollback.
+- **Stage 1 measured deltas:** `FFO #40–49` `8t` improved `2.585 → 2.488 s` (`+3.9 %`, `1,159.0M` nodes, `465.7M` nps); `16t` improved `2.086 → 2.032 s` (`+2.7 %`, `1,280.4M` nodes, `630.2M` nps); `57/57` `clang-release` & `clang-sanitized` green.
+
+### 3. Stage 2 — Dynamic `SplitNode`, Helpful Master, & Wide-Window Wave-Cut Fix
+
+- Replaced per-wave `std::make_shared<ScopeTasks>` / `std::make_unique` allocations with stack-allocated `SplitNode` / `WaveSplitNode` (`SplitEntry`) and **Helpful Master** work-stealing in [pool.hpp](../Stello.Cpp/src/search/pool.hpp) and [ybwc_impl.hpp](../Stello.Cpp/src/search/ybwc_impl.hpp).
+- **Diagnosis & resolution of initial `#48` node explosion (`287M → 741M`):**
+  - Initial single-pass `SplitNode` did not cut siblings on wide-window (`beta - alpha > 1`, e.g. `#48` Exact `[0, +65]` / `24`-empty `end_window`) fail-highs (`probe > alpha && probe < beta`) and allowed parallel `child_window` re-searches on stale `alpha`.
+  - Split `Kernel<Tier>::split()` cleanly into:
+    - **Fast path (`beta - alpha == 1`, NWS):** zero-wave single-pass stack `SplitNode` calling `child_null_window`, cutting immediately on `score > alpha`.
+    - **Wide-window path (`beta - alpha > 1`):** `WaveSplitNode` runs null-window probes, cuts siblings immediately on any `score > window_alpha`, sorts collected fail-highs descending, re-probes/re-searches sequentially on the master (freeing all workers to split inside the PV subtree), and launches any remaining moves in a tightened-`alpha` wave.
+  - **Pool/lifetime fixes:** moved `active_helpers.fetch_sub` + `wait_cv.notify_all()` inside `wait_mutex` with an unconditional `wait_mutex` drain in `wait_split` whenever `ever_helped == true` (preventing stack `SplitNode` UAF); added `unclaimed > joining` with RAII `JoinGuard` to eliminate empty helper joins; restricted Helpful Master `may_split()` checks to ancestors (`has_waiting_ancestor()`); tie-broke equal-priority splits by lowest `active_helpers`; and enabled mid-loop splitting (`i >= 1`) across all split sites (`end_window`, `solve_root`, `search_root`, `search_inc`, `search_inc_deep`).
+
+### 4. Stage 3 — Tuning & Investigations (`3a`–`3d`)
+
+- **3a. Split criteria sweep (FFO `#40–49` & `#50–59` + `mid-d16`, `8t` & `16t`):**
+  - `SPLIT_MAX_SLAVES`: swept `{2, 3, 4, 6, 8, 64}` (`end=14`, `todo=2`, uncapped root, ancestor waiting). `sl=4` won `16t` across both `#40–49` (`1.903 s` mean, `7.44×`, `+19.3 %` nodes vs `sl=6` `1.916 s` / `+22.6 %`) and `#50–59` (`65.0 s` vs `66.1 s`) while also beating `sl=6` on `mid-d16` (`1.434 / 1.482 s` vs `1.452 / 1.548 s` on 1-pass), and delivering `2.242 s` (`+9.5 %` nodes) @ `8t` `#40–49` and `82.3 s` @ `8t` `#50–59`.
+  - `split_root_cap=on` regressed `#40–49`; `SPLIT_MIN_MOVES_TODO ∈ {2, 3, 4}` favored `2`; `YBWC_END_MIN_EMPTIES ∈ {13, 14, 15, 16}` confirmed **`14`**.
+  - Locked `SPLIT_MAX_SLAVES = 4`, `SPLIT_MIN_MOVES_TODO = 2`, `YBWC_END_MIN_EMPTIES = 14` in [engine.hpp](../Stello.Cpp/src/search/engine.hpp) and removed all temporary `--split-*` CLI flags.
+- **3b. Windows physical-core CPU affinity spike — REVERTED:**
+  - Prototyped and cleanly tested interleaved `A/B/C` (`PIN=0` unpinned, `PIN=1` `SetThreadGroupAffinity` + staggered core base, `PIN=2` `SetThreadIdealProcessorEx`) at `8t`:
+    - `FFO #40–49` (3 runs): `PIN=0` `2.377 s` (`516.3M` nps), `PIN=1` `2.436 s` (`529.1M` nps), `PIN=2` `2.372 s` (`512.7M` nps).
+    - `mid-d16` (3 runs, 1-pass): `PIN=0` `1.461 s` (`64.4M`), `PIN=1` `1.485 s` (`65.3M`), `PIN=2` `1.408 s` (`65.1M`).
+    - `FFO #50–59`: `PIN=0` `83.9 s` (`477.1M`), `PIN=1` `79.5 s` (`501.6M`, `+5.5 %`), `PIN=2` `82.6 s` (`477.8M`).
+  - Neither `PIN=2` (`+0.2 %` `#40–49`, `+1.6 %` `#50–59`) nor `PIN=1` (`−2.4 %` `#40–49`, `−1.6 %` `mid-d16`) met the keep thresholds; reverted cleanly.
+- **3c. Midgame split threshold & Stockfish-style Lazy SMP diversification — KEPT:**
+  - `LAZY_MODE=-1` (pure YBWC, 0 lazy helpers) regressed `mid-d16` to `1.795 s` (`8t`) / `1.888 s` (`16t`) at `~40M` nps; `(workers + 2) / 4` clearly outperformed `1` and `workers / 2`.
+  - Lowering `YBWC_MID_MIN_DEPTH` from `6` to `5` (`mid-d16` `p3` `1.301 → 1.268 s` @ `8t`, `1.285 → 1.209 s` @ `16t`) combined with Stockfish-style diversification (`DIV=3`: rotating `moves[1..]` by `(i + 1) % (count - 1)` per helper + staggered `+1/+2` skip-depth stride) beat `MIN_DEPTH=6` across `mid-d16` (`1.268 / 1.209 s` vs `1.292 / 1.229 s`, `-7 %` `16t` nodes `95.7M`) and `mid-d14` (`0.576 / 0.562 s` vs `0.582 / 0.573 s`).
+- **3d. ABDADA spike — SKIPPED BY TRIGGER RULE:**
+  - `16t FFO #40–49` reached `7.44×` scaling (`1.903 s` during Step 2, `7.23–7.34×` final) with `+19.3–22.4 %` nodes and `FFO #50–59` `16t` gained `+8.1–14.5 %`, avoiding any throwaway TT slot changes right before Phase 4's Unified TT rewrite.
+
+### 5. Stage 4 — Final Phase 3 Benchmarks & Full Verification Matrix
+
+- **Native final idle-CPU benchmarks (`clang-release`, `hash-bits=19`, `v4`):**
+
+| Benchmark | Threads | `Stello 5.0` | `Phase 2` (`5e9dc80`) | **`Phase 3`** | Phase 3 vs Phase 2 | Phase 3 vs `v5.0` | Scaling vs `Phase 3 1t` |
+|---|---:|---|---|---|---|---|---|
+| `FFO #40–49` | 1t | `16.664 s` (`64.24M`) | `14.16 s` (`75.62M`) | **`13.94 s` (`76.81M`)** | `+1.6 %` (nodes `1,070.5M` exact) | `+19.5 %` | `1.00×` |
+| `FFO #40–49` (3× med / mean) | 8t | `3.114 s` (`375.96M`) | `2.566 / 2.585 s` (`457.2M`) | **`2.284 / 2.437 s` (`512.0M` mean)** | **`+12.3 %` med / `+6.1 %` mean** | **`+36.3 %` med** | `6.10×` med / `5.72×` mean (`+10.1–16.3 %` nodes) |
+| `FFO #40–49` (3× mean) | 16t | `2.629 s` (`478.91M`) | `2.086 s` (`625.9M`) | **`1.928 s` (`679.7M` mean)** | **`+8.2 %`** | **`+36.4 %`** | **`7.23×`** (`1,310.1M`, `+22.4 %` nodes) |
+| `FFO #50–59` | 8t | `105.095 s` (`357.55M`) | `92.37 s` (`422.82M`) | **`79.29 s` (`480.43M`)** | **`+16.5 %`** | **`+32.5 %`** | — (`38,093.7M` nodes) |
+| `FFO #50–59` | 16t | `93.144 s` (`461.14M`) | `74.40 s` (`570.12M`) | **`68.83 s` (`634.31M`)** | **`+8.1 %`** | **`+35.3 %`** | — (`43,654.9M` nodes) |
+| `mid-d16` (`p3`) | 1t | `4.549 s` (`13.31M`) | `4.369 s` (`13.86M`) | **`4.332 s` (`13.98M`)** | `+0.9 %` (`60.57M` exact) | `+5.0 %` | `1.00×` |
+| `mid-d16` (`p3`, 3× mean) | 8t | `1.526 s` (`54.95M`) | `1.416 s` (`59.42M`) | **`1.221 s` (`69.54M`)** | **`+16.0 %`** | **`+25.0 %`** | **`3.55×`** (`84.89M`, `+40.2 %` nodes) |
+| `mid-d16` (`p3`, 3× mean) | 16t | `1.426 s` (`69.50M`) | `1.336 s` (`76.07M`) | **`1.216 s` (`83.61M`)** | **`+9.9 %`** | **`+17.3 %`** | **`3.56×`** (`101.60M`, `+67.8 %` nodes) |
+
+- **WASM ST/MT final sizes & `wasm_bench.mjs` (`node v24.19.0`):**
+  - `engine/stello_wasm_bg.wasm`: `9,177,061` raw / `8,984,952` gzip / `8,963,114` B brotli
+  - `engine-mt/stello_wasm_bg.wasm`: `9,208,981` raw / `8,997,728` gzip / `8,974,001` B brotli
+  - `st`: `mid-d10` `328.3 / 332.1 ms` (`9.39M`), `mid-d12` `862.4 / 871.2 ms` (`9.42M`), `ffo-40-44` `2997.9 / 3012.1 ms` (`40.71M`)
+  - `mt1`: `mid-d10` `330.7 / 336.2 ms` (`9.33M`), `mid-d12` `873.1 / 882.8 ms` (`9.30M`), `ffo-40-44` `2902.4 / 2915.0 ms` (`42.05M`)
+  - **`mt4`:** `mid-d10` **`180.1 / 188.0 ms`** (`22.72M`, **`+48.7 %` vs P2 `267.8 ms`**, **`+61.6 %` vs v5.0**); `mid-d12` **`424.1 / 447.1 ms`** (`25.69M`, **`+37.6 %` vs P2 `583.7 ms`**, **`+53.1 %` vs v5.0**); `ffo-40-44` **`933.0 / 949.8 ms`** (`151.17M`, **`+13.7 %` vs P2 `1060.4 ms`**)!
+- **Verification matrix (all run after final edit):**
+  - **All 5 C++ presets (`clang-release`, `clang-native`, `msvc-release`, `msvc-native`, `clang-sanitized` ASan+UBSan):** `0` warnings, `3/3` ctests passed each (including `58/58` `stello_tests` with new `phase3_helpful_master_transitions_and_rapid_stop_stress`).
+  - **`windows-ffi` & `zmm` audit:** `0` warnings; `0` `zmm` instructions across `windows-ffi\stello_engine.dll`, `clang-release\{stello-cpp.exe, stello_engine.dll}`, `msvc-release\stello-cpp.exe`, `clang-native\stello-cpp.exe`.
+  - **WASM Node tests (`engine.test.mjs`, `engine-mt.test.mjs`):** `20/20 passed, 0 failed` (`3.69 s`).
+  - **`.NET` Release build & tests:** `0 Warning(s), 0 Error(s)`; `Stello.Engine.Tests` `521/521`, `Stello.Net.Tests` `127/127`, `Egaroucid.Engine.Tests` `118 passed, 0 failed, 8 skipped` (`TaggedV30_*`).
+  - **`.NET` FFI `1t` `--compare Plans\benchmark-results\v5.0-ref\*.json`:** `100/100 identical` on `mid-d12` (`0.578` vs `0.631 s`, `+9.1 %`), `100/100` on `mid-d14` (`1.620` vs `1.780 s`, `+9.9 %`), `100/100` on `mid-d16` (`4.330` vs `4.549 s`, `+5.1 %`), `10/10` on `ffo-40-49` (`14.2` vs `16.7 s`, `+17.8 %`).
+
+### 6. Gate P3 Verification Matches (`stello` Phase 3 vs `Phase2` `stello_engine_p2.dll`, `threads=8`, `--workers 1`, `hash-bits=19`, `book=off`)
+
+| Side B vs Side A (`Phase2`) | Time / Move | Starts (Games) | Score (95 % CI) | W / D / L | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | NPS (A / B) | Max Time (A / B) | Wall Time |
+|---|---:|---:|---|---|---|---|---|---|---|---|---|---|
+| `Phase3` (`Match 1`) | 500 ms | 587 (`1,174`) | **53.2 %** (`51.3–55.1 %`) | `+462 =325 −387` | **+22** (`+9 to +36`) | **99.9 %** | `+0.2 ± 0.1` | `23.97 / 24.32` | `25.7 / 26.0` | `166.48M / 207.46M` (**+24.6 %**) | `512 / 515 ms` | [3h 18m](benchmark-results/match_p3_v6_vs_p2_500ms_8t.md) |
+| `Phase3` (`Match 2`) | 2,000 ms | 587 (`1,174`) | **51.1 %** (`49.4–52.9 %`) | `+425 =351 −398` | **+8** (`−4 to +20`) | **90.4 %** | `+0.1 ± 0.1` | `27.04 / 27.38` | `27.8 / 28.0` | `192.47M / 242.45M` (**+26.0 %**) | `2001 / 2001 ms` | [12h 02m](benchmark-results/match_p3_v6_vs_p2_2000ms_8t.md) |

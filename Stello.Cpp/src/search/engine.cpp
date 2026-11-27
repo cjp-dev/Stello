@@ -198,19 +198,23 @@ SearchOutcome SearchEngine::search(
         options_, probcut_errors_.get(), end_probcut_errors_.get(), midgame_table_, endgame_table_, clock_, root_empties);
     pool_->for_each_state([](ThreadState& state) { state.ordering.clear_responses(); });
 
-    std::atomic<uint64_t> nodes{0};
-    std::atomic<uint64_t> evaluations{0};
-    const Helpers search_helpers{pool_.get(), context, static_cast<size_t>(threads - 1), &nodes, &evaluations};
+    struct alignas(64) AlignedCounter {
+        std::atomic<uint64_t> value{0};
+    };
+    AlignedCounter nodes{};
+    AlignedCounter evaluations{};
+    const Helpers search_helpers{pool_.get(), context, static_cast<size_t>(threads - 1), &nodes.value, &evaluations.value};
 
     Searcher s(context, main_, stop);
     s.progress = std::move(progress);
     s.iteration_done = iteration_done_ ? &iteration_done_ : nullptr;
+    s.heartbeat_owner = &s;
     s.helpers = search_helpers;
-    s.node_source = &nodes;
+    s.node_source = &nodes.value;
     SearchOutcome outcome = s.run(board, player, limits, only_moves);
     if (outcome.ok) {
-        outcome.result.nodes += nodes.load(std::memory_order_relaxed);
-        outcome.result.evaluations += evaluations.load(std::memory_order_relaxed);
+        outcome.result.nodes += nodes.value.load(std::memory_order_relaxed);
+        outcome.result.evaluations += evaluations.value.load(std::memory_order_relaxed);
     }
     return outcome;
 }
@@ -229,6 +233,7 @@ Searcher::Searcher(const SearchContext& context, ThreadState& thread, const Stop
       endgame_table(context.endgame_table),
       endgame(&thread.endgame),
       ordering(&thread.ordering),
+      thread_state(&thread),
       stop(&stop_signal),
       clock(context.clock),
       start(context.clock()),
@@ -331,9 +336,28 @@ AbortVoid Searcher::split_midgame(
     int32_t alpha,
     int32_t beta,
     int32_t& best,
-    int32_t& best_move
+    int32_t& best_move,
+    const eval::PatternState& eval_state,
+    bool node_is_even,
+    std::span<const uint64_t> tail_flips,
+    std::span<const uint64_t> tail_replies
 ) {
-    STELLO_TIER_DISPATCH(split_midgame, *this, board, player, look, ply, tail, alpha, beta, best, best_move);
+    STELLO_TIER_DISPATCH(
+        split_midgame,
+        *this,
+        board,
+        player,
+        look,
+        ply,
+        tail,
+        alpha,
+        beta,
+        best,
+        best_move,
+        eval_state,
+        node_is_even,
+        tail_flips,
+        tail_replies);
 }
 
 AbortResult<std::optional<int32_t>> Searcher::try_probcut(
@@ -394,8 +418,22 @@ void Searcher::maybe_report_heartbeat() {
 }
 
 STELLO_NOINLINE AbortVoid Searcher::check_abort() {
-    flush_nodes();
-    maybe_report_heartbeat();
+    if (node_sink != nullptr && (nodes - flushed_nodes) >= 65536ULL) {
+        flush_nodes();
+    }
+    if (heartbeat_owner != nullptr) {
+        heartbeat_owner->maybe_report_heartbeat();
+        if (heartbeat_owner != this) {
+            if (heartbeat_owner->stop->is_cancelled()) {
+                STELLO_RETURN_ABORT_IN_STATUS(Abort::Cancelled);
+            }
+            if (heartbeat_owner->stop->is_move_now() || heartbeat_owner->elapsed_ms() >= heartbeat_owner->hard_limit_ms) {
+                STELLO_RETURN_ABORT_IN_STATUS(Abort::Stop);
+            }
+        }
+    } else {
+        maybe_report_heartbeat();
+    }
 
     if (stop->is_cancelled()) {
         STELLO_RETURN_ABORT_IN_STATUS(Abort::Cancelled);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -16,6 +17,41 @@
 #include <vector>
 
 namespace stello::search {
+
+/// Dynamic YBWC split node entry registered with the thread pool for zero-allocation work-stealing.
+struct SplitEntry {
+    SplitEntry* parent{nullptr};
+    int32_t priority{0};
+    size_t max_slaves{64};
+    std::atomic<size_t> unclaimed{0};
+    std::atomic<size_t> joining{0};
+    std::atomic<size_t> active_helpers{0};
+    std::atomic<bool> open{false};
+    std::atomic<bool> ever_helped{false};
+    std::atomic<bool> master_waiting{false};
+    std::atomic<bool> wake_pending{false};
+    std::mutex wait_mutex;
+    std::condition_variable wait_cv;
+    void (*execute)(SplitEntry* self, void* state_ptr, void* host_ctx) noexcept{nullptr};
+
+    bool is_descendant_of(const SplitEntry* ancestor) const noexcept {
+        for (const SplitEntry* cur = this; cur != nullptr; cur = cur->parent) {
+            if (cur == ancestor) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool has_waiting_ancestor() const noexcept {
+        for (const SplitEntry* cur = this; cur != nullptr; cur = cur->parent) {
+            if (cur->master_waiting.load(std::memory_order_relaxed)) {
+                return true;
+            }
+        }
+        return false;
+    }
+};
 
 /// Starts a thread that runs `body` (`index` is the worker's number from 0).
 /// Returns true if the thread started, false if it could not start.
@@ -126,13 +162,46 @@ struct PoolShared {
 
     std::mutex queue_mutex;
     std::deque<Job> jobs;
+    std::vector<SplitEntry*> open_splits;
     bool running{true};
     size_t alive{0};
 
     std::condition_variable work;
     std::condition_variable changed;
     std::atomic<size_t> idle{0};
+    std::atomic<size_t> waiting_masters{0};
     std::vector<std::unique_ptr<StateSlot>> states;
+
+    SplitEntry* pick_best_split_locked(const SplitEntry* ancestor) noexcept {
+        SplitEntry* best = nullptr;
+        size_t best_active = 0;
+        for (SplitEntry* e : open_splits) {
+            const size_t active = e->active_helpers.load(std::memory_order_relaxed);
+            if (e->open.load(std::memory_order_acquire)
+                && active < e->max_slaves
+                && e->unclaimed.load(std::memory_order_acquire) > e->joining.load(std::memory_order_acquire)
+                && (ancestor == nullptr || e->is_descendant_of(ancestor)))
+            {
+                if (best == nullptr || e->priority > best->priority || (e->priority == best->priority && active < best_active)) {
+                    best = e;
+                    best_active = active;
+                }
+            }
+        }
+        if (best != nullptr) {
+            best->ever_helped.store(true, std::memory_order_relaxed);
+            best->active_helpers.fetch_add(1, std::memory_order_acq_rel);
+            best->joining.fetch_add(1, std::memory_order_acq_rel);
+        }
+        return best;
+    }
+
+    static void finish_split_helper(SplitEntry* split) noexcept {
+        std::lock_guard<std::mutex> wlk(split->wait_mutex);
+        if (split->active_helpers.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+            split->wait_cv.notify_all();
+        }
+    }
 
     void run(size_t index) {
         std::unique_lock<std::mutex> lk(queue_mutex);
@@ -142,10 +211,17 @@ struct PoolShared {
 
         for (;;) {
             std::optional<Job> job;
+            SplitEntry* split = nullptr;
             for (;;) {
                 if (!jobs.empty()) {
                     job.emplace(std::move(jobs.front()));
                     jobs.pop_front();
+                    break;
+                }
+
+                split = pick_best_split_locked(nullptr);
+                if (split != nullptr) {
+                    idle.fetch_sub(1, std::memory_order_relaxed);
                     break;
                 }
 
@@ -160,18 +236,30 @@ struct PoolShared {
             }
 
             lk.unlock();
+            if (split != nullptr) {
+                {
+                    std::lock_guard<std::mutex> state_lk(states[index]->mutex);
+                    split->execute(split, &states[index]->state, nullptr);
+                }
+                idle.fetch_add(1, std::memory_order_acq_rel);
+                finish_split_helper(split);
+                lk.lock();
+                continue;
+            }
+
             {
                 std::lock_guard<std::mutex> state_lk(states[index]->mutex);
                 job->task(states[index]->state);
             }
-            // Destroy captured state of the task before notifying scope/idle so all task borrows end before finish().
+            // Release job before publishing idle/completion, and never nest queue_mutex with running_mutex.
             auto scope = std::move(job->scope);
             job.reset();
 
-            lk.lock();
             // Idle again before the scope learns that the task finished, so a follow-up spawn finds this worker.
-            idle.fetch_add(1, std::memory_order_relaxed);
+            idle.fetch_add(1, std::memory_order_acq_rel);
             scope->finish();
+
+            lk.lock();
         }
     }
 };
@@ -205,17 +293,28 @@ public:
                 }
             });
 
+        {
+            std::lock_guard<std::mutex> rlk(tasks_->running_mutex);
+            tasks_->running += 1;
+        }
+        struct RollbackRunning {
+            detail::ScopeTasks* t;
+            bool active{true};
+            ~RollbackRunning() noexcept {
+                if (active) {
+                    t->finish();
+                }
+            }
+        } rollback{tasks_.get()};
+
         std::lock_guard<std::mutex> lk(shared_->queue_mutex);
         if (shared_->idle.load(std::memory_order_relaxed) == 0 || !shared_->running) {
             return false;
         }
 
         shared_->jobs.push_back(typename detail::PoolShared<S>::Job{std::move(wrapped), tasks_});
+        rollback.active = false;
         shared_->idle.fetch_sub(1, std::memory_order_relaxed);
-        {
-            std::lock_guard<std::mutex> rlk(tasks_->running_mutex);
-            tasks_->running += 1;
-        }
         shared_->work.notify_one();
         return true;
     }
@@ -232,6 +331,7 @@ public:
     template <typename MakeState>
     ThreadPool(size_t workers, Spawner spawner, MakeState&& make_state)
         : shared_(std::make_shared<detail::PoolShared<S>>()) {
+        shared_->open_splits.reserve(64);
         shared_->states.reserve(workers);
         for (size_t i = 0; i < workers; ++i) {
             shared_->states.push_back(std::make_unique<typename detail::PoolShared<S>::StateSlot>(make_state()));
@@ -276,6 +376,110 @@ public:
 
     size_t idle() const noexcept {
         return shared_->idle.load(std::memory_order_relaxed);
+    }
+
+    bool has_free_helper(const SplitEntry* current_entry = nullptr) const noexcept {
+        if (shared_->idle.load(std::memory_order_relaxed) > 0) {
+            return true;
+        }
+        if (current_entry != nullptr && shared_->waiting_masters.load(std::memory_order_relaxed) > 0) {
+            return current_entry->has_waiting_ancestor();
+        }
+        return false;
+    }
+
+    void publish_split(SplitEntry& entry, size_t max_wake) const {
+        size_t wakes = 0;
+        {
+            std::lock_guard<std::mutex> lk(shared_->queue_mutex);
+            entry.open.store(true, std::memory_order_release);
+            shared_->open_splits.push_back(&entry);
+            const size_t avail = shared_->idle.load(std::memory_order_relaxed);
+            wakes = (avail < max_wake) ? avail : max_wake;
+        }
+        for (size_t i = 0; i < wakes; ++i) {
+            shared_->work.notify_one();
+        }
+        if (wakes < max_wake && shared_->waiting_masters.load(std::memory_order_seq_cst) > 0) {
+            size_t rem = max_wake - wakes;
+            for (SplitEntry* p = entry.parent; p != nullptr && rem > 0; p = p->parent) {
+                if (p->master_waiting.load(std::memory_order_seq_cst)) {
+                    {
+                        std::lock_guard<std::mutex> wlk(p->wait_mutex);
+                        p->wake_pending.store(true, std::memory_order_relaxed);
+                    }
+                    p->wait_cv.notify_all();
+                    --rem;
+                }
+            }
+        }
+    }
+
+    void unpublish_split(SplitEntry& entry) const noexcept {
+        std::lock_guard<std::mutex> lk(shared_->queue_mutex);
+        entry.open.store(false, std::memory_order_release);
+        auto& vec = shared_->open_splits;
+        for (size_t i = 0; i < vec.size(); ++i) {
+            if (vec[i] == &entry) {
+                vec[i] = vec.back();
+                vec.pop_back();
+                break;
+            }
+        }
+    }
+
+    template <typename Poll>
+    void wait_split(SplitEntry& entry, S& master_state, void* host_ctx, Poll&& poll) const {
+        unpublish_split(entry);
+        if (entry.active_helpers.load(std::memory_order_acquire) == 0) {
+            if (entry.ever_helped.load(std::memory_order_acquire)) {
+                std::lock_guard<std::mutex> drain(entry.wait_mutex);
+            }
+            return;
+        }
+
+        while (entry.active_helpers.load(std::memory_order_acquire) > 0) {
+            SplitEntry* desc = nullptr;
+            {
+                std::lock_guard<std::mutex> lk(shared_->queue_mutex);
+                desc = shared_->pick_best_split_locked(&entry);
+            }
+            if (desc != nullptr) {
+                desc->execute(desc, &master_state, host_ctx);
+                detail::PoolShared<S>::finish_split_helper(desc);
+                continue;
+            }
+
+            entry.wake_pending.store(false, std::memory_order_seq_cst);
+            entry.master_waiting.store(true, std::memory_order_seq_cst);
+            shared_->waiting_masters.fetch_add(1, std::memory_order_seq_cst);
+            {
+                std::lock_guard<std::mutex> lk(shared_->queue_mutex);
+                desc = shared_->pick_best_split_locked(&entry);
+            }
+            if (desc != nullptr) {
+                entry.master_waiting.store(false, std::memory_order_relaxed);
+                shared_->waiting_masters.fetch_sub(1, std::memory_order_relaxed);
+                desc->execute(desc, &master_state, host_ctx);
+                detail::PoolShared<S>::finish_split_helper(desc);
+                continue;
+            }
+
+            {
+                std::unique_lock<std::mutex> wlk(entry.wait_mutex);
+                if (entry.active_helpers.load(std::memory_order_acquire) > 0
+                    && !entry.wake_pending.load(std::memory_order_acquire))
+                {
+                    entry.wait_cv.wait_for(wlk, std::chrono::milliseconds(1));
+                }
+            }
+            entry.master_waiting.store(false, std::memory_order_relaxed);
+            shared_->waiting_masters.fetch_sub(1, std::memory_order_relaxed);
+            poll();
+        }
+        if (entry.ever_helped.load(std::memory_order_acquire)) {
+            std::lock_guard<std::mutex> drain(entry.wait_mutex);
+        }
     }
 
     template <typename F>
