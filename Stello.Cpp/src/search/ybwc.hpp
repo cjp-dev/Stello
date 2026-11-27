@@ -81,4 +81,15 @@ struct TaskSetup {
     int64_t hard_limit_ms{0};
 };
 
+/// Packs `(move, score)` into one 64-bit atomic word so heartbeats never read a torn pair.
+inline uint64_t pack_live_best(int32_t mv, int32_t score) noexcept {
+    return (static_cast<uint64_t>(static_cast<uint32_t>(score)) << 32)
+        | static_cast<uint64_t>(static_cast<uint32_t>(mv));
+}
+
+inline void unpack_live_best(uint64_t packed, int32_t& mv, int32_t& score) noexcept {
+    mv = static_cast<int32_t>(static_cast<uint32_t>(packed & 0xFFFF'FFFFULL));
+    score = static_cast<int32_t>(static_cast<uint32_t>(packed >> 32));
+}
+
 } // namespace stello::search

@@ -1,0 +1,27 @@
+# Deep pure-midgame positions for Phase 4 mid-bench: 24 positions (8 each at 48, 42, 36 empties)
+# selected evenly across 8 games from midgame.txt. Keeping empties >= 36 ensures Stello, Edax AVX
+# (sd 16-24), and Egaroucid (level 16-24 / --mpc 74) all remain 100 % in pure midgame up to depth 24.
+g01e48 -------------------XOOO----OOOX---OOOX----OXXX------------------ X
+g01e42 ------------XO-----XOOO---XOXXO---OXOX-O--OXXX----OX------------ X
+g01e36 ---OO------OOO----XOOOO---XOXOO---OOOXOO--OXXXX---OX------------ X
+g03e48 -----------O-------O-O---X-OOX----XOO-----XXOO----X-O----------- X
+g03e42 -----------O-------O-O---XOOOX---OOOXX----XXXXX---XXOO---------- X
+g03e36 -----------O-------O-O---XOOOOO--OOOXX---OOOXXX---XXXX-----XXXX- X
+g06e48 --O-------OO-----OOOO-----OXX----OXXX-----X-X------------------- X
+g06e42 --O-------OO-----OOOO---OOOOX---OXXOX---OXXOX------------------- X
+g06e36 --O-------OO-X---OOOX---OOOXX---OOOOX---OXOXO-----XOOO-------O-- X
+g08e48 ------------------OOO----X-XXO----XXXOO----XX-------XO---------- X
+g08e42 ------------------OOO----X-OXO----XXOOO----XXOOO----XX------XXX- X
+g08e36 -----------------OOOO----XOOXO----XOOOO---XOOOOO--XXXX----O-XXX- X
+g11e48 -------------X---OOOOO---XOXO-----XOO-----XXO------------------- X
+g11e42 -------------X---OOOOX---OXOXX--O-XOXX----XXOO----XO------------ X
+g11e36 ------------XX---OOOXX---OOOXX--OOOOXX---OOOXO----OXX-----OX---- X
+g13e48 ----------------O-OX-O---OXXX----OOOOX----OXX------------------- X
+g13e42 --------X-------X-OOOO--XOXOX---XOOXXX--XOOXX------------------- X
+g13e36 --------X-------XXOOOO--XXOOOO--XXOOOX--XOOOX-----OOX------O---- X
+g16e48 -----------------XXXOO---OOOO----XOXO-----OXX------------------- X
+g16e42 -----------O-----XXOOO--XXXOO-X--XOOOOO---OXXX------------------ X
+g16e36 ----------OO-X---XOOOOO-XXOXXOXX-XOOOXX---OOXX-----O------------ X
+g19e48 ------------------OOOO---XXOXX----OOO----OOOX------------------- X
+g19e42 ----X-----XX----OOXOOO---OOXXX----OOX----OOOXX------------------ X
+g19e36 --O-XXX---OXXX--OOOOXX---OOXOX----OOOO---OOOXX------------------ X

@@ -447,6 +447,7 @@ public:
             if (desc != nullptr) {
                 desc->execute(desc, &master_state, host_ctx);
                 detail::PoolShared<S>::finish_split_helper(desc);
+                poll();
                 continue;
             }
 
@@ -462,6 +463,7 @@ public:
                 shared_->waiting_masters.fetch_sub(1, std::memory_order_relaxed);
                 desc->execute(desc, &master_state, host_ctx);
                 detail::PoolShared<S>::finish_split_helper(desc);
+                poll();
                 continue;
             }
 

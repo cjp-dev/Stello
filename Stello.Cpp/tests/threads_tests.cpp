@@ -909,4 +909,275 @@ STELLO_TEST(phase3_helpful_master_transitions_and_rapid_stop_stress) {
     }
 }
 
+namespace {
+
+struct BorrowedSplitStop final : search::StopSignal {
+    const search::SplitPoint* point{nullptr};
+    explicit BorrowedSplitStop(const search::SplitPoint* p) noexcept : point(p) {}
+    bool is_cancelled() const noexcept override { return false; }
+    bool is_move_now() const noexcept override { return point->stopped(); }
+};
+
+std::array<search::EndgameChild, 2> make_fast_and_heavy_endgame_children() {
+    uint64_t seed = 0x1357'9BDF'2468'ACE0ULL;
+    std::optional<std::pair<Board, Player>> trivial;
+    while (!trivial.has_value()) {
+        trivial = random_position(seed, 1U);
+    }
+    const auto ffo = load_bench_file("ffo-40-59.txt");
+    const cli::BenchPosition* ffo55 = nullptr;
+    for (const auto& p : ffo) {
+        if (p.id == "55") {
+            ffo55 = &p;
+            break;
+        }
+    }
+    STELLO_CHECK(ffo55 != nullptr);
+
+    const uint32_t mv0 = static_cast<uint32_t>(std::countr_zero(trivial->first.legal_moves(trivial->second)));
+    const uint64_t heavy_legal = ffo55->board.legal_moves(ffo55->player);
+    STELLO_CHECK(heavy_legal != 0ULL);
+    const uint32_t mv1 = static_cast<uint32_t>(std::countr_zero(heavy_legal));
+    const Board heavy_after = ffo55->board.play_unchecked(ffo55->player, mv1);
+    const Player heavy_opp = opponent(ffo55->player);
+
+    return {
+        search::EndgameChild{
+            trivial->first.discs(trivial->second),
+            trivial->first.discs(opponent(trivial->second)),
+            static_cast<int32_t>(trivial->first.empty_count()),
+            endgame::bits::LEGAL_UNDEFINED,
+            static_cast<int32_t>(mv0),
+        },
+        search::EndgameChild{
+            heavy_after.discs(heavy_opp),
+            heavy_after.discs(ffo55->player),
+            static_cast<int32_t>(heavy_after.empty_count()),
+            endgame::bits::LEGAL_UNDEFINED,
+            static_cast<int32_t>(mv1),
+        },
+    };
+}
+
+} // namespace
+
+STELLO_TEST(phase3_nested_helpful_master_wait_forwards_cancel_and_move_now) {
+    search::SearchEngine engine(18);
+    const auto children = make_fast_and_heavy_endgame_children();
+    SearchOptions opts;
+    const auto context = search::SearchContext::create(
+        opts, nullptr, nullptr, engine.midgame_table(), engine.endgame_table(), &search::system_clock, 64);
+    search::ThreadPool<search::ThreadState> pool(1, &search::std_spawner, []() {
+        return search::ThreadState{};
+    });
+    const int64_t max_lag_ms = STELLO_TESTS_ASAN ? 500 : 200;
+
+    for (const bool wide_window : {false, true}) {
+        for (const bool move_now : {false, true}) {
+            search::SearchSignals owner_signals;
+            search::ThreadState owner_state;
+            search::ThreadState help_state;
+            std::atomic<uint64_t> nodes{0};
+            std::atomic<uint64_t> evaluations{0};
+            const search::Helpers search_helpers{&pool, context, 1, &nodes, &evaluations};
+
+            search::Searcher owner(context, owner_state, owner_signals);
+            owner.heartbeat_owner = &owner;
+            owner.helpers = search_helpers;
+
+            search::SplitPoint outer_point{};
+            BorrowedSplitStop borrowed_stop(&outer_point);
+            search::Searcher helper_task(context, help_state, borrowed_stop);
+            const search::TaskSetup setup{64, 64, false, 0, owner.start, owner.hard_limit_ms};
+            helper_task.split_task(search_helpers, &outer_point, setup, nullptr);
+            helper_task.heartbeat_owner = &owner;
+
+            std::chrono::steady_clock::time_point signalled{};
+            std::thread setter([&]() {
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                signalled = std::chrono::steady_clock::now();
+                if (move_now) {
+                    owner_signals.move_now();
+                } else {
+                    owner_signals.cancel();
+                }
+            });
+
+            int32_t best = -search::INFINITY_SCORE;
+            int32_t best_move = -1;
+            bool got_abort = false;
+            search::Abort abort_reason = search::Abort::Stop;
+            const int32_t alpha = wide_window ? -64 : -1;
+            const int32_t beta = wide_window ? 64 : 0;
+
+#if STELLO_ABORT_EXCEPTIONS
+            try {
+                helper_task.split<search::EndgameChild>(children, alpha, beta, best, best_move, false);
+            } catch (search::Abort a) {
+                got_abort = true;
+                abort_reason = a;
+            }
+#else
+            const search::AbortStatus st = helper_task.split<search::EndgameChild>(children, alpha, beta, best, best_move, false);
+            if (st.is_err()) {
+                got_abort = true;
+                abort_reason = st.abort_reason();
+            }
+#endif
+
+            const auto returned = std::chrono::steady_clock::now();
+            setter.join();
+            const auto lag = std::chrono::duration_cast<std::chrono::milliseconds>(returned - signalled);
+            STELLO_CHECK(got_abort);
+            STELLO_CHECK(abort_reason == (move_now ? search::Abort::Stop : search::Abort::Cancelled));
+            STELLO_CHECK_MSG(lag.count() < max_lag_ms, "nested wait lag=" + std::to_string(lag.count()) + "ms");
+        }
+    }
+}
+
+STELLO_TEST(phase3_throwing_progress_callback_propagates_from_splits) {
+    const auto ffo = load_bench_file("ffo-40-59.txt");
+    const cli::BenchPosition* ffo40 = nullptr;
+    const cli::BenchPosition* ffo55 = nullptr;
+    for (const auto& p : ffo) {
+        if (p.id == "40") {
+            ffo40 = &p;
+        } else if (p.id == "55") {
+            ffo55 = &p;
+        }
+    }
+    STELLO_CHECK(ffo40 != nullptr && ffo55 != nullptr);
+
+    // 1. Serial baseline: throwing ProgressCallback propagates out of search() once.
+    {
+        search::SearchEngine engine(18);
+        std::atomic<int> calls{0};
+        bool caught = false;
+        try {
+            (void)engine.search(
+                ffo55->board,
+                ffo55->player,
+                SearchLimits::solve(),
+                [&](const SearchInfo&) {
+                    calls.fetch_add(1, std::memory_order_relaxed);
+                    throw std::runtime_error("serial progress boom");
+                });
+        } catch (const std::runtime_error& e) {
+            caught = (std::string(e.what()) == "serial progress boom");
+        }
+        STELLO_CHECK(caught);
+        STELLO_CHECK_EQ(calls.load(std::memory_order_relaxed), 1);
+    }
+
+    // 2. Controlled SplitNode (null window) and WaveSplitNode (wide window): poll() throws without std::terminate.
+    {
+        search::SearchEngine engine(18);
+        const auto children = make_fast_and_heavy_endgame_children();
+        SearchOptions opts;
+        const auto context = search::SearchContext::create(
+            opts, nullptr, nullptr, engine.midgame_table(), engine.endgame_table(), &search::system_clock, 64);
+        search::ThreadPool<search::ThreadState> pool(1, &search::std_spawner, []() {
+            return search::ThreadState{};
+        });
+
+        for (const bool wide_window : {false, true}) {
+            search::SearchSignals signals;
+            search::ThreadState state;
+            std::atomic<uint64_t> nodes{0};
+            std::atomic<uint64_t> evaluations{0};
+            std::atomic<int> calls{0};
+
+            search::Searcher s(context, state, signals);
+            s.heartbeat_owner = &s;
+            s.helpers = search::Helpers{&pool, context, 1, &nodes, &evaluations};
+            s.node_source = &nodes;
+            s.start = search::system_clock() - std::chrono::milliseconds(500);
+            s.last_heartbeat_ms = -1000;
+            s.report_move = 0;
+            s.progress = [&](const SearchInfo&) {
+                calls.fetch_add(1, std::memory_order_relaxed);
+                throw std::runtime_error("split poll boom");
+            };
+
+            int32_t best = -search::INFINITY_SCORE;
+            int32_t best_move = -1;
+            bool caught = false;
+            try {
+                const int32_t alpha = wide_window ? -64 : -1;
+                const int32_t beta = wide_window ? 64 : 0;
+                (void)s.split<search::EndgameChild>(children, alpha, beta, best, best_move, true);
+            } catch (const std::runtime_error& e) {
+                caught = (std::string(e.what()) == "split poll boom");
+            }
+            STELLO_CHECK(caught);
+            STELLO_CHECK_EQ(calls.load(std::memory_order_relaxed), 1);
+        }
+    }
+
+    // 3. End-to-end 8-thread search: callback throwing mid-search propagates cleanly and engine remains reusable.
+    {
+        search::SearchEngine engine(18);
+        std::atomic<int> calls{0};
+        bool caught = false;
+        try {
+            (void)engine.search(
+                ffo55->board,
+                ffo55->player,
+                with_threads(SearchLimits::solve(), 8),
+                [&](const SearchInfo&) {
+                    const int n = calls.fetch_add(1, std::memory_order_relaxed) + 1;
+                    if (n == 2) {
+                        throw std::runtime_error("mt progress boom");
+                    }
+                });
+        } catch (const std::runtime_error& e) {
+            caught = (std::string(e.what()) == "mt progress boom");
+        }
+        STELLO_CHECK(caught);
+        STELLO_CHECK_EQ(calls.load(std::memory_order_relaxed), 2);
+
+        engine.clear_hash();
+        const auto after = engine.search(ffo40->board, ffo40->player, with_threads(SearchLimits::solve(), 8));
+        STELLO_CHECK(after.ok);
+        STELLO_CHECK_EQ(after.result.score, *ffo40->score);
+    }
+}
+
+STELLO_TEST(phase3_atomic_live_best_snapshot_has_no_torn_pairs) {
+    struct Case {
+        int32_t mv;
+        int32_t score;
+    };
+    const std::array<Case, 5> cases = {{
+        {-1, -search::INFINITY_SCORE},
+        {0, -64},
+        {63, 64},
+        {27, -12345},
+        {19, 12345},
+    }};
+    for (const auto& c : cases) {
+        const uint64_t packed = search::pack_live_best(c.mv, c.score);
+        int32_t out_mv = 0;
+        int32_t out_score = 0;
+        search::unpack_live_best(packed, out_mv, out_score);
+        STELLO_CHECK_EQ(out_mv, c.mv);
+        STELLO_CHECK_EQ(out_score, c.score);
+    }
+
+    const auto midgame = load_bench_file("midgame.txt");
+    search::SearchEngine engine(18);
+    const uint64_t root_legal = midgame[0].board.legal_moves(midgame[0].player);
+    const auto outcome = engine.search(
+        midgame[0].board,
+        midgame[0].player,
+        with_threads(SearchLimits::time_per_move_ms(300), 8),
+        [&](const SearchInfo& info) {
+            if (info.best_move.has_value()) {
+                STELLO_CHECK((root_legal & info.best_move->bit()) != 0ULL);
+                STELLO_CHECK(info.score > -search::INFINITY_SCORE && info.score < search::INFINITY_SCORE);
+            }
+        });
+    STELLO_CHECK(outcome.ok);
+}
+
 } // namespace stello::tests

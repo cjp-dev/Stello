@@ -47,6 +47,40 @@ struct JoinGuard {
     JoinGuard& operator=(const JoinGuard&) = delete;
 };
 
+/// Records the outermost active split point on `heartbeat_owner` so nested waits can stop it immediately.
+struct RestoreRootSplitPoint {
+    Searcher* owner;
+    SplitPoint* prev;
+    bool active;
+
+    RestoreRootSplitPoint(Searcher* o, SplitPoint* point, bool is_owner) noexcept
+        : owner(o), prev(o->root_split_point), active(is_owner && o->root_split_point == nullptr)
+    {
+        if (active) {
+            owner->root_split_point = point;
+        }
+    }
+
+    ~RestoreRootSplitPoint() noexcept {
+        if (active) {
+            owner->root_split_point = prev;
+        }
+    }
+
+    RestoreRootSplitPoint(const RestoreRootSplitPoint&) = delete;
+    RestoreRootSplitPoint& operator=(const RestoreRootSplitPoint&) = delete;
+};
+
+/// Records the first non-Abort exception from a worker or heartbeat callback and stops the active split tree.
+inline void capture_split_exception(Searcher& owner, SplitPoint& point, std::atomic<bool>& open) noexcept {
+    owner.pending_exception.capture(std::current_exception());
+    point.request_stop();
+    if (owner.root_split_point != nullptr) {
+        owner.root_split_point->request_stop();
+    }
+    open.store(false, std::memory_order_release);
+}
+
 /// Restores `Searcher::split_point` and `Searcher::current_split_entry` on unwind.
 struct RestoreSplitContext {
     Searcher& s;
@@ -220,8 +254,7 @@ AbortVoid Kernel<Tier>::split(
             int32_t beta{0};
             bool is_root{false};
 
-            std::atomic<int32_t> live_best_move{-1};
-            std::atomic<int32_t> live_best_score{-INFINITY_SCORE};
+            std::atomic<uint64_t> live_best{pack_live_best(-1, -INFINITY_SCORE)};
 
             std::mutex data_mutex;
             size_t next_idx{0};
@@ -242,9 +275,10 @@ AbortVoid Kernel<Tier>::split(
 
             AbortStatus run_loop(Searcher& task, bool is_master) noexcept {
                 JoinGuard join_guard{joining, !is_master};
+                Searcher& owner = (task.heartbeat_owner != nullptr) ? *task.heartbeat_owner : task;
 
                 for (;;) {
-                    if (point.is_stopped()) {
+                    if (point.stopped() || owner.pending_exception.active()) {
                         return AbortStatus::ok();
                     }
 
@@ -267,25 +301,30 @@ AbortVoid Kernel<Tier>::split(
                     const ChildT& child = children[idx];
                     int32_t score = 0;
 
-#if STELLO_ABORT_EXCEPTIONS
                     try {
-                        score = Kernel<Tier>::child_null_window(task, child, alpha);
-                    } catch (Abort a) {
-                        if (is_master) {
-                            return AbortStatus::err(a);
+#if STELLO_ABORT_EXCEPTIONS
+                        try {
+                            score = Kernel<Tier>::child_null_window(task, child, alpha);
+                        } catch (Abort a) {
+                            if (is_master) {
+                                return AbortStatus::err(a);
+                            }
+                            return AbortStatus::ok();
                         }
-                        return AbortStatus::ok();
-                    }
 #else
-                    const AbortResult<int32_t> nres = Kernel<Tier>::child_null_window(task, child, alpha);
-                    if (nres.is_err()) {
-                        if (is_master) {
-                            return AbortStatus::err(nres.abort_reason());
+                        const AbortResult<int32_t> nres = Kernel<Tier>::child_null_window(task, child, alpha);
+                        if (nres.is_err()) {
+                            if (is_master) {
+                                return AbortStatus::err(nres.abort_reason());
+                            }
+                            return AbortStatus::ok();
                         }
+                        score = nres.value;
+#endif
+                    } catch (...) {
+                        capture_split_exception(owner, point, open);
                         return AbortStatus::ok();
                     }
-                    score = nres.value;
-#endif
 
                     std::lock_guard<std::mutex> dlk(data_mutex);
                     ++completed_moves;
@@ -293,8 +332,7 @@ AbortVoid Kernel<Tier>::split(
                         best = score;
                         best_move = child.square();
                         if (is_root) {
-                            live_best_move.store(best_move, std::memory_order_relaxed);
-                            live_best_score.store(best, std::memory_order_relaxed);
+                            live_best.store(pack_live_best(best_move, best), std::memory_order_relaxed);
                         }
                         if (best >= beta) {
                             point.request_cut();
@@ -330,11 +368,21 @@ AbortVoid Kernel<Tier>::split(
         node.is_root = is_root;
         node.best = best;
         node.best_move = best_move;
-        node.live_best_move.store(best_move, std::memory_order_relaxed);
-        node.live_best_score.store(best, std::memory_order_relaxed);
+        node.live_best.store(pack_live_best(best_move, best), std::memory_order_relaxed);
 
         const int32_t start_best_score = best;
-        const auto poll = [&]() {
+        const auto stop_poll = [&]() noexcept {
+            const bool owner_stop = hb_owner->pending_exception.active()
+                || hb_owner->stop->is_cancelled()
+                || hb_owner->stop->is_move_now()
+                || (hb_owner != &s && hb_owner->elapsed_ms() >= hb_owner->hard_limit_ms);
+            if (owner_stop) {
+                node.point.request_stop();
+                if (hb_owner->root_split_point != nullptr) {
+                    hb_owner->root_split_point->request_stop();
+                }
+                return;
+            }
             if (!node.point.is_stopped()) {
                 const Duration now = caller_clock();
                 const Duration el = (now > node.setup.start) ? (now - node.setup.start) : Duration::zero();
@@ -347,9 +395,16 @@ AbortVoid Kernel<Tier>::split(
                     node.point.request_stop();
                 }
             }
+        };
+        const auto poll = [&]() noexcept {
+            stop_poll();
+            if (hb_owner->pending_exception.active()) {
+                return;
+            }
             if (is_root) {
-                const int32_t lm = node.live_best_move.load(std::memory_order_relaxed);
-                const int32_t ls = node.live_best_score.load(std::memory_order_relaxed);
+                int32_t lm = -1;
+                int32_t ls = -INFINITY_SCORE;
+                unpack_live_best(node.live_best.load(std::memory_order_relaxed), lm, ls);
                 if (lm >= 0 && ls > start_best_score) {
                     const int32_t scaled = (s.end_mpc_stage > 0) ? (ls * eval::PATTERN_UNITS_PER_DISC) : ls;
                     if (s.report_best_move < 0 || scaled > s.report_score) {
@@ -358,7 +413,11 @@ AbortVoid Kernel<Tier>::split(
                     }
                 }
             }
-            hb_owner->maybe_report_heartbeat();
+            try {
+                hb_owner->maybe_report_heartbeat();
+            } catch (...) {
+                capture_split_exception(*hb_owner, node.point, node.open);
+            }
         };
 
         const size_t max_wake = (children.size() > 1U)
@@ -368,19 +427,20 @@ AbortVoid Kernel<Tier>::split(
 
         bool has_master_abort = false;
         Abort master_abort = Abort::Stop;
+        RestoreRootSplitPoint root_sp_guard{hb_owner, &node.point, &s == hb_owner};
         struct WaitOnExit {
             const ThreadPool<ThreadState>* pool;
             SplitNode& node;
             ThreadState& state;
             void* host_ctx;
-            const decltype(poll)& poll_fn;
+            const decltype(stop_poll)& poll_fn;
             bool waited{false};
             ~WaitOnExit() noexcept {
                 if (!waited) {
                     pool->wait_split(node, state, host_ctx, poll_fn);
                 }
             }
-        } wait_guard{node.split_helpers.pool, node, *s.thread_state, hb_owner, poll, false};
+        } wait_guard{node.split_helpers.pool, node, *s.thread_state, hb_owner, stop_poll, false};
 
         {
             RestoreSplitContext restore{s, prev_split, prev_entry};
@@ -390,13 +450,21 @@ AbortVoid Kernel<Tier>::split(
             const AbortStatus master_st = node.run_loop(s, true);
             if (master_st.is_err()) {
                 const Abort a = master_st.abort_reason();
+                const bool owner_stop = hb_owner->pending_exception.active()
+                    || hb_owner->stop->is_cancelled()
+                    || hb_owner->stop->is_move_now()
+                    || (hb_owner != &s && hb_owner->elapsed_ms() >= hb_owner->hard_limit_ms);
                 const bool external_stop = (a == Abort::Cancelled)
+                    || owner_stop
                     || caller_stop->is_cancelled()
                     || caller_stop->is_move_now()
                     || (prev_split != nullptr && prev_split->stopped())
                     || (s.elapsed_ms() >= node.setup.hard_limit_ms);
                 if (external_stop || !node.point.is_cut()) {
                     node.point.request_stop();
+                    if (owner_stop && hb_owner->root_split_point != nullptr) {
+                        hb_owner->root_split_point->request_stop();
+                    }
                     has_master_abort = true;
                     master_abort = a;
                 }
@@ -408,14 +476,24 @@ AbortVoid Kernel<Tier>::split(
 
         commit_score(node.best, node.best_move);
 
+        if (hb_owner->pending_exception.active()) {
+            if (&s == hb_owner) {
+                std::exception_ptr ex = hb_owner->pending_exception.take();
+                std::rethrow_exception(ex);
+            }
+            STELLO_RETURN_ABORT_IN_STATUS(Abort::Cancelled);
+        }
         if (has_master_abort) {
             STELLO_RETURN_ABORT_IN_STATUS(master_abort);
         }
-        if (caller_stop->is_cancelled()) {
+        if (caller_stop->is_cancelled() || hb_owner->stop->is_cancelled()) {
             STELLO_RETURN_ABORT_IN_STATUS(Abort::Cancelled);
         }
         if (!node.point.is_cut() && node.completed_moves < children.size()) {
-            STELLO_RETURN_ABORT_IN_STATUS(caller_stop->is_move_now() ? Abort::Stop : (s.stop->is_cancelled() ? Abort::Cancelled : Abort::Stop));
+            STELLO_RETURN_ABORT_IN_STATUS(
+                (caller_stop->is_move_now() || hb_owner->stop->is_move_now())
+                    ? Abort::Stop
+                    : (s.stop->is_cancelled() ? Abort::Cancelled : Abort::Stop));
         }
 
         STELLO_RETURN_OK_VOID();
@@ -481,8 +559,7 @@ AbortVoid Kernel<Tier>::split(
             int32_t window_alpha{0};
             bool is_root{false};
 
-            std::atomic<int32_t> live_best_move{-1};
-            std::atomic<int32_t> live_best_score{-INFINITY_SCORE};
+            std::atomic<uint64_t> live_best{pack_live_best(-1, -INFINITY_SCORE)};
 
             std::mutex data_mutex;
             size_t next_idx{0};
@@ -506,9 +583,10 @@ AbortVoid Kernel<Tier>::split(
 
             AbortStatus run_loop(Searcher& task, bool is_master) noexcept {
                 JoinGuard join_guard{joining, !is_master};
+                Searcher& owner = (task.heartbeat_owner != nullptr) ? *task.heartbeat_owner : task;
 
                 for (;;) {
-                    if (point.is_stopped()) {
+                    if (point.stopped() || owner.pending_exception.active()) {
                         return AbortStatus::ok();
                     }
 
@@ -532,25 +610,30 @@ AbortVoid Kernel<Tier>::split(
                     const ChildT& child = children[cidx];
                     int32_t score = 0;
 
-#if STELLO_ABORT_EXCEPTIONS
                     try {
-                        score = Kernel<Tier>::child_null_window(task, child, window_alpha);
-                    } catch (Abort a) {
-                        if (is_master) {
-                            return AbortStatus::err(a);
+#if STELLO_ABORT_EXCEPTIONS
+                        try {
+                            score = Kernel<Tier>::child_null_window(task, child, window_alpha);
+                        } catch (Abort a) {
+                            if (is_master) {
+                                return AbortStatus::err(a);
+                            }
+                            return AbortStatus::ok();
                         }
-                        return AbortStatus::ok();
-                    }
 #else
-                    const AbortResult<int32_t> nres = Kernel<Tier>::child_null_window(task, child, window_alpha);
-                    if (nres.is_err()) {
-                        if (is_master) {
-                            return AbortStatus::err(nres.abort_reason());
+                        const AbortResult<int32_t> nres = Kernel<Tier>::child_null_window(task, child, window_alpha);
+                        if (nres.is_err()) {
+                            if (is_master) {
+                                return AbortStatus::err(nres.abort_reason());
+                            }
+                            return AbortStatus::ok();
                         }
+                        score = nres.value;
+#endif
+                    } catch (...) {
+                        capture_split_exception(owner, point, open);
                         return AbortStatus::ok();
                     }
-                    score = nres.value;
-#endif
 
                     const uint64_t bit = uint64_t{1} << cidx;
                     std::lock_guard<std::mutex> dlk(data_mutex);
@@ -567,8 +650,7 @@ AbortVoid Kernel<Tier>::split(
                         best = score;
                         best_move = child.square();
                         if (is_root) {
-                            live_best_move.store(best_move, std::memory_order_relaxed);
-                            live_best_score.store(best, std::memory_order_relaxed);
+                            live_best.store(pack_live_best(best_move, best), std::memory_order_relaxed);
                         }
                     }
                 }
@@ -600,11 +682,21 @@ AbortVoid Kernel<Tier>::split(
         node.is_root = is_root;
         node.best = best;
         node.best_move = best_move;
-        node.live_best_move.store(best_move, std::memory_order_relaxed);
-        node.live_best_score.store(best, std::memory_order_relaxed);
+        node.live_best.store(pack_live_best(best_move, best), std::memory_order_relaxed);
 
         const int32_t start_best_score = best;
-        const auto poll = [&]() {
+        const auto stop_poll = [&]() noexcept {
+            const bool owner_stop = hb_owner->pending_exception.active()
+                || hb_owner->stop->is_cancelled()
+                || hb_owner->stop->is_move_now()
+                || (hb_owner != &s && hb_owner->elapsed_ms() >= hb_owner->hard_limit_ms);
+            if (owner_stop) {
+                node.point.request_stop();
+                if (hb_owner->root_split_point != nullptr) {
+                    hb_owner->root_split_point->request_stop();
+                }
+                return;
+            }
             if (!node.point.is_stopped()) {
                 const Duration now = caller_clock();
                 const Duration el = (now > node.setup.start) ? (now - node.setup.start) : Duration::zero();
@@ -617,9 +709,16 @@ AbortVoid Kernel<Tier>::split(
                     node.point.request_stop();
                 }
             }
+        };
+        const auto poll = [&]() noexcept {
+            stop_poll();
+            if (hb_owner->pending_exception.active()) {
+                return;
+            }
             if (is_root) {
-                const int32_t lm = node.live_best_move.load(std::memory_order_relaxed);
-                const int32_t ls = node.live_best_score.load(std::memory_order_relaxed);
+                int32_t lm = -1;
+                int32_t ls = -INFINITY_SCORE;
+                unpack_live_best(node.live_best.load(std::memory_order_relaxed), lm, ls);
                 if (lm >= 0 && ls > start_best_score) {
                     const int32_t scaled = (s.end_mpc_stage > 0) ? (ls * eval::PATTERN_UNITS_PER_DISC) : ls;
                     if (s.report_best_move < 0 || scaled > s.report_score) {
@@ -628,7 +727,11 @@ AbortVoid Kernel<Tier>::split(
                     }
                 }
             }
-            hb_owner->maybe_report_heartbeat();
+            try {
+                hb_owner->maybe_report_heartbeat();
+            } catch (...) {
+                capture_split_exception(*hb_owner, node.point, node.open);
+            }
         };
 
         const size_t max_wake = (wave_count > 1U)
@@ -638,19 +741,20 @@ AbortVoid Kernel<Tier>::split(
 
         bool has_master_abort = false;
         Abort master_abort = Abort::Stop;
+        RestoreRootSplitPoint root_sp_guard{hb_owner, &node.point, &s == hb_owner};
         struct WaitOnExit {
             const ThreadPool<ThreadState>* pool;
             WaveSplitNode& node;
             ThreadState& state;
             void* host_ctx;
-            const decltype(poll)& poll_fn;
+            const decltype(stop_poll)& poll_fn;
             bool waited{false};
             ~WaitOnExit() noexcept {
                 if (!waited) {
                     pool->wait_split(node, state, host_ctx, poll_fn);
                 }
             }
-        } wait_guard{node.split_helpers.pool, node, *s.thread_state, hb_owner, poll, false};
+        } wait_guard{node.split_helpers.pool, node, *s.thread_state, hb_owner, stop_poll, false};
 
         {
             RestoreSplitContext restore{s, prev_split, prev_entry};
@@ -660,13 +764,21 @@ AbortVoid Kernel<Tier>::split(
             const AbortStatus master_st = node.run_loop(s, true);
             if (master_st.is_err()) {
                 const Abort a = master_st.abort_reason();
+                const bool owner_stop = hb_owner->pending_exception.active()
+                    || hb_owner->stop->is_cancelled()
+                    || hb_owner->stop->is_move_now()
+                    || (hb_owner != &s && hb_owner->elapsed_ms() >= hb_owner->hard_limit_ms);
                 const bool external_stop = (a == Abort::Cancelled)
+                    || owner_stop
                     || caller_stop->is_cancelled()
                     || caller_stop->is_move_now()
                     || (prev_split != nullptr && prev_split->stopped())
                     || (s.elapsed_ms() >= node.setup.hard_limit_ms);
                 if (external_stop || !node.point.is_cut()) {
                     node.point.request_stop();
+                    if (owner_stop && hb_owner->root_split_point != nullptr) {
+                        hb_owner->root_split_point->request_stop();
+                    }
                     has_master_abort = true;
                     master_abort = a;
                 }
@@ -678,14 +790,24 @@ AbortVoid Kernel<Tier>::split(
 
         commit_score(node.best, node.best_move);
 
+        if (hb_owner->pending_exception.active()) {
+            if (&s == hb_owner) {
+                std::exception_ptr ex = hb_owner->pending_exception.take();
+                std::rethrow_exception(ex);
+            }
+            STELLO_RETURN_ABORT_IN_STATUS(Abort::Cancelled);
+        }
         if (has_master_abort) {
             STELLO_RETURN_ABORT_IN_STATUS(master_abort);
         }
-        if (caller_stop->is_cancelled()) {
+        if (caller_stop->is_cancelled() || hb_owner->stop->is_cancelled()) {
             STELLO_RETURN_ABORT_IN_STATUS(Abort::Cancelled);
         }
         if (!node.point.is_cut() && node.completed_count < wave_count) {
-            STELLO_RETURN_ABORT_IN_STATUS(caller_stop->is_move_now() ? Abort::Stop : (s.stop->is_cancelled() ? Abort::Cancelled : Abort::Stop));
+            STELLO_RETURN_ABORT_IN_STATUS(
+                (caller_stop->is_move_now() || hb_owner->stop->is_move_now())
+                    ? Abort::Stop
+                    : (s.stop->is_cancelled() ? Abort::Cancelled : Abort::Stop));
         }
 
         pending &= ~node.completed_mask;

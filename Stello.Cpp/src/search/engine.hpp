@@ -18,6 +18,7 @@
 #include <array>
 #include <atomic>
 #include <cstdint>
+#include <exception>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -311,6 +312,46 @@ public:
     const TranspositionTable* endgame_table{nullptr};
     EndgameState* endgame{nullptr};
     MoveOrdering* ordering{nullptr};
+    /// Synchronized first-exception slot allowing worker or heartbeat exceptions to unwind to the caller without std::terminate.
+    struct PendingException {
+        std::atomic<bool> has{false};
+        std::atomic<bool> lock{false};
+        std::exception_ptr ptr;
+
+        PendingException() noexcept = default;
+        PendingException(const PendingException&) noexcept {}
+        PendingException& operator=(const PendingException&) noexcept { return *this; }
+        PendingException(PendingException&& other) noexcept : ptr(std::move(other.ptr)) {
+            has.store(other.has.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        }
+        PendingException& operator=(PendingException&& other) noexcept {
+            if (this != &other) {
+                ptr = std::move(other.ptr);
+                has.store(other.has.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            }
+            return *this;
+        }
+
+        bool active() const noexcept { return has.load(std::memory_order_acquire); }
+
+        void capture(std::exception_ptr ex) noexcept {
+            while (lock.exchange(true, std::memory_order_acquire)) {}
+            if (!ptr) {
+                ptr = std::move(ex);
+                has.store(true, std::memory_order_release);
+            }
+            lock.store(false, std::memory_order_release);
+        }
+
+        std::exception_ptr take() noexcept {
+            while (lock.exchange(true, std::memory_order_acquire)) {}
+            has.store(false, std::memory_order_release);
+            std::exception_ptr ex = std::move(ptr);
+            lock.store(false, std::memory_order_release);
+            return ex;
+        }
+    };
+
     ThreadState* thread_state{nullptr};
     Searcher* heartbeat_owner{nullptr};
     ProgressCallback progress;
@@ -323,7 +364,9 @@ public:
     int32_t end_mpc_stage{0};
     uint32_t root_empties{64};
     const SplitPoint* split_point{nullptr};
+    SplitPoint* root_split_point{nullptr};
     SplitEntry* current_split_entry{nullptr};
+    PendingException pending_exception;
     std::optional<Helpers> helpers;
     std::atomic<uint64_t>* node_sink{nullptr};
     std::atomic<uint64_t>* node_source{nullptr};

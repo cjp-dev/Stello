@@ -499,6 +499,14 @@ Evaluated Priorities 1–4 from [Possible remaining Stello speed optimizations.m
   - **WASM Node tests (`engine.test.mjs`, `engine-mt.test.mjs`):** `20/20 passed, 0 failed` (`3.69 s`).
   - **`.NET` Release build & tests:** `0 Warning(s), 0 Error(s)`; `Stello.Engine.Tests` `521/521`, `Stello.Net.Tests` `127/127`, `Egaroucid.Engine.Tests` `118 passed, 0 failed, 8 skipped` (`TaggedV30_*`).
   - **`.NET` FFI `1t` `--compare Plans\benchmark-results\v5.0-ref\*.json`:** `100/100 identical` on `mid-d12` (`0.578` vs `0.631 s`, `+9.1 %`), `100/100` on `mid-d14` (`1.620` vs `1.780 s`, `+9.9 %`), `100/100` on `mid-d16` (`4.330` vs `4.549 s`, `+5.1 %`), `10/10` on `ffo-40-49` (`14.2` vs `16.7 s`, `+17.8 %`).
+- **Post-review threading fixes & Gate P3 notes ([Thread feedback.md](Thread%20feedback.md)):**
+  - **Code fixes (`Stello.Cpp`):**
+    1. Forwarded `heartbeat_owner->stop` (`cancel`, `move_now`, `hard_limit_ms`) and `pending_exception` inside both `SplitNode`/`WaveSplitNode` `poll` loops and `root_split_point` propagation, plus added `poll()` immediately after helping each descendant split in `ThreadPool::wait_split`.
+    2. Added lock-guarded `PendingException` propagation across worker/poll/wait paths with a stop-only `WaitOnExit` drain so throwing `ProgressCallback`s unwind cleanly to the caller instead of triggering `std::terminate`.
+    3. Replaced split `live_best_move` / `live_best_score` atomics with a single 64-bit `live_best` atomic snapshot (`pack_live_best` / `unpack_live_best`).
+    4. Replaced `AlignedCounter` struct with `alignas(64) std::atomic<uint64_t>` locals in `SearchEngine::search()`, eliminating MSVC `C4324`.
+  - **Regression tests (`threads_tests.cpp`):** `phase3_nested_helpful_master_wait_forwards_cancel_and_move_now`, `phase3_throwing_progress_callback_propagates_from_splits`, `phase3_atomic_live_best_snapshot_has_no_torn_pairs`.
+  - **Gate P3 benchmark/match distinctions:** Faster wall times across all suites vs Phase 2, while `16t` FFO node inflation rose slightly (`+22.0 → +22.4 %` on `#40–49`, `+39.0 → +43.1 %` on `#50–59`, while `8t` `#50–59` fell `+28.0 → +24.8 %`), `mid-d16` gained cleanly over Phase 2 at `8t`/`16t` with flat `8t → 16t` (`1.221 → 1.216 s`), and `starts-v6.txt` matches beat Phase 2 conclusively at `500 ms` (`53.2 %`, `99.9 %` LOS) and positively at `2,000 ms` (`51.1 %`, `90.4 %` LOS, CI `49.4–52.9 %`).
 
 ### 6. Gate P3 Verification Matches (`stello` Phase 3 vs `Phase2` `stello_engine_p2.dll`, `threads=8`, `--workers 1`, `hash-bits=19`, `book=off`)
 
@@ -506,3 +514,22 @@ Evaluated Priorities 1–4 from [Possible remaining Stello speed optimizations.m
 |---|---:|---:|---|---|---|---|---|---|---|---|---|---|
 | `Phase3` (`Match 1`) | 500 ms | 587 (`1,174`) | **53.2 %** (`51.3–55.1 %`) | `+462 =325 −387` | **+22** (`+9 to +36`) | **99.9 %** | `+0.2 ± 0.1` | `23.97 / 24.32` | `25.7 / 26.0` | `166.48M / 207.46M` (**+24.6 %**) | `512 / 515 ms` | [3h 18m](benchmark-results/match_p3_v6_vs_p2_500ms_8t.md) |
 | `Phase3` (`Match 2`) | 2,000 ms | 587 (`1,174`) | **51.1 %** (`49.4–52.9 %`) | `+425 =351 −398` | **+8** (`−4 to +20`) | **90.4 %** | `+0.1 ± 0.1` | `27.04 / 27.38` | `27.8 / 28.0` | `192.47M / 242.45M` (**+26.0 %**) | `2001 / 2001 ms` | [12h 02m](benchmark-results/match_p3_v6_vs_p2_2000ms_8t.md) |
+
+---
+
+## Phase 4: Search
+
+### 1. Pre-Phase 4 Deep Pure-Midgame Baselines (`midgame-deep.txt`)
+
+- **`midgame-deep.txt` (`24` positions: `8` each at `48/42/36` empties, `1` pass, idle CPU, `Stello` `clang-release` `v4` `hash-bits=19`, external `hash-bits=21`):**
+
+| Depth | Threads | `Stello` (Phase 3) Time (Nodes, NPS) | `Stello` EBF / Scaling | `Edax AVX` Time (Nodes, NPS) | `Edax AVX` EBF / Scaling | `Egaroucid` (`--mpc 74`) Time (Nodes, NPS) | `Egaroucid` EBF / Scaling |
+|---|---:|---|---|---|---|---|---|
+| `d16` | 1t | `1.964 s` (`23.52M`, `11.98M`) | — | `0.768 s` (`24.20M`, `31.50M`) | — | `2.053 s` (`29.70M`, `14.46M`) | — |
+| `d18` | 1t | `5.140 s` (`63.61M`, `12.37M`) | `EBF 1.645` | `1.207 s` (`39.22M`, `32.50M`) | `EBF 1.273` | `4.460 s` (`64.43M`, `14.45M`) | `EBF 1.473` |
+| `d20` | 1t | `14.05 s` (`171.89M`, `12.23M`) | `EBF 1.644` | `2.583 s` (`87.64M`, `33.93M`) | `EBF 1.495` | `9.756 s` (`137.78M`, `14.12M`) | `EBF 1.462` |
+| `d22` | 1t | `37.52 s` (`483.73M`, `12.89M`) | `EBF 1.678` | `4.848 s` (`166.82M`, `34.41M`) | `EBF 1.380` | `23.94 s` (`329.13M`, `13.78M`) | `EBF 1.546` |
+| `d20` (3× med / mean) | 8t | `2.985 / 3.201 s` (`261.9M` mean, `81.81M`) | **`4.71×`** med / `4.39×` mean (`+52.4 %` nodes) | `1.069 / 1.073 s` (`100.4M` mean, `93.50M`) | `2.42×` (`+14.5 %` nodes) | `2.628 / 2.635 s` (`167.8M` mean, `63.68M`) | `3.71×` (`+21.8 %` nodes) |
+| `d22` | 8t | `7.629 s` (`672.93M`, `88.21M`) | **`4.92×`** (`+39.1 %` nodes) | `1.810 s` (`225.87M`, `124.79M`) | `2.68×` (`+35.4 %` nodes) | `5.476 s` (`364.68M`, `66.60M`) | `4.37×` (`+10.8 %` nodes) |
+
+- Keeping empties `≥ 36` guarantees all three engines stay 100 % in pure midgame through `d22` without endgame handover triggers. By `d22` (`1t`), `Stello`'s tree expands (`EBF 1.64–1.68` vs `Edax AVX` `1.27–1.50` and `Egaroucid` `1.46–1.55`), visiting `2.90×` more nodes than `Edax AVX` and `1.47×` more than `Egaroucid`, even though `Stello` matches `Egaroucid` at `d16` and outscales both engines on `8t` (`4.92×` at `d22`).

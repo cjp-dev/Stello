@@ -198,23 +198,20 @@ SearchOutcome SearchEngine::search(
         options_, probcut_errors_.get(), end_probcut_errors_.get(), midgame_table_, endgame_table_, clock_, root_empties);
     pool_->for_each_state([](ThreadState& state) { state.ordering.clear_responses(); });
 
-    struct alignas(64) AlignedCounter {
-        std::atomic<uint64_t> value{0};
-    };
-    AlignedCounter nodes{};
-    AlignedCounter evaluations{};
-    const Helpers search_helpers{pool_.get(), context, static_cast<size_t>(threads - 1), &nodes.value, &evaluations.value};
+    alignas(64) std::atomic<uint64_t> nodes{0};
+    alignas(64) std::atomic<uint64_t> evaluations{0};
+    const Helpers search_helpers{pool_.get(), context, static_cast<size_t>(threads - 1), &nodes, &evaluations};
 
     Searcher s(context, main_, stop);
     s.progress = std::move(progress);
     s.iteration_done = iteration_done_ ? &iteration_done_ : nullptr;
     s.heartbeat_owner = &s;
     s.helpers = search_helpers;
-    s.node_source = &nodes.value;
+    s.node_source = &nodes;
     SearchOutcome outcome = s.run(board, player, limits, only_moves);
     if (outcome.ok) {
-        outcome.result.nodes += nodes.value.load(std::memory_order_relaxed);
-        outcome.result.evaluations += evaluations.value.load(std::memory_order_relaxed);
+        outcome.result.nodes += nodes.load(std::memory_order_relaxed);
+        outcome.result.evaluations += evaluations.load(std::memory_order_relaxed);
     }
     return outcome;
 }
@@ -412,7 +409,7 @@ bool Searcher::stop_iterating(const SearchLimits& limits, time::TimeBudget budge
 }
 
 void Searcher::maybe_report_heartbeat() {
-    if (progress && report_move >= 0 && elapsed_ms() - last_heartbeat_ms >= 100) {
+    if (progress && !pending_exception.active() && report_move >= 0 && elapsed_ms() - last_heartbeat_ms >= 100) {
         report(report_depth, report_move, report_best_move, report_score, report_kind);
     }
 }
@@ -422,6 +419,9 @@ STELLO_NOINLINE AbortVoid Searcher::check_abort() {
         flush_nodes();
     }
     if (heartbeat_owner != nullptr) {
+        if (heartbeat_owner->pending_exception.active()) {
+            STELLO_RETURN_ABORT_IN_STATUS(Abort::Cancelled);
+        }
         heartbeat_owner->maybe_report_heartbeat();
         if (heartbeat_owner != this) {
             if (heartbeat_owner->stop->is_cancelled()) {
@@ -432,6 +432,9 @@ STELLO_NOINLINE AbortVoid Searcher::check_abort() {
             }
         }
     } else {
+        if (pending_exception.active()) {
+            STELLO_RETURN_ABORT_IN_STATUS(Abort::Cancelled);
+        }
         maybe_report_heartbeat();
     }
 
