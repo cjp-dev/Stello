@@ -23,6 +23,8 @@ public class NativeEngineTests
         Assert.Equal(StelloNative.AbiVersion, StelloNative.LibraryAbiVersion());
         Assert.Equal(48, Unsafe.SizeOf<NativeSearchInfo>());
         Assert.Equal(40, Unsafe.SizeOf<NativeSearchResult>());
+        Assert.Equal(64, SearchEngine.HashBytesPerSlot);
+        Assert.Equal(33_554_432L, (long)SearchEngine.HashBytesPerSlot << 19);
     }
 
     public static TheoryData<string> OptionCases() => ["selective off", "probcut 150", "soft 50", "written model", "loaded model"];
@@ -59,7 +61,7 @@ public class NativeEngineTests
             Path.Combine(AppContext.BaseDirectory, "Data", "Benchmark", "midgame.txt")).Single(p => p.Id == "g01e48");
         SearchLimits limits = SearchLimits.FixedDepth(10);
         SearchResult result = new SearchEngine().Search(position.Board, position.Player, limits);
-        Assert.Equal(23212, result.Nodes);
+        Assert.Equal(23208, result.Nodes);
     }
 
     [Fact]

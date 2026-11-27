@@ -295,7 +295,36 @@ STELLO_TEST(table_dual_bounds_and_composite_level) {
     STELLO_CHECK(h.has_value());
     STELLO_CHECK_EQ(static_cast<int32_t>(h->mv), 19);
 
-    // 3. Upgrade (new_level > old_level) resets stale bounds while preserving mv if mv == -1, or adopting valid deeper mv even on fail-low.
+    // 3. Bidirectional same-level lower-bound move preservation & upgrade:
+    // - A weaker same-level fail-high must NEVER steal the move of an existing lower bound.
+    // - A stronger same-level fail-high or fresh exact search with a valid move MUST adopt the new move.
+    const uint64_t mv_own = 0x3333'4444'5555'6666ULL;
+    const int8_t sq_c4 = static_cast<int8_t>(Square::parse("c4")->index());
+    const int8_t sq_h3 = static_cast<int8_t>(Square::parse("h3")->index());
+    const int8_t sq_d3 = static_cast<int8_t>(Square::parse("d3")->index());
+    table.store_bounds_at_root(mv_own, 0, 0, 8, 7, -32665, 32665, -193, sq_c4, 48, 2);
+    table.store_bounds_at_root(mv_own, 0, 0, 8, 7, -6401, -6400, -1131, sq_h3, 48, 1);
+    h = table.get_at_root(mv_own, 0, 0, 48);
+    STELLO_CHECK(h.has_value());
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->lower), -193);
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->upper), -193);
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->mv), static_cast<int32_t>(sq_c4));
+
+    const uint64_t mv_up_own = 0x4444'5555'6666'7777ULL;
+    table.store_bounds_at_root(mv_up_own, 0, 0, 8, 7, -6401, -6400, -1131, sq_h3, 48, 1);
+    table.store_bounds_at_root(mv_up_own, 0, 0, 8, 7, -200, -193, -193, sq_c4, 48, 2);
+    h = table.get_at_root(mv_up_own, 0, 0, 48);
+    STELLO_CHECK(h.has_value());
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->lower), -193);
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->mv), static_cast<int32_t>(sq_c4));
+    table.store_bounds_at_root(mv_up_own, 0, 0, 8, 7, -500, 0, -250, sq_d3, 48, 3);
+    h = table.get_at_root(mv_up_own, 0, 0, 48);
+    STELLO_CHECK(h.has_value());
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->lower), -250);
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->upper), -250);
+    STELLO_CHECK_EQ(static_cast<int32_t>(h->mv), static_cast<int32_t>(sq_d3));
+
+    // 4. Upgrade (new_level > old_level) resets stale bounds while preserving mv if mv == -1, or adopting valid deeper mv even on fail-low.
     const uint64_t up_own = 0x2222'3333'4444'5555ULL;
     table.store_bounds_at_root(up_own, 0, search::ENDGAME_TT_TAG, 16, 4, 0, 10, 10, 22, 64, 15);
     table.store_bounds_at_root(up_own, 0, search::ENDGAME_TT_TAG, 16, 7, -20, -10, -20, -1, 64, 4);
@@ -311,7 +340,7 @@ STELLO_TEST(table_dual_bounds_and_composite_level) {
     STELLO_CHECK(h.has_value());
     STELLO_CHECK_EQ(static_cast<int32_t>(h->mv), 27);
 
-    // 4. Composite level ordering: empties=28 sel=4 (level=228) outlives empties=14 sel=7 (level=119).
+    // 5. Composite level ordering: empties=28 sel=4 (level=228) outlives empties=14 sel=7 (level=119).
     table.clear();
     std::vector<uint64_t> col;
     for (uint64_t seed = 1; seed <= 1'000'000 && col.size() < 5; ++seed) {
@@ -328,6 +357,58 @@ STELLO_TEST(table_dual_bounds_and_composite_level) {
     table.store_bounds_at_root(col[4], 0, search::ENDGAME_TT_TAG, 18, 7, 0, 2, 2, 5, 64, 10);
     STELLO_CHECK(table.get(col[0], 0, search::ENDGAME_TT_TAG).has_value());
     STELLO_CHECK(!table.get(col[1], 0, search::ENDGAME_TT_TAG).has_value());
+}
+
+STELLO_TEST(table_same_level_weaker_fail_high_preserves_exact_move) {
+    const auto [board, player] = find_bench_pos("midgame-deep.txt", "g01e48");
+    const auto c4 = Square::parse("c4");
+    const auto h3 = Square::parse("h3");
+    STELLO_CHECK(c4.has_value() && h3.has_value());
+
+    SearchOptions opts;
+    opts.selective = false;
+    search::TranspositionTable table(12);
+    search::ThreadState thread;
+    const auto ctx = search::SearchContext::create(
+        opts, nullptr, nullptr, table, table, search::system_clock, board.empty_count());
+    search::Searcher searcher(ctx, thread, search::no_stop());
+    searcher.hash_put_height = 1;
+
+    auto unwrap = [](search::AbortResult<search::ScoreMove> r) -> search::ScoreMove {
+#if STELLO_ABORT_EXCEPTIONS
+        return r;
+#else
+        STELLO_CHECK(r.is_ok());
+        return r.value;
+#endif
+    };
+
+    // 1. Exact full-window 1-ply interior search stores c4 = -193.
+    searcher.hash_get_height = 0;
+    const search::ScoreMove step1 = unwrap(searcher.search(board, player, 0, 1, -1, -32665, 32665));
+    STELLO_CHECK_EQ(step1.score, -193);
+    STELLO_CHECK_EQ(step1.mv, static_cast<int32_t>(c4->index()));
+
+    // 2. Weaker narrow fail-high search (h3 = -1131) must NOT overwrite c4 in the TT.
+    searcher.hash_get_height = 0;
+    const search::ScoreMove step2 = unwrap(searcher.search(board, player, 0, 1, -1, -6401, -6400));
+    STELLO_CHECK_EQ(step2.score, -1131);
+    STELLO_CHECK_EQ(step2.mv, static_cast<int32_t>(h3->index()));
+
+    // 3. Exact TT hit must return c4 = -193 in 1 node.
+    searcher.hash_get_height = 1;
+    const uint64_t nodes_before = searcher.nodes;
+    const search::ScoreMove step3 = unwrap(searcher.search(board, player, 0, 1, -1, -32665, 32665));
+    STELLO_CHECK_EQ(searcher.nodes - nodes_before, uint64_t{1});
+    STELLO_CHECK_EQ(step3.score, -193);
+    STELLO_CHECK_EQ(step3.mv, static_cast<int32_t>(c4->index()));
+
+    // 4. Confirm h3 alone scores -1131 at depth 1.
+    search::SearchEngine engine(12, opts);
+    const auto step4 = engine.search(board, player, SearchLimits::fixed_depth(1), {}, search::no_stop(), h3->bit());
+    STELLO_CHECK(step4.ok);
+    STELLO_CHECK(step4.result.mv == Move(*h3));
+    STELLO_CHECK_EQ(step4.result.score, -1131);
 }
 
 STELLO_TEST(table_4way_replacement_and_domain_isolation) {
@@ -788,7 +869,7 @@ STELLO_TEST(persistent_engine_ages_full_table_across_game_positions) {
         player = opponent(player);
     }
 
-    STELLO_CHECK_EQ(total_nodes, uint64_t{1'546'315});
+    STELLO_CHECK_EQ(total_nodes, uint64_t{1'511'196});
 }
 
 // ---- Full 105-signature baseline integration test (Stello 3.1) ----
@@ -1432,8 +1513,11 @@ STELLO_TEST(phase4_1d_leaf_wipeout_recognition) {
     STELLO_CHECK_EQ(wipe_board.discs(Player::White), uint64_t{0x0000001c00000000ULL});
 
     const Board swapped(wipe_board.discs(Player::White), wipe_board.discs(Player::Black));
-    // Black: c1 (2), White: b1 (1) + h8 (63). Black's only move a1 (0) flips b1 leaving White surviving at h8 with 0 legal moves.
-    const Board pass_board(uint64_t{1} << 2, (uint64_t{1} << 1) | (uint64_t{1} << 63));
+    // Black: c1 (2), White: b1 (1) | d1 (3) | h8 (63).
+    // Playing a1 (0) flips b1 only: White survives at d1 & h8 with 0 legal moves, while Black can still play e1 (4).
+    const Board pass_board(uint64_t{1} << 2, (uint64_t{1} << 1) | (uint64_t{1} << 3) | (uint64_t{1} << 63));
+    const Square sq_a1(0);
+    const Square sq_e1(4);
 
     for (const cpu::CpuTier tier : tiers) {
         STELLO_CHECK(cpu::set_forced_tier(tier));
@@ -1478,14 +1562,20 @@ STELLO_TEST(phase4_1d_leaf_wipeout_recognition) {
             STELLO_CHECK(r4.result.mv == Move(*c5));
             STELLO_CHECK_EQ(r4.result.score, -(search::WIN_SCORE + 64));
 
-            // 5. Non-wipeout pass at depth 1 uses normal pattern score (not WIN_SCORE).
-            STELLO_CHECK_EQ(pass_board.legal_moves(Player::Black), uint64_t{1}); // a1 only
-            STELLO_CHECK_EQ(pass_board.play_unchecked(Player::Black, 0).legal_moves(Player::White), uint64_t{0});
-            STELLO_CHECK(pass_board.play_unchecked(Player::Black, 0).discs(Player::White) != 0ULL);
+            // 5. Non-wipeout pass at depth 1 (only_moves = a1 bypasses the 1-move shortcut and evaluates the depth-1 leaf).
+            const Board after_a1 = pass_board.play_unchecked(Player::Black, sq_a1.index());
+            STELLO_CHECK(after_a1.discs(Player::White) != 0ULL);
+            STELLO_CHECK_EQ(after_a1.legal_moves(Player::White), uint64_t{0});
+            STELLO_CHECK_EQ(after_a1.legal_moves(Player::Black), sq_e1.bit());
             engine.clear_hash();
-            const SearchResult r5 = engine.search_simple(pass_board, Player::Black, SearchLimits::fixed_depth(1));
-            STELLO_CHECK(r5.mv == Move(Square(0)));
-            STELLO_CHECK(r5.score > -search::WIN_SCORE && r5.score < search::WIN_SCORE);
+            const auto r5 = engine.search(
+                pass_board, Player::Black, SearchLimits::fixed_depth(1), {}, search::no_stop(), sq_a1.bit());
+            STELLO_CHECK(r5.ok);
+            STELLO_CHECK(r5.result.mv == Move(sq_a1));
+            STELLO_CHECK(r5.result.kind == ScoreKind::Heuristic);
+            STELLO_CHECK_EQ(r5.result.depth, 1);
+            STELLO_CHECK(r5.result.nodes >= uint64_t{1});
+            STELLO_CHECK(r5.result.score > -search::WIN_SCORE && r5.result.score < search::WIN_SCORE);
         }
     }
 }

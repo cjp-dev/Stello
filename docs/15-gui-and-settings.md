@@ -181,7 +181,7 @@ The dialog is arranged into three fieldset groups:
 graph TD
     Settings["Settings Dialog"]
     Settings --> Section1["1. How long may the computer think?<br/>Fixed depth • Time per move • Time per game"]
-    Settings --> Section2["2. Stello Opening Book &amp; Transposition Table<br/>6,000 Canonical Positions • 4 MB to 1,024 MB TT Capacity"]
+    Settings --> Section2["2. Stello Opening Book &amp; Transposition Table<br/>6,000 Canonical Positions • 2 MiB to 512 MiB TT Capacity"]
     Settings --> Section3["3. Threads<br/>Automatic • 1 up to the device's threads"]
 ```
 
@@ -192,22 +192,20 @@ graph TD
 
 ### 2. Stello Opening Book & Transposition Table
 * **Stello Opening Book (6,000 canonical positions):** Checkbox controlling whether the engine queries the canonical opening book database before launching tree search. When checked, known book positions are played instantly. When unchecked, book lookups are bypassed and the engine searches every move from scratch.
-* **Transposition Table Capacity:** Selects the number of entries in each of the two tables (the midgame heuristic table and the exact endgame solver table); the memory shown covers both. Both dialogs use the same five choices from `SettingsViewModel.TranspositionTableChoices`:
+* **Transposition Table Capacity:** Selects the capacity of the unified transposition table shared by midgame search and endgame solver. The numeric preference identifiers (`65_536`..`16_777_216`) are preserved for settings compatibility; both dialogs use the five choices from `SettingsViewModel.TranspositionTableChoices`:
 
-| Entries Option | Hash Bits | Entries / Table | Combined Memory | Description |
-|---|---|---|---|---|
-| **65,536 entries (4 MB)** | 15 | 65,536 | $4.19\text{ MB}$ | Ultra-compact memory for low-resource environments |
-| **262,144 entries (16 MB)** | 17 | 262,144 | $16.78\text{ MB}$ | Lightweight cache for fast mobile browsers |
-| **1,048,576 entries (64 MB) - Default** | 19 | 1,048,576 | $67.11\text{ MB}$ | Tournament balance of speed and cache hit rates |
-| **4,194,304 entries (256 MB)** | 21 | 4,194,304 | $268.44\text{ MB}$ | Deep tactical searches and endgame solving |
-| **16,777,216 entries (1,024 MB)** | 23 | 16,777,216 | $1{,}073.74\text{ MB}$ | Maximum transposition table cache for 64-bit desktop |
+| Entries Option | Saved Key | Hash Bits | Shared Entries | Memory (MiB / MB) | Description |
+|---|---:|---:|---:|---:|---|
+| **131,072 shared entries (2 MiB)** | `65,536` | 15 | 131,072 | $2\text{ MiB}$ ($2.10\text{ MB}$) | Ultra-compact memory for low-resource environments |
+| **524,288 shared entries (8 MiB)** | `262,144` | 17 | 524,288 | $8\text{ MiB}$ ($8.39\text{ MB}$) | Lightweight cache for fast mobile browsers |
+| **2,097,152 shared entries (32 MiB) - Default** | `1,048,576` | 19 | 2,097,152 | $32\text{ MiB}$ ($33.55\text{ MB}$) | Tournament balance of speed and cache hit rates |
+| **8,388,608 shared entries (128 MiB)** | `4,194,304` | 21 | 8,388,608 | $128\text{ MiB}$ ($134.22\text{ MB}$) | Deep tactical searches and endgame solving |
+| **33,554,432 shared entries (512 MiB)** | `16,777,216` | 23 | 33,554,432 | $512\text{ MiB}$ ($536.87\text{ MB}$) | Maximum transposition table cache for 64-bit desktop |
 
 #### Memory Calculation & Architecture
-Each transposition table slot is one 64-byte cache line ([chapter 07](07-transposition-table.md)): an 8-byte sequence word, which lets all the search threads share the table safely, and 2 entries (primary and replacement) of 24 bytes. Each entry is stored as three 64-bit words:
-* 16 bytes for the position bitboards (`own`, `opponent`)
-* 8 bytes packed into one word: the score (`value`, 2 bytes), the search depth (`depth`, 1 byte), the bound type (`bound`, 1 byte), the best move (`mv`, 1 byte), the extra key (`tag`, 1 byte: the side to move in the midgame table) and the table's generation when it was stored (`generation`, 2 bytes, for clearing without writing the table)
+The unified transposition table consists of $2^{\text{hashBits}}$ buckets aligned to 64-byte cache lines ([chapter 07](07-transposition-table.md)), each holding 4 lockless Hyatt-XOR entries of 16 bytes (`key_xor` and packed `data` of 8 bytes each: dual 16-bit `[lower, upper]` bounds, best move, 2-bit domain tag, 5-bit cost, 3-bit selectivity, 6-bit depth, 2-bit date, and 7-bit generation).
 
-The total entries per table equals $2^{\text{hashBits} + 1}$ (the number in the option label), in $2^{\text{hashBits}}$ slots. Because the search engine keeps two tables of that size—one for the heuristic midgame search and one for the exact endgame solver—the combined memory equals $2 \times 2^{\text{hashBits}} \times 64\text{ bytes}$. The option labels give this in MiB ($2^{20}$ bytes); the Combined Memory column gives it in MB ($10^6$ bytes). Stello 2.0 had no sequence word and 48-byte slots, so its labels said 3, 12, 48, 192 and 768 MB; Stello 3.0 needs a third more memory for the same number of entries ([chapter 26](26-phases-5-9-threads.md)). When the capacity setting changes, the engine host dynamically reinitializes the engine with the requested hash size.
+Thus total shared entries equal $4 \times 2^{\text{hashBits}}$ and memory equals $64 \times 2^{\text{hashBits}}$ bytes ($32\text{ MiB}$ for $2{,}097{,}152$ shared entries at default `hashBits = 19`). Saved `GameSettings.TranspositionTableEntries` keys keep $\text{hashBits} = \log_2(\text{key}) - 1$ so existing players do not resize silently. Historically, Stello 2.0 used two tables of 48-byte slots (3, 12, 48, 192, and 768 MiB) and Stello 3.0–5.0 used two seqlock tables of 64-byte slots (4, 16, 64, 256, and 1,024 MiB; [chapter 26](26-phases-5-9-threads.md)). When the capacity setting changes, the engine host dynamically reinitializes the engine with the requested hash size.
 
 ### 3. Threads
 The computer can search with several threads at once ([chapter 06](06-midgame-search.md#threads)), which makes it reach more depth in the same time. The **Threads** group chooses how many:

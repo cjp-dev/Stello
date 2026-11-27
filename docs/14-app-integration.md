@@ -197,7 +197,7 @@ The C ABI has version 3 (`kAbiVersion` in [version.hpp](../Stello.Cpp/src/core/v
 | 2 | `stello_engine_set_threads(engine, threads)`: 1–256, else `STELLO_INVALID_ARGUMENT` ([line 140](../Stello.Cpp/src/ffi/stello_ffi.cpp#L140)) | `SetThreads`, called from `Search` when `SearchLimits.Threads` changes |
 | 3 | `stello_engine_set_ybwc(engine, ybwc)`: YBWC on (the default) or off, for comparisons ([line 154](../Stello.Cpp/src/ffi/stello_ffi.cpp#L154)) | `SetYbwc`, called once when the engine is made if `SearchOptions.Ybwc` is false ([SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs#L208)) |
 
-The wrapper requires exactly this version ([`AbiVersion`](../Stello.Net/Stello.Engine/Native/StelloNative.cs#L17) = 3). Progress and the iteration callback still run on the thread that called `Search`, with the nodes of all threads. The hash tables now take 64 bytes per slot, one cache line with the slot's lock ([chapter 07](07-transposition-table.md)), so the wrapper tells the .NET garbage collector about $2 \times 64 \times 2^{\text{hashBits}}$ bytes of native memory (`HashBytesPerSlot`, [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs#L31)): 64 MiB at the default 19 bits.
+The wrapper requires exactly this version ([`AbiVersion`](../Stello.Net/Stello.Engine/Native/StelloNative.cs#L17) = 3). Progress and the iteration callback still run on the thread that called `Search`, with the nodes of all threads. The unified transposition table uses 64 bytes per 4-entry cache-line bucket ([chapter 07](07-transposition-table.md)), so the wrapper tells the .NET garbage collector about $64 \times 2^{\text{hashBits}}$ bytes of native memory (`HashBytesPerSlot`, [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs#L31)): 32 MiB at the default 19 bits (down from 64 MiB in Stello 3.0–5.0).
 
 ### The engine in the browser
 
@@ -327,7 +327,7 @@ Measured on Stello 3.0's Release AOT publish in headless Chromium served with CO
 
 `GameSettings` also configures engine features:
 - `UseOpeningBook` (`bool`, default `true`): enables or disables opening book lookups.
-- `TranspositionTableEntries` (`int`, default `1_048_576`): the entries in each of the two hash tables (midgame and endgame, chapter 07), a power of two from 65 536 to 16 777 216; `HashBits` is $\log_2(\text{entries}) - 1$ (each slot holds two entries), so the default gives 19. The memory is $2 \times 64 \times 2^{\text{HashBits}}$ bytes: 4, 16, 64, 256 or 1,024 MB (chapter 15).
+- `TranspositionTableEntries` (`int`, default `1_048_576`): compatibility preference key (`65_536` to `16_777_216`) preserved across upgrades; `HashBits` is $\log_2(\text{key}) - 1$, so the default gives 19. The unified 4-way table holds $4 \times 2^{\text{HashBits}}$ shared entries ($2{,}097{,}152$ at the default 19 bits) and uses $64 \times 2^{\text{HashBits}}$ bytes: 2, 8, 32, 128 or 512 MiB (chapter 15; down from 4, 16, 64, 256 or 1,024 MB in Stello 3.0–5.0).
 - `Threads` (`int`, default 0 = `AutomaticThreads`): the threads to search with; 0 means the device's default, so the same saved settings mean cores − 1 on a desktop and all of the browser's threads in a browser. `Normalize` keeps it within 0–256, and `ThreadsFor` caps a chosen number at the device's.
 - When `HashBits` differs from the current engine's size, `LocalEngineHost` makes a new `ComputerPlayer` with a `SearchEngine` of the new size (and so a fresh `BookTracker`). In the browser the worker makes a new engine of the new size, and `WebEngineHost` resets its `BookTracker`.
 

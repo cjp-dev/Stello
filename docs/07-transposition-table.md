@@ -4,212 +4,97 @@
 
 ## In short
 
-In Othello the same position is often reached by different move orders: a **transposition**. The transposition table (also called the hash table) remembers what the search found out about each position it has searched: the score, whether that score is exact or only a bound, how deep the search was, and the best move. When the position comes up again, the stored result can end the search of that position at once, or at least give the best move to try first. Stello has two tables, one for the midgame search and one for the endgame solver, with two entries per slot so that deep results are not pushed out by shallow ones. All the threads of a search share both tables. Each slot is one 64-byte cache line with a sequence lock, so a thread never takes a half-written entry of another thread for a valid one.
+In Othello the same position is often reached by different move orders: a **transposition**. The transposition table (also called the hash table) remembers what the search found out about each position it has searched: dual `[lower, upper]` bounds, whether a bound cuts or is exact, how deep and selective the search was, and the best move. When the position comes up again, the stored result can end the search of that position at once, or at least give the best move to try first. Since Phase 4 Item 2, Stello uses **one unified 4-way transposition table** shared across midgame search (`tag` 0/1 for Black/White) and endgame solving (`ENDGAME_TT_TAG = 2`). All threads share it lock-free inside 64-byte cache-line buckets using Hyatt's XOR verification (`key_xor ^ data`). *(In Stello 3.0–5.0, Stello kept separate `midgame_table` and `endgame_table` allocations of 64-byte seqlock slots with 2 entries each, costing twice as much RAM.)*
 
 ## Data structures
 
-![Left: the table as an array of 2^bits slots, each with two entries, "deepest" and "always replaced". Right: the 24-byte entry with Own, Opponent, Value, Depth, Bound, Move, Tag and Generation, and the hash function that chooses the slot.](images/tt-layout.svg)
-
-An `Entry` is a `Copy` struct of 24 bytes:
-
-| Field | Type | Contents |
-|---|---|---|
-| `own`, `opponent` | `u64` | The discs of the side to move and of the other side: the whole position |
-| `value` | `i16` | The score |
-| `depth` | `i8` | The midgame `look` of the search, or the number of empty squares in the endgame |
-| `bound` | `Bound` | `Exact`, `Lower`, `Upper`, or `None` for an unused entry |
-| `mv` | `i8` | The best move (square index), or −1 |
-| `tag` | `u8` | Extra key: the side to move in the midgame table, 0 in the endgame table |
-| `generation` | `u16` | The table's generation when the entry was stored (see [Clearing](#clearing-by-generation)); it fills the two bytes that would otherwise be padding |
-
-| `Bound` | Meaning | C++ name |
-|---|---|---|
-| `Exact` | The value is the true score (it was inside the window) | `OK_HASH` |
-| `Lower` | The true score is at least the value (it failed high: ≥ β) | `HI_HASH` |
-| `Upper` | The true score is at most the value (it failed low: ≤ α) | `LO_HASH` |
-
-### The slot
-
-The entries are not stored as `Entry` structs. Each slot is a `Slot` of eight 64-bit words, aligned to 64 bytes so that it fills exactly one cache line ([search/table.hpp](../Stello.Cpp/src/search/table.hpp)):
+A `PackedEntry` in `Slot::entries` (`std::array<PackedEntry, 4>`) is **16 bytes** (`two uint64_t`s), so **4 entries fit in one 64-byte cache-line-aligned `Slot`**:
 
 | Word | Contents |
 |---|---|
-| 0 | `sequence`: even while the slot is free, odd while a writer holds it |
-| 1–3 | The first entry ("deepest"): `own`, `opponent`, and one packed word |
-| 4–6 | The second entry ("always replaced"): `own`, `opponent`, and one packed word |
-| 7 | Unused: the padding to 64 bytes (`padding_`, avoiding MSVC alignment warnings) |
+| `key_xor` | `verify ^ data` (for lockless torn-read detection) |
+| `data` | Packed `[lower, upper]`, move, domain tag, cost, selectivity, depth, date, and generation |
 
-All seven used words are `std::atomic<uint64_t>` accessed with `memory_order_acquire`/`release`/`relaxed`. The packed word holds the rest of the entry, from the low bits up (`Entry::pack` / `Entry::unpack` in [search/table.hpp](../Stello.Cpp/src/search/table.hpp)):
+Where `verify` packs the 7-bit empty count (`64 - popcount(own | opponent)`) in bits 57–63 and a 57-bit secondary hash in bits 0–56; and `data` packs from the low bits up (`Entry::pack` / `Entry::unpack` in [search/table.hpp](../Stello.Cpp/src/search/table.hpp)):
 
-| Bits | Field |
-|---|---|
-| 0–15 | `value` |
-| 16–23 | `depth` |
-| 24–31 | `bound` |
-| 32–39 | `mv` |
-| 40–47 | `tag` |
-| 48–63 | `generation` |
+| Bits | Field | Notes |
+|---|---|---|
+| 0–15 | `lower` | Signed 16-bit lower bound (`TT_SCORE_MIN = -32768` = none) |
+| 16–31 | `upper` | Signed 16-bit upper bound (`TT_SCORE_MAX = 32767` = none) |
+| 32–38 | `mv + 1` | 7 bits (`0` = `-1`, `1..64` = square `0..63`) |
+| 39–40 | `tag` | `0` = Black midgame, `1` = White midgame, `2` = Endgame (`ENDGAME_TT_TAG`) |
+| 41–45 | `cost` | `bit_width(delta_nodes)` clamped to `0..31` |
+| 46–48 | `selectivity` | `1` = midgame MPC, `1..6` = endgame MPC stage, `7` = `SEL_EXACT` |
+| 49–54 | `depth` | Midgame `look`, or endgame `empties` (`0..63`) |
+| 55–56 | `date` | Search counter `0..3` |
+| 57–63 | `generation` | 7-bit table generation (`1..127`; `0` = empty/cleared) |
 
-A packed word of zero is an empty entry (`Bound::None`, generation 0), so zeroed memory is an empty table. `get` unpacks the three words into an `Entry` again.
+An all-zero `data` word has generation 0 (empty), so zeroed memory is an empty table. Notice that keeping a separate `16`-bit `[lower, upper]` pair handles fail-highs (`lower > TT_SCORE_MIN`), fail-lows (`upper < TT_SCORE_MAX`), and exact matches (`lower == upper`) without discarding the opposite bound at the same `(depth, selectivity)` level.
 
 ### Memory
 
-`TranspositionTable::new(bits)` allocates $2^{\text{bits}}$ slots. `SearchEngine` takes the hash bits (10–26, default 19) and creates two tables of that size (one for the heuristic midgame and one for the exact endgame solver):
+`TranspositionTable(bits)` allocates $2^{\text{bits}}$ 64-byte `Slot`s ($4 \times 2^{\text{bits}}$ shared `16`-byte entries). At the default `hashBits = 19` (`524,288` buckets):
 
-$$2 \times \big(2^{19} \text{ slots} \times 64 \text{ bytes}\big) = 64 \text{ MiB total}$$
+$$2^{19}\text{ buckets} \times 64\text{ bytes} = 32\text{ MiB}\quad (2{,}097{,}152\text{ shared entries})$$
 
-Two entries need 48 bytes. The sequence word and the padding take the other quarter of the slot: a third more memory is the price of sharing the table between threads. Stello 2.0 had 48-byte slots and took 48 MiB at the default size; 3.0 takes 64 MiB for the same number of entries ([chapter 26](26-phases-5-9-threads.md#the-hash-table-seqlock-spin-lock-or-xor) has the measurements behind the choice).
+Historically, Stello 2.0 took 48 MiB at the default size (two tables of 48-byte slots), and Stello 3.0–5.0 took **64 MiB** for half as many entries per table (`1,048,576` per table in two seqlock allocations; [chapter 26](26-phases-5-9-threads.md#the-hash-table-seqlock-spin-lock-or-xor)). Keeping the active default table at `32 MiB` avoids DTLB / cache cliffs on Windows while doubling capacity in half the RAM.
 
 ### The sizes in the settings
 
-In the Settings dialog ([chapter 15](15-gui-and-settings.md)), players choose the number of entries **per table** from 5 power-of-two sizes. The engine has two tables, so the memory is twice that of one table. The sizes in the option labels are in MiB ($2^{20}$ bytes); the Combined Memory column gives the same sizes in MB ($10^6$ bytes):
+In the Settings dialog ([chapter 15](15-gui-and-settings.md)), players pick from 5 power-of-two table capacities. To preserve saved user preferences across upgrades, the stored numeric `TranspositionTableEntries` key (`65_536`–`16_777_216`) and $\text{hashBits} = \log_2(\text{key}) - 1$ remain unchanged, while the UI labels reflect the unified 4-way shared table sizes (`bytes = 64 × 2^hashBits`, `shared entries = 4 × 2^hashBits`):
 
-| Option label (web) | `hashBits` | Entries / table | Combined memory |
-|---|---|---|---|
-| **65,536 entries (4 MB)** | 15 | 65,536 | $4.19\text{ MB}$ |
-| **262,144 entries (16 MB)** | 17 | 262,144 | $16.78\text{ MB}$ |
-| **1,048,576 entries (64 MB) - Default** | 19 | 1,048,576 | $67.11\text{ MB}$ |
-| **4,194,304 entries (256 MB)** | 21 | 4,194,304 | $268.44\text{ MB}$ |
-| **16,777,216 entries (1,024 MB)** | 23 | 16,777,216 | $1{,}073.74\text{ MB}$ |
+| Option label (shared by WPF & Web) | Saved Key | `hashBits` | Shared entries | Memory (MiB / MB) |
+|---|---:|---:|---:|---:|
+| **131,072 shared entries (2 MiB)** | `65,536` | 15 | 131,072 | $2\text{ MiB}$ ($2.10\text{ MB}$) |
+| **524,288 shared entries (8 MiB)** | `262,144` | 17 | 524,288 | $8\text{ MiB}$ ($8.39\text{ MB}$) |
+| **2,097,152 shared entries (32 MiB) - Default** | `1,048,576` | 19 | 2,097,152 | $32\text{ MiB}$ ($33.55\text{ MB}$) |
+| **8,388,608 shared entries (128 MiB)** | `4,194,304` | 21 | 8,388,608 | $128\text{ MiB}$ ($134.22\text{ MB}$) |
+| **33,554,432 shared entries (512 MiB)** | `16,777,216` | 23 | 33,554,432 | $512\text{ MiB}$ ($536.87\text{ MB}$) |
 
-The desktop labels are the same without the word "entries" ([SettingsViewModel.cs](../Stello.Net/Stello.App/ViewModels/SettingsViewModel.cs#L88-L95)). The setting is converted via $\text{hashBits} = \log_2(\text{entries}) - 1$ and passed in `SearchLimits.HashBits`. If the active search engine's `HashBits` does not match the requested size, `LocalEngineHost` (desktop) and the WebAssembly engine's `search` in the Web Worker ([chapter 14](14-app-integration.md)) recreate the engine with the requested capacity before launching the search. The threaded WebAssembly engine's shared memory may grow to 2 GiB, so the largest size fits there too ([chapter 14](14-app-integration.md#threads-in-the-browser)).
+Both apps share `SettingsViewModel.TranspositionTableChoices` ([SettingsViewModel.cs](../Stello.Net/Stello.App/ViewModels/SettingsViewModel.cs#L10-L18)). If the active engine's `HashBits` differs from the requested setting, `LocalEngineHost` (desktop) and the Web Worker ([chapter 14](14-app-integration.md)) recreate the engine with the requested size before searching.
 
 ## Algorithm
 
-### Finding the slot
+### Finding the bucket
 
-The slot comes from a hash of the whole position:
+The 64-byte bucket index comes from a hash of `own`, `opponent`, and `tag`, while `verify` uses a second independent hash permutation plus `empties` (`64 - popcount(own | opponent)`):
 
-$$
-\begin{aligned}
-h &= \text{own} \cdot \texttt{0x9E3779B97F4A7C15} \\
-h &= h \oplus \big(\operatorname{rotl}(\text{opponent} \cdot \texttt{0xC2B2AE3D27D4EB4F}, 31) + \text{tag}\big) \\
-h &= h \cdot \texttt{0xD6E8FEB86659FD93} \\
-\text{slot} &= h \gg (64 - \text{bits})
-\end{aligned}
-$$
-
-(multiplications modulo $2^{64}$). The top bits of $h$ choose the slot; they depend on all the input bits.
-
-### Looking up: `get`
-
-The searches use `get_at_root(own, opponent, tag, root_empties)`: it checks the first entry, then the second if needed, and returns one matching entry, if any. An entry is a hit only if `own`, `opponent` and `tag` are all equal, its bound is not `None`, its generation is the table's, and its position has no more empty squares than the current root ([Aging](#aging-across-moves)). Because the whole position is stored, there are **no false hits**: an entry can never belong to a different position that happens to have the same hash. With several threads, the probe also checks that no other thread wrote the slot while it read it ([Sharing the table between threads](#sharing-the-table-between-threads)). The convenience `get(own, opponent, tag)` uses a root limit of 64, so it only applies the generation check.
-
-### Storing: `store`
-
-The searches use `store_at_root(own, opponent, tag, depth, bound, value, mv, root_empties)`, which holds the slot's lock while it decides and writes. A stale first entry is overwritten without disturbing the second entry. Otherwise it keeps the deepest result in the first entry and uses the second entry for everything else. The convenience `store(...)` uses a root limit of 64.
-
-```mermaid
-flowchart TD
-    S["store(position, depth, ...)"] --> Stale{"First entry is live in this generation<br/>but has more empties than the root?"}
-    Stale -- "yes" --> Reclaim["Overwrite the first entry;<br/>leave the second entry alone"]
-    Stale -- "no" --> Same{"First entry holds<br/>the same live position?"}
-    Same -- "yes" --> Deeper{"depth ≥ its depth?"}
-    Deeper -- "yes" --> Replace["Replace the first entry"]
-    Deeper -- "no" --> Keep["Keep the first entry;<br/>the new result is dropped"]
-    Same -- "no" --> Empty{"First entry not in use,<br/>or depth ≥ its depth?"}
-    Empty -- "yes" --> Move["Move the first entry to the second place,<br/>store the new one first"]
-    Empty -- "no" --> Second["Store the new one in the second entry"]
+```cpp
+h1 = (own * C1 ^ rotl(opponent * C2, 31) ^ (tag * C3)) * C4;
+slot = h1 >> (64 - bits);
 ```
 
-The first entry is "depth-preferred": it survives until a result at least as deep arrives, or its position becomes stale. The second entry is "always replaced": it keeps the most recent shallow result. This is the *two-tier* scheme described on the Chess Programming Wiki. C++ had one entry per slot, so a deep result could be overwritten by many shallow ones. A shallower result for the same position is still dropped even if its bound is tighter; retaining a second bound was tried and not kept.
+### Looking up: `get_at_root`
+
+`get_at_root(own, opponent, tag, root_empties)` scans the 4 entries in `slots_[key.index]`. For each way, it loads `data` and `key_xor` with relaxed `std::atomic_ref<uint64_t>` reads, checks `verify = key_xor ^ data`, `tag`, live `generation`, and `empties <= root_empties` ([Aging](#aging-across-moves)), and returns the first match. The convenience `get(own, opponent, tag)` uses `root_empties = 64`.
+
+### Storing & replacement: `store_bounds_at_root`
+
+If an entry matches `(verify, tag)` and is live:
+1. Updates with `new_level < old_level` (where `level = (depth << 3) | selectivity`) are refused.
+2. When `new_level == old_level`, `lower` and `upper` are merged monotonically (resetting on contradiction), and `mv` is chosen according to which search established the retained lower bound (a weaker fail-high does not steal the move of a stronger lower bound; a stronger fail-high or fresh exact result adopts the new valid move; upper-only updates only supply a move when no lower bound exists yet).
+3. When `new_level > old_level`, stale bounds reset to the new search's bounds while keeping `existing_mv` if the deeper search returned `-1`.
+
+If no entry matches, the 4 ways are scored for replacement: any non-live / stale entry (`empties > root_empties` or old generation) is evicted immediately; otherwise the way with the smallest `writeable_level_packed = 1 + (current_date ? 0x4000 : 0) + ((cost | sel | depth) -> sorted composite)` is overwritten. Notice that for a new key in a full bucket, depth and selectivity help pick the least valuable resident—they do not block a shallow incoming key from entering the bucket.
 
 ### Aging across moves
 
-At the start of each search, the engine records the root's empty-square count and passes it to every thread. For a stored position the empty count is `64 - (own | opponent).count_ones()`. If it exceeds the root's count, the position cannot occur below that root: a move fills one square and a pass leaves the count unchanged. Such an entry counts as empty on probe and replacement.
+At the start of each search, `SearchEngine` advances `date_` (0–3) and records the root's `empties`. Entries whose `empties > root_empties` belong to ancestors/other branches with fewer discs and are treated as empty on probe and replacement ([3.1 findings](../Plans/making-stello-3-1-findings.md#item-3-aging-transposition-table-entries-2026-11-06-3a-kept-3b-dropped)).
 
-This matters when tables persist across moves, as in apps and matches. Without aging, deep entries from earlier positions could block the first place in a slot for the rest of the game. With aging, even a shallower current entry can reclaim that place; a useful second entry is kept rather than overwritten with the stale one. Empty or old-generation entries still follow the original replacement rules.
+### Use in midgame search and endgame solver
 
-The benchmarks clear their tables between positions, so aging changes none of their strict node signatures. A persistent small-table regression exercises the competition that those benchmarks cannot. The [3.1 findings](../Plans/making-stello-3-1-findings.md#item-3-aging-transposition-table-entries-2026-11-06-3a-kept-3b-dropped) record the five matches and the decision to keep aging only.
-
-### Use in the midgame search
-
-In the node search (chapter 06):
-
-- The table is read at plies ≤ `look` − 1 and written at plies ≤ `look` of the current iteration, with the side to move as the tag.
-- A stored move is only used if it is a legal move in the position.
-- If the stored depth is at least the node's `look`, the stored value ends the search when:
-  - the bound is `Exact`, or
-  - the bound is `Upper` and the value is at or below α (the position cannot improve our current result), or
-  - the bound is `Lower` and the value is at least β (too good; the opponent avoids it).
-- Otherwise the stored move is searched first (chapter 05).
-- **Enhanced transposition cutoff.** From `look` = 4 (`MIDGAME_ETC_MIN_LOOK`), when the children's ply is still within the read height, the position after each move is looked up before the moves are ordered, with the opponent as the tag. If a child has an `Exact` or `Upper` entry with depth ≥ `look` − 1 whose negated value is at least β, that move already refutes the node, and the node returns at once without searching anything.
-- **Multi-ProbCut's shallow searches** (chapter 06) read and write the same table at the same plies. Their entries have a small depth, so for the deep search that follows they mostly give the move to try first, and the depth-preferred entry keeps deeper results.
-- **Prefetch.** At a node that will store its result but does not read the table (the deepest ply that is written, one below the last one that is read), the search asks the processor to load the slot into the cache (`prefetch`, x86-64 only) before it searches the children, so the store at the end does not wait for memory. It changes nothing else.
-- After the node is searched, the result is stored with the node's `look` as depth and the bound from the window: `Lower` if the best score ≥ β, `Exact` if it is above α, else `Upper`.
-
-### Use in the endgame solver
-
-The solver ([chapter 08](08-endgame-solver.md)) uses the endgame table with tag 0 and `depth` equal to the number of empty squares (`>= 7`) for exact solves, or the selective stage (`1..6`, below `7`) during timed selective endgame passes (`try_end_probcut`). Checking `entry->depth >= required_depth` ensures selective bounds guide move ordering and ascending selective passes without ever masquerading as exact solves:
-
-- **Nodes with a window** (`end_window`, 7 or more empty squares, the principal variation of the solver):
-  - an `Exact` entry (with sufficient depth) is returned at once;
-  - a `Lower` entry raises α and an `Upper` entry lowers β; if then α ≥ β, the stored value is returned;
-  - otherwise the stored move is searched first;
-  - the result is stored as `Lower` if it reached β, `Exact` if it is above the original α, else `Upper`.
-- **Null-window nodes above 13 empty squares** (`end_deep`, a fail-soft null window around α, so there is no window to narrow):
-  - an entry of sufficient depth that is not `Upper` with a value above α, or not `Lower` with a value at or below α, already answers the question "better than α?", so its value is returned;
-  - otherwise the stored move is searched first, before the other moves are ordered;
-  - the result is stored as `Lower` if it is above α, else `Upper`.
-
-Both are described in [Above 13 empty squares: `EndWindow` and `EndDeep`](08-endgame-solver.md#above-13-empty-squares). Null-window nodes with 13 or fewer empty squares use the solver's small local table instead ([7 to 13 empty squares](08-endgame-solver.md#7-to-13-empty-squares)), and nodes with 6 or fewer empty squares no table at all. From 12 empty squares (`END_ETC_MIN_EMPTIES`), both kinds of node first look up the positions after each move (*enhanced transposition cutoff*, chapter 08).
-
-### Two tables
-
-Midgame values (heuristic scores in 1/100 disc, depending on the search depth, or ±(32 600 + discs) for a finished game) and endgame values (final disc differences, −64 to 64) mean different things, so they are kept in separate tables. The tables are never cleared during a game: `SearchEngine::clear_hash` (C# `ClearHash`, which also clears the solver's local table) exists, but the apps do not call it, so results from the previous move are still there when the next search starts. The tools call it between independent searches: the benchmarks, the trainer's `mpc` command, the book recalculation and the book match.
+- **Midgame search** (`engine_impl.hpp`) tags Black = `0`, White = `1` with `depth = look` and `selectivity = (probcut_errors ? SEL_MIDGAME_MPC : SEL_EXACT)`. Qualifying hits cut when `lower >= beta`, `upper <= alpha`, or `lower == upper`, and otherwise supply `hash_move` to `1A`'s hash-move-first ordering. `try_probcut_inc` and ETC (`search_inc_deep`) share the same unified table.
+- **Endgame solver** (`endgame/search_impl.hpp`) tags positions with `ENDGAME_TT_TAG = 2`, real `depth = empties`, and `selectivity = (end_mpc_stage > 0 ? end_mpc_stage : SEL_EXACT)`, so exact probes (`req_sel = SEL_EXACT`) never accept selective MPC entries while lower-selectivity passes and move ordering can reuse them cleanly.
 
 ### Clearing by generation
 
-`clear` does not write the table. Each table has a 16-bit generation counter, which `clear` increases, and every entry records the generation it was stored in. An entry of an older generation counts as empty: `get` does not find it, and `store` treats it as an unused first entry. So clearing costs nothing, however large the table; only when the counter wraps, after 65,535 clears, is the whole table set to zero once (an all-zero entry is an empty one), and the count starts again at 1. A new table starts at generation 1, so its zeroed entries (generation 0) are empty too. The tools that clear the tables before each of many short searches gain the most ([chapter 25](25-phases-0-4-the-engine-in-rust.md)).
+`clear` resets `date_ = 0` and increments the 7-bit `generation_` counter (`1..127`); only on wraparound back to `0` is the table zeroed (using AVX2 non-temporal stores on x86-64) and `generation_` reset to `1`.
 
 ### Sharing the table between threads
 
-A search with more than one thread ([chapter 06](06-midgame-search.md#threads)) runs on several threads that all read and write the same two tables. They do so through `&self`: there is no lock on the whole table. Instead each slot has its own **sequence lock** (seqlock), the `sequence` word at the start of its cache line.
+Concurrent threads read and write the unified table without per-slot locks using Hyatt's XOR technique (`key_xor = verify ^ data`). A torn read mismatches `verify`, preventing corrupted entries with `0` lock contention on reads or writes.
 
-**A store** ([`store_at_root`](../Stello.Cpp/src/search/table.hpp), `Slot::lock`):
-
-1. The writer reads the sequence. If it is even, the writer makes it odd with a compare-and-swap: it now holds the slot. If another writer holds it, it waits in a short spin loop; a write is only a few stores.
-2. It applies the replacement rules above and writes the words of the entries it changes.
-3. It stores the sequence + 2: even again, and larger than before.
-
-**A probe** ([`get_at_root`](../Stello.Cpp/src/search/table.hpp)):
-
-1. The reader reads the sequence. If it is odd, a writer holds the slot, and the probe returns a miss at once. A reader never waits.
-2. It reads the words of the two entries and looks for its position. If neither entry matches, it is a miss; a miss read during a write is a miss either way.
-3. If an entry matches, it reads the sequence again. The hit counts only if the sequence did not change. Otherwise it is a miss.
-
-```mermaid
-sequenceDiagram
-    participant W as Writer (store)
-    participant S as Slot (sequence and 6 words)
-    participant R as Reader (get)
-    R->>S: read the sequence: 8 (even, free)
-    W->>S: compare-and-swap 8 to 9 (odd, locked)
-    W->>S: write own, opponent and the packed word
-    R->>S: read own, opponent and the packed word<br/>(they may come from two writes)
-    W->>S: store the sequence 10 (free)
-    R->>S: read the sequence again: 10
-    Note over S,R: 10 is not 8: a miss, the words are not used
-```
-
-**Why a torn read is never taken for a valid entry.** The three words of an entry are written one after the other. Without the check, a reader could combine the discs of one position with the discs or the value of another, and take the mix for the position it looks for. With the check, every write that overlaps the reader's reads changes the sequence between its two reads: the writer makes it odd before its first store and adds 2 after its last. The memory orderings make sure of that: the compare-and-swap is an acquire and is followed by a release fence, the unlock is a release, and the reader's second read of the sequence follows an acquire fence. So if the reader saw any word of a write, it also sees the changed sequence. A missed hit costs only a little search; a false hit could give a wrong score.
-
-**With one thread** the lock is never contended. Apart from aging, lookup and replacement follow the C# 2.0 table's rules; later search changes can alter which entries are used and the nodes visited.
-
-**`clear`** needs `&mut self`: the table to itself. It runs between searches only, when no other thread uses the table.
-
-**What was measured before choosing** (phase 5, on one thread, one pinned CPU, fastest of 3 passes; mid-bench depth 10 / mid-bench depth 12 / random positions at depth 8 / FFO #40–49, from [the findings](../Plans/making-stello-3-findings.md#the-hash-table-a-seqlock-per-slot)):
-
-| Variant | Time | Cost |
-|---|---|---|
-| Unchanged (single-threaded, 48-byte slot) | 0.346 / 1.001 / 0.856 / 25.0 s | — |
-| **Seqlock, 64-byte slot (chosen)** | 0.345 / 1.007 / 0.855 / 24.9 s | 0–0.6 % |
-| Spin lock per slot on probe and store (as in Egaroucid) | 0.351 / 1.021 / 0.865 / 25.0 s | 1.5–2 % |
-| Hyatt's XOR check, 48-byte slot | 0.341 / 1.008 / 0.848 / 25.1 s | About 0 %, but only probabilistic |
-
-- **The spin lock** makes every probe take and release the lock, which costs time even when no other thread is there.
-- **The XOR check** ("lockless hashing") stores the key XOR the data, so a torn entry usually fails the key check. It keeps the 48-byte slot. But it is only probabilistic: two positions that differ in one disc's colour can let a torn read pass.
-- **The seqlock** costs nothing measurable and is strict. Its price is memory: a third more ([Memory](#memory)).
+*(Historical Stello 3.0 note, [making-stello-3-findings.md](../Plans/making-stello-3-findings.md#the-hash-table-a-seqlock-per-slot): in Stello 3.0's 2-table 24-byte-entry seqlock era, a single-thread comparison measured 48-byte Hyatt XOR vs 64-byte seqlock vs spin lock (`mid-bench d10/d12/random d8/FFO #40–49`): `0.341/1.008/0.848/25.1 s` for 48 B XOR vs `0.345/1.007/0.855/24.9 s` for 64 B seqlock vs `0.351/1.021/0.865/25.0 s` for spin lock. In Stello 6.0 Phase 4 Item 2, switching to 16-byte unified entries with 57-bit verify + 7-bit empties + 2-bit tag and 64-byte 4-way buckets halved memory and eliminated striped/seqlock multi-thread contention while keeping lockless reads/writes fast.)*
 
 ## Worked examples
 
@@ -254,32 +139,28 @@ The deep result A survived two shallow stores (steps 2 and 3); only a deeper res
 
 ## Design notes
 
-- **Full positions instead of Zobrist keys.** C++ used 32-bit Zobrist-style keys from random numbers, and checked only 32 bits, so false hits were possible. Storing both bitboards costs 16 bytes per entry but makes every hit certain, and there is no random key table to maintain. See [Stello porting documentation.md](../Plans/Stello%20porting%20documentation.md), section 3.5.
-- **Two tables** instead of one shared table: C++ mixed midgame and endgame values in the same table.
-- **Two entries per slot.** With one entry per slot, as in C++, deep endgame results were overwritten by many shallow ones; the second entry keeps them. The measurements from the port, which also set the default of $2^{19}$ slots, are in the [Stello 1 documentation](stello-1/07-transposition-table.md).
-- **One bound and one move per entry.** An entry with both bounds and two moves was tried for the midgame and was not better ([chapter 23](23-phase-5-the-search.md)).
-- **Bounds narrow the endgame window.** In the endgame, a stored bound that does not end the search still narrows (α, β), which C++ did not do.
-- **One shared table, not one per thread.** The threads help each other through the table: Lazy SMP helpers only fill it ([chapter 06](06-midgame-search.md#lazy-smp)). So all threads must share it, and a slot lock is cheaper than any lock on the whole table.
-- **A reader never waits.** A probe of a slot that is being written is a miss, not a wait. Writers wait only for other writers of the same slot, which is rare with $2^{19}$ slots.
+- **Unified 4-way 16-byte lockless entries instead of two 24-byte seqlock tables.** Stello 3.0–5.0 stored full 128-bit `(own, opponent)` bitboards inside separate `midgame_table` and `endgame_table` allocations (2 ways per 64-byte seqlock slot, `64 MiB` at `hashBits = 19`). Stello 6.0 unifies both domains via the 2-bit `tag` and stores a 57-bit independent verification hash + 7-bit `empties` + Hyatt XOR check per 16-byte entry (`32 MiB` at `hashBits = 19`), doubling shared entry capacity in half the memory while staying inside the 32 MiB cache/DTLB working-set sweet spot. *(Stello 1 C++ used 32-bit Zobrist-style keys with only 1 entry per slot; see [Stello porting documentation.md](../Plans/Stello%20porting%20documentation.md), section 3.5, and [Stello 1 documentation](stello-1/07-transposition-table.md).)*
+- **Dual `[lower, upper]` bounds and composite `(depth, selectivity)` level.** Storing separate 16-bit `[lower, upper]` bounds with same-level monotonic merging preserves complementary fail-high and fail-low information while keeping the move supporting the retained lower bound; composite `(depth << 3) | selectivity` distinguishes selective endgame probes from exact solves.
+- **Bounds narrow the endgame window.** In `end_window`, stored bounds that do not cut immediately narrow `(α, β)`.
+- **One shared table, not one per thread.** The threads help each other through the table: Lazy SMP and YBWC helpers read and write the shared lockless buckets with zero lock contention.
 
 ## Where in the code
 
 | File | Main members |
 |---|---|
-| [search/table.hpp](../Stello.Cpp/src/search/table.hpp), [search/table.cpp](../Stello.Cpp/src/search/table.cpp) | `Bound`, `Entry` (`pack`, `unpack`, `is_live`, `matches`, `empty_count`), `Slot` (`load`, `put`, `lock`, `unlock`), `TranspositionTable` (`get_at_root`, `store_at_root`, `get`, `store`, `prefetch`, `clear`, `slot`; hot probes/stores inlined in `table.hpp` for `Kernel<true>` hardware `popcnt`) |
-| [search/engine_impl.hpp](../Stello.Cpp/src/search/engine_impl.hpp) | `midgame_table` and `endgame_table`, the midgame use in `Kernel::search_inc` (with `MIDGAME_ETC_MIN_LOOK` and prefetch), `SearchEngine::clear_hash` |
-| [endgame/search_impl.hpp](../Stello.Cpp/src/endgame/search_impl.hpp) | The endgame use in `end_window` and `end_deep`, `END_ETC_MIN_EMPTIES` |
-| [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs) | The C# `ClearHash` and `HashBits`, passed on to the C++ engine (chapter 14); `HashBytesPerSlot` (2 × 64), the memory it reports to the garbage collector |
-| Rust 3.1 (preserved): [search/table.rs](../Stello.Rust/stello-core/src/search/table.rs) | The preserved Rust 3.1 table |
-| C++: [Minmax.cpp](../Stello%20C++/BRAIN/Minmax.cpp), [HASH.H](../Stello%20C++/BRAIN/HASH.H) | `f_hash_put`, the C++ hash table |
-| C# 2.0 (frozen): [Stello.Engine.V2/Search/TranspositionTable.cs](../Stello.Net/Stello.Engine.V2/Search/TranspositionTable.cs) | The C# original, without aging, the generation (its `Clear` writes every entry), or the lock, in 48-byte slots |
+| [search/table.hpp](../Stello.Cpp/src/search/table.hpp), [search/table.cpp](../Stello.Cpp/src/search/table.cpp) | `Bound`, `Entry` (`pack`, `unpack`, `level`, `is_live`, `matches`, `empty_count`), `PackedEntry`, `Slot`, `StoreParams`, `TranspositionTable` (`get_at_root`, `store_bounds_at_root`, `store_bounds_at_root_slow`, `get`, `store`, `prefetch`, `clear`, `slot_index`, AVX2 non-temporal zeroing) |
+| [search/engine_impl.hpp](../Stello.Cpp/src/search/engine_impl.hpp) | `midgame_table` (pointing to the unified `table_`), midgame probes/stores in `Kernel::search_inc` & `search_inc_deep`, `try_probcut_inc`, `MIDGAME_ETC_MIN_LOOK`, prefetch, and `SearchEngine::clear_hash` |
+| [endgame/search_impl.hpp](../Stello.Cpp/src/endgame/search_impl.hpp) | `endgame_table` (pointing to the same unified `table_` with `ENDGAME_TT_TAG = 2`) in `end_window` and `end_deep`, `END_ETC_MIN_EMPTIES` |
+| [SearchEngine.cs](../Stello.Net/Stello.Engine/SearchEngine.cs) | The C# `ClearHash` and `HashBits`, passed on to the C++ engine (chapter 14); `HashBytesPerSlot` (`64`), the native memory reported to the garbage collector |
+| Rust 3.1 (preserved): [search/table.rs](../Stello.Rust/stello-core/src/search/table.rs) | The preserved historical Rust 3.1 seqlock table |
+| C++: [Minmax.cpp](../Stello%20C++/BRAIN/Minmax.cpp), [HASH.H](../Stello%20C++/BRAIN/HASH.H) | `f_hash_put`, the historical C++ hash table |
+| C# 2.0 (frozen): [Stello.Engine.V2/Search/TranspositionTable.cs](../Stello.Net/Stello.Engine.V2/Search/TranspositionTable.cs) | The historical C# 2.0 original, without aging, the generation (its `Clear` writes every entry), or multi-thread sharing, in 48-byte slots |
 
 ## Tests
 
-- C++, [search_tests.cpp](../Stello.Cpp/tests/search_tests.cpp) and [threads_tests.cpp](../Stello.Cpp/tests/threads_tests.cpp) (under `clang-release` and ASan/UBSan `clang-sanitized`): store and find, aging, generation wraparound, persistent-table aging regression (`4,096` slots across `34` positions), and the **hammer test** (8 threads storing and probing 2,048 positions in 1,024 slots a million rounds per thread without torn reads).
-- Rust 3.1 ([search/table.rs](../Stello.Rust/stello-core/src/search/table.rs)): the original unit tests, hammer test, and Miri/ThreadSanitizer verification ([chapter 26](26-phases-5-9-threads.md)).
-- [TranspositionTableTests.cs](../Stello.Net/Stello.Engine.Tests/TranspositionTableTests.cs), on the frozen C# 2.0 table: store and find; another position or tag is not found; the deeper result for the same position is kept; a deep entry survives many shallow entries in the same slot; clear removes everything.
-- The search and endgame tests (chapters 06 and 08) verify exact 1-thread baseline parity against `stello-v3-signatures.txt`. Aging and inlining leave cleared-table signatures unchanged.
+- C++, [search_tests.cpp](../Stello.Cpp/tests/search_tests.cpp) and [threads_tests.cpp](../Stello.Cpp/tests/threads_tests.cpp) (under `clang-release`, `clang-native`, `msvc-release`, `msvc-native`, and ASan/UBSan `clang-sanitized`): bitfield `pack`/`unpack` & `writeable_level_packed` parity, dual-bound merging, bidirectional lower-bound move preservation (`g01e48` regression), composite-level eviction, 4-way replacement and domain tag isolation, generation wraparound, persistent-table aging regression (`4,096` slots across `34` positions), and the concurrent multi-thread hammer test.
+- Rust 3.1 ([search/table.rs](../Stello.Rust/stello-core/src/search/table.rs)): historical Rust tests and Miri/ThreadSanitizer verification ([chapter 26](26-phases-5-9-threads.md)).
+- [TranspositionTableTests.cs](../Stello.Net/Stello.Engine.Tests/TranspositionTableTests.cs), on the frozen C# 2.0 table, plus [NativeEngineTests.cs](../Stello.Net/Stello.Engine.Tests/NativeEngineTests.cs) (`SearchEngine.HashBytesPerSlot` & `stello-v3-signatures.txt` 1-thread parity).
 
 ## Further reading
 

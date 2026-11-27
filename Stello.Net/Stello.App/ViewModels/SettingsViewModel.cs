@@ -10,11 +10,11 @@ public sealed partial class SettingsViewModel : ObservableObject
     private static readonly IReadOnlyList<TranspositionTableChoice> SharedTranspositionTableChoices = Array.AsReadOnly(
         new TranspositionTableChoice[]
         {
-            new(65_536, "65,536 entries (4 MB)"),
-            new(262_144, "262,144 entries (16 MB)"),
-            new(1_048_576, "1,048,576 entries (64 MB) - Default"),
-            new(4_194_304, "4,194,304 entries (256 MB)"),
-            new(16_777_216, "16,777,216 entries (1,024 MB)"),
+            new(65_536, "131,072 shared entries (2 MiB)"),
+            new(262_144, "524,288 shared entries (8 MiB)"),
+            new(1_048_576, "2,097,152 shared entries (32 MiB) - Default"),
+            new(4_194_304, "8,388,608 shared entries (128 MiB)"),
+            new(16_777_216, "33,554,432 shared entries (512 MiB)"),
         });
 
     [ObservableProperty]

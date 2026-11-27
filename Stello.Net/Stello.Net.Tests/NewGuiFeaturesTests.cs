@@ -192,16 +192,17 @@ public sealed class NewGuiFeaturesTests
 
         Assert.True(vm.UseOpeningBook);
         Assert.Equal(GameSettings.DefaultTranspositionTableEntries, vm.TranspositionTableEntries);
+        Assert.Equal(19, GameSettings.Default.HashBits);
         Assert.Equal(
             [65_536, 262_144, 1_048_576, 4_194_304, 16_777_216],
             vm.TranspositionTableChoices.Select(choice => choice.Value));
         Assert.Equal(
             [
-                "65,536 entries (4 MB)",
-                "262,144 entries (16 MB)",
-                "1,048,576 entries (64 MB) - Default",
-                "4,194,304 entries (256 MB)",
-                "16,777,216 entries (1,024 MB)",
+                "131,072 shared entries (2 MiB)",
+                "524,288 shared entries (8 MiB)",
+                "2,097,152 shared entries (32 MiB) - Default",
+                "8,388,608 shared entries (128 MiB)",
+                "33,554,432 shared entries (512 MiB)",
             ],
             vm.TranspositionTableChoices.Select(choice => choice.Text));
 

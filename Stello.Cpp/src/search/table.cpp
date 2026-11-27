@@ -103,14 +103,17 @@ void TranspositionTable::store_bounds_at_root_slow(
             if (new_level == old_level) {
                 int16_t lo = existing_lo;
                 int16_t hi = existing_hi;
+                bool new_sets_lo = false;
                 if (p.score < p.beta_in && p.score < hi) {
                     hi = static_cast<int16_t>(p.score);
                     if (p.score > p.alpha_in && p.score < lo) {
                         lo = static_cast<int16_t>(p.score);
+                        new_sets_lo = true;
                     }
                 }
                 if (p.score > p.alpha_in && p.score > lo) {
                     lo = static_cast<int16_t>(p.score);
+                    new_sets_lo = true;
                     if (p.score < p.beta_in && p.score > hi) {
                         hi = static_cast<int16_t>(p.score);
                     }
@@ -118,11 +121,18 @@ void TranspositionTable::store_bounds_at_root_slow(
                 if (lo > hi) {
                     lo = fresh_lo;
                     hi = fresh_hi;
+                    new_sets_lo = (fresh_lo > TT_SCORE_MIN);
                 }
                 entry.lower = lo;
                 entry.upper = hi;
-                const bool keep_old_mv = (existing_mv >= 0) && (existing_lo > TT_SCORE_MIN) && (p.score <= p.alpha_in);
-                entry.mv = (p.mv >= 0 && !keep_old_mv) ? static_cast<int8_t>(p.mv) : existing_mv;
+                const bool is_fresh_exact = (p.score > p.alpha_in) && (p.score < p.beta_in);
+                const bool adopt_new_mv = (p.mv >= 0) && (
+                    new_sets_lo
+                    || is_fresh_exact
+                    || existing_lo == TT_SCORE_MIN
+                    || (existing_mv < 0 && p.score > p.alpha_in && p.score == lo)
+                );
+                entry.mv = adopt_new_mv ? static_cast<int8_t>(p.mv) : existing_mv;
             } else {
                 entry.lower = fresh_lo;
                 entry.upper = fresh_hi;

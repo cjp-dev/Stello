@@ -13,11 +13,11 @@ namespace Stello.Engine;
 /// Stello 4.0 it runs in C++20 (<c>Stello.Cpp</c>). This class calls it through the C ABI of
 /// <c>stello_engine</c> (<see cref="StelloNative"/>). An instance runs one search at a time; instances on different
 /// threads are independent. A search with <see cref="SearchLimits.Threads"/> above 1 also runs on worker threads of the
-/// native engine, which share its hash tables; they are started at the first such search and kept for the next ones.
+/// native engine, which share its transposition table; they are started at the first such search and kept for the next ones.
 /// </summary>
 /// <remarks>
-/// The native engine and its hash tables are made at the first search, so an engine that never searches (such as the
-/// one a <see cref="BookLearner"/> only adds games with) needs no native library.
+/// The native engine and its transposition table are made at the first search, so an engine that never searches (such
+/// as the one a <see cref="BookLearner"/> only adds games with) needs no native library.
 /// </remarks>
 public sealed class SearchEngine
 {
@@ -27,8 +27,8 @@ public sealed class SearchEngine
     /// <summary>Multi-ProbCut's t × 100 when <see cref="SearchOptions.ProbCutPercent"/> is null.</summary>
     internal const int DefaultProbCutPercent = 100;
 
-    // Two hash tables of 2^hashBits slots of 64 bytes (two 24-byte entries and the slot's lock, one cache line).
-    private const int HashBytesPerSlot = 2 * 64;
+    // One unified lockless transposition table of 2^hashBits buckets of 64 bytes (four 16-byte Hyatt-XOR entries per cache line).
+    internal const int HashBytesPerSlot = 64;
 
     private EngineHandle? _engine;
     private SignalsHandle? _signals;
@@ -36,7 +36,7 @@ public sealed class SearchEngine
     // The threads the native engine was last set to (a new one uses 1).
     private int _threads = 1;
 
-    /// <param name="hashBits">Each of the two hash tables gets 2^hashBits slots of two entries (C++: HASHSIZE 19, one entry).</param>
+    /// <param name="hashBits">The unified transposition table allocates 2^hashBits 64-byte buckets of four entries (C++: default 19 = 32 MiB).</param>
     public SearchEngine(int hashBits = 19)
         : this(hashBits, SearchOptions.Default)
     {
