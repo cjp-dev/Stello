@@ -639,7 +639,7 @@ STELLO_TEST(persistent_engine_ages_full_table_across_game_positions) {
         player = opponent(player);
     }
 
-    STELLO_CHECK_EQ(total_nodes, uint64_t{1'724'077});
+    STELLO_CHECK_EQ(total_nodes, uint64_t{1'688'772});
 }
 
 // ---- Full 105-signature baseline integration test (Stello 3.1) ----

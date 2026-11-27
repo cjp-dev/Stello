@@ -533,3 +533,40 @@ Evaluated Priorities 1–4 from [Possible remaining Stello speed optimizations.m
 | `d22` | 8t | `7.629 s` (`672.93M`, `88.21M`) | **`4.92×`** (`+39.1 %` nodes) | `1.810 s` (`225.87M`, `124.79M`) | `2.68×` (`+35.4 %` nodes) | `5.476 s` (`364.68M`, `66.60M`) | `4.37×` (`+10.8 %` nodes) |
 
 - Keeping empties `≥ 36` guarantees all three engines stay 100 % in pure midgame through `d22` without endgame handover triggers. By `d22` (`1t`), `Stello`'s tree expands (`EBF 1.64–1.68` vs `Edax AVX` `1.27–1.50` and `Egaroucid` `1.46–1.55`), visiting `2.90×` more nodes than `Edax AVX` and `1.47×` more than `Egaroucid`, even though `Stello` matches `Egaroucid` at `d16` and outscales both engines on `8t` (`4.92×` at `d22`).
+
+### 2. Item 1A — `search_inc_deep` `hash_move`-first ordering & 1-move bypass
+
+- **Kept (`1A-i`, single-loop refactor in `Stello.Cpp/src/search/engine_impl.hpp`):**
+  - Refactored `Kernel<Tier>::search_inc_deep` into a single child loop backed by a shared `eval_and_sort` (`-> AbortVoid`) lambda: bypass `order_by_evaluation` when `move_count == 1`, search any legal TT `hash_move` directly at `(-beta, -alpha)` before evaluating/sorting remaining siblings, return early on `hash_move` cutoff, and bypass sibling ordering again when `move_count == 2` post-`hash_move`.
+  - **Rejected & reverted:**
+    - `1A-ii-a` (lazy `move_next_best` selection inside `search_inc_deep`): preserved exact node parity, but regressed wall time vs branchless rank-sort across `deep-d16` (`1.753 → 1.941 s`), `deep-d18` (`4.819 → 4.986 s`), `deep-d22 1t` (`33.97 → 34.44 s`), and `deep-d22 8t` (`7.044 → 7.319 s`).
+    - `1A-ii-b` (shallow `hash_move`-first inside `search_inc` `look >= 1`): altered tie-breaking (`0/100` node parity on `mid-d16`, `1/100` score shift `g16e30` `−1143 → −1137`) and slowed `deep-d20`/`d22`.
+- **Instrumentation, parity, & Phase 2 Addendum cross-references:**
+  - Temporary `STELLO_PHASE4_1A_STATS` profiling (removed cleanly) showed `64.1–71.2 %` first-move cutoffs on `hash_move` and avoided `63.2–66.4 %` of deep ordering evaluations (`deep-d20`: `4,819,359` avoided vs `2,433,295` performed).
+  - **100 % exact move and score parity** vs Phase 3 (`88c59a0`) across `mid-d12` (`100/100`), `mid-d16` (`100/100`), `deep-d16` (`24/24`), and `deep-d18` (`24/24`); only skipped dead `order_by_evaluation` node counts changed (`~2.7–3.0 %` fewer nodes).
+  - Phase 2 Addendum cross-references: Priority 3 (reusing ordering `static0` in child ProbCut) becomes less valuable after `1A-i` because `hash_move` now skips ordering altogether on most Cut-nodes; Priority 4 (portable sibling-delta evaluation) remains gated cleanly to `eval_count >= 3` inside `eval_and_sort`.
+- **Interleaved `A, B, B, A` benchmarks (`Phase 3` `88c59a0` vs `1A-i`, idle CPU, `hash-bits=19`, `v4`):**
+
+| Benchmark | `Phase 3` (`A`) | `Phase 4 1A-i` (`B`) | Time Δ | Nodes Δ |
+|---|---:|---:|---:|---:|
+| `mid-d12` (`1t`, `3×`, `A/B/B/A`) | `0.602 s` (`8,120,201`) | `0.590 s` (`7,896,521`) | **`−1.99 %`** | `−2.75 %` |
+| `mid-d16` (`1t`, `3×`, `A/B/B/A`) | `4.410 s` (`60,566,022`) | `4.247 s` (`58,737,857`) | **`−3.71 %`** | `−3.02 %` |
+| `deep-d16` (`1t`, `1×`, `A/B/B/A`) | `1.838 s` (`23,516,883`) | `1.750 s` (`22,856,569`) | **`−4.81 %`** | `−2.81 %` |
+| `deep-d18` (`1t`, `1×`, `A/B/B/A`) | `4.874 s` (`63,607,751`) | `4.777 s` (`61,814,177`) | **`−1.99 %`** | `−2.82 %` |
+| `deep-d20` (`1t`, `1×`, `A/B/B/A`) | `12.814 s` (`171,892,262`) | `12.420 s` (`167,072,903`) | **`−3.07 %`** | `−2.80 %` |
+| `deep-d22` (`1t`, `1×`, `A/B`) | `35.167 s` (`483,727,185`) | `33.809 s` (`470,765,807`) | **`−3.86 %`** | `−2.68 %` |
+| `deep-d20` (`8t`, `1×`, `A/B/B/A`) | `2.973 s` (`252,594,293`) | `2.833 s` (`239,720,658`) | **`−4.72 %`** | `−5.10 %` |
+| `deep-d22` (`8t`, `1×`, `A/B/B/A/B/A`) | `7.955 s` (`728,134,137`) | `7.932 s` (`717,073,900`) | **`−0.29 %`** | `−1.52 %` |
+
+- **Gate P4 Match 1 (`stello` `1A-i` vs `Phase3` `stello_engine_p3.dll`, `500 ms/move`, `1t`, `hash-bits=19`, `--workers 8`):**
+
+| Side B vs Side A (`Phase3`) | Starts (Games) | Score (95 % CI) | W / D / L | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | NPS (A / B) | Max Time (A / B) | Wall Time |
+|---|---:|---|---|---|---|---|---|---|---|---|---|
+| `Phase4_1A` (`500 ms`, `1t`) | 587 (`1,174`) | **49.5 %** (`48.1–50.9 %`) | `+458 =247 −469` | **−3** (`−13 to +7`) | `25.7 %` | `0.0 ± 0.1` | `20.51 / 20.54` | `23.1 / 23.2` | `22.67M / 22.54M` | `519 / 502 ms` | [28m 04s](benchmark-results/match_p4_1a_vs_p3_500ms_1t.md) |
+
+  - Because `1A-i` is a pure speed optimization (`~2.0–4.8 %` faster on fixed-depth `1t`, corresponding to `~+0.03–0.06` ply / `~+2–3` Elo at Stello's deep EBF `≈ 1.65`), a single `1,174`-game timed match sits well inside `±10` Elo statistical noise while confirming non-regression; kept for clean fixed-depth speedups and as the foundation for Item 2E (`move[1]`).
+- **Updated baselines & full verification matrix:**
+  - Updated `100` midgame `depth=10` node counts in `Stello.Net/Stello.Engine.Tests/Data/stello-v3-signatures.txt` (100 % identical moves/scores/kinds/depths; `FFO #40–44` unchanged; `g01e48` `23,519 → 23,111`), plus corresponding node assertions in `NativeEngineTests.cs`, `Stello.Cpp/tests/wasm/engine.test.mjs`, and `Stello.Cpp/tests/search_tests.cpp` (`persistent_engine_ages_full_table_across_game_positions` `1'724'077 → 1'688'772`).
+  - **All 5 C++ presets (`clang-release`, `clang-native`, `msvc-release`, `msvc-native`, `clang-sanitized`):** `0` warnings, `3/3` ctests passed each (including `61/61` `stello_tests` and `stello_v3_all_105_signatures_match_baseline` across `Portable`, `V3`, and `V4`).
+  - **`.NET` Release + `windows-ffi` + WASM ST/MT:** `0 Warning(s), 0 Error(s)`; `20/20` WASM Node tests (`3.67 s`); `Stello.Engine.Tests` `521/521`, `Stello.Net.Tests` `127/127`, `Egaroucid.Engine.Tests` `118 passed, 0 failed, 8 skipped` (`TaggedV30_*`).
+  - **`zmm` audit (`llvm-objdump -d`):** `0` `zmm` instructions across `windows-ffi\stello_engine.dll`, `clang-release\{stello-cpp.exe, stello_engine.dll}`, `msvc-release\stello-cpp.exe`, and `clang-native\stello-cpp.exe`.

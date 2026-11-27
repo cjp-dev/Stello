@@ -919,110 +919,174 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc_deep(
     const uint32_t child_discs = node_discs + 1U;
     const int32_t* const child_w = s.pattern->packed_weights_for_discs(child_discs);
 
-#ifndef __wasm_simd128__
-    constexpr bool allow_sibling_deep = (Tier == cpu::CpuTier::Portable);
-    [[maybe_unused]] detail::midgame::SiblingBaselineSlot<allow_sibling_deep> sibling_slot;
-    [[maybe_unused]] bool use_sibling_delta = false;
-    if constexpr (allow_sibling_deep) {
-        use_sibling_delta = (move_count - (hash_move >= 0 ? size_t{1} : size_t{0})) >= size_t{3};
-        if (use_sibling_delta) {
-            set.init_sibling_baseline(eval_state, child_w, node_is_even, sibling_slot.data);
-        }
-    }
-#endif
-
-    std::array<int32_t, MAX_MOVES> keys;
-    std::array<uint64_t, MAX_MOVES> cached_replies;
-    for (size_t idx = 0; idx < move_count; ++idx) {
-        const int32_t mv = list[idx];
-        if (mv == hash_move) {
-            keys[idx] = (std::numeric_limits<int32_t>::max)();
-            cached_replies[idx] = endgame::bits::LEGAL_UNDEFINED;
-            if (!did_etc) {
-                cached_flips[idx] = 0;
-            }
-            continue;
-        }
-
-        const uint64_t f = did_etc
-            ? cached_flips[idx]
-            : (cached_flips[idx] = flips(own, other, static_cast<uint32_t>(mv)));
-        const uint64_t child_own = other & ~f;
-        const uint64_t child_other = own | f | (uint64_t{1} << mv);
-        uint64_t replies_bb = 0;
-        uint64_t opp_moves_bb = 0;
-        int32_t potential = 0;
-        if (s.pattern->has_mobility()) {
-            legal_and_potential(child_own, child_other, replies_bb, potential);
-            opp_moves_bb = legal_moves(child_other, child_own);
-        } else {
-            legal_and_potential(child_own, child_other, replies_bb, potential);
-        }
-        cached_replies[idx] = replies_bb;
-        const int32_t replies = endgame::bits::weighted_moves(replies_bb);
-        STELLO_TRY_VOID_R(ScoreMove, s.count_node());
-        s.evaluations += 1;
-        int32_t raw;
-#ifndef __wasm_simd128__
-        if constexpr (allow_sibling_deep) {
-            raw = use_sibling_delta
-                ? set.sum_weights_sibling_delta(
-                    sibling_slot.data, eval_state, node_is_even, static_cast<uint32_t>(mv), f, child_w, node_is_even)
-                : sum_eval_after_move(
-                    set, eval_state, node_is_even, static_cast<uint32_t>(mv), f, child_w, node_is_even, s.pattern->packed_vpaddw_safe());
-        } else
-#endif
-        {
-            raw = sum_eval_after_move(
-                set, eval_state, node_is_even, static_cast<uint32_t>(mv), f, child_w, node_is_even, s.pattern->packed_vpaddw_safe());
-        }
-        if (s.pattern->has_mobility()) {
-            const uint32_t m_own = static_cast<uint32_t>(std::popcount(replies_bb));
-            const uint32_t m_opp = static_cast<uint32_t>(std::popcount(opp_moves_bb));
-            raw += s.pattern->mobility_bonus_for_discs(child_discs, m_own, m_opp);
-        }
-        const int32_t value = eval::clamp_pattern_score(*s.pattern, raw);
-        keys[idx] = (ORDER_OFFSET - replies) * ORDER_MOBILITY
-                  + (ORDER_OFFSET - potential) * ORDER_POTENTIAL_MOBILITY
-                  - value * ORDER_VALUE / eval::PATTERN_UNITS_PER_DISC;
-    }
-
-    std::array<int32_t, MAX_MOVES> sorted_moves;
-    std::array<uint64_t, MAX_MOVES> sorted_flips;
-    std::array<uint64_t, MAX_MOVES> sorted_replies;
-    for (size_t i = 0; i < move_count; ++i) {
-        const int32_t key = keys[i];
-        size_t before = 0;
-        for (size_t j = 0; j < i; ++j) {
-            before += static_cast<size_t>(keys[j] >= key);
-        }
-        size_t after = 0;
-        for (size_t j = i + 1; j < move_count; ++j) {
-            after += static_cast<size_t>(keys[j] > key);
-        }
-        const size_t pos = before + after;
-        sorted_moves[pos] = list[i];
-        sorted_flips[pos] = cached_flips[i];
-        sorted_replies[pos] = cached_replies[i];
-    }
-    for (size_t i = 0; i < move_count; ++i) {
-        list[i] = sorted_moves[i];
-    }
-
     int32_t best = -INFINITY_SCORE;
     int32_t best_move = -1;
     Bound bound = Bound::Lower;
     const int32_t alpha_start = alpha;
+    bool searched_first = false;
+    size_t loop_count = 0;
 
-    for (size_t index = 0; index < move_count; ++index) {
-        if (index >= 1 && look >= YBWC_MID_MIN_DEPTH && s.may_split(move_count - index)) {
+    std::array<int32_t, MAX_MOVES> sorted_moves;
+    std::array<uint64_t, MAX_MOVES> sorted_flips;
+    std::array<uint64_t, MAX_MOVES> sorted_replies;
+
+    const auto eval_and_sort = [&](size_t eval_count) -> AbortVoid {
+#ifndef __wasm_simd128__
+        constexpr bool allow_sibling_deep = (Tier == cpu::CpuTier::Portable);
+        [[maybe_unused]] detail::midgame::SiblingBaselineSlot<allow_sibling_deep> sibling_slot;
+        [[maybe_unused]] bool use_sibling_delta = false;
+        if constexpr (allow_sibling_deep) {
+            use_sibling_delta = (eval_count >= size_t{3});
+            if (use_sibling_delta) {
+                set.init_sibling_baseline(eval_state, child_w, node_is_even, sibling_slot.data);
+            }
+        }
+#endif
+
+        std::array<int32_t, MAX_MOVES> keys;
+        std::array<uint64_t, MAX_MOVES> cached_replies;
+        for (size_t idx = 0; idx < eval_count; ++idx) {
+            const int32_t mv = list[idx];
+            const uint64_t f = did_etc
+                ? cached_flips[idx]
+                : (cached_flips[idx] = flips(own, other, static_cast<uint32_t>(mv)));
+            const uint64_t child_own = other & ~f;
+            const uint64_t child_other = own | f | (uint64_t{1} << mv);
+            uint64_t replies_bb = 0;
+            uint64_t opp_moves_bb = 0;
+            int32_t potential = 0;
+            if (s.pattern->has_mobility()) {
+                legal_and_potential(child_own, child_other, replies_bb, potential);
+                opp_moves_bb = legal_moves(child_other, child_own);
+            } else {
+                legal_and_potential(child_own, child_other, replies_bb, potential);
+            }
+            cached_replies[idx] = replies_bb;
+            const int32_t replies = endgame::bits::weighted_moves(replies_bb);
+            STELLO_TRY_VOID_IN_STATUS(s.count_node());
+            s.evaluations += 1;
+            int32_t raw;
+#ifndef __wasm_simd128__
+            if constexpr (allow_sibling_deep) {
+                raw = use_sibling_delta
+                    ? set.sum_weights_sibling_delta(
+                        sibling_slot.data, eval_state, node_is_even, static_cast<uint32_t>(mv), f, child_w, node_is_even)
+                    : sum_eval_after_move(
+                        set, eval_state, node_is_even, static_cast<uint32_t>(mv), f, child_w, node_is_even, s.pattern->packed_vpaddw_safe());
+            } else
+#endif
+            {
+                raw = sum_eval_after_move(
+                    set, eval_state, node_is_even, static_cast<uint32_t>(mv), f, child_w, node_is_even, s.pattern->packed_vpaddw_safe());
+            }
+            if (s.pattern->has_mobility()) {
+                const uint32_t m_own = static_cast<uint32_t>(std::popcount(replies_bb));
+                const uint32_t m_opp = static_cast<uint32_t>(std::popcount(opp_moves_bb));
+                raw += s.pattern->mobility_bonus_for_discs(child_discs, m_own, m_opp);
+            }
+            const int32_t value = eval::clamp_pattern_score(*s.pattern, raw);
+            keys[idx] = (ORDER_OFFSET - replies) * ORDER_MOBILITY
+                      + (ORDER_OFFSET - potential) * ORDER_POTENTIAL_MOBILITY
+                      - value * ORDER_VALUE / eval::PATTERN_UNITS_PER_DISC;
+        }
+
+        for (size_t i = 0; i < eval_count; ++i) {
+            const int32_t key = keys[i];
+            size_t before = 0;
+            for (size_t j = 0; j < i; ++j) {
+                before += static_cast<size_t>(keys[j] >= key);
+            }
+            size_t after = 0;
+            for (size_t j = i + 1; j < eval_count; ++j) {
+                after += static_cast<size_t>(keys[j] > key);
+            }
+            const size_t pos = before + after;
+            sorted_moves[pos] = list[i];
+            sorted_flips[pos] = cached_flips[i];
+            sorted_replies[pos] = cached_replies[i];
+        }
+        STELLO_RETURN_OK_VOID();
+    };
+
+    if (move_count == 1) {
+        const int32_t mv = list[0];
+        sorted_moves[0] = mv;
+        sorted_flips[0] = did_etc ? cached_flips[0] : flips(own, other, static_cast<uint32_t>(mv));
+        sorted_replies[0] = endgame::bits::LEGAL_UNDEFINED;
+        loop_count = 1;
+    } else if (hash_move >= 0) {
+        size_t hash_idx = 0;
+        while (hash_idx < move_count && list[hash_idx] != hash_move) {
+            ++hash_idx;
+        }
+        assert(hash_idx < move_count);
+        const uint64_t hf = did_etc ? cached_flips[hash_idx] : flips(own, other, static_cast<uint32_t>(hash_move));
+        const Board child = board.play_flips(player, static_cast<uint32_t>(hash_move), hf);
+        eval::PatternState child_eval;
+        advance_eval_state(set, child_eval, eval_state, node_is_even, static_cast<uint32_t>(hash_move), hf);
+        STELLO_TRY_ASSIGN_R(
+            ScoreMove,
+            const ScoreMove res,
+            search_inc(
+                s, child, opp, look - 1, ply + 1, hash_move, -beta, -alpha, child_eval,
+                endgame::bits::LEGAL_UNDEFINED));
+        const int32_t score = -res.score;
+        s.ordering->record_response(opp, hash_move, res.mv, score <= alpha);
+        if (score >= beta) {
+            bound = Bound::Lower;
+        } else if (score > alpha) {
+            bound = Bound::Exact;
+        } else {
+            bound = Bound::Upper;
+        }
+        if (score > alpha) {
+            alpha = score;
+        }
+        best = score;
+        best_move = hash_move;
+        if (best >= beta) {
+            if (hash_put) {
+                s.midgame_table->store_at_root(own, other, tag, look, bound, best, best_move, s.root_empties);
+            }
+            STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{best, best_move}));
+        }
+        searched_first = true;
+        if (move_count == 2) {
+            const size_t other_idx = 1U - hash_idx;
+            const int32_t omv = list[other_idx];
+            sorted_moves[0] = omv;
+            sorted_flips[0] = did_etc ? cached_flips[other_idx] : flips(own, other, static_cast<uint32_t>(omv));
+            sorted_replies[0] = endgame::bits::LEGAL_UNDEFINED;
+            loop_count = 1;
+        } else {
+            size_t dst = 0;
+            for (size_t idx = 0; idx < move_count; ++idx) {
+                if (idx != hash_idx) {
+                    list[dst] = list[idx];
+                    if (did_etc) {
+                        cached_flips[dst] = cached_flips[idx];
+                    }
+                    ++dst;
+                }
+            }
+            STELLO_TRY_VOID_R(ScoreMove, eval_and_sort(dst));
+            loop_count = dst;
+        }
+    } else {
+        STELLO_TRY_VOID_R(ScoreMove, eval_and_sort(move_count));
+        loop_count = move_count;
+    }
+
+    for (size_t index = 0; index < loop_count; ++index) {
+        if ((searched_first || index >= 1) && look >= YBWC_MID_MIN_DEPTH && s.may_split(loop_count - index)) {
             STELLO_TRY_VOID_R(
                 ScoreMove,
                 split_midgame(
-                    s, board, player, look, ply, list.subspan(index), alpha, beta, best, best_move,
-                    eval_state, node_is_even,
-                    std::span<const uint64_t>(sorted_flips.data() + index, move_count - index),
-                    std::span<const uint64_t>(sorted_replies.data() + index, move_count - index)));
+                    s, board, player, look, ply,
+                    std::span<const int32_t>(sorted_moves.data() + index, loop_count - index),
+                    alpha, beta, best, best_move, eval_state, node_is_even,
+                    std::span<const uint64_t>(sorted_flips.data() + index, loop_count - index),
+                    std::span<const uint64_t>(sorted_replies.data() + index, loop_count - index)));
             if (best >= beta) {
                 bound = Bound::Lower;
             } else if (best > alpha_start) {
@@ -1034,33 +1098,28 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc_deep(
         }
 
         const int32_t mv = sorted_moves[index];
-        uint64_t f = sorted_flips[index];
-        if (f == 0) {
-            f = flips(own, other, static_cast<uint32_t>(mv));
-        }
-        const uint64_t child_legal = sorted_replies[index];
-        const Board child = board.play_flips(player, static_cast<uint32_t>(mv), f);
+        const Board child = board.play_flips(player, static_cast<uint32_t>(mv), sorted_flips[index]);
         eval::PatternState child_eval;
-        advance_eval_state(set, child_eval, eval_state, node_is_even, static_cast<uint32_t>(mv), f);
+        advance_eval_state(set, child_eval, eval_state, node_is_even, static_cast<uint32_t>(mv), sorted_flips[index]);
 
         int32_t score = 0;
         if (best == -INFINITY_SCORE || beta - alpha == 1) {
             STELLO_TRY_ASSIGN_R(
                 ScoreMove,
                 const ScoreMove res,
-                search_inc(s, child, opp, look - 1, ply + 1, mv, -beta, -alpha, child_eval, child_legal));
+                search_inc(s, child, opp, look - 1, ply + 1, mv, -beta, -alpha, child_eval, sorted_replies[index]));
             score = -res.score;
             s.ordering->record_response(opp, mv, res.mv, score <= alpha);
         } else {
             STELLO_TRY_ASSIGN_R(
                 ScoreMove,
                 ScoreMove res,
-                search_inc(s, child, opp, look - 1, ply + 1, mv, -alpha - 1, -alpha, child_eval, child_legal));
+                search_inc(s, child, opp, look - 1, ply + 1, mv, -alpha - 1, -alpha, child_eval, sorted_replies[index]));
             if (-res.score > alpha && -res.score < beta) {
                 STELLO_TRY_ASSIGN_EXISTING_R(
                     ScoreMove,
                     res,
-                    search_inc(s, child, opp, look - 1, ply + 1, mv, -beta, -alpha, child_eval, child_legal));
+                    search_inc(s, child, opp, look - 1, ply + 1, mv, -beta, -alpha, child_eval, sorted_replies[index]));
             }
             score = -res.score;
             s.ordering->record_response(opp, mv, res.mv, score <= alpha);
