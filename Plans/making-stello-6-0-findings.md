@@ -570,3 +570,39 @@ Evaluated Priorities 1–4 from [Possible remaining Stello speed optimizations.m
   - **All 5 C++ presets (`clang-release`, `clang-native`, `msvc-release`, `msvc-native`, `clang-sanitized`):** `0` warnings, `3/3` ctests passed each (including `61/61` `stello_tests` and `stello_v3_all_105_signatures_match_baseline` across `Portable`, `V3`, and `V4`).
   - **`.NET` Release + `windows-ffi` + WASM ST/MT:** `0 Warning(s), 0 Error(s)`; `20/20` WASM Node tests (`3.67 s`); `Stello.Engine.Tests` `521/521`, `Stello.Net.Tests` `127/127`, `Egaroucid.Engine.Tests` `118 passed, 0 failed, 8 skipped` (`TaggedV30_*`).
   - **`zmm` audit (`llvm-objdump -d`):** `0` `zmm` instructions across `windows-ffi\stello_engine.dll`, `clang-release\{stello-cpp.exe, stello_engine.dll}`, `msvc-release\stello-cpp.exe`, and `clang-native\stello-cpp.exe`.
+
+### 3. Items 1B, 1C, 1D, & 1E — Remaining Pre-TT Experiments & Leaf Wipeout Fix
+
+- **Item `1D` (KEPT — tactical horizon wipeout fix in `Stello.Cpp/src/search/kernel.hpp`):**
+  - Placing `if (move_flips == other) [[unlikely]] { return WIN_SCORE + 64; }` inside `Kernel<Tier>::search_root` / `search_inc` regressed `deep-d18` by `+2.76 %` (`4.693 → 4.823 s`) due to hot-loop codegen sensitivity. Moving the single check to the top of `Kernel<Tier>::eval_after_move_score_bounded` eliminated the regression.
+  - **Interleaved `A, B, B, A` vs `1A` (`stello_1a` vs `stello_1d_v2`, `1t`, `v4`, `hash-bits=19`):** `mid-d16 +0.53 %` (`4.247 → 4.270 s`), `deep-d16 −3.12 %` (`1.811 → 1.754 s`), `deep-d18 +2.82 %` (`4.738 → 4.871 s`), `deep-d20 +0.25 %` (`12.431 → 12.462 s`) — mean **`+0.12 %`** across the 4 suites.
+  - **Parity vs `1A`:** `mid-d10`/`FFO #40–44` (`stello_v3_all_105_signatures_match_baseline`), `mid-d12` (`100/100`), and `deep-d16` (`24/24`) remained 100 % node-identical. `5/100` `mid-d16` (`+4..+22` nodes), `4/36` `holdout-36 d16`, and `2/24` `deep-d18` (`+25` / `−5` nodes) shifted slightly with 100 % identical root moves/scores where deeper lines encounter genuine 15–17 ply horizon wipeouts.
+  - Added regression test `phase4_1d_leaf_wipeout_recognition` in `Stello.Cpp/tests/search_tests.cpp` covering `f5 f6 d3 e3 f3 f4 f7 c5 → b5` (`WIN_SCORE + 64`), color-swap, `only_moves` exclusion, interior `look == 0`, and non-wipeout passes across `Portable`/`V3`/`V4` and MPC off/on.
+- **Item `1E` (REJECTED & reverted — forwarding `moves` into `try_probcut_inc` & `eval_state_score`):**
+  - Maintained **100 % exact node/move/score parity** (`100/100` `mid-d12`/`d16`, `24/24` `deep-d16`/`d18`, `36/36` `holdout-36 d16`), but interleaved `A, B, B, A` (`1t`, `v4`) slowed 4 of 5 multi-sample suites due to register/argument pressure in `search_inc`: `mid-d16 +1.33 %` (`4.241 → 4.297 s`), `deep-d16 −1.46 %` (`1.817 → 1.791 s`), `deep-d18 +2.42 %` (`4.717 → 4.831 s`), `holdout-36 d18 +1.36 %` (`4.991 → 5.059 s`), `deep-d20 +1.05 %` (`12.353 → 12.483 s`), single-pair `deep-d22 −2.78 %` (`35.339 → 34.357 s`).
+- **Item `1B` (REJECTED in isolation & reverted — deferred to Item `2F`):**
+  - Preserved 100 % exact cold parity (`mid-d12` `100/100`, `deep-d16` `24/24`, `deep-d18` `24/24`); trimmed `persistent_engine_ages_full_table_across_game_positions` (`34` warm `d12` plies) `1,688,772 → 1,683,411` (`−0.32 %`).
+  - On `16` consecutive-turn midgame games from `starts-v6.txt` (`385` multi-move searches per mode/depth, `empties ≥ 24`, `v4`, `hash-bits=19`), root TT hit rates were `95.8 %` (`1-ply`) and `91.7 %` (`2-ply`, matching the final best move `81.0–90.2 %`), yet `1-ply` nodes fell only `−0.21 %` (`d14`) / `−0.04 %` (`d16`) while realistic `2-ply` alternating turns **increased nodes `+0.61 %` (`d14`, `91.60M → 92.16M`) / `+0.45 %` (`d16`, `200.13M → 201.04M`, `+0.50 %` ms)** because `midgame_iterations` starts at `look = 0` (`1-ply`) and calls `move_to_front`, overwriting the deeper root hint whenever `d1` disagrees. Revisit together with verified PV-walk starting depth in Item `2F`.
+- **Item `1C` (REJECTED & reverted — failed-ProbCut move hint recovery):**
+  - `#ifdef STELLO_P4_1C_STATS` instrumentation across `deep-d16/d18/d20` and `holdout-36 d18`:
+    - Direct `pc_hint` return matched Edax's literal TT re-probe 100 % (`tt2_same = 1,608 / 3,474 / 8,241 / 3,623`, `diff = 0`).
+    - PV hints were negligible (`0`, `0`, `2`, `1`). NWS `pc_ran_no_cut` fired `1,610` (`d16`) to `8,266` (`d20`) times (`~1.3–1.8 %` of deep multi-move NWS nodes); first-move cutoff rates were **`38.1–40.8 %`** (`High-NWS`) and **`42.7–44.9 %`** (`Low-NWS`), vs **`64.3–70.9 %`** for TT `hash_move`.
+  - Clean uninstrumented `1c_both` and `1c_high` raised nodes on every suite (`+0.36 %` to `+1.12 %`) and altered `2/100` `mid-d16` moves/scores. `1c_low` kept `100/100` `mid-d16` moves/scores; full interleaved `A, B, B, A` vs `base_1d` across 9 suites was flat/slightly worse with unchanged EBFs:
+
+| Suite | `base_1d` (`A`) | `1c_low` (`B`) | Time Δ | Nodes Δ |
+|---|---:|---:|---:|---:|
+| `mid-d12` (`1t`, `3×`, `A/B/B/A`) | `0.595 s` (`7,896,521`) | `0.605 s` (`7,895,972`) | `+1.58 %` | `−0.01 %` |
+| `mid-d16` (`1t`, `3×`, `A/B/B/A`) | `4.334 s` (`58,737,924`) | `4.335 s` (`58,633,560`) | `+0.03 %` | `−0.18 %` |
+| `deep-d16` (`1t`, `1×`, `A/B/B/A`) | `1.840 s` (`22,856,569`) | `1.792 s` (`22,775,492`) | `−2.59 %` | `−0.35 %` |
+| `deep-d18` (`1t`, `1×`, `A/B/B/A`) | `4.797 s` (`61,814,197`) | `4.902 s` (`61,939,015`) | `+2.20 %` | `+0.20 %` |
+| `deep-d20` (`1t`, `1×`, `A/B/B/A`) | `12.532 s` (`167,072,911`) | `12.688 s` (`167,296,509`) | `+1.25 %` | `+0.13 %` (`4/8` games) |
+| `deep-d22` (`1t`, `1×`, `A/B`) | `34.466 s` (`470,765,697`) | `34.563 s` (`471,267,478`) | `+0.28 %` | `+0.11 %` |
+| `hold36-d16` (`1t`, `1×`, `A/B/B/A`) | `1.784 s` (`22,833,266`) | `1.736 s` (`22,811,434`) | `−2.65 %` | `−0.10 %` |
+| `hold36-d18` (`1t`, `1×`, `A/B/B/A`) | `5.029 s` (`66,565,199`) | `5.067 s` (`66,486,817`) | `+0.75 %` | `−0.12 %` |
+| `hold36-d20` (`1t`, `1×`, `A/B/B/A`) | `13.405 s` (`178,801,384`) | `13.387 s` (`178,456,864`) | `−0.13 %` | `−0.19 %` (`6/12` games) |
+
+  - Deep EBFs remained flat (`16→18`: `1.6445 → 1.6491`, `18→20`: `1.6440 → 1.6435`, `20→22`: `1.6786 → 1.6784`; holdout `16→18`: `1.7074 → 1.7072`, `18→20`: `1.6389 → 1.6383`). Note that Edax's permissive `eval_0` pre-filter changes failed-ProbCut frequency and hint mix; revisit only if Item `4B` widens `error0`.
+- **Verification matrix on kept `1D` state (run after final code/test edit):**
+  - **All 5 C++ presets (`clang-release`, `clang-native`, `msvc-release`, `msvc-native`, `clang-sanitized`):** `0` warnings/errors, `3/3` ctests passed each (`62/62` `stello_tests` including `phase4_1d_leaf_wipeout_recognition` and `stello_v3_all_105_signatures_match_baseline`).
+  - **`.NET` Release + `windows-ffi` + WASM ST/MT:** `0 Warning(s), 0 Error(s)`; `20/20` WASM Node tests (`3.84 s`); `Stello.Engine.Tests` `521/521`, `Stello.Net.Tests` `127/127`, `Egaroucid.Engine.Tests` `118 passed, 0 failed, 8 skipped` (`TaggedV30_*`).
+  - **`zmm` audit (`llvm-objdump -d`):** `0` `zmm` instructions across `windows-ffi\stello_engine.dll`, `clang-release\{stello-cpp.exe, stello_engine.dll}`, `msvc-release\stello-cpp.exe`, and `clang-native\stello-cpp.exe`.

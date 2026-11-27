@@ -1251,4 +1251,94 @@ STELLO_TEST(phase1_c2_c3_c5_search_and_time_regression_tests) {
     }
 }
 
+STELLO_TEST(phase4_1d_leaf_wipeout_recognition) {
+    const cpu::CpuTier saved_tier = cpu::active_tier();
+    struct RestoreTier {
+        cpu::CpuTier tier;
+        ~RestoreTier() { (void)cpu::set_forced_tier(tier); }
+    } restore_tier{saved_tier};
+
+    std::vector<cpu::CpuTier> tiers = {cpu::CpuTier::Portable};
+    if (cpu::has_avx2_bmi2()) {
+        tiers.push_back(cpu::CpuTier::V3);
+    }
+    if (cpu::has_avx512_v4()) {
+        tiers.push_back(cpu::CpuTier::V4);
+    }
+
+    Board before_c5 = Board::initial();
+    Player side = Player::Black;
+    for (const char* mv : {"f5", "f6", "d3", "e3", "f3", "f4", "f7"}) {
+        const auto sq = Square::parse(mv);
+        STELLO_CHECK(sq.has_value());
+        before_c5 = before_c5.play_unchecked(side, sq->index());
+        side = opponent(side);
+    }
+    STELLO_CHECK(side == Player::White);
+    const auto c5 = Square::parse("c5");
+    const auto b5 = Square::parse("b5");
+    STELLO_CHECK(c5.has_value() && b5.has_value());
+    const Board wipe_board = before_c5.play_unchecked(Player::White, c5->index());
+    STELLO_CHECK_EQ(wipe_board.discs(Player::Black), uint64_t{0x0020202038380000ULL});
+    STELLO_CHECK_EQ(wipe_board.discs(Player::White), uint64_t{0x0000001c00000000ULL});
+
+    const Board swapped(wipe_board.discs(Player::White), wipe_board.discs(Player::Black));
+    // Black: c1 (2), White: b1 (1) + h8 (63). Black's only move a1 (0) flips b1 leaving White surviving at h8 with 0 legal moves.
+    const Board pass_board(uint64_t{1} << 2, (uint64_t{1} << 1) | (uint64_t{1} << 63));
+
+    for (const cpu::CpuTier tier : tiers) {
+        STELLO_CHECK(cpu::set_forced_tier(tier));
+        for (const bool selective : {false, true}) {
+            SearchOptions opts;
+            opts.selective = selective;
+            search::SearchEngine engine(14, opts);
+
+            // 1. Root look == 0 wipeout (f5 f6 d3 e3 f3 f4 f7 c5 -> b5).
+            engine.clear_hash();
+            const SearchResult r1 = engine.search_simple(wipe_board, Player::Black, SearchLimits::fixed_depth(1));
+            STELLO_CHECK(r1.mv == Move(*b5));
+            STELLO_CHECK_EQ(r1.score, search::WIN_SCORE + 64);
+            STELLO_CHECK(r1.kind == ScoreKind::Heuristic);
+            STELLO_CHECK_EQ(r1.depth, 1);
+
+            // 2. Color-swapped equivalent (White to move).
+            engine.clear_hash();
+            const SearchResult r2 = engine.search_simple(swapped, Player::White, SearchLimits::fixed_depth(1));
+            STELLO_CHECK(r2.mv == Move(*b5));
+            STELLO_CHECK_EQ(r2.score, search::WIN_SCORE + 64);
+            STELLO_CHECK(r2.kind == ScoreKind::Heuristic);
+            STELLO_CHECK_EQ(r2.depth, 1);
+
+            // 3. only_moves excluding b5 keeps legal move set & non-win heuristic score.
+            const uint64_t all_moves = wipe_board.legal_moves(Player::Black);
+            const uint64_t without_b5 = all_moves & ~b5->bit();
+            STELLO_CHECK(without_b5 != 0ULL);
+            engine.clear_hash();
+            const auto r3 = engine.search(
+                wipe_board, Player::Black, SearchLimits::fixed_depth(1), {}, search::no_stop(), without_b5);
+            STELLO_CHECK(r3.ok);
+            STELLO_CHECK(r3.result.mv != Move(*b5));
+            STELLO_CHECK((without_b5 & r3.result.mv.square->bit()) != 0ULL);
+            STELLO_CHECK(r3.result.score < search::WIN_SCORE);
+
+            // 4. Interior search_inc look == 0 wipeout (playing c5 from before_c5 at depth 2).
+            engine.clear_hash();
+            const auto r4 = engine.search(
+                before_c5, Player::White, SearchLimits::fixed_depth(2), {}, search::no_stop(), c5->bit());
+            STELLO_CHECK(r4.ok);
+            STELLO_CHECK(r4.result.mv == Move(*c5));
+            STELLO_CHECK_EQ(r4.result.score, -(search::WIN_SCORE + 64));
+
+            // 5. Non-wipeout pass at depth 1 uses normal pattern score (not WIN_SCORE).
+            STELLO_CHECK_EQ(pass_board.legal_moves(Player::Black), uint64_t{1}); // a1 only
+            STELLO_CHECK_EQ(pass_board.play_unchecked(Player::Black, 0).legal_moves(Player::White), uint64_t{0});
+            STELLO_CHECK(pass_board.play_unchecked(Player::Black, 0).discs(Player::White) != 0ULL);
+            engine.clear_hash();
+            const SearchResult r5 = engine.search_simple(pass_board, Player::Black, SearchLimits::fixed_depth(1));
+            STELLO_CHECK(r5.mv == Move(Square(0)));
+            STELLO_CHECK(r5.score > -search::WIN_SCORE && r5.score < search::WIN_SCORE);
+        }
+    }
+}
+
 } // namespace stello::tests

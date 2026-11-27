@@ -131,6 +131,9 @@ struct Kernel {
         uint32_t square,
         uint64_t move_flips
     ) noexcept {
+        if (move_flips == other) [[unlikely]] {
+            return WIN_SCORE + 64;
+        }
         int32_t raw = sum_eval_after_move(
             weights.set(), cur, mover_is_even_disc, square, move_flips, child_w, mover_is_even_disc, weights.packed_vpaddw_safe());
         if (weights.has_mobility()) {
