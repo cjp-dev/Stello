@@ -1187,6 +1187,22 @@ STELLO_TEST(phase3_atomic_live_best_snapshot_has_no_torn_pairs) {
     STELLO_CHECK(outcome.ok);
 }
 
+namespace {
+
+std::thread::id g_ybwc_master_tid{};
+std::atomic<uint64_t>* g_ybwc_worker_nodes{nullptr};
+
+Duration ybwc_yield_until_worker_claims_clock() {
+    if (std::this_thread::get_id() == g_ybwc_master_tid && g_ybwc_worker_nodes != nullptr) {
+        while (g_ybwc_worker_nodes->load(std::memory_order_acquire) == 0) {
+            std::this_thread::yield();
+        }
+    }
+    return Duration::zero();
+}
+
+} // namespace
+
 STELLO_TEST(phase4_ybwc_split_propagates_nonzero_probcut_level) {
     const auto midgame = load_bench_file("midgame.txt");
     const Board board = midgame[0].board;
@@ -1208,9 +1224,16 @@ STELLO_TEST(phase4_ybwc_split_propagates_nonzero_probcut_level) {
     SearchOptions opts;
     opts.selective = true;
     const auto context = search::SearchContext::create(
-        opts, probcut.get(), nullptr, table, table, &search::system_clock, board.empty_count());
+        opts, probcut.get(), nullptr, table, table, &ybwc_yield_until_worker_claims_clock, board.empty_count());
 
-    // 1. Direct split_task copy check.
+    struct ResetClockGuard {
+        ~ResetClockGuard() noexcept {
+            g_ybwc_master_tid = std::thread::id{};
+            g_ybwc_worker_nodes = nullptr;
+        }
+    } clock_guard;
+
+    // 1. Direct worker receipt check (split_task).
     {
         search::ThreadPool<search::ThreadState> pool(1, &search::std_spawner, []() {
             return search::ThreadState{};
@@ -1229,13 +1252,15 @@ STELLO_TEST(phase4_ybwc_split_propagates_nonzero_probcut_level) {
     }
 
     // 2. Measure sequential per-child node counts at probcut_level = 0, 1, 2 (TT disabled -> exact level sensitivity).
-    auto measure_one_child = [&](uint8_t lvl) -> uint64_t {
+    auto measure_one_child = [&](int32_t look, uint8_t lvl) -> uint64_t {
+        g_ybwc_master_tid = std::thread::id{};
+        g_ybwc_worker_nodes = nullptr;
         search::ThreadState st;
         search::Searcher s(context, st, search::no_stop());
         s.hash_get_height = -1;
         s.hash_put_height = -1;
         s.probcut_level = lvl;
-        const search::MidgameChild c{child_board, child_player, child_look, 1, mv, nullptr, f, endgame::bits::LEGAL_UNDEFINED, true};
+        const search::MidgameChild c{child_board, child_player, look, 1, mv, nullptr, f, endgame::bits::LEGAL_UNDEFINED, true};
 #if STELLO_ABORT_EXCEPTIONS
         (void)c.null_window(s, split_alpha);
 #else
@@ -1245,73 +1270,71 @@ STELLO_TEST(phase4_ybwc_split_propagates_nonzero_probcut_level) {
         return s.nodes;
     };
 
-    const uint64_t seq0 = measure_one_child(0);
-    const uint64_t seq1 = measure_one_child(1);
-    const uint64_t seq2 = measure_one_child(2);
+    const uint64_t seq0 = measure_one_child(child_look, 0);
+    const uint64_t seq1 = measure_one_child(child_look, 1);
+    const uint64_t seq2 = measure_one_child(child_look, 2);
     STELLO_CHECK_MSG(seq0 < seq1 && seq1 < seq2,
         "seq0=" + std::to_string(seq0) + " seq1=" + std::to_string(seq1) + " seq2=" + std::to_string(seq2));
 
-    // 3. Replicate 6 identical fail-low children across NarrowSplitNode & WaveSplitNode at levels 1 and 2.
+    // 3. Coordinate master & helper deterministically across NarrowSplitNode and WaveSplitNode (zero retries/sleeps).
     constexpr size_t K = 6;
-    std::array<search::MidgameChild, K> children{};
-    for (size_t i = 0; i < K; ++i) {
-        children[i] = search::MidgameChild{
-            child_board, child_player, child_look, 1, mv, nullptr, f, endgame::bits::LEGAL_UNDEFINED, true};
-    }
-
     search::ThreadPool<search::ThreadState> pool(1, &search::std_spawner, []() {
         return search::ThreadState{};
     });
 
     for (const bool wide_window : {false, true}) {
         for (const uint8_t start_level : {uint8_t{1}, uint8_t{2}}) {
-            const uint64_t expected_all_lvl = static_cast<uint64_t>(K) * ((start_level == 1) ? seq1 : seq2);
-            const uint64_t max_if_one_worker_zeroed =
-                expected_all_lvl - ((start_level == 1) ? seq1 : seq2) + seq0;
-
-            bool checked_worker = false;
-            for (int attempt = 0; attempt < 6 && !checked_worker; ++attempt) {
-                search::ThreadState owner_state;
-                std::atomic<uint64_t> worker_nodes{0};
-                std::atomic<uint64_t> evaluations{0};
-                const search::Helpers search_helpers{&pool, context, 1, &worker_nodes, &evaluations};
-                search::Searcher owner(context, owner_state, search::no_stop());
-                owner.heartbeat_owner = &owner;
-                owner.helpers = search_helpers;
-                owner.ybwc = true;
-                owner.hash_get_height = -1;
-                owner.hash_put_height = -1;
-                owner.probcut_level = start_level;
-
-                int32_t best = -search::INFINITY_SCORE;
-                int32_t best_move = -1;
-                const int32_t beta = wide_window ? 32'000 : (split_alpha + 1);
-#if STELLO_ABORT_EXCEPTIONS
-                owner.split<search::MidgameChild>(children, split_alpha, beta, best, best_move, false);
-#else
-                const auto st = owner.split<search::MidgameChild>(children, split_alpha, beta, best, best_move, false);
-                STELLO_CHECK(st.is_ok());
-#endif
-                STELLO_CHECK_EQ(owner.probcut_level, start_level);
-                const uint64_t wnodes = worker_nodes.load(std::memory_order_relaxed);
-                if (wnodes == 0) {
-                    continue;
-                }
-                const uint64_t total_nodes = owner.nodes + wnodes;
-                // Must exceed the upper bound where even a single child ran on a zero-level worker.
-                STELLO_CHECK_MSG(
-                    total_nodes > max_if_one_worker_zeroed + (seq1 - seq0) / 2,
-                    "wide=" + std::to_string(wide_window ? 1 : 0)
-                        + " lvl=" + std::to_string(start_level)
-                        + " total=" + std::to_string(total_nodes)
-                        + " owner=" + std::to_string(owner.nodes)
-                        + " worker=" + std::to_string(wnodes)
-                        + " seq0=" + std::to_string(seq0)
-                        + " seq1=" + std::to_string(seq1)
-                        + " seq2=" + std::to_string(seq2));
-                checked_worker = true;
+            std::array<search::MidgameChild, K> children{};
+            for (size_t i = 0; i < K; ++i) {
+                children[i] = search::MidgameChild{
+                    child_board, child_player, child_look, 1, mv, nullptr, f, endgame::bits::LEGAL_UNDEFINED, true};
             }
-            STELLO_CHECK_MSG(checked_worker, "YBWC helper did not claim split work within 6 attempts");
+
+            const uint64_t expected_one = (start_level == 1) ? seq1 : seq2;
+            const uint64_t expected_worker_nodes = static_cast<uint64_t>(K - 1) * expected_one;
+            const uint64_t zeroed_worker_nodes = static_cast<uint64_t>(K - 1) * seq0;
+
+            search::ThreadState owner_state;
+            std::atomic<uint64_t> worker_nodes{0};
+            std::atomic<uint64_t> evaluations{0};
+            const search::Helpers search_helpers{&pool, context, 1, &worker_nodes, &evaluations};
+            g_ybwc_worker_nodes = nullptr;
+            search::Searcher owner(context, owner_state, search::no_stop());
+            owner.heartbeat_owner = &owner;
+            owner.helpers = search_helpers;
+            owner.ybwc = true;
+            owner.hash_get_height = -1;
+            owner.hash_put_height = -1;
+            owner.probcut_level = start_level;
+            owner.next_abort_check = 1;
+            owner.start = Duration::zero();
+            owner.hard_limit_ms = 1'000'000;
+
+            g_ybwc_master_tid = std::this_thread::get_id();
+            g_ybwc_worker_nodes = &worker_nodes;
+
+            int32_t best = -search::INFINITY_SCORE;
+            int32_t best_move = -1;
+            const int32_t beta = wide_window ? 32'000 : (split_alpha + 1);
+#if STELLO_ABORT_EXCEPTIONS
+            owner.split<search::MidgameChild>(children, split_alpha, beta, best, best_move, false);
+#else
+            const auto st = owner.split<search::MidgameChild>(children, split_alpha, beta, best, best_move, false);
+            STELLO_CHECK(st.is_ok());
+#endif
+            g_ybwc_master_tid = std::thread::id{};
+            g_ybwc_worker_nodes = nullptr;
+
+            STELLO_CHECK_EQ(owner.probcut_level, start_level);
+            const uint64_t wnodes = worker_nodes.load(std::memory_order_acquire);
+            STELLO_CHECK_MSG(
+                wnodes > zeroed_worker_nodes && wnodes >= (expected_worker_nodes * 90ULL) / 100ULL,
+                "wide=" + std::to_string(wide_window ? 1 : 0)
+                    + " lvl=" + std::to_string(start_level)
+                    + " owner=" + std::to_string(owner.nodes)
+                    + " worker=" + std::to_string(wnodes)
+                    + " expected_worker=" + std::to_string(expected_worker_nodes)
+                    + " zeroed_worker=" + std::to_string(zeroed_worker_nodes));
         }
     }
 }

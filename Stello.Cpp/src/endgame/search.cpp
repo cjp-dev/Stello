@@ -33,6 +33,16 @@ AbortResult<int32_t> Searcher::end_window(
     STELLO_TIER_DISPATCH(end_window, *this, own, opponent, alpha, beta, empties, passed);
 }
 
+AbortResult<std::optional<int32_t>> Searcher::try_end_probcut(
+    uint64_t own,
+    uint64_t opponent,
+    int32_t alpha,
+    int32_t beta,
+    int32_t empties
+) {
+    STELLO_TIER_DISPATCH(try_end_probcut, *this, own, opponent, alpha, beta, empties);
+}
+
 AbortResult<int32_t> Searcher::end_deep(
     uint64_t own,
     uint64_t opponent,

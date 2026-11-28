@@ -3,6 +3,7 @@
 #include "cli/bench.hpp"
 #include "core/bits.hpp"
 #include "core/board.hpp"
+#include "core/cpu.hpp"
 #include "core/square.hpp"
 #include "endgame/bits.hpp"
 #include "endgame/local.hpp"
@@ -35,18 +36,20 @@
 #include <thread>
 #include <vector>
 
-#if defined(__has_feature)
-#if __has_feature(address_sanitizer)
-#define STELLO_TESTS_ASAN 1
-#endif
-#endif
-#ifndef STELLO_TESTS_ASAN
-#define STELLO_TESTS_ASAN 0
-#endif
-
 namespace stello::tests {
 
 namespace {
+
+struct ForcedCpuTierGuard {
+    explicit ForcedCpuTierGuard(std::optional<cpu::CpuTier> tier) noexcept {
+        STELLO_CHECK(cpu::set_forced_tier(tier));
+    }
+    ~ForcedCpuTierGuard() noexcept {
+        (void)cpu::set_forced_tier(std::nullopt);
+    }
+    ForcedCpuTierGuard(const ForcedCpuTierGuard&) = delete;
+    ForcedCpuTierGuard& operator=(const ForcedCpuTierGuard&) = delete;
+};
 
 std::string read_repo_text(const std::filesystem::path& rel) {
     const auto full = repo_root() / rel;
@@ -529,6 +532,18 @@ STELLO_TEST(time_budget_and_for_solver_tests) {
     STELLO_CHECK(time::for_solver(pm, pm_b, 300, 50) == (time::TimeBudget{450, 900}));
     STELLO_CHECK(time::for_solver(SearchLimits::fixed_depth(5), time::TimeBudget::unlimited(), 300, 50) == time::TimeBudget::unlimited());
     STELLO_CHECK(time::for_solver(SearchLimits::solve(), time::TimeBudget::unlimited(), 300, 50) == time::TimeBudget::unlimited());
+
+    // Capped solver budgets: soft percentage applies to the capped span above elapsed_ms, not the uncapped span.
+    const auto g10 = SearchLimits::time_per_game_ms(10'000);
+    STELLO_CHECK(time::for_solver_capped(g10, time::TimeBudget::unlimited(), 0, 10, 3'500) == (time::TimeBudget{350, 3500}));
+    // Nonzero solver start offset (elapsed = 1,000 ms, rest/2 = 4,500 ms capped to 3,500 ms).
+    STELLO_CHECK(time::for_solver_capped(g10, time::TimeBudget::unlimited(), 1'000, std::nullopt, 3'500) == (time::TimeBudget{3333, 4500}));
+    STELLO_CHECK(time::for_solver_capped(g10, time::TimeBudget::unlimited(), 1'000, 10, 3'500) == (time::TimeBudget{1350, 4500}));
+    STELLO_CHECK(time::for_solver_capped(g10, time::TimeBudget::unlimited(), 1'000, 100, 3'500) == (time::TimeBudget{4500, 4500}));
+    STELLO_CHECK(time::for_solver_capped(g10, time::TimeBudget::unlimited(), 1'000, 10, 6'000) == (time::TimeBudget{1450, 5500}));
+    STELLO_CHECK(time::for_solver_capped(pm, pm_b, 300, 50, 100) == (time::TimeBudget{450, 900}));
+    STELLO_CHECK(time::for_solver_capped(SearchLimits::fixed_depth(5), time::TimeBudget::unlimited(), 300, 50, 100) == time::TimeBudget::unlimited());
+    STELLO_CHECK(time::for_solver_capped(SearchLimits::solve(), time::TimeBudget::unlimited(), 300, 50, 100) == time::TimeBudget::unlimited());
 }
 
 STELLO_TEST(wld_admission_decision_tests) {
@@ -1202,12 +1217,6 @@ Duration manual_clock() {
     return std::chrono::milliseconds(g_manual_ms.load(std::memory_order_relaxed));
 }
 
-#if STELLO_TESTS_ASAN
-Duration asan_scaled_clock() {
-    return search::system_clock() / 10;
-}
-#endif
-
 } // namespace
 
 STELLO_TEST(progress_and_time_limit_tests) {
@@ -1422,24 +1431,95 @@ STELLO_TEST(selective_endgame_progress_and_time_per_game_tests) {
         STELLO_CHECK((board.legal_moves(player) & outcome.result.mv.square->bit()) != 0);
     }
 
-    // TimePerGame (15 s remaining) on affordable win g46e28 admits WLD and proves a winning result.
+    // Speed-independent g46e28 affordable-win entry under both native and forced portable dispatch.
     {
         const auto [board, player] = find_bench_pos("midgame-exact.txt", "g46e28");
-        search::SearchEngine engine(19);
-#if STELLO_TESTS_ASAN
-        engine.set_clock(&asan_scaled_clock);
-#endif
-        const auto outcome = engine.search(board, player, SearchLimits::time_per_game_ms(15'000));
-        STELLO_CHECK(outcome.ok);
-#if STELLO_TESTS_ASAN
-        STELLO_CHECK(outcome.result.elapsed < std::chrono::seconds(60));
-#else
-        STELLO_CHECK(outcome.result.elapsed < std::chrono::seconds(10));
-#endif
-        STELLO_CHECK(outcome.result.mv.square.has_value());
-        STELLO_CHECK((board.legal_moves(player) & outcome.result.mv.square->bit()) != 0);
-        STELLO_CHECK(outcome.result.kind == ScoreKind::WinLossDraw || outcome.result.kind == ScoreKind::Exact);
-        STELLO_CHECK(outcome.result.score > 0);
+        for (const auto tier : {std::optional<cpu::CpuTier>{std::nullopt}, std::optional<cpu::CpuTier>{cpu::CpuTier::Portable}}) {
+            ForcedCpuTierGuard tier_guard(tier);
+            g_manual_ms.store(0, std::memory_order_relaxed);
+            search::SearchEngine engine(19);
+            engine.set_clock(&manual_clock);
+            bool saw_wld = false;
+            bool saw_exact = false;
+            const auto outcome = engine.search(
+                board, player, SearchLimits::time_per_game_ms(15'000),
+                [&](const SearchInfo& info) {
+                    if (info.kind == ScoreKind::WinLossDraw) {
+                        saw_wld = true;
+                        // Above 2,693 ms soft limit and below 4,040 ms hard cap so WLD completes cleanly without Exact.
+                        g_manual_ms.store(3'000, std::memory_order_relaxed);
+                    } else if (info.kind == ScoreKind::Exact) {
+                        saw_exact = true;
+                    }
+                });
+            STELLO_CHECK(outcome.ok);
+            STELLO_CHECK(saw_wld);
+            STELLO_CHECK(!saw_exact);
+            STELLO_CHECK(outcome.result.mv.square.has_value());
+            STELLO_CHECK((board.legal_moves(player) & outcome.result.mv.square->bit()) != 0);
+            STELLO_CHECK(outcome.result.kind == ScoreKind::WinLossDraw);
+            STELLO_CHECK(outcome.result.score > 0);
+        }
+    }
+
+    // Soft percentage applies to capped solver allowance (g21e24: 10,000 ms, soft_time_percent = 10 -> 350 ms soft).
+    {
+        const auto [board, player] = find_bench_pos("midgame-exact.txt", "g21e24");
+        const auto base_limits = SearchLimits::time_per_game_ms(10'000);
+        SearchOptions opts;
+        opts.soft_time_percent = 10;
+
+        // 400 ms arm: exceeds capped 350 ms soft limit so WLD completes and Exact is suppressed.
+        {
+            g_manual_ms.store(0, std::memory_order_relaxed);
+            search::SearchEngine engine(16, opts);
+            engine.set_clock(&manual_clock);
+            bool saw_wld = false;
+            bool saw_exact = false;
+            const auto outcome = engine.search(
+                board, player, base_limits,
+                [&](const SearchInfo& info) {
+                    if (info.kind == ScoreKind::WinLossDraw) {
+                        saw_wld = true;
+                        g_manual_ms.store(400, std::memory_order_relaxed);
+                    } else if (info.kind == ScoreKind::Exact) {
+                        saw_exact = true;
+                    }
+                });
+            STELLO_CHECK(outcome.ok);
+            STELLO_CHECK(saw_wld);
+            STELLO_CHECK(!saw_exact);
+            STELLO_CHECK(outcome.result.mv.square.has_value());
+            STELLO_CHECK((board.legal_moves(player) & outcome.result.mv.square->bit()) != 0);
+            STELLO_CHECK(outcome.result.kind == ScoreKind::WinLossDraw);
+            STELLO_CHECK(outcome.result.score < 0);
+        }
+
+        // 100 ms positive control: stays below 350 ms soft limit so Exact proceeds and returns -4.
+        {
+            g_manual_ms.store(0, std::memory_order_relaxed);
+            search::SearchEngine engine(16, opts);
+            engine.set_clock(&manual_clock);
+            bool saw_wld = false;
+            bool saw_exact = false;
+            const auto outcome = engine.search(
+                board, player, base_limits,
+                [&](const SearchInfo& info) {
+                    if (info.kind == ScoreKind::WinLossDraw) {
+                        saw_wld = true;
+                        g_manual_ms.store(100, std::memory_order_relaxed);
+                    } else if (info.kind == ScoreKind::Exact) {
+                        saw_exact = true;
+                    }
+                });
+            STELLO_CHECK(outcome.ok);
+            STELLO_CHECK(saw_wld);
+            STELLO_CHECK(saw_exact);
+            STELLO_CHECK(outcome.result.mv.square.has_value());
+            STELLO_CHECK((board.legal_moves(player) & outcome.result.mv.square->bit()) != 0);
+            STELLO_CHECK(outcome.result.kind == ScoreKind::Exact);
+            STELLO_CHECK_EQ(outcome.result.score, -4);
+        }
     }
 
     // Deterministic controlled-clock TimePerGame tests: budget exhaustion & WLD abort preserve valid Heuristic fallback.
@@ -2076,6 +2156,44 @@ STELLO_TEST(probcut_recursion_guard_limit_and_endgame_isolation) {
         };
         STELLO_CHECK(run_end(1, 0) <= run_end(1, 1));
         STELLO_CHECK_EQ(run_end(0, 0), run_end(0, 1));
+    }
+
+    // Pin the intentional inner verifier policy on g29e24 (exact +18) stage 2 window [18, 19]:
+    // starting level 0 runs inner midgame ProbCut at level 1 and returns a correct fail-low 18;
+    // starting level 1 suppresses inner midgame ProbCut (level 2) and returns no cutoff.
+    {
+        ForcedCpuTierGuard tier_guard(cpu::CpuTier::Portable);
+        const auto [g29_board, g29_player] = find_bench_pos("midgame-exact.txt", "g29e24");
+        search::SearchEngine eng(19);
+        auto run_verifier = [&](uint8_t start_level) -> std::optional<int32_t> {
+            eng.clear_hash();
+            search::ThreadState thread;
+            search::Searcher base = eng.searcher({}, search::no_stop(), 24U);
+            const search::SearchContext ctx = search::SearchContext::create(
+                eng.options(), base.probcut_errors, base.end_probcut_errors,
+                eng.midgame_table(), eng.endgame_table(), &search::system_clock, 24U);
+            search::Searcher s(ctx, thread, search::no_stop());
+            s.end_mpc_stage = 2;
+            s.probcut_level = start_level;
+            s.hash_get_height = 64;
+            s.hash_put_height = 64;
+            const Player g29_opp = opponent(g29_player);
+#if STELLO_ABORT_EXCEPTIONS
+            const auto res = s.try_end_probcut(g29_board.discs(g29_player), g29_board.discs(g29_opp), 18, 19, 24);
+#else
+            const auto box = s.try_end_probcut(g29_board.discs(g29_player), g29_board.discs(g29_opp), 18, 19, 24);
+            STELLO_CHECK(box.is_ok());
+            const auto res = box.value;
+#endif
+            STELLO_CHECK_EQ(s.probcut_level, start_level);
+            return res;
+        };
+
+        const auto mixed_cut = run_verifier(0);
+        const auto isolated_cut = run_verifier(1);
+        STELLO_CHECK(mixed_cut.has_value());
+        STELLO_CHECK_EQ(*mixed_cut, 18);
+        STELLO_CHECK(!isolated_cut.has_value());
     }
 
     // 8-thread recursive ProbCut propagation safety.

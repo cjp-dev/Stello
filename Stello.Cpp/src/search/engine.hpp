@@ -257,6 +257,7 @@ public:
     AbortResult<int32_t> solve_child(uint64_t own, uint64_t opponent, int32_t alpha, int32_t beta, int32_t empties);
     AbortResult<int32_t> end_null(uint64_t own, uint64_t opponent, int32_t alpha, int32_t empties, uint64_t legal);
     AbortResult<int32_t> end_window(uint64_t own, uint64_t opponent, int32_t alpha, int32_t beta, int32_t empties, bool passed);
+    AbortResult<std::optional<int32_t>> try_end_probcut(uint64_t own, uint64_t opponent, int32_t alpha, int32_t beta, int32_t empties);
     AbortResult<int32_t> solve_shallow(uint64_t own, uint64_t opponent, int32_t alpha, int32_t beta, int32_t empties, bool passed);
     AbortResult<int32_t> end_deep(uint64_t own, uint64_t opponent, int32_t alpha, int32_t empties, bool passed, uint64_t legal);
     AbortResult<int32_t> ordering_value(

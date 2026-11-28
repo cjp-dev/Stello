@@ -539,9 +539,9 @@ AbortResult<std::optional<int32_t>> Kernel<Tier>::try_end_probcut(
         return sc;
     };
 
-    // Intentional mixed nesting (Stage B keep): outer endgame MPC calls arrive at probcut_level == 0 (non-recursive).
-    // Raising to 1 allows 1 inner midgame ProbCut level (< PROBCUT_MAX_LEVEL = 2), cutting verifier nodes 12.1x;
-    // isolating inner ProbCut (>= 2) regressed mid-quality solved rate and -12 Elo in 400g 500ms testing.
+    // Intentional mixed nesting: outer endgame MPC calls arrive at probcut_level == 0 (non-recursive).
+    // Raising to 1 allows 1 inner midgame ProbCut level (< PROBCUT_MAX_LEVEL = 2), cutting 12.1x nodes on the
+    // 600-probe verifier panel; isolation scored 193/400 (48.2%, 95% CI 46.1-50.4%) in a 400g 500ms match.
     ProbCutGuard guard(s.probcut_level);
     const Board pc_board(own, opponent);
 

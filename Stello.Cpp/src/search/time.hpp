@@ -110,6 +110,33 @@ inline TimeBudget for_solver(
     return for_endgame(limits, midgame, elapsed_ms).with_soft_percent(soft_percent, offset_ms);
 }
 
+inline TimeBudget for_solver_capped(
+    const SearchLimits& limits,
+    TimeBudget midgame,
+    int64_t elapsed_ms,
+    std::optional<int32_t> soft_percent,
+    int64_t max_span_ms
+) noexcept {
+    if (limits.mode() != TimeControlMode::TimePerGame) {
+        return for_solver(limits, midgame, elapsed_ms, soft_percent);
+    }
+    const int64_t clamped_elapsed = clamp_time_ms(elapsed_ms);
+    int64_t rest = 10;
+    if (limits.time_ms() >= 0) {
+        const int64_t clamped_limit = clamp_time_ms(limits.time_ms());
+        rest = (clamped_limit < clamped_elapsed) ? 10 : (clamped_limit - clamped_elapsed);
+    }
+    const int64_t uncapped_span = rest / 2;
+    const int64_t capped_span = (max_span_ms >= 0)
+        ? (std::min)(uncapped_span, clamp_time_ms(max_span_ms))
+        : uncapped_span;
+    const TimeBudget base{
+        clamp_add_ms(clamped_elapsed, capped_span / 15 * 10 + (capped_span % 15) * 10 / 15),
+        clamp_add_ms(clamped_elapsed, capped_span),
+    };
+    return base.with_soft_percent(soft_percent, clamped_elapsed);
+}
+
 // Calibrated on midgame-exact (24-28 empties) cal/val splits + 30-empty boards for TimePerGame:
 // median wld_ms / stage4_ms is 0.46-0.70; tight margins (|stage4_score| < 6) need a 12x bound, while
 // clear margins (|stage4_score| >= 6) prove reliably within 4x stage4_ms.
