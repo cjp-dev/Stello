@@ -391,7 +391,7 @@ STELLO_TEST(table_same_level_weaker_fail_high_preserves_exact_move) {
 
     // 2. Weaker narrow fail-high search (h3 = -1131) must NOT overwrite c4 in the TT.
     searcher.hash_get_height = 0;
-    const search::ScoreMove step2 = unwrap(searcher.search(board, player, 0, 1, -1, -6401, -6400));
+    const search::ScoreMove step2 = unwrap(searcher.search(board, player, 0, 1, -1, -6401, -6399));
     STELLO_CHECK_EQ(step2.score, -1131);
     STELLO_CHECK_EQ(step2.mv, static_cast<int32_t>(h3->index()));
 
@@ -869,7 +869,7 @@ STELLO_TEST(persistent_engine_ages_full_table_across_game_positions) {
         player = opponent(player);
     }
 
-    STELLO_CHECK_EQ(total_nodes, uint64_t{1'511'196});
+    STELLO_CHECK_EQ(total_nodes, uint64_t{1'698'407});
 }
 
 // ---- Full 105-signature baseline integration test (Stello 3.1) ----
@@ -1576,6 +1576,150 @@ STELLO_TEST(phase4_1d_leaf_wipeout_recognition) {
             STELLO_CHECK_EQ(r5.result.depth, 1);
             STELLO_CHECK(r5.result.nodes >= uint64_t{1});
             STELLO_CHECK(r5.result.score > -search::WIN_SCORE && r5.result.score < search::WIN_SCORE);
+        }
+    }
+}
+
+STELLO_TEST(phase4_3a1_nws_kernels_parity) {
+    const cpu::CpuTier saved_tier = cpu::active_tier();
+    struct RestoreTier {
+        cpu::CpuTier tier;
+        ~RestoreTier() { (void)cpu::set_forced_tier(tier); }
+    } restore_tier{saved_tier};
+
+    std::vector<cpu::CpuTier> tiers = {cpu::CpuTier::Portable};
+    if (cpu::has_avx2_bmi2()) {
+        tiers.push_back(cpu::CpuTier::V3);
+    }
+    if (cpu::has_avx512_v4()) {
+        tiers.push_back(cpu::CpuTier::V4);
+    }
+
+    const auto [mid_board, mid_player] = find_bench_pos("midgame.txt", "g01e48");
+
+    // Pass position: Black c1, White b1 | d1 | h8 -> play a1 leaves White with 0 legal moves and Black with e1 only.
+    const Board pass_board(uint64_t{1} << 2, (uint64_t{1} << 1) | (uint64_t{1} << 3) | (uint64_t{1} << 63));
+    const Board after_a1 = pass_board.play_unchecked(Player::Black, 0U);
+    STELLO_CHECK_EQ(after_a1.legal_moves(Player::White), uint64_t{0});
+    STELLO_CHECK_EQ(after_a1.legal_moves(Player::Black), uint64_t{1} << 4);
+
+    // Double-pass (game over) position: 62 Black discs, 0 White discs -> 0 legal moves on both sides.
+    const Board terminal_board(0xFFFF'FFFF'FFFF'FFFCULL, 0ULL);
+    STELLO_CHECK_EQ(terminal_board.legal_moves(Player::Black), uint64_t{0});
+    STELLO_CHECK_EQ(terminal_board.legal_moves(Player::White), uint64_t{0});
+
+    // Wipeout position (f5 f6 d3 e3 f3 f4 f7 c5 -> b5).
+    Board before_c5 = Board::initial();
+    Player side = Player::Black;
+    for (const char* mv : {"f5", "f6", "d3", "e3", "f3", "f4", "f7"}) {
+        const auto sq = Square::parse(mv);
+        STELLO_CHECK(sq.has_value());
+        before_c5 = before_c5.play_unchecked(side, sq->index());
+        side = opponent(side);
+    }
+    const auto c5 = Square::parse("c5");
+    const auto b5 = Square::parse("b5");
+    STELLO_CHECK(c5.has_value() && b5.has_value());
+    const Board wipe_board = before_c5.play_unchecked(Player::White, c5->index());
+
+    auto unwrap = [](search::AbortResult<search::ScoreMove> r) -> search::ScoreMove {
+#if STELLO_ABORT_EXCEPTIONS
+        return r;
+#else
+        STELLO_CHECK(r.is_ok());
+        return r.value;
+#endif
+    };
+
+    SearchOptions opts;
+    opts.selective = false;
+
+    for (const cpu::CpuTier tier : tiers) {
+        STELLO_CHECK(cpu::set_forced_tier(tier));
+        search::TranspositionTable table(12);
+        search::ThreadState thread;
+
+        auto make_ctx = [&](const Board& b) {
+            return search::SearchContext::create(
+                opts, nullptr, nullptr, table, table, search::system_clock, b.empty_count());
+        };
+        auto check_nws_parity = [&](const search::SearchContext& ctx, const Board& b, Player p, int32_t look, int32_t hash_h, int32_t alpha, int32_t pv_score) {
+            search::Searcher s(ctx, thread, search::no_stop());
+            s.hash_get_height = hash_h;
+            s.hash_put_height = hash_h;
+            const search::ScoreMove nws = unwrap(s.search(b, p, look, 1, -1, alpha, alpha + 1));
+            STELLO_CHECK_EQ(nws.score > alpha, pv_score > alpha);
+        };
+
+        const auto ctx_mid = make_ctx(mid_board);
+        const auto ctx_a1 = make_ctx(after_a1);
+        const auto ctx_term = make_ctx(terminal_board);
+        const auto ctx_wipe = make_ctx(wipe_board);
+        const auto ctx_bc5 = make_ctx(before_c5);
+
+        for (const int32_t hash_h : {0, 4}) {
+            for (const int32_t look : {0, 1, 2}) {
+                // 1. Standard midgame across alpha thresholds around PV score.
+                table.clear();
+                search::Searcher s_mid(ctx_mid, thread, search::no_stop());
+                s_mid.hash_get_height = hash_h;
+                s_mid.hash_put_height = hash_h;
+                const int32_t pv_mid = unwrap(s_mid.search(mid_board, mid_player, look, 1, -1, -32665, 32665)).score;
+                for (const int32_t alpha : {pv_mid - 200, pv_mid - 1, pv_mid, pv_mid + 1, pv_mid + 200}) {
+                    if (hash_h == 0) {
+                        table.clear();
+                    }
+                    check_nws_parity(ctx_mid, mid_board, mid_player, look, hash_h, alpha, pv_mid);
+                }
+
+                // 2. Pass position (White passes to Black e1 only).
+                table.clear();
+                search::Searcher s_pass(ctx_a1, thread, search::no_stop());
+                s_pass.hash_get_height = hash_h;
+                s_pass.hash_put_height = hash_h;
+                const int32_t pv_pass = unwrap(s_pass.search(after_a1, Player::White, look, 1, -1, -32665, 32665)).score;
+                for (const int32_t alpha : {pv_pass - 1, pv_pass}) {
+                    check_nws_parity(ctx_a1, after_a1, Player::White, look, hash_h, alpha, pv_pass);
+                }
+
+                // 3. Double-pass / game-over terminal score.
+                table.clear();
+                search::Searcher s_term(ctx_term, thread, search::no_stop());
+                s_term.hash_get_height = hash_h;
+                s_term.hash_put_height = hash_h;
+                const int32_t pv_term = unwrap(s_term.search(terminal_board, Player::Black, look, 1, -1, -32665, 32665)).score;
+                STELLO_CHECK(pv_term > 0);
+                check_nws_parity(ctx_term, terminal_board, Player::Black, look, hash_h, pv_term - 1, pv_term);
+                check_nws_parity(ctx_term, terminal_board, Player::Black, look, hash_h, pv_term, pv_term);
+
+                // 4. Forced 1-move extension at look == 0 (after_a1, Black e1 only).
+                table.clear();
+                search::Searcher s_1mv(ctx_a1, thread, search::no_stop());
+                s_1mv.hash_get_height = hash_h;
+                s_1mv.hash_put_height = hash_h;
+                const int32_t pv_1mv = unwrap(s_1mv.search(after_a1, Player::Black, look, 1, -1, -32665, 32665)).score;
+                check_nws_parity(ctx_a1, after_a1, Player::Black, look, hash_h, pv_1mv - 1, pv_1mv);
+                check_nws_parity(ctx_a1, after_a1, Player::Black, look, hash_h, pv_1mv, pv_1mv);
+            }
+
+            // 5. Wipeout recognition in eval1_nws (look == 0) and propagation in eval2_nws / search_inc (look == 1, 2).
+            table.clear();
+            search::Searcher s_wipe(ctx_wipe, thread, search::no_stop());
+            s_wipe.hash_get_height = hash_h;
+            s_wipe.hash_put_height = hash_h;
+            const search::ScoreMove w0 = unwrap(s_wipe.search(wipe_board, Player::Black, 0, 1, -1, search::WIN_SCORE, search::WIN_SCORE + 1));
+            STELLO_CHECK_EQ(w0.score, search::WIN_SCORE + 64);
+            STELLO_CHECK_EQ(w0.mv, static_cast<int32_t>(b5->index()));
+
+            for (const int32_t look : {1, 2}) {
+                table.clear();
+                search::Searcher s_wb(ctx_bc5, thread, search::no_stop());
+                s_wb.hash_get_height = hash_h;
+                s_wb.hash_put_height = hash_h;
+                const int32_t pv_wb = unwrap(s_wb.search(before_c5, Player::White, look, 1, -1, -32665, 32665)).score;
+                check_nws_parity(ctx_bc5, before_c5, Player::White, look, hash_h, pv_wb - 1, pv_wb);
+                check_nws_parity(ctx_bc5, before_c5, Player::White, look, hash_h, pv_wb, pv_wb);
+            }
         }
     }
 }

@@ -665,3 +665,50 @@ Evaluated Priorities 1–4 from [Possible remaining Stello speed optimizations.m
   - **All 5 C++ presets (`clang-release`, `clang-native`, `clang-sanitized`, `msvc-release`, `msvc-native`):** `0` warnings/errors, `3/3` ctests passed each (`65/65` `stello_tests` including `table_same_level_weaker_fail_high_preserves_exact_move`).
   - **`.NET` Release + `windows-ffi` + WASM ST/MT:** `0 Warning(s), 0 Error(s)` (`-m:1`); `20/20` WASM Node tests (`3.58 s`); `Stello.Engine.Tests` `521/521`, `Stello.Net.Tests` `127/127`, `Egaroucid.Engine.Tests` `118 passed, 0 failed, 8 skipped` (`TaggedV30_*`).
   - **`zmm` audit (`llvm-objdump -d`):** `0` `zmm` instructions across `windows-ffi\stello_engine.dll`, `clang-release\{stello-cpp.exe, stello_engine.dll}`, `clang-native\stello-cpp.exe`, and `msvc-release\stello-cpp.exe`.
+
+### 5. Item 3 — Dedicated NWS Shallow Kernels & Midgame Ordering / Resolution Experiments
+
+- **Stage 0 diagnostic findings (`#ifdef STELLO_ITEM3_DIAG` on `bb8bded`, cleanly reverted before edits):**
+  - `look <= 2` NWS accounts for **`97.1 %`** of total `deep24 d20` (`1t`, `selective=on`) leaf work (`105.7M` leaf evals: `41.5M` `look=0`, `10.1M` `look=1`, `4.6M` `look=2`), with ProbCut internals contributing `80.1 %` (`d16`) → `87.6 %` (`d18`) → `92.2 %` (`d20`).
+  - **Rejecting `3C` (`[g, beta]` PVS re-search) on measurement gate:** Across `deep24 d16/d18/d20` and `hold36 d18`, **`98.50–99.46 %`** of selective PVS re-search nodes have `g - alpha == 1` because `try_probcut_inc` returns fail-hard `*cut = beta = alpha + 1`, leaving no headroom for `[g, beta]` window narrowing.
+  - **Ordering audit (`4,881`-node `d18` `look >= 6` sample):** Legacy weights `(35, 17, 269)` achieved `NWS R1 = 64.34 %, MRR = 0.7848` and `PV R1 = 47.15 %, MRR = 0.6652`. Grid search capped out at `+0.36 %` NWS R1 / `+0.0003` PV MRR; `edge_stability` (`25..400`) added `+0.00 % R1 / +0.0000 MRR`; and `W_HASH` child-TT bonus monotonically hurt (`64.34 % → 62.33 %` NWS R1).
+- **Kept implementation (`3A-1` `m4` in [kernel.hpp](../Stello.Cpp/src/search/kernel.hpp) and [engine_impl.hpp](../Stello.Cpp/src/search/engine_impl.hpp)):**
+  - Added 5-mask static cell priority table `STATIC_CELL_PRIORITY` (corners `0x8100000000000081`, center 4×4 `0x00003C3C3C3C0000`, edges/outer-mid `0x3C3CC3C3C3C33C3C`, C-squares `0x4281000000008142`, X-squares `0x0042000000004200`).
+  - Added `Kernel<Tier>::eval1_nws` (`look == 0` NWS keeping pass, 1-move forced extension, leaf wipeout check, `raw_skip_threshold`, and `hash_get` while skipping `hash_put` and `O(n²)` move sorting), `Kernel<Tier>::eval2_nws` (`look == 1` NWS keeping pass, prefetch, `hash_get`, and `hash_put`), and a `look == 2 && beta - alpha == 1` `STATIC_CELL_PRIORITY` loop in `search_inc`.
+  - Recalibrated `estimate_wld_ms` denominator `mid_nps * 3.5 → mid_nps * 2.0` (`~14M → ~25M` midgame NPS vs `~49M` unchanged endgame NPS), restoring `< 20 s` budget compliance in `selective_endgame_progress_and_time_per_game_tests` on `g01e30`.
+- **Interleaved `A/B/B/A` benchmarks (`3A-1` `m4` vs `Item 2` `bb8bded`, `--hash-bits 19`, `--cpu v4`):**
+
+| Suite (`sel=on` unless noted) | `Item 2` (`bb8bded`) | **`3A-1` (`m4`)** | Time Δ | Nodes Δ |
+|---|---:|---:|---:|---:|
+| `deep24 d12` (`1t`, `sel=off`, `0/24` diffs) | `12,192.6 ms` (`169.59M`) | **`6,463.7 ms`** (`171.49M`) | **`−46.99 %`** | `+1.12 %` |
+| `mid100 d16` (`1t`) | `4,354.5 ms` (`58.00M`) | **`2,920.8 ms`** (`69.63M`) | **`−32.93 %`** | `+20.06 %` |
+| `deep24 d16` (`1t`) | `1,717.6 ms` (`22.56M`) | **`1,112.1 ms`** (`26.97M`) | **`−35.25 %`** | `+19.55 %` |
+| `hold36 d18` (`1t`) | `4,798.3 ms` (`65.63M`) | **`3,109.5 ms`** (`76.70M`) | **`−35.20 %`** | `+16.86 %` |
+| `deep24 d18` (`1t`) | `4,645.3 ms` (`61.38M`) | **`2,899.8 ms`** (`72.07M`) | **`−37.58 %`** | `+17.43 %` |
+| `deep24 d20` (`1t`) | `12,436.4 ms` (`168.15M`) | **`7,936.9 ms`** (`197.01M`) | **`−36.18 %`** | `+17.16 %` |
+| `hold36 d20` (`1t`) | `12,673.7 ms` (`172.93M`) | **`7,898.7 ms`** (`196.25M`) | **`−37.68 %`** | `+13.49 %` |
+| `deep24 d22` (`1t`, `1×`) | `33,084.0 ms` (`451.73M`) | **`19,530.3 ms`** (`494.60M`) | **`−40.97 %`** | `+9.49 %` |
+| `deep24 d20` **`8t`** | `2,866.8 ms` (`237.59M`) | **`1,720.5 ms`** (`253.42M`) | **`−39.99 %`** | `+6.66 %` |
+| `deep24 d22` **`8t`** | `7,402.8 ms` (`671.98M`) | **`4,578.4 ms`** (`717.61M`) | **`−38.15 %`** | `+6.79 %` |
+
+  - **Deep EBF (`1t` `deep24 d20→d22`):** Dropped from **`1.6391` (`bb8bded`) → `1.5844` (`3A-1`)** as static-priority node inflation shrinks from `+20 %` (`d16`) down to `+9.49 %` (`d22`) and `+6.66–6.79 %` (`8t`).
+  - **`mid-quality` ([midgame-exact.txt](../Stello.Net/tools/Stello.Benchmark/Data/midgame-exact.txt), `300` positions, `--workers 4`):** `200 ms`: `Loss 0.5067 ± 0.1575` (`85.00 %` best, `5.00 %` solved, `187.3 ms`); `1,000 ms`: `Loss 0.2600 ± 0.1141` (`91.33 %` best, `45.00 %` solved, `875.6 ms`; `24e` `0.0400 ± 0.0552`, `98.00 %` best, `91.00 %` solved).
+- **Rejected Stage `3A` & `3B` experiments (each isolated and cleanly reverted):**
+  - **`3A-1` ablations (`m3`/`m5`/`m7`/`m8`):** Skipping `hash_put` in `eval2_nws` (`m3`, `+27–31 %` nodes, `+5–8 %` slower), writing TT in `eval1_nws` (`m5`, `+821 ms` slower at `d22 1t`), and skipping `hash_get` in `eval1_nws` (`m7`/`m8`, `+940 ms` / `+30M` nodes at `d22 1t`) all lost to `m4`.
+  - **`3A-1d` (`look == 3` NWS static priority vs `m4`):** `deep24 d18` `+0.84 %` ms (`+2.74 %` nodes), `d20` `−1.59 %` ms, `hold36 d20` `−3.13 %` ms, `deep24 d22` `+0.01 %` ms (`+0.72 %` nodes).
+  - **`3A-2` (deep PV `1–2`-ply shortlist ordering, 4 modes vs `m4`):** All 4 variants failed consistency across `deep24`/`hold36` (`d20`: `m1 −0.21 % / +1.94 %`, `m2 −0.81 % / +0.77 %`, `m3 +2.11 % / +0.59 %`, `m4 +1.11 % / −0.99 %`).
+  - **`3A-3` (Takizawa stale `hash_move` guard on NWS `look >= 4`, `gap=2/3` vs `m4`):** Improved `d20` (`−0.78 % / −3.42 %` and `−0.32 % / −3.96 %`) but regressed `deep24 d22` on both time and nodes (`gap2`: `+1.45 %` ms / `+1.11 %` nodes; `gap3`: `+0.93 %` ms / `+1.22 %` nodes; EBF worsened `1.5844 → 1.609`).
+  - **`3B` (coarser heuristic search resolution `Q ∈ {25, 50, 100}` ± `pc_align` vs `m4`):** Verified `eval_raw_skip_threshold_search_exact` `100 %` exact across `Q = 25, 50, 100` (`1 passed, 0 failed`). Speedups on `sel=off` (`q100`: `−7.34 %` `deep24 d12`, `−7.30 %` `hold36 d12`, `−9.14 %` `deep4 d14`) and `sel=on` (`q100`: `−15.22 %` `d20 1t`, `−7.97 %` `d22 1t`, `−16.06 % / −15.48 %` `8t`; `q50a`: `−15.15 %` `d20 1t`, `−11.97 %` `d22 1t`; `q100a`: `−37.53 %` `d20 1t`, `−19.71 %` `d22 1t`, `−29.14 % / −26.33 %` `8t`) looked promising, and `mid-quality` stayed within CIs (`200 ms`: `q100 0.4333 ± 0.1353`, `q50a 0.5133 ± 0.1533`, `q100a 0.5267 ± 0.1572`), but paired `500 ms` matches vs `3A-1` (`q1`) exposed that `pc_align` hurt playing strength (`q100a`: `231/500 = 46.2 %`, `−26` Elo, CI `43.2–49.2 %`, LOS `0.6 %`; `q50a`: `249.5/500 = 49.9 %`, `−1` Elo, CI `46.8–53.0 %`) and full `1,174`-game `q100 vs q1` finished at **`597.0/1,174` (`50.85 %`, paired 95 % CI `48.79–52.91 %`, Elo `+5.9` [`−8.4..+20.2`], LOS `79.1 %`)**, failing the `lower 95 % CI > 50 %` gate; cleanly reverted.
+- **Gate P4 Verification Matches (`p4_item3` `3A-1` vs `p4_item2` `bb8bded`, `threads=1`, `--workers 8`, `hash-bits=19`, `book=off`):**
+
+| Match | Time / Move | Starts (Games) | Score (95 % CI) | W / D / L | Elo (95 % CI) | LOS | Discs/g | Avg Depth (A / B) | First Solve (A / B) | NPS (A / B) | Wall Time |
+|---|---:|---:|---|---|---|---|---|---|---|---|---|
+| `Item 3` (`p4_item3`) | 500 ms | 587 (`1,174`) | **53.5 %** (`51.5–55.6 %`) | `+499 =259 −416` | **+25** (`+10 to +39`) | **`100.0 %`** | `+0.4 ± 0.2` | `20.61 / 21.49` | `23.2 / 23.3` | `23.40M / 31.09M` | [28m 00s](benchmark-results/match_p4_item3_vs_item2_500ms.md) |
+| `Item 3` (`p4_item3`) | 2,000 ms | 300 (`600`) | **54.1 %** (`51.1–57.1 %`) | `+247 =155 −198` | **+28** (`+8 to +50`) | **`99.6 %`** | `+0.3 ± 0.2` | `23.20 / 24.20` | `25.3 / 25.5` | `24.01M / 32.25M` | [52m 16s](benchmark-results/match_p4_item3_vs_item2_2000ms.md) |
+
+  - **Decision:** **Accepted (Gate P4 passed at both `500 ms` and `2 s`)** — `+25` Elo (`53.5 %`, CI `51.5–55.6 %`) at `500 ms` and `+28` Elo (`54.1 %`, CI `51.1–57.1 %`, `+1.00` ply avg depth, `+34.3 %` NPS) at `2 s`.
+- **Updated baselines & full verification matrix (all run after final code/test edits):**
+  - Updated [stello-v3-signatures.txt](../Stello.Net/Stello.Engine.Tests/Data/stello-v3-signatures.txt) (`105/105` identical moves, kinds, and depths; `5/5` exact FFO `#40–44` scores with `4/5` node counts updated `+91` net; `100` midgame `d10` node counts updated `+653,331` net with `3` MPC `Score` shifts [`g05e42 287→112`, `g14e36 325→375`, `g18e30 4093→4293`], 100 % exact under `selective=off`), [search_tests.cpp](../Stello.Cpp/tests/search_tests.cpp) (`persistent_engine_ages_full_table_across_game_positions` `1,698,407`; updated `table_same_level_weaker_fail_high_preserves_exact_move` Step 2 window to `[-6401, -6399]`; added `phase4_3a1_nws_kernels_parity`), [NativeEngineTests.cs](../Stello.Net/Stello.Engine.Tests/NativeEngineTests.cs) (`UpperBoundEqualityCutoff_IsUsedByDefault` `34,841`; `WrittenModel()` `Selective = false`; added `ProbCutPercent_IsForwardedAcrossFfi`), and [engine.test.mjs](../Stello.Cpp/tests/wasm/engine.test.mjs) (`g01e48` `34,841`).
+  - **All 5 C++ presets (`clang-release`, `clang-native`, `clang-sanitized`, `msvc-release`, `msvc-native`):** `0` warnings/errors, `3/3` ctests passed each (`66/66` `stello_tests`, `stello_cli_version`, `stello_cli_microbench`).
+  - **`.NET` Release + `windows-ffi` + WASM ST/MT (`Stello.Net/Stello.Net.slnx`):** `0 Warning(s), 0 Error(s)` (`-m:1`); `20/20` WASM Node tests (`3.68 s`); `Stello.Engine.Tests` `521/521`, `Stello.Net.Tests` `127/127`, `Egaroucid.Engine.Tests` `118 passed, 0 failed, 8 skipped` (`TaggedV30_*`).
+  - **`zmm` audit (`llvm-objdump -d`):** `0` `zmm` instructions across `windows-ffi/stello_engine.dll`, `clang-release/{stello-cpp.exe, stello_engine.dll}`, `clang-native/stello-cpp.exe`, and `msvc-release/stello-cpp.exe`.

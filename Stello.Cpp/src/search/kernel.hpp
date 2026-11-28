@@ -221,6 +221,24 @@ struct Kernel {
         const eval::PatternState& eval_state,
         uint64_t known_legal = endgame::bits::LEGAL_UNDEFINED
     );
+    static AbortResult<ScoreMove> eval1_nws(
+        Searcher& s,
+        const Board& board,
+        Player player,
+        int32_t ply,
+        int32_t alpha,
+        const eval::PatternState& eval_state,
+        uint64_t known_legal = endgame::bits::LEGAL_UNDEFINED
+    );
+    static AbortResult<ScoreMove> eval2_nws(
+        Searcher& s,
+        const Board& board,
+        Player player,
+        int32_t ply,
+        int32_t alpha,
+        const eval::PatternState& eval_state,
+        uint64_t known_legal = endgame::bits::LEGAL_UNDEFINED
+    );
     static STELLO_NOINLINE AbortResult<ScoreMove> search_inc_deep(
         Searcher& s,
         const Board& board,

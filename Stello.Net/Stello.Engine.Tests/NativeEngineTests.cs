@@ -27,7 +27,7 @@ public class NativeEngineTests
         Assert.Equal(33_554_432L, (long)SearchEngine.HashBytesPerSlot << 19);
     }
 
-    public static TheoryData<string> OptionCases() => ["selective off", "probcut 150", "soft 50", "written model", "loaded model"];
+    public static TheoryData<string> OptionCases() => ["selective off", "soft 50", "written model", "loaded model"];
 
     [Theory]
     [MemberData(nameof(OptionCases))]
@@ -36,7 +36,6 @@ public class NativeEngineTests
         (SearchOptions options, V2.Search.SearchOptions v2Options) = option switch
         {
             "selective off" => WithBase(WrittenModel(), static (a, b) => (a with { Selective = false }, b with { Selective = false })),
-            "probcut 150" => WithBase(WrittenModel(), static (a, b) => (a with { ProbCutPercent = 150 }, b with { ProbCutPercent = 150 })),
             "soft 50" => WithBase(WrittenModel(), static (a, b) => (a with { SoftTimePercent = 50 }, b with { SoftTimePercent = 50 })),
             "written model" => WrittenModel(),
             _ => LoadedModel(),
@@ -55,13 +54,44 @@ public class NativeEngineTests
     }
 
     [Fact]
+    public void ProbCutPercent_IsForwardedAcrossFfi()
+    {
+        BenchmarkPosition position = BenchmarkPosition.Load(
+            Path.Combine(AppContext.BaseDirectory, "Data", "Benchmark", "midgame.txt")).Single(p => p.Id == "g01e48");
+        SearchLimits limits = SearchLimits.FixedDepth(10);
+        SearchResult pc100 = new SearchEngine(16, new SearchOptions { ProbCutPercent = 100 }).Search(position.Board, position.Player, limits);
+        SearchResult pc150 = new SearchEngine(16, new SearchOptions { ProbCutPercent = 150 }).Search(position.Board, position.Player, limits);
+        SearchResult pcOff = new SearchEngine(16, new SearchOptions { Selective = false }).Search(position.Board, position.Player, limits);
+
+        foreach (SearchResult r in new[] { pc100, pc150, pcOff })
+        {
+            Assert.True(r.Move.Square is { } sq && (position.Board.LegalMoves(position.Player) & (1UL << sq.Index)) != 0);
+            Assert.Equal(ScoreKind.Heuristic, r.Kind);
+            Assert.Equal(10, r.Depth);
+        }
+        Assert.True(pc100.Nodes < pc150.Nodes && pc150.Nodes < pcOff.Nodes);
+
+        (SearchOptions options, V2.Search.SearchOptions v2Options) = WithBase(
+            WrittenModel(),
+            static (a, b) => (a with { ProbCutPercent = 150 }, b with { ProbCutPercent = 150 }));
+        var engine = new SearchEngine(16, options);
+        var v2 = new V2.SearchEngine(16, v2Options);
+        foreach ((Board board, Player player) in TestPositions.RandomPositions(seed: 32, count: 3, plies: 46))
+        {
+            SearchResult expected = v2.Search(board, player, SearchLimits.Solve);
+            SearchResult actual = engine.Search(board, player, SearchLimits.Solve);
+            Assert.Equal((expected.Move, expected.Score, expected.Kind, expected.Depth), (actual.Move, actual.Score, actual.Kind, actual.Depth));
+        }
+    }
+
+    [Fact]
     public void UpperBoundEqualityCutoff_IsUsedByDefault()
     {
         BenchmarkPosition position = BenchmarkPosition.Load(
             Path.Combine(AppContext.BaseDirectory, "Data", "Benchmark", "midgame.txt")).Single(p => p.Id == "g01e48");
         SearchLimits limits = SearchLimits.FixedDepth(10);
         SearchResult result = new SearchEngine().Search(position.Board, position.Player, limits);
-        Assert.Equal(23208, result.Nodes);
+        Assert.Equal(34841, result.Nodes);
     }
 
     [Fact]
@@ -285,7 +315,9 @@ public class NativeEngineTests
         using var stream = new MemoryStream();
         model.Write(stream);
         stream.Position = 0;
-        return (new SearchOptions { Pattern = model }, new V2.Search.SearchOptions { Pattern = V2.Evaluation.EvalWeights.Read(stream) });
+        return (
+            new SearchOptions { Pattern = model, Selective = false },
+            new V2.Search.SearchOptions { Pattern = V2.Evaluation.EvalWeights.Read(stream), Selective = false });
     }
 
     private static (SearchOptions, V2.Search.SearchOptions) WithBase(

@@ -24,6 +24,16 @@ inline constexpr int32_t EVALUATION_ORDER_MIN_LOOK = 4;
 inline constexpr int32_t MIDGAME_ETC_MIN_LOOK = 4;
 inline constexpr size_t SOLVE_HELPERS = 3;
 
+inline constexpr std::array<uint64_t, 5> STATIC_CELL_PRIORITY = {
+    0x8100'0000'0000'0081ULL, // corners (4)
+    0x0000'3C3C'3C3C'0000ULL, // center 4x4 box (16)
+    0x3C3C'C3C3'C3C3'3C3CULL, // edges & outer-inner non-C/X (32)
+    0x4281'0000'0000'8142ULL, // C squares (8)
+    0x0042'0000'0000'4200ULL, // X squares (4)
+};
+static_assert((STATIC_CELL_PRIORITY[0] | STATIC_CELL_PRIORITY[1] | STATIC_CELL_PRIORITY[2] | STATIC_CELL_PRIORITY[3] | STATIC_CELL_PRIORITY[4]) == ~uint64_t{0});
+static_assert(std::popcount(STATIC_CELL_PRIORITY[0]) + std::popcount(STATIC_CELL_PRIORITY[1]) + std::popcount(STATIC_CELL_PRIORITY[2]) + std::popcount(STATIC_CELL_PRIORITY[3]) + std::popcount(STATIC_CELL_PRIORITY[4]) == 64);
+
 template <bool Enable>
 struct SiblingBaselineSlot {};
 
@@ -91,11 +101,12 @@ inline int64_t estimate_wld_ms(
                          / static_cast<double>((std::max<int64_t>)(mid_elapsed_ms, 1));
     // Calibrated on midgame-exact (24-28 empties): ~48x iter_nodes at 24 empties, scaling ~1.6x/empty
     // (endgame exact WLD grows ~2.7x/empty vs ~1.7x/empty for selective midgame depth = empties - 8).
+    // eval1_nws/eval2_nws raised midgame NPS (~14M -> ~25M) relative to unchanged endgame NPS (~49M, ~2.0x ratio).
     const double baseline_depth = static_cast<double>((std::max)(empties - 8, 1));
     const double scale = 48.0 * std::pow(1.6, static_cast<double>(empties - 24))
                        / std::pow(2.0, static_cast<double>(depth_done) - baseline_depth);
     const double est_nodes = static_cast<double>((std::max)(last_iter_nodes, uint64_t{1})) * scale;
-    const double est_ms = est_nodes / (mid_nps * 3.5);
+    const double est_ms = est_nodes / (mid_nps * 2.0);
     return static_cast<int64_t>((std::min)(est_ms, 1e12));
 }
 
@@ -688,6 +699,13 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc(
 ) {
     using namespace detail::midgame;
 
+    if (beta - alpha == 1 && look <= 1) {
+        if (look == 0) {
+            return eval1_nws(s, board, player, ply, alpha, eval_state, known_legal);
+        }
+        return eval2_nws(s, board, player, ply, alpha, eval_state, known_legal);
+    }
+
     const uint64_t nodes_start = s.nodes;
     STELLO_TRY_VOID_R(ScoreMove, s.count_node());
 
@@ -755,6 +773,61 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc(
 
     if (look >= EVALUATION_ORDER_MIN_LOOK) {
         return search_inc_deep(s, board, player, look, ply, alpha, beta, eval_state, moves, hash_move, hash_put);
+    }
+
+    if (look == 2 && beta - alpha == 1) {
+        const auto& set = s.pattern->set();
+        const bool node_is_even = (node_discs & 1U) == 0U;
+        int32_t best = -INFINITY_SCORE;
+        int32_t best_move = -1;
+        uint64_t rem = moves;
+
+        if (hash_move >= 0) {
+            const uint32_t hmv = static_cast<uint32_t>(hash_move);
+            const uint64_t f = flips(own, other, hmv);
+            const Board child = board.play_flips(player, hmv, f);
+            eval::PatternState child_eval;
+            advance_eval_state(set, child_eval, eval_state, node_is_even, hmv, f);
+            STELLO_TRY_ASSIGN_R(
+                ScoreMove,
+                const ScoreMove res,
+                eval2_nws(s, child, opp, ply + 1, -alpha - 1, child_eval));
+            best = -res.score;
+            best_move = hash_move;
+            rem &= ~(uint64_t{1} << hmv);
+        }
+
+        for (size_t mi = 0; mi < STATIC_CELL_PRIORITY.size() && best <= alpha; ++mi) {
+            uint64_t sub = rem & STATIC_CELL_PRIORITY[mi];
+            while (sub != 0) {
+                const uint32_t mv = static_cast<uint32_t>(std::countr_zero(sub));
+                sub &= (sub - 1ULL);
+                const uint64_t f = flips(own, other, mv);
+                const Board child = board.play_flips(player, mv, f);
+                eval::PatternState child_eval;
+                advance_eval_state(set, child_eval, eval_state, node_is_even, mv, f);
+                STELLO_TRY_ASSIGN_R(
+                    ScoreMove,
+                    const ScoreMove res,
+                    eval2_nws(s, child, opp, ply + 1, -alpha - 1, child_eval));
+                const int32_t score = -res.score;
+                if (score > best) {
+                    best = score;
+                    best_move = static_cast<int32_t>(mv);
+                    if (best > alpha) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (hash_put) {
+            const uint8_t req_sel = (s.probcut_errors == nullptr) ? SEL_EXACT : SEL_MIDGAME_MPC;
+            s.midgame_table->store_bounds_at_root(
+                own, other, tag, 2, req_sel, alpha, beta, best, best_move, s.root_empties,
+                search_cost(s.nodes - nodes_start));
+        }
+        STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{best, best_move}));
     }
 
     const int32_t stored_look = look;
@@ -853,6 +926,248 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc(
             search_cost(s.nodes - nodes_start));
     }
 
+    STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{best, best_move}));
+}
+
+template <cpu::CpuTier Tier>
+AbortResult<ScoreMove> Kernel<Tier>::eval1_nws(
+    Searcher& s,
+    const Board& board,
+    Player player,
+    int32_t ply,
+    int32_t alpha,
+    const eval::PatternState& eval_state,
+    uint64_t known_legal
+) {
+    using namespace detail::midgame;
+
+    STELLO_TRY_VOID_R(ScoreMove, s.count_node());
+
+    const Player opp = opponent(player);
+    const uint64_t own = board.discs(player);
+    const uint64_t other = board.discs(opp);
+    const uint32_t node_discs = 64U - board.empty_count();
+    const uint64_t moves = (known_legal != endgame::bits::LEGAL_UNDEFINED)
+        ? known_legal
+        : legal_moves(own, other);
+
+    if (moves == 0) {
+        if (legal_moves(other, own) == 0) {
+            s.evaluations += 1;
+            STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{game_over_score(own, other), -1}));
+        }
+        const eval::PatternState pass_eval = eval_state_of_node(s.pattern->set(), other, own, node_discs);
+        STELLO_TRY_ASSIGN_R(
+            ScoreMove,
+            const ScoreMove passed,
+            eval1_nws(s, board, opp, ply, -alpha - 1, pass_eval));
+        STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{-passed.score, -1}));
+    }
+
+    int32_t hash_move = -1;
+    const bool hash_get = ply <= s.hash_get_height;
+    const int32_t tag = static_cast<int32_t>(player_index(player));
+    const uint8_t req_sel = (s.probcut_errors == nullptr) ? SEL_EXACT : SEL_MIDGAME_MPC;
+    if (hash_get) {
+        if (const auto entry = s.midgame_table->get_at_root(own, other, tag, s.root_empties)) {
+            if (entry->mv >= 0 && entry->mv < 64 && (moves & (uint64_t{1} << entry->mv)) != 0) {
+                if (entry->selectivity >= req_sel) {
+                    const int32_t lo = static_cast<int32_t>(entry->lower);
+                    const int32_t hi = static_cast<int32_t>(entry->upper);
+                    if ((lo > TT_SCORE_MIN && lo > alpha) || (hi < TT_SCORE_MAX && hi <= alpha) || (lo == hi)) {
+                        const int32_t cut_v = (lo > TT_SCORE_MIN && lo > alpha) ? lo : ((hi < TT_SCORE_MAX && hi <= alpha) ? hi : lo);
+                        STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{cut_v, static_cast<int32_t>(entry->mv)}));
+                    }
+                }
+                hash_move = static_cast<int32_t>(entry->mv);
+            }
+        }
+    }
+
+    const auto& set = s.pattern->set();
+    const bool node_is_even = (node_discs & 1U) == 0U;
+
+    // Preserve the 1-move forced extension at look == 0.
+    if ((moves & (moves - 1ULL)) == 0ULL) {
+        const uint32_t mv = static_cast<uint32_t>(std::countr_zero(moves));
+        const uint64_t f = flips(own, other, mv);
+        const Board child = board.play_flips(player, mv, f);
+        eval::PatternState child_eval;
+        advance_eval_state(set, child_eval, eval_state, node_is_even, mv, f);
+        STELLO_TRY_ASSIGN_R(
+            ScoreMove,
+            const ScoreMove res,
+            eval1_nws(s, child, opp, ply + 1, -alpha - 1, child_eval));
+        STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{-res.score, static_cast<int32_t>(mv)}));
+    }
+
+    const uint32_t child_discs = node_discs + 1U;
+    const int32_t* const child_w = s.pattern->packed_weights_for_discs(child_discs);
+    int32_t best = -INFINITY_SCORE;
+    int32_t best_move = -1;
+    int32_t skip_thresh = (std::numeric_limits<int32_t>::max)() / 2;
+    uint64_t rem = moves;
+
+    if (hash_move >= 0) {
+        const uint32_t hmv = static_cast<uint32_t>(hash_move);
+        const uint64_t f = flips(own, other, hmv);
+        STELLO_TRY_VOID_R(ScoreMove, s.count_node());
+        s.evaluations += 1;
+        const int32_t score = eval_after_move_score_bounded(
+            *s.pattern, eval_state, node_is_even, child_discs, child_w,
+            skip_thresh, best, own, other, hmv, f);
+        best = score;
+        best_move = hash_move;
+        if (best > alpha) {
+            STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{best, best_move}));
+        }
+        skip_thresh = eval::raw_skip_threshold(best, s.pattern->units_per_disc());
+        rem &= ~(uint64_t{1} << hmv);
+    }
+
+    for (size_t mi = 0; mi < STATIC_CELL_PRIORITY.size() && best <= alpha; ++mi) {
+        uint64_t sub = rem & STATIC_CELL_PRIORITY[mi];
+        while (sub != 0) {
+            const uint32_t mv = static_cast<uint32_t>(std::countr_zero(sub));
+            sub &= (sub - 1ULL);
+            const uint64_t f = flips(own, other, mv);
+            STELLO_TRY_VOID_R(ScoreMove, s.count_node());
+            s.evaluations += 1;
+            const int32_t score = eval_after_move_score_bounded(
+                *s.pattern, eval_state, node_is_even, child_discs, child_w,
+                skip_thresh, best, own, other, mv, f);
+            if (score > best) {
+                best = score;
+                best_move = static_cast<int32_t>(mv);
+                if (best > alpha) {
+                    break;
+                }
+                skip_thresh = eval::raw_skip_threshold(best, s.pattern->units_per_disc());
+            }
+        }
+    }
+
+    STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{best, best_move}));
+}
+
+template <cpu::CpuTier Tier>
+AbortResult<ScoreMove> Kernel<Tier>::eval2_nws(
+    Searcher& s,
+    const Board& board,
+    Player player,
+    int32_t ply,
+    int32_t alpha,
+    const eval::PatternState& eval_state,
+    uint64_t known_legal
+) {
+    using namespace detail::midgame;
+
+    const uint64_t nodes_start = s.nodes;
+    STELLO_TRY_VOID_R(ScoreMove, s.count_node());
+
+    const Player opp = opponent(player);
+    const uint64_t own = board.discs(player);
+    const uint64_t other = board.discs(opp);
+    const uint32_t node_discs = 64U - board.empty_count();
+    const uint64_t moves = (known_legal != endgame::bits::LEGAL_UNDEFINED)
+        ? known_legal
+        : legal_moves(own, other);
+
+    if (moves == 0) {
+        if (legal_moves(other, own) == 0) {
+            s.evaluations += 1;
+            STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{game_over_score(own, other), -1}));
+        }
+        const eval::PatternState pass_eval = eval_state_of_node(s.pattern->set(), other, own, node_discs);
+        STELLO_TRY_ASSIGN_R(
+            ScoreMove,
+            const ScoreMove passed,
+            eval2_nws(s, board, opp, ply, -alpha - 1, pass_eval));
+        STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{-passed.score, -1}));
+    }
+
+    int32_t hash_move = -1;
+    const bool hash_get = ply <= s.hash_get_height;
+    const bool hash_put = ply <= s.hash_put_height;
+    const int32_t tag = static_cast<int32_t>(player_index(player));
+    const uint8_t req_sel = (s.probcut_errors == nullptr) ? SEL_EXACT : SEL_MIDGAME_MPC;
+    if (hash_put && !hash_get) {
+        s.midgame_table->prefetch(own, other, tag);
+    }
+    if (hash_get) {
+        if (const auto entry = s.midgame_table->get_at_root(own, other, tag, s.root_empties)) {
+            if (entry->mv >= 0 && entry->mv < 64 && (moves & (uint64_t{1} << entry->mv)) != 0) {
+                if (static_cast<int32_t>(entry->depth) >= 1 && entry->selectivity >= req_sel) {
+                    const int32_t lo = static_cast<int32_t>(entry->lower);
+                    const int32_t hi = static_cast<int32_t>(entry->upper);
+                    if ((lo > TT_SCORE_MIN && lo > alpha) || (hi < TT_SCORE_MAX && hi <= alpha) || (lo == hi)) {
+                        const int32_t cut_v = (lo > TT_SCORE_MIN && lo > alpha) ? lo : ((hi < TT_SCORE_MAX && hi <= alpha) ? hi : lo);
+                        STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{cut_v, static_cast<int32_t>(entry->mv)}));
+                    }
+                }
+                hash_move = static_cast<int32_t>(entry->mv);
+            }
+        }
+    }
+
+    const auto& set = s.pattern->set();
+    const bool node_is_even = (node_discs & 1U) == 0U;
+    int32_t best = -INFINITY_SCORE;
+    int32_t best_move = -1;
+    uint64_t rem = moves;
+
+    if (hash_move >= 0) {
+        const uint32_t hmv = static_cast<uint32_t>(hash_move);
+        const uint64_t f = flips(own, other, hmv);
+        const Board child = board.play_flips(player, hmv, f);
+        eval::PatternState child_eval;
+        advance_eval_state(set, child_eval, eval_state, node_is_even, hmv, f);
+        STELLO_TRY_ASSIGN_R(
+            ScoreMove,
+            const ScoreMove res,
+            eval1_nws(s, child, opp, ply + 1, -alpha - 1, child_eval));
+        best = -res.score;
+        best_move = hash_move;
+        if (best > alpha) {
+            if (hash_put) {
+                s.midgame_table->store_bounds_at_root(
+                    own, other, tag, 1, req_sel, alpha, alpha + 1, best, best_move, s.root_empties,
+                    search_cost(s.nodes - nodes_start));
+            }
+            STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{best, best_move}));
+        }
+        rem &= ~(uint64_t{1} << hmv);
+    }
+
+    for (size_t mi = 0; mi < STATIC_CELL_PRIORITY.size() && best <= alpha; ++mi) {
+        uint64_t sub = rem & STATIC_CELL_PRIORITY[mi];
+        while (sub != 0) {
+            const uint32_t mv = static_cast<uint32_t>(std::countr_zero(sub));
+            sub &= (sub - 1ULL);
+            const uint64_t f = flips(own, other, mv);
+            const Board child = board.play_flips(player, mv, f);
+            eval::PatternState child_eval;
+            advance_eval_state(set, child_eval, eval_state, node_is_even, mv, f);
+            STELLO_TRY_ASSIGN_R(
+                ScoreMove,
+                const ScoreMove res,
+                eval1_nws(s, child, opp, ply + 1, -alpha - 1, child_eval));
+            const int32_t score = -res.score;
+            if (score > best) {
+                best = score;
+                best_move = static_cast<int32_t>(mv);
+                if (best > alpha) {
+                    break;
+                }
+            }
+        }
+    }
+
+    if (hash_put) {
+        s.midgame_table->store_bounds_at_root(
+            own, other, tag, 1, req_sel, alpha, alpha + 1, best, best_move, s.root_empties,
+            search_cost(s.nodes - nodes_start));
+    }
     STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{best, best_move}));
 }
 
