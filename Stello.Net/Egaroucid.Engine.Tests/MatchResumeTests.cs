@@ -158,6 +158,78 @@ public class MatchResumeTests
         Assert.Contains("contains no completed games", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void MatchReport_SeparatesOrdinaryDiscScoreFromFlagAdjustedOverrunScore()
+    {
+        var a = new MatchSide("base", SearchLimits.TimePerGame(TimeSpan.FromSeconds(15), useOpeningBook: false), HashBits: 16);
+        var b = new MatchSide("cand", SearchLimits.TimePerGame(TimeSpan.FromSeconds(15), useOpeningBook: false), HashBits: 16);
+        var aFirst = new MatchGame(Player.White, [], DiscsB: 4)
+        {
+            ElapsedA = TimeSpan.FromSeconds(10),
+            ElapsedB = TimeSpan.FromSeconds(16),
+            FirstOverrun = ClockOverrunSide.B,
+        };
+        var bFirst = new MatchGame(Player.Black, [], DiscsB: 4)
+        {
+            ElapsedA = TimeSpan.FromSeconds(11),
+            ElapsedB = TimeSpan.FromSeconds(12),
+            FirstOverrun = ClockOverrunSide.None,
+        };
+        var report = MatchReport.Of(a, b, [new MatchPair("d3", aFirst, bFirst)], TimeSpan.FromSeconds(2));
+
+        Assert.True(report.HasGameClock);
+        Assert.Equal(0, report.OverrunsA);
+        Assert.Equal(1, report.OverrunsB);
+        Assert.Equal(2.0, report.PointsB);
+        Assert.Equal(1.0, report.Score, 6);
+        Assert.Equal(1.0, report.FlagAdjustedPointsB);
+        Assert.Equal(0.5, report.FlagAdjustedScore, 6);
+        Assert.Equal(0.0, report.FlagAdjustedElo, 6);
+
+        string md = report.Markdown(true);
+        Assert.Contains("| Clock overruns (first to exceed) | 0 | 1 |", md, StringComparison.Ordinal);
+        Assert.Contains("B scored **100.0 %**", md, StringComparison.Ordinal);
+        Assert.Contains("Flag-adjusted (first clock overrun loses): B **1/2** (**50.0 %**", md, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MatchJournal_RoundTripsClockOverrunsAndLoadsLegacyV1RecordsWithoutThem()
+    {
+        using var temp = new TemporaryDirectory();
+        string path = Path.Combine(temp.Path, "match.games.jsonl");
+        List<string> starts = ["d3"];
+        MatchRunSettings settings = MatchRunSettings.Create("game-s=15", "game-s=15", starts);
+
+        string settingsJson = JsonSerializer.Serialize(settings);
+        string legacyLine = "{\"Version\":1,\"Settings\":" + settingsJson
+            + ",\"StartIndex\":0,\"GameNumber\":0,\"Start\":\"d3\",\"Game\":{\"ColourB\":0,\"DiscsB\":2,\"StatsA\":{},\"StatsB\":{}}}";
+        File.WriteAllText(path, legacyLine + "\n");
+
+        using (MatchJournal journal = MatchJournal.Resume(path, settings, starts))
+        {
+            journal.Append(new MatchGameRecord(
+                MatchJournal.FormatVersion,
+                settings,
+                0,
+                1,
+                "d3",
+                MatchGameData.From(new MatchGame(Player.White, [], DiscsB: 6)
+                {
+                    ElapsedA = TimeSpan.FromSeconds(16),
+                    ElapsedB = TimeSpan.FromSeconds(14),
+                    FirstOverrun = ClockOverrunSide.A,
+                })));
+        }
+
+        using MatchJournal reloaded = MatchJournal.Resume(path, settings, starts);
+        MatchPair pair = Assert.Single(reloaded.Pairs());
+        Assert.Equal(TimeSpan.Zero, pair.AFirst.ElapsedA);
+        Assert.Equal(ClockOverrunSide.None, pair.AFirst.FirstOverrun);
+        Assert.Equal(TimeSpan.FromSeconds(16), pair.BFirst.ElapsedA);
+        Assert.Equal(TimeSpan.FromSeconds(14), pair.BFirst.ElapsedB);
+        Assert.Equal(ClockOverrunSide.A, pair.BFirst.FirstOverrun);
+    }
+
     private static string NormalizeMarkdown(string markdown)
     {
         string normalized = markdown;
@@ -182,6 +254,16 @@ public class MatchResumeTests
             summary.Remove("SecondsPerGame");
             summary.Remove("MsPerSearchedMove");
             summary.Remove("LongestMoveMs");
+        }
+        if (json["Pairs"] is JsonArray pairs)
+        {
+            foreach (JsonObject pair in pairs.OfType<JsonObject>())
+            {
+                pair.Remove("ElapsedSecondsAWhenAFirst");
+                pair.Remove("ElapsedSecondsBWhenAFirst");
+                pair.Remove("ElapsedSecondsAWhenBFirst");
+                pair.Remove("ElapsedSecondsBWhenBFirst");
+            }
         }
 
         return json.ToJsonString(new JsonSerializerOptions { WriteIndented = true });

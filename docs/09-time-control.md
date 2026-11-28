@@ -82,12 +82,13 @@ xychart-beta
   The green line is the hard limit, $\frac{1}{4} + \frac{3\,(64 - s)}{256}$ of $t$; the orange line is the soft limit, two thirds of it. The 6 is `FAST_ENDGAME_EMPTIES` (C++ `lookahead − 2` at the default level). If the clock is already below zero, the remaining time is taken as 10 ms (the same in the endgame budget).
 - **Fixed depth and solve:** no time limit.
 
-#### Dynamic `TimePerGame` extension and verified early exit
+#### Dynamic `TimePerGame` extension and heuristic early exit
 
-In `TimePerGame`, `midgame_iterations` (`TpgMoveState` in `Stello.Cpp/src/search/engine.hpp` and `engine_impl.hpp`) adjusts the midgame budget dynamically around unstable or settled roots without carrying over to `TimePerMove`, `FixedDepth`, or `Solve`:
+In `TimePerGame`, `midgame_iterations` (`TpgMoveState` in `Stello.Cpp/src/search/engine.hpp` and `engine_impl.hpp`) adjusts the midgame budget dynamically during ordinary midgame iterations only (leaving `TimePerMove`, `FixedDepth`, and `Solve` unchanged):
 
-- **Instability / fail-low extension:** From `look >= 7`, if the best move changes at iteration end, `hard_ms` extends by `1.3×`; if the root score drops by `>= 150` centidiscs (`1.50` discs) on root move `0` (`look >= 7`) or at iteration end, `hard_ms` extends by `1.4×`, recomputing `soft_ms` (`soft_time_percent` or two-thirds). Total extension per move is capped at $\min(1.5 \times \text{base\_hard},\ \max(\text{remaining\_ms}, 10) / 4)$, while `for_solver_capped` (below) remains anchored to the initial `base_mid_hard_ms`.
-- **Once-per-move verified early exit:** Once `look >= 11`, `stable_streak >= 3`, `root_moves.size() > 1`, non-wipeout `best.score > -ROOT_WINDOW + 300`, and `elapsed_ms >= 45% of soft_ms`, if `stop_iterating` did not stop yet, the engine runs a null-window verification at `look - 2` against `best.score - 300` over `root_moves[1..]`. If every alternative fails low (`<= best.score - 300`), the midgame search stops early; otherwise it re-checks `stop_iterating` and continues.
+- **Instability / fail-low extension:** At `look >= 7`, if the best move changes at iteration end, `hard_ms` extends by `1.3×`; if the root score drops by `>= 150` centidiscs (`1.50` discs) on root move `0` (`look >= 7`) or at the end of an ordinary iteration, `hard_ms` extends by `1.4×`, recomputing `soft_ms` (`soft_time_percent` or two-thirds). Total extension per move is capped at $\min(1.5 \times \text{base\_hard},\ \max(\text{remaining\_ms}, 10) / 4)$.
+- **Selective-endgame handover:** When ordinary midgame finishes and hands over to selective endgame stages `1, 2, 4`, both the caller's original soft limit and `s.hard_limit_ms = budget.hard_ms` are restored to the unextended `for_midgame` budget (`base_mid_hard_ms`), so selective stages do not inherit an extended midgame hard limit and `for_solver_capped` (below) remains anchored to `base_mid_hard_ms`.
+- **Once-per-move heuristic early exit:** Once `look >= 11`, `stable_streak >= 3`, `root_moves.size() > 1`, non-wipeout `best.score > -ROOT_WINDOW + 300`, and `elapsed_ms >= 45% of soft_ms`, if `stop_iterating` did not stop yet, the engine checks all alternative root moves `root_moves[1..]` with selective null-window searches one ply shallower (`look - 2` at child vs `look - 1` for the incumbent) against `best.score - 300`. If every alternative fails low (`<= best.score - 300`), ordinary midgame stops early; otherwise it re-checks `stop_iterating` and continues. Passing means no alternative cleared that shallower selective bound, not a same-depth or exact endgame proof.
 
 ### The budget for the endgame
 
@@ -171,7 +172,7 @@ See [Stello porting documentation.md](../Plans/Stello%20porting%20documentation.
 
 | File | Main members |
 |---|---|
-| [search/time.hpp](../Stello.Cpp/src/search/time.hpp), [search/engine.hpp](../Stello.Cpp/src/search/engine.hpp), [search/engine_impl.hpp](../Stello.Cpp/src/search/engine_impl.hpp) | `TimeBudget`, `for_midgame`, `for_solver_capped`, `estimate_wld_ms_after_stage4`, `TpgMoveState`, dynamic `TimePerGame` extension and verified early exit |
+| [search/time.hpp](../Stello.Cpp/src/search/time.hpp), [search/engine.hpp](../Stello.Cpp/src/search/engine.hpp), [search/engine_impl.hpp](../Stello.Cpp/src/search/engine_impl.hpp) | `TimeBudget`, `for_midgame`, `for_solver_capped`, `estimate_wld_ms_after_stage4`, `TpgMoveState`, dynamic `TimePerGame` extension and heuristic early exit |
 | [search/time.rs](../Stello.Rust/stello-core/src/search/time.rs) | `TimeBudget` (`UNLIMITED`, `with_soft_percent`), `for_midgame`, `for_endgame`, `for_solver` (with `SoftTimePercent`), `for_game`, `FAST_ENDGAME_EMPTIES` |
 | [search/engine.rs](../Stello.Rust/stello-core/src/search/engine.rs) | `StopSignal`, `SearchSignals`, `NoStop`, `Clock`, `system_clock`, `SearchEngine::set_clock`, `Searcher::stop_iterating`, `check_abort`, `report`, `result`, `Abort`, `SearchError` |
 | [endgame/search.rs](../Stello.Rust/stello-core/src/endgame/search.rs) | `count_end_node`, the solver's node count and abort check |

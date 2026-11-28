@@ -34,7 +34,16 @@ internal sealed record SideSummary(
 }
 
 /// <param name="DiscsBWhenAFirst">Side B's disc difference in the game where side A played the side to move.</param>
-internal sealed record PairResult(string Start, int DiscsBWhenAFirst, int DiscsBWhenBFirst);
+internal sealed record PairResult(
+    string Start,
+    int DiscsBWhenAFirst,
+    int DiscsBWhenBFirst,
+    double ElapsedSecondsAWhenAFirst = 0,
+    double ElapsedSecondsBWhenAFirst = 0,
+    ClockOverrunSide OverrunWhenAFirst = ClockOverrunSide.None,
+    double ElapsedSecondsAWhenBFirst = 0,
+    double ElapsedSecondsBWhenBFirst = 0,
+    ClockOverrunSide OverrunWhenBFirst = ClockOverrunSide.None);
 
 /// <summary>The result of a match, from side B's point of view, with 95 % intervals over the pairs of games.</summary>
 internal sealed record MatchReport(
@@ -55,16 +64,47 @@ internal sealed record MatchReport(
     double DiscsB,
     double DiscsMargin,
     string Duration,
-    IReadOnlyList<PairResult> Pairs)
+    IReadOnlyList<PairResult> Pairs,
+    bool HasGameClock = false,
+    int OverrunsA = 0,
+    int OverrunsB = 0,
+    double FlagAdjustedPointsB = 0,
+    double FlagAdjustedScore = 0.5,
+    double FlagAdjustedScoreLow = 0.5,
+    double FlagAdjustedScoreHigh = 0.5,
+    double FlagAdjustedElo = 0,
+    double FlagAdjustedEloLow = 0,
+    double FlagAdjustedEloHigh = 0,
+    double FlagAdjustedLos = 0.5)
 {
+    private readonly record struct ScoreOutcome(
+        double PointsB, double Score, double ScoreLow, double ScoreHigh,
+        double Elo, double EloLow, double EloHigh, double LikelihoodOfSuperiority);
+
+    private static ScoreOutcome SummarizePairs(double[] pairPointsB)
+    {
+        if (pairPointsB.Length == 0)
+        {
+            return new ScoreOutcome(0, 0.5, 0.5, 0.5, 0, 0, 0, 0.5);
+        }
+
+        double[] scores = pairPointsB.Select(p => p / 2).ToArray();
+        double mean = scores.Average();
+        double error = StandardError(scores);
+        double margin = 1.96 * error;
+        double low = Math.Clamp(mean - margin, 0.0, 1.0);
+        double high = Math.Clamp(mean + margin, 0.0, 1.0);
+        double los = error > 0 ? NormalCdf((mean - 0.5) / error) : mean > 0.5 ? 1 : mean < 0.5 ? 0 : 0.5;
+        return new ScoreOutcome(pairPointsB.Sum(), mean, low, high, EloOf(mean), EloOf(low), EloOf(high), los);
+    }
+
     public static MatchReport Of(MatchSide a, MatchSide b, IReadOnlyList<MatchPair> pairs, TimeSpan duration)
     {
-        MatchSummary summary = MatchSummary.Of(pairs);
         List<MatchGame> games = pairs.SelectMany(p => new[] { p.AFirst, p.BFirst }).ToList();
-
-        double[] scores = pairs.Select(p => p.PointsB / 2).ToArray();
-        double scoreError = StandardError(scores);
+        ScoreOutcome ordinary = SummarizePairs(pairs.Select(p => p.PointsB).ToArray());
+        ScoreOutcome flagAdjusted = SummarizePairs(pairs.Select(p => p.FlagAdjustedPointsB).ToArray());
         double[] discs = pairs.Select(p => (p.AFirst.DiscsB + p.BFirst.DiscsB) / 2.0).ToArray();
+        bool hasGameClock = a.Limits.Mode == TimeControlMode.TimePerGame || b.Limits.Mode == TimeControlMode.TimePerGame;
 
         return new MatchReport(
             SideSummary.Of(a, games.Select(g => g.StatsA)),
@@ -73,18 +113,38 @@ internal sealed record MatchReport(
             games.Count(g => g.DiscsB > 0),
             games.Count(g => g.DiscsB == 0),
             games.Count(g => g.DiscsB < 0),
-            summary.PointsB,
-            summary.Score,
-            summary.Low,
-            summary.High,
-            EloOf(summary.Score),
-            EloOf(summary.Low),
-            EloOf(summary.High),
-            scoreError > 0 ? NormalCdf((summary.Score - 0.5) / scoreError) : summary.Score > 0.5 ? 1 : summary.Score < 0.5 ? 0 : 0.5,
-            summary.AverageDiscsB,
+            ordinary.PointsB,
+            ordinary.Score,
+            ordinary.ScoreLow,
+            ordinary.ScoreHigh,
+            ordinary.Elo,
+            ordinary.EloLow,
+            ordinary.EloHigh,
+            ordinary.LikelihoodOfSuperiority,
+            discs.Length > 0 ? discs.Average() : 0,
             1.96 * StandardError(discs),
             Program.Duration(duration),
-            pairs.Select(p => new PairResult(p.Start, p.AFirst.DiscsB, p.BFirst.DiscsB)).ToList());
+            pairs.Select(p => new PairResult(
+                p.Start,
+                p.AFirst.DiscsB,
+                p.BFirst.DiscsB,
+                p.AFirst.ElapsedA.TotalSeconds,
+                p.AFirst.ElapsedB.TotalSeconds,
+                p.AFirst.FirstOverrun,
+                p.BFirst.ElapsedA.TotalSeconds,
+                p.BFirst.ElapsedB.TotalSeconds,
+                p.BFirst.FirstOverrun)).ToList(),
+            hasGameClock,
+            games.Count(g => g.FirstOverrun == ClockOverrunSide.A),
+            games.Count(g => g.FirstOverrun == ClockOverrunSide.B),
+            flagAdjusted.PointsB,
+            flagAdjusted.Score,
+            flagAdjusted.ScoreLow,
+            flagAdjusted.ScoreHigh,
+            flagAdjusted.Elo,
+            flagAdjusted.EloLow,
+            flagAdjusted.EloHigh,
+            flagAdjusted.LikelihoodOfSuperiority);
     }
 
     public string Markdown(bool completed)
@@ -102,10 +162,23 @@ internal sealed record MatchReport(
         text.AppendLine(CultureInfo.InvariantCulture, $"| Nodes per second | {A.NodesPerSecond / 1e6:0.00}M | {B.NodesPerSecond / 1e6:0.00}M |");
         text.AppendLine(CultureInfo.InvariantCulture, $"| Thinking time per game | {A.SecondsPerGame:0.0} s | {B.SecondsPerGame:0.0} s |");
         text.AppendLine(CultureInfo.InvariantCulture, $"| Time per searched move (average / longest) | {A.MsPerSearchedMove:0} / {A.LongestMoveMs:0} ms | {B.MsPerSearchedMove:0} / {B.LongestMoveMs:0} ms |");
+        if (HasGameClock || OverrunsA > 0 || OverrunsB > 0)
+        {
+            text.AppendLine(CultureInfo.InvariantCulture, $"| Clock overruns (first to exceed) | {OverrunsA} | {OverrunsB} |");
+        }
+
         text.AppendLine();
         text.AppendLine(CultureInfo.InvariantCulture,
             $"B scored **{Score:P1}** (95 % interval {ScoreLow:P1} to {ScoreHigh:P1}), Elo **{Signed(Elo)}** ({Signed(EloLow)} to {Signed(EloHigh)}), " +
             $"likelihood of superiority {LikelihoodOfSuperiority:P1}; discs per game {DiscsB:+0.0;-0.0;0.0} ± {DiscsMargin:0.0}. Wall time {Duration}.");
+        if (HasGameClock || OverrunsA > 0 || OverrunsB > 0)
+        {
+            text.AppendLine(CultureInfo.InvariantCulture,
+                $"Flag-adjusted (first clock overrun loses): B **{FlagAdjustedPointsB:0.#}/{Games}** (**{FlagAdjustedScore:P1}**, " +
+                $"95 % interval {FlagAdjustedScoreLow:P1} to {FlagAdjustedScoreHigh:P1}), Elo **{Signed(FlagAdjustedElo)}** ({Signed(FlagAdjustedEloLow)} to {Signed(FlagAdjustedEloHigh)}), " +
+                $"likelihood of superiority {FlagAdjustedLos:P1}; first overruns A {OverrunsA}, B {OverrunsB}.");
+        }
+
         text.Append(ScoreLow > 0.5 ? "B is stronger." : ScoreHigh < 0.5 ? "A is stronger." : "No significant difference.");
         return text.ToString();
     }

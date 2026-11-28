@@ -32,15 +32,36 @@ internal readonly record struct SideStats(int Searched, long Nodes, TimeSpan Tim
     }
 }
 
+/// <summary>Which side first exceeded its game-clock allowance during a game, if any.</summary>
+internal enum ClockOverrunSide
+{
+    None = 0,
+    A = 1,
+    B = 2,
+}
+
 /// <param name="ColourB">The colour side B played.</param>
 /// <param name="DiscsB">Side B's discs minus side A's discs at the end.</param>
 internal sealed record MatchGame(Player ColourB, IReadOnlyList<Move> Moves, int DiscsB)
 {
     public double PointsB => DiscsB > 0 ? 1 : DiscsB == 0 ? 0.5 : 0;
 
+    public double FlagAdjustedPointsB => FirstOverrun switch
+    {
+        ClockOverrunSide.A => 1,
+        ClockOverrunSide.B => 0,
+        _ => PointsB,
+    };
+
     public SideStats StatsA { get; init; }
 
     public SideStats StatsB { get; init; }
+
+    public TimeSpan ElapsedA { get; init; }
+
+    public TimeSpan ElapsedB { get; init; }
+
+    public ClockOverrunSide FirstOverrun { get; init; }
 }
 
 /// <param name="Start">The start position, as a line from d3.</param>
@@ -49,6 +70,8 @@ internal sealed record MatchGame(Player ColourB, IReadOnlyList<Move> Moves, int 
 internal sealed record MatchPair(string Start, MatchGame AFirst, MatchGame BFirst)
 {
     public double PointsB => AFirst.PointsB + BFirst.PointsB;
+
+    public double FlagAdjustedPointsB => AFirst.FlagAdjustedPointsB + BFirst.FlagAdjustedPointsB;
 }
 
 /// <param name="Score">Side B's share of the points, 0 to 1.</param>
@@ -269,6 +292,7 @@ internal sealed class EngineMatch(MatchSide a, MatchSide b, int workers)
         SideStats statsB = default;
         TimeSpan usedA = TimeSpan.Zero;
         TimeSpan usedB = TimeSpan.Zero;
+        ClockOverrunSide firstOverrun = ClockOverrunSide.None;
 
         while (!board.IsGameOver)
         {
@@ -297,11 +321,19 @@ internal sealed class EngineMatch(MatchSide a, MatchSide b, int workers)
             {
                 usedB += used;
                 statsB = statsB.Add(result, empties, used);
+                if (firstOverrun == ClockOverrunSide.None && side.Limits.Mode == TimeControlMode.TimePerGame && usedB > side.Limits.Time)
+                {
+                    firstOverrun = ClockOverrunSide.B;
+                }
             }
             else
             {
                 usedA += used;
                 statsA = statsA.Add(result, empties, used);
+                if (firstOverrun == ClockOverrunSide.None && side.Limits.Mode == TimeControlMode.TimePerGame && usedA > side.Limits.Time)
+                {
+                    firstOverrun = ClockOverrunSide.A;
+                }
             }
 
             board = board.Play(toMove, result.Move.Square!.Value);
@@ -313,6 +345,9 @@ internal sealed class EngineMatch(MatchSide a, MatchSide b, int workers)
         {
             StatsA = statsA,
             StatsB = statsB,
+            ElapsedA = usedA,
+            ElapsedB = usedB,
+            FirstOverrun = firstOverrun,
         };
     }
 }

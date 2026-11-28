@@ -291,6 +291,34 @@ public class BenchmarkTests
     }
 
     [Fact]
+    public void EngineMatch_RecordsElapsedTimeAndFirstClockOverrunOnlyUnderTimePerGame()
+    {
+        List<string> starts = BookMatch.StartsAtPly(BookTestData.Master, 8).Take(1).ToList();
+        var gameClockA = new MatchSide("A", SearchLimits.TimePerGame(TimeSpan.FromMilliseconds(5), useOpeningBook: false), HashBits: 10,
+            CreatePlayer: () => new DelayedMatchPlayer(TimeSpan.FromMilliseconds(35)));
+        var gameClockB = new MatchSide("B", SearchLimits.TimePerGame(TimeSpan.FromMilliseconds(5), useOpeningBook: false), HashBits: 10,
+            CreatePlayer: () => new DelayedMatchPlayer(TimeSpan.FromMilliseconds(35)));
+
+        IReadOnlyList<MatchPair> pairs = new EngineMatch(gameClockA, gameClockB, workers: 1).Play(starts, null, CancellationToken.None);
+
+        // Warm-up searches run outside PlayGame; inside each timed game, the side moving first exceeds 5 ms on move 1 first.
+        MatchGame aFirst = pairs[0].AFirst;
+        MatchGame bFirst = pairs[0].BFirst;
+        Assert.Equal(ClockOverrunSide.A, aFirst.FirstOverrun);
+        Assert.Equal(ClockOverrunSide.B, bFirst.FirstOverrun);
+        Assert.True(aFirst.ElapsedA > gameClockA.Limits.Time && aFirst.ElapsedB > gameClockB.Limits.Time);
+        Assert.True(bFirst.ElapsedA > gameClockA.Limits.Time && bFirst.ElapsedB > gameClockB.Limits.Time);
+
+        var moveClockA = new MatchSide("A", SearchLimits.TimePerMove(TimeSpan.FromMilliseconds(5), useOpeningBook: false), HashBits: 10,
+            CreatePlayer: () => new DelayedMatchPlayer(TimeSpan.FromMilliseconds(25)));
+        var moveClockB = new MatchSide("B", SearchLimits.TimePerMove(TimeSpan.FromMilliseconds(5), useOpeningBook: false), HashBits: 10,
+            CreatePlayer: () => new DelayedMatchPlayer(TimeSpan.FromMilliseconds(25)));
+        IReadOnlyList<MatchPair> movePairs = new EngineMatch(moveClockA, moveClockB, workers: 1).Play(starts, null, CancellationToken.None);
+        Assert.Equal(ClockOverrunSide.None, movePairs[0].AFirst.FirstOverrun);
+        Assert.Equal(ClockOverrunSide.None, movePairs[0].BFirst.FirstOverrun);
+    }
+
+    [Fact]
     public void MatchSide_ForwardsOptionsToNewPlayer_AndMatchSummaryClampsInterval()
     {
         var selectiveSide = new MatchSide("mpc", SearchLimits.FixedDepth(6, useOpeningBook: false), HashBits: 11);
@@ -365,5 +393,27 @@ public class BenchmarkTests
         }
 
         public void Dispose() => onDispose();
+    }
+
+    private sealed class DelayedMatchPlayer(TimeSpan firstMoveDelay) : IMatchPlayer
+    {
+        private readonly StelloMatchPlayer _inner = new(10, null);
+        private int _movesInGame;
+
+        public void NewGame()
+        {
+            _movesInGame = 0;
+            _inner.NewGame();
+        }
+
+        public SearchResult ChooseMove(Board board, Player player, SearchLimits limits, CancellationToken cancellationToken)
+        {
+            if (_movesInGame++ == 0)
+            {
+                Thread.Sleep(firstMoveDelay);
+            }
+
+            return _inner.ChooseMove(board, player, SearchLimits.FixedDepth(1, useOpeningBook: false, hashBits: 10), cancellationToken);
+        }
     }
 }

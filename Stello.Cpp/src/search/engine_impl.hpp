@@ -187,6 +187,7 @@ AbortVoid Kernel<Tier>::iterate(
         }
     }
 
+    s.hard_limit_ms = budget.hard_ms;
     const int64_t mid_hard_ms = base_mid_hard_ms;
     int64_t stage4_ms = 0;
     int32_t stage4_score = 0;

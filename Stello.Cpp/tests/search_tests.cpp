@@ -1576,6 +1576,72 @@ STELLO_TEST(selective_endgame_progress_and_time_per_game_tests) {
             STELLO_CHECK(outcome.result.mv.square.has_value());
             STELLO_CHECK((board.legal_moves(player) & outcome.result.mv.square->bit()) != 0);
         }
+
+        // Case C: selective-endgame handover uses original soft (583 ms) and original hard (875 ms)
+        // deadlines on g21e24 even when ordinary midgame extended s.hard_limit_ms.
+        STELLO_CHECK(time::for_midgame(SearchLimits::time_per_game_ms(10'000), 24) == (time::TimeBudget{583, 875}));
+        {
+            // Arm 1: 584 ms at completion of ordinary depth 16 prevents stage 1 from starting.
+            g_manual_ms.store(0, std::memory_order_relaxed);
+            search::SearchEngine engine(16);
+            engine.set_clock(&manual_clock);
+            bool saw_stage1 = false;
+            bool saw_wld = false;
+            bool saw_exact = false;
+            engine.set_iteration_done([&](int32_t depth, int32_t) {
+                if (depth == 16) {
+                    g_manual_ms.store(584, std::memory_order_relaxed);
+                }
+            });
+            const auto outcome = engine.search(
+                board, player, SearchLimits::time_per_game_ms(10'000),
+                [&](const SearchInfo& info) {
+                    if (info.depth == 24 && info.kind == ScoreKind::Heuristic) {
+                        saw_stage1 = true;
+                    } else if (info.kind == ScoreKind::WinLossDraw) {
+                        saw_wld = true;
+                    } else if (info.kind == ScoreKind::Exact) {
+                        saw_exact = true;
+                    }
+                });
+            STELLO_CHECK(outcome.ok);
+            STELLO_CHECK(!saw_stage1);
+            STELLO_CHECK(!saw_wld);
+            STELLO_CHECK(!saw_exact);
+            STELLO_CHECK(outcome.result.kind == ScoreKind::Heuristic);
+            STELLO_CHECK_EQ(outcome.result.depth, 16);
+            STELLO_CHECK(outcome.result.mv.square.has_value());
+            STELLO_CHECK((board.legal_moves(player) & outcome.result.mv.square->bit()) != 0);
+        }
+        {
+            // Arm 2: clock jumps to 876 ms on first stage-1 progress report -> aborts stage 1 and returns depth-16 fallback.
+            g_manual_ms.store(0, std::memory_order_relaxed);
+            search::SearchEngine engine(16);
+            engine.set_clock(&manual_clock);
+            bool saw_stage1 = false;
+            bool saw_wld = false;
+            bool saw_exact = false;
+            const auto outcome = engine.search(
+                board, player, SearchLimits::time_per_game_ms(10'000),
+                [&](const SearchInfo& info) {
+                    if (info.depth == 24 && info.kind == ScoreKind::Heuristic) {
+                        saw_stage1 = true;
+                        g_manual_ms.store(876, std::memory_order_relaxed);
+                    } else if (info.kind == ScoreKind::WinLossDraw) {
+                        saw_wld = true;
+                    } else if (info.kind == ScoreKind::Exact) {
+                        saw_exact = true;
+                    }
+                });
+            STELLO_CHECK(outcome.ok);
+            STELLO_CHECK(saw_stage1);
+            STELLO_CHECK(!saw_wld);
+            STELLO_CHECK(!saw_exact);
+            STELLO_CHECK(outcome.result.kind == ScoreKind::Heuristic);
+            STELLO_CHECK_EQ(outcome.result.depth, 16);
+            STELLO_CHECK(outcome.result.mv.square.has_value());
+            STELLO_CHECK((board.legal_moves(player) & outcome.result.mv.square->bit()) != 0);
+        }
     }
 }
 
@@ -2248,141 +2314,159 @@ STELLO_TEST(tpg_dynamic_time_and_verified_early_exit_tests) {
         STELLO_CHECK_EQ(s.hard_limit_ms, int64_t{780});
     }
 
-    // 2. TimePerGame dynamic extension (best-move change / score drop >= 150 at look >= 7) vs TimePerMove invariance.
+    // 2. Shipped 79d5f0f TimePerGame score-drop extensions vs TimePerMove invariance.
     {
-        const auto all_mid = load_bench_file("midgame.txt");
-        std::optional<std::pair<Board, Player>> ext_pos;
-        int32_t trigger_depth = 0;
-        for (const auto& pos : all_mid) {
-            if (pos.board.empty_count() < 28U) {
-                continue;
-            }
-            search::SearchEngine probe(16);
-            int32_t prev_mv = -1;
-            int32_t prev_score = 0;
-            bool has_prev = false;
-            std::vector<int32_t> best_moves(13, -1);
-            (void)probe.search(
-                pos.board, pos.player, SearchLimits::fixed_depth(12),
-                [&](const SearchInfo& info) {
-                    if (info.depth >= 1 && info.depth <= 12 && info.best_move.has_value()) {
-                        best_moves[info.depth] = static_cast<int32_t>(info.best_move->index());
-                    }
-                });
-            probe.clear_hash();
-            probe.set_iteration_done([&](int32_t depth, int32_t score) {
-                const int32_t mv = (depth >= 1 && depth <= 12) ? best_moves[depth] : -1;
-                if (trigger_depth == 0 && depth >= 8 && has_prev
-                    && ((mv >= 0 && prev_mv >= 0 && mv != prev_mv) || (prev_score - score >= 150)))
-                {
-                    trigger_depth = depth;
-                }
-                prev_mv = mv;
-                prev_score = score;
-                has_prev = true;
-            });
-            (void)probe.search_simple(pos.board, pos.player, SearchLimits::fixed_depth(11));
-            if (trigger_depth >= 8) {
-                ext_pos = {pos.board, pos.player};
-                break;
-            }
-        }
-        STELLO_CHECK(ext_pos.has_value());
-        STELLO_CHECK(trigger_depth >= 8);
-
-        const auto [board, player] = *ext_pos;
-        const int32_t empties = static_cast<int32_t>(board.empty_count());
-        const auto base_budget = time::for_midgame(SearchLimits::time_per_game_ms(60'000), empties);
-
-        // Step clock just past initial soft_ms (inside extended soft_ms) on trigger_depth:
-        // TimePerGame extends budget and reaches trigger_depth + 1; TimePerMove stops at trigger_depth.
+        // 2a. Completed-iteration drop currently applies at shallow depths too (g21e28: G6 stays best while score
+        //     drops from -306 at depth 1 to -593 at depth 2; base soft/hard 2,698 / 4,047 ms at 60,000 ms/game).
+        const auto [g21_b, g21_p] = find_bench_pos("midgame-exact.txt", "g21e28");
+        const auto g21_budget = time::for_midgame(SearchLimits::time_per_game_ms(60'000), 28);
+        STELLO_CHECK(g21_budget == (time::TimeBudget{2698, 4047}));
         {
             g_manual_ms.store(0, std::memory_order_relaxed);
-            search::SearchEngine tpg_eng(16);
-            tpg_eng.set_clock(&manual_clock);
-            tpg_eng.set_iteration_done([&](int32_t depth, int32_t) {
-                if (depth == trigger_depth) {
-                    g_manual_ms.store(static_cast<uint64_t>(base_budget.soft_ms + 10), std::memory_order_relaxed);
-                } else if (depth > trigger_depth) {
-                    g_manual_ms.store(static_cast<uint64_t>(base_budget.hard_ms * 2), std::memory_order_relaxed);
+            search::SearchEngine eng(16);
+            eng.set_clock(&manual_clock);
+            int32_t d1_score = 0;
+            int32_t d2_score = 0;
+            eng.set_iteration_done([&](int32_t depth, int32_t score) {
+                if (depth == 1) {
+                    d1_score = score;
+                } else if (depth == 2) {
+                    d2_score = score;
+                    g_manual_ms.store(2699, std::memory_order_relaxed);
+                } else if (depth >= 3) {
+                    g_manual_ms.store(10'000, std::memory_order_relaxed);
                 }
             });
-            const auto tpg_res = tpg_eng.search(board, player, SearchLimits::time_per_game_ms(60'000));
-            STELLO_CHECK(tpg_res.ok);
-            STELLO_CHECK_EQ(tpg_res.result.depth, trigger_depth + 1);
+            const auto out = eng.search(g21_b, g21_p, SearchLimits::time_per_game_ms(60'000));
+            STELLO_CHECK(out.ok);
+            STELLO_CHECK_EQ(d1_score, -306);
+            STELLO_CHECK_EQ(d2_score, -593);
+            STELLO_CHECK_EQ(out.result.depth, 3);
         }
         {
             g_manual_ms.store(0, std::memory_order_relaxed);
-            search::SearchEngine tpm_eng(16);
-            tpm_eng.set_clock(&manual_clock);
-            tpm_eng.set_iteration_done([&](int32_t depth, int32_t) {
-                if (depth >= trigger_depth) {
-                    g_manual_ms.store(static_cast<uint64_t>(base_budget.soft_ms + 10), std::memory_order_relaxed);
+            search::SearchEngine eng(16);
+            eng.set_clock(&manual_clock);
+            eng.set_iteration_done([&](int32_t depth, int32_t) {
+                if (depth >= 2) {
+                    g_manual_ms.store(2699, std::memory_order_relaxed);
                 }
             });
-            const auto tpm_res = tpm_eng.search(board, player, SearchLimits::time_per_move_ms(base_budget.hard_ms));
-            STELLO_CHECK(tpm_res.ok);
-            STELLO_CHECK_EQ(tpm_res.result.depth, trigger_depth);
+            const auto out = eng.search(g21_b, g21_p, SearchLimits::time_per_move_ms(g21_budget.hard_ms));
+            STELLO_CHECK(out.ok);
+            STELLO_CHECK_EQ(out.result.depth, 2);
+        }
+
+        // 2b. Depth-8 score drop (g01e48, C4 stays best from depth 7 score 218 to depth 8 score 18; base 966 / 1,450 ms)
+        //     currently triggers both the move-0 extension (1,450 -> 2,030 ms, soft 1,353 ms) and iteration-end
+        //     extension (2,030 -> 2,175 ms, soft 1,450 ms), so clock 1,400 ms at depth-8 completion admits depth 9.
+        const auto [g01_b, g01_p] = find_bench_pos("midgame.txt", "g01e48");
+        const auto g01_budget = time::for_midgame(SearchLimits::time_per_game_ms(60'000), 48);
+        STELLO_CHECK(g01_budget == (time::TimeBudget{966, 1450}));
+        {
+            g_manual_ms.store(0, std::memory_order_relaxed);
+            search::SearchEngine eng(16);
+            eng.set_clock(&manual_clock);
+            int32_t d7_score = 0;
+            int32_t d8_score = 0;
+            eng.set_iteration_done([&](int32_t depth, int32_t score) {
+                if (depth == 7) {
+                    d7_score = score;
+                } else if (depth == 8) {
+                    d8_score = score;
+                    g_manual_ms.store(1400, std::memory_order_relaxed);
+                } else if (depth >= 9) {
+                    g_manual_ms.store(10'000, std::memory_order_relaxed);
+                }
+            });
+            const auto out = eng.search(g01_b, g01_p, SearchLimits::time_per_game_ms(60'000));
+            STELLO_CHECK(out.ok);
+            STELLO_CHECK_EQ(d7_score, 218);
+            STELLO_CHECK_EQ(d8_score, 18);
+            STELLO_CHECK_EQ(out.result.depth, 9);
+        }
+        {
+            g_manual_ms.store(0, std::memory_order_relaxed);
+            search::SearchEngine eng(16);
+            eng.set_clock(&manual_clock);
+            eng.set_iteration_done([&](int32_t depth, int32_t) {
+                if (depth >= 8) {
+                    g_manual_ms.store(1400, std::memory_order_relaxed);
+                }
+            });
+            const auto out = eng.search(g01_b, g01_p, SearchLimits::time_per_move_ms(g01_budget.hard_ms));
+            STELLO_CHECK(out.ok);
+            STELLO_CHECK_EQ(out.result.depth, 8);
         }
     }
 
-    // 3. Verified early exit: find a dominated >=28-empty root from midgame-exact.txt that exits early at
-    //    depth 12 (look == 11, stable_streak >= 3, elapsed >= 45% soft_ms) in TimePerGame while TimePerMove
-    //    continues to depth 13; and verify non-dominated g24e28 (F2 +2, G4 +2) rejects early exit.
+    // 3. Heuristic early-exit fixtures:
+    //    - Accept (g23e28): F2 scores 1,206 at depth 12, verifier checks alternatives and finds none clearing 906,
+    //      exiting before depth 13 starts; TimePerMove under the same budget continues to depth 13.
+    //    - Reject (g24e28): F2 is stable across 3+ iterations, verifier checks alternatives before depth 13, fails
+    //      dominance, and depth 13 starts.
     {
-        const auto all_exact = load_bench_file("midgame-exact.txt");
-        std::optional<std::pair<Board, Player>> dom_pos;
-        time::TimeBudget dom_budget{0, 0};
-        uint64_t trigger_ms = 0;
-        for (const auto& pos : all_exact) {
-            if (pos.board.empty_count() != 28U) {
-                continue;
-            }
-            const auto b = time::for_midgame(SearchLimits::time_per_game_ms(60'000), 28);
-            const uint64_t t_ms = static_cast<uint64_t>(b.soft_ms * 9 / 10);
-            g_manual_ms.store(0, std::memory_order_relaxed);
-            search::SearchEngine eng(16);
-            eng.set_clock(&manual_clock);
-            eng.set_iteration_done([&](int32_t depth, int32_t) {
-                if (depth == 12) {
-                    g_manual_ms.store(t_ms, std::memory_order_relaxed);
-                } else if (depth >= 13) {
-                    g_manual_ms.store(static_cast<uint64_t>(b.hard_ms * 2), std::memory_order_relaxed);
-                }
-            });
-            const auto out = eng.search(pos.board, pos.player, SearchLimits::time_per_game_ms(60'000));
-            if (out.ok && out.result.depth == 12) {
-                dom_pos = {pos.board, pos.player};
-                dom_budget = b;
-                trigger_ms = t_ms;
-                break;
-            }
-        }
-        STELLO_CHECK(dom_pos.has_value());
-        const auto [dom_b, dom_p] = *dom_pos;
+        const auto [dom_b, dom_p] = find_bench_pos("midgame-exact.txt", "g23e28");
+        const auto dom_budget = time::for_midgame(SearchLimits::time_per_game_ms(60'000), 28);
+        const uint64_t trigger_ms = static_cast<uint64_t>(dom_budget.soft_ms * 9 / 10);
+        const auto f2 = Square::parse("F2");
+        STELLO_CHECK(f2.has_value());
 
-        // Positive case: TimePerGame exits at depth 12 (look == 11, stable_streak >= 3, elapsed >= 45% soft_ms).
+        auto count_streak_through_12 = [&](const std::array<std::optional<Square>, 16>& best_by_depth) {
+            int32_t streak = 1;
+            for (int32_t d = 2; d <= 12; ++d) {
+                if (best_by_depth[d].has_value() && best_by_depth[d] == best_by_depth[d - 1]) {
+                    ++streak;
+                } else {
+                    streak = 1;
+                }
+            }
+            return streak;
+        };
+
+        // Positive case: TimePerGame on g23e28 checks alternatives at depth 12 and exits before depth 13.
         {
             g_manual_ms.store(0, std::memory_order_relaxed);
             search::SearchEngine eng(16);
             eng.set_clock(&manual_clock);
-            eng.set_iteration_done([&](int32_t depth, int32_t) {
+            std::array<std::optional<Square>, 16> best_by_depth{};
+            int32_t d12_score = 0;
+            uint64_t d12_nodes = 0;
+            int32_t max_reported_depth = 0;
+            eng.set_iteration_done([&](int32_t depth, int32_t score) {
                 if (depth == 12) {
+                    d12_score = score;
                     g_manual_ms.store(trigger_ms, std::memory_order_relaxed);
                 } else if (depth >= 13) {
                     g_manual_ms.store(static_cast<uint64_t>(dom_budget.hard_ms * 2), std::memory_order_relaxed);
                 }
             });
-            const auto out = eng.search(dom_b, dom_p, SearchLimits::time_per_game_ms(60'000));
+            const auto out = eng.search(
+                dom_b, dom_p, SearchLimits::time_per_game_ms(60'000),
+                [&](const SearchInfo& info) {
+                    max_reported_depth = (std::max)(max_reported_depth, info.depth);
+                    if (info.depth >= 1 && info.depth <= 12 && info.best_move.has_value()) {
+                        best_by_depth[info.depth] = info.best_move;
+                    }
+                    if (info.depth == 12) {
+                        d12_nodes = info.nodes;
+                    }
+                });
             STELLO_CHECK(out.ok);
+            STELLO_CHECK(count_streak_through_12(best_by_depth) >= 3);
+            STELLO_CHECK_EQ(d12_score, 1206);
             STELLO_CHECK_EQ(out.result.depth, 12);
+            STELLO_CHECK_EQ(max_reported_depth, 12);
+            STELLO_CHECK(out.result.mv.square == f2);
+            STELLO_CHECK(out.result.nodes > d12_nodes);
         }
 
-        // Control: TimePerMove with the exact same soft/hard budget does NOT early-exit at depth 12.
+        // Control: TimePerMove on g23e28 with the exact same soft/hard budget does NOT early-exit at depth 12.
         {
             g_manual_ms.store(0, std::memory_order_relaxed);
             search::SearchEngine eng(16);
             eng.set_clock(&manual_clock);
+            int32_t max_reported_depth = 0;
             eng.set_iteration_done([&](int32_t depth, int32_t) {
                 if (depth == 12) {
                     g_manual_ms.store(trigger_ms, std::memory_order_relaxed);
@@ -2390,27 +2474,58 @@ STELLO_TEST(tpg_dynamic_time_and_verified_early_exit_tests) {
                     g_manual_ms.store(static_cast<uint64_t>(dom_budget.hard_ms * 2), std::memory_order_relaxed);
                 }
             });
-            const auto out = eng.search(dom_b, dom_p, SearchLimits::time_per_move_ms(dom_budget.hard_ms));
+            const auto out = eng.search(
+                dom_b, dom_p, SearchLimits::time_per_move_ms(dom_budget.hard_ms),
+                [&](const SearchInfo& info) { max_reported_depth = (std::max)(max_reported_depth, info.depth); });
             STELLO_CHECK(out.ok);
             STELLO_CHECK_EQ(out.result.depth, 13);
+            STELLO_CHECK_EQ(max_reported_depth, 13);
         }
 
-        // Negative case: g24e28 has tied best moves (F2 +2, G4 +2) so verification fails -> reaches depth 13.
+        // Negative case: g24e28 has F2 stable through depth 12, runs the verifier (extra nodes before first d13 report),
+        // rejects early exit, and continues to depth 13.
         {
             const auto [tie_b, tie_p] = find_bench_pos("midgame-exact.txt", "g24e28");
-            g_manual_ms.store(0, std::memory_order_relaxed);
-            search::SearchEngine eng(16);
-            eng.set_clock(&manual_clock);
-            eng.set_iteration_done([&](int32_t depth, int32_t) {
-                if (depth == 12) {
-                    g_manual_ms.store(trigger_ms, std::memory_order_relaxed);
-                } else if (depth >= 13) {
-                    g_manual_ms.store(static_cast<uint64_t>(dom_budget.hard_ms * 2), std::memory_order_relaxed);
-                }
-            });
-            const auto out = eng.search(tie_b, tie_p, SearchLimits::time_per_game_ms(60'000));
-            STELLO_CHECK(out.ok);
-            STELLO_CHECK_EQ(out.result.depth, 13);
+            auto run_g24 = [&](const SearchLimits& lim) {
+                g_manual_ms.store(0, std::memory_order_relaxed);
+                search::SearchEngine eng(16);
+                eng.set_clock(&manual_clock);
+                std::array<std::optional<Square>, 16> best_by_depth{};
+                uint64_t d12_nodes = 0;
+                std::optional<uint64_t> first_d13_nodes;
+                int32_t max_reported_depth = 0;
+                eng.set_iteration_done([&](int32_t depth, int32_t) {
+                    if (depth == 12) {
+                        g_manual_ms.store(trigger_ms, std::memory_order_relaxed);
+                    } else if (depth >= 13) {
+                        g_manual_ms.store(static_cast<uint64_t>(dom_budget.hard_ms * 2), std::memory_order_relaxed);
+                    }
+                });
+                const auto out = eng.search(
+                    tie_b, tie_p, lim,
+                    [&](const SearchInfo& info) {
+                        max_reported_depth = (std::max)(max_reported_depth, info.depth);
+                        if (info.depth >= 1 && info.depth <= 12 && info.best_move.has_value()) {
+                            best_by_depth[info.depth] = info.best_move;
+                        }
+                        if (info.depth == 12) {
+                            d12_nodes = info.nodes;
+                        } else if (info.depth == 13 && !first_d13_nodes.has_value()) {
+                            first_d13_nodes = info.nodes;
+                        }
+                    });
+                STELLO_CHECK(out.ok);
+                STELLO_CHECK_EQ(out.result.depth, 13);
+                STELLO_CHECK_EQ(max_reported_depth, 13);
+                STELLO_CHECK(first_d13_nodes.has_value());
+                STELLO_CHECK(count_streak_through_12(best_by_depth) >= 3);
+                STELLO_CHECK(best_by_depth[12] == f2);
+                return *first_d13_nodes - d12_nodes;
+            };
+
+            const uint64_t tpg_transition_nodes = run_g24(SearchLimits::time_per_game_ms(60'000));
+            const uint64_t tpm_transition_nodes = run_g24(SearchLimits::time_per_move_ms(dom_budget.hard_ms));
+            STELLO_CHECK(tpg_transition_nodes > tpm_transition_nodes);
         }
     }
 }

@@ -16,11 +16,26 @@ internal sealed record MatchRunSettings(string SideA, string SideB, int StartCou
     }
 }
 
-internal sealed record MatchGameData(Player ColourB, int DiscsB, SideStats StatsA, SideStats StatsB)
+internal sealed record MatchGameData(
+    Player ColourB,
+    int DiscsB,
+    SideStats StatsA,
+    SideStats StatsB,
+    TimeSpan ElapsedA = default,
+    TimeSpan ElapsedB = default,
+    ClockOverrunSide FirstOverrun = ClockOverrunSide.None)
 {
-    public static MatchGameData From(MatchGame game) => new(game.ColourB, game.DiscsB, game.StatsA, game.StatsB);
+    public static MatchGameData From(MatchGame game) =>
+        new(game.ColourB, game.DiscsB, game.StatsA, game.StatsB, game.ElapsedA, game.ElapsedB, game.FirstOverrun);
 
-    public MatchGame ToGame() => new(ColourB, [], DiscsB) { StatsA = StatsA, StatsB = StatsB };
+    public MatchGame ToGame() => new(ColourB, [], DiscsB)
+    {
+        StatsA = StatsA,
+        StatsB = StatsB,
+        ElapsedA = ElapsedA,
+        ElapsedB = ElapsedB,
+        FirstOverrun = FirstOverrun,
+    };
 }
 
 internal sealed record MatchGameRecord(
@@ -237,6 +252,11 @@ internal sealed class MatchJournal : IDisposable
             || record.Game.DiscsB is < -64 or > 64)
         {
             throw new InvalidDataException("The match game log contains an invalid game result.");
+        }
+
+        if (record.Game.ElapsedA < TimeSpan.Zero || record.Game.ElapsedB < TimeSpan.Zero || !Enum.IsDefined(record.Game.FirstOverrun))
+        {
+            throw new InvalidDataException("The match game log contains invalid clock-overrun metadata.");
         }
 
         ValidateStats(record.Game.StatsA);
