@@ -158,6 +158,7 @@ AbortVoid Kernel<Tier>::iterate(
 
     const int32_t empties = static_cast<int32_t>(board.empty_count());
     time::TimeBudget budget = time::for_midgame(limits, empties).with_soft_percent(s.soft_time_percent, 0);
+    const int64_t base_mid_hard_ms = budget.hard_ms;
     s.hard_limit_ms = budget.hard_ms;
     s.end_mpc_stage = 0;
 
@@ -186,7 +187,7 @@ AbortVoid Kernel<Tier>::iterate(
         }
     }
 
-    const int64_t mid_hard_ms = budget.hard_ms;
+    const int64_t mid_hard_ms = base_mid_hard_ms;
     int64_t stage4_ms = 0;
     int32_t stage4_score = 0;
     bool has_stage4 = false;
@@ -499,6 +500,28 @@ AbortResult<bool> Kernel<Tier>::midgame_iterations(
 ) {
     const int32_t empties = static_cast<int32_t>(board.empty_count());
     int32_t look = 0;
+    const bool tpg = (limits.mode() == TimeControlMode::TimePerGame);
+    int32_t prev_mv = best.mv;
+    int32_t prev_score = 0;
+    bool has_prev_score = false;
+    int32_t stable_streak = 0;
+    bool tried_early_exit = false;
+    const int64_t rem_ms = (std::max<int64_t>)(limits.time_ms(), 10);
+    const int64_t ext_cap = (budget.hard_ms <= (std::numeric_limits<int64_t>::max)() / 15)
+        ? (std::min)(budget.hard_ms * 15 / 10, rem_ms / 4)
+        : (rem_ms / 4);
+    const int64_t max_hard = (std::max)(budget.hard_ms, ext_cap);
+
+    Searcher::TpgMoveState tpg_state{false, 0, max_hard, &budget, &s, s.soft_time_percent};
+    struct RestoreTpgMove {
+        Searcher& s;
+        Searcher::TpgMoveState* prev;
+        ~RestoreTpgMove() noexcept { s.tpg_move = prev; }
+    } restore_tpg{s, s.tpg_move};
+    if (tpg) {
+        s.tpg_move = &tpg_state;
+    }
+
     while (empties - 1 - look > detail::midgame::ENDGAME_DISTANCE) {
         if (main_look != nullptr) {
             main_look->store(look, std::memory_order_relaxed);
@@ -511,8 +534,56 @@ AbortResult<bool> Kernel<Tier>::midgame_iterations(
         if (s.iteration_done != nullptr && *s.iteration_done) {
             (*s.iteration_done)(look + 1, best.score);
         }
+
+        if (tpg) {
+            if (best.mv >= 0 && best.mv == prev_mv) {
+                ++stable_streak;
+            } else {
+                stable_streak = 1;
+                if (look >= 7 && prev_mv >= 0 && best.mv >= 0) {
+                    tpg_state.extend(13, 10);
+                }
+            }
+            if (has_prev_score && prev_score - best.score >= 150) {
+                tpg_state.extend(14, 10);
+            }
+            prev_mv = best.mv;
+            prev_score = best.score;
+            has_prev_score = true;
+            tpg_state.prev_score = best.score;
+            tpg_state.has_prev_score = true;
+        }
+
         if (s.stop_iterating(limits, budget, look + 1)) {
             STELLO_RETURN_OK_R(bool, true);
+        }
+
+        if (tpg && !tried_early_exit && look >= 11 && stable_streak >= 3 && root_moves.size() > 1
+            && best.score > -detail::midgame::ROOT_WINDOW + 300
+            && s.elapsed_ms() >= budget.soft_ms * 45 / 100)
+        {
+            tried_early_exit = true;
+            const int32_t ver_thresh = best.score - 300;
+            bool dominated = true;
+            const Player opp = opponent(player);
+            for (size_t vi = 1; vi < root_moves.size(); ++vi) {
+                const int32_t vmv = root_moves[vi];
+                const Board vchild = board.play_unchecked(player, static_cast<uint32_t>(vmv));
+                STELLO_TRY_ASSIGN_R(
+                    bool,
+                    const ScoreMove vres,
+                    search(s, vchild, opp, look - 2, 1, vmv, -ver_thresh - 1, -ver_thresh));
+                if (-vres.score > ver_thresh) {
+                    dominated = false;
+                    break;
+                }
+            }
+            if (dominated) {
+                STELLO_RETURN_OK_R(bool, true);
+            }
+            if (s.stop_iterating(limits, budget, look + 1)) {
+                STELLO_RETURN_OK_R(bool, true);
+            }
         }
         ++look;
     }
@@ -627,6 +698,11 @@ AbortVoid Kernel<Tier>::search_root(
                     search_inc(s, child, opp, child_look, 1, mv, -beta, -alpha, child_eval));
                 score = -res.score;
                 reply = res.mv;
+                if (i == 0 && look >= 7 && s.tpg_move != nullptr && s.tpg_move->has_prev_score
+                    && (s.tpg_move->prev_score - score >= 150))
+                {
+                    s.tpg_move->extend(14, 10);
+                }
             } else {
                 STELLO_TRY_ASSIGN_IN_STATUS(
                     const ScoreMove res,

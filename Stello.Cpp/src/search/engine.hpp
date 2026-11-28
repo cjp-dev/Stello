@@ -373,6 +373,32 @@ public:
     std::atomic<uint64_t>* node_source{nullptr};
     uint64_t flushed_nodes{0};
 
+    struct TpgMoveState {
+        bool has_prev_score{false};
+        int32_t prev_score{0};
+        int64_t max_hard_ms{0};
+        time::TimeBudget* budget{nullptr};
+        Searcher* searcher{nullptr};
+        std::optional<int32_t> soft_pct;
+
+        void extend(int64_t num, int64_t den) noexcept {
+            if (budget == nullptr || searcher == nullptr || budget->hard_ms >= max_hard_ms) {
+                return;
+            }
+            const int64_t target_h = (std::min)(max_hard_ms, (budget->hard_ms * num + den - 1) / den);
+            if (target_h > budget->hard_ms) {
+                budget->hard_ms = target_h;
+                if (soft_pct.has_value()) {
+                    *budget = budget->with_soft_percent(soft_pct, 0);
+                } else {
+                    budget->soft_ms = target_h / 3 * 2 + (target_h % 3) * 2 / 3;
+                }
+                searcher->hard_limit_ms = target_h;
+            }
+        }
+    };
+    TpgMoveState* tpg_move{nullptr};
+
     uint64_t nodes{0};
     uint64_t last_iter_nodes{0};
     uint64_t evaluations{0};
