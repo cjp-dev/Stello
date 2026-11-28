@@ -523,11 +523,15 @@ STELLO_TEST(time_budget_and_for_solver_tests) {
 }
 
 STELLO_TEST(wld_admission_decision_tests) {
-    STELLO_CHECK_EQ(time::estimate_wld_ms(24, 16, 100'000, 100, 1'000'000), int64_t{240});
-    STELLO_CHECK(!time::should_admit_wld(24, 16, 100'000, 100, 1'000'000, 200));
-    STELLO_CHECK(time::should_admit_wld(24, 16, 100'000, 100, 1'000'000, 300));
-    STELLO_CHECK(!time::should_admit_wld(24, 16, 100'000, 100, 1'000'000, 0));
-    STELLO_CHECK(time::should_admit_wld(14, 6, 100'000, 100, 1'000'000, 1));
+    // total_nodes=200k over 100ms -> mid_nps=2,000/ms; effective_nodes=max(100k, 100k)=100k -> 100k*96/4,000 = 2,400 ms.
+    STELLO_CHECK_EQ(time::estimate_wld_ms(24, 16, 100'000, 100, 200'000), int64_t{2'400});
+    // Tiny last_iter_nodes (e.g. heavy TT/MPC pruning) is floored at total_nodes / 2.
+    STELLO_CHECK_EQ(time::estimate_wld_ms(24, 16, 10'000, 100, 200'000), int64_t{2'400});
+    STELLO_CHECK(!time::should_admit_wld(24, 16, 100'000, 100, 200'000, 2'000));
+    STELLO_CHECK(time::should_admit_wld(24, 16, 100'000, 100, 200'000, 2'500));
+    STELLO_CHECK(time::estimate_wld_ms(30, 22, 65'000, 27, 484'000) > 30'000);
+    STELLO_CHECK(!time::should_admit_wld(24, 16, 100'000, 100, 200'000, 0));
+    STELLO_CHECK(time::should_admit_wld(14, 6, 100'000, 100, 200'000, 1));
 }
 
 // ---- Stable & Last4..1 unit tests ----
@@ -877,7 +881,7 @@ STELLO_TEST(persistent_engine_ages_full_table_across_game_positions) {
         player = opponent(player);
     }
 
-    STELLO_CHECK_EQ(total_nodes, uint64_t{1'698'407});
+    STELLO_CHECK_EQ(total_nodes, uint64_t{1'241'568});
 }
 
 // ---- Full 105-signature baseline integration test (Stello 3.1) ----
@@ -1819,6 +1823,169 @@ STELLO_TEST(phase4_3a1_nws_kernels_parity) {
                 table.clear();
                 (void)check_scout(ctx_bc5, before_c5, Player::White, look, 4, 4, alpha, v_wb, false);
             }
+        }
+    }
+}
+
+STELLO_TEST(etc_cutoff_stores_parent_tt_entry_with_zero_cost) {
+    const auto [board, player] = find_bench_pos("midgame.txt", "g01e48");
+    const Player opp = opponent(player);
+    const uint64_t own = board.discs(player);
+    const uint64_t other = board.discs(opp);
+    const uint32_t empties = board.empty_count();
+    const int32_t tag = static_cast<int32_t>(player_index(player));
+    const int32_t opp_tag = static_cast<int32_t>(player_index(opp));
+    const int32_t mv = static_cast<int32_t>(std::countr_zero(board.legal_moves(player)));
+    const Board child = board.play_unchecked(player, static_cast<uint32_t>(mv));
+    const int32_t child_mv = static_cast<int32_t>(std::countr_zero(child.legal_moves(opp)));
+
+    auto unwrap = [](search::AbortResult<search::ScoreMove> r) -> search::ScoreMove {
+#if STELLO_ABORT_EXCEPTIONS
+        return r;
+#else
+        STELLO_CHECK(r.is_ok());
+        return r.value;
+#endif
+    };
+
+    SearchOptions opts;
+    opts.selective = false;
+    search::TranspositionTable table(12);
+    search::ThreadState thread;
+    const auto ctx = search::SearchContext::create(opts, nullptr, nullptr, table, table, search::system_clock, empties);
+
+    table.clear();
+    table.store_at_root(
+        child.discs(opp), child.discs(player), opp_tag, 3, search::Bound::Upper, -300, child_mv, empties, 0,
+        search::SEL_EXACT);
+    {
+        search::Searcher s(ctx, thread, search::no_stop());
+        s.hash_get_height = 4;
+        s.hash_put_height = 4;
+        const search::ScoreMove res = unwrap(s.search(board, player, 4, 1, -1, 100, 300));
+        STELLO_CHECK_EQ(s.nodes, uint64_t{1});
+        STELLO_CHECK_EQ(s.evaluations, uint64_t{0});
+        STELLO_CHECK_EQ(res.score, 300);
+        STELLO_CHECK_EQ(res.mv, mv);
+
+        const auto parent = table.get_at_root(own, other, tag, empties);
+        STELLO_CHECK(parent.has_value());
+        STELLO_CHECK_EQ(static_cast<int32_t>(parent->depth), 4);
+        STELLO_CHECK_EQ(static_cast<int32_t>(parent->lower), 300);
+        STELLO_CHECK_EQ(static_cast<int32_t>(parent->upper), search::TT_SCORE_MAX);
+        STELLO_CHECK_EQ(static_cast<int32_t>(parent->mv), mv);
+        STELLO_CHECK_EQ(static_cast<int32_t>(parent->cost), 0);
+    }
+
+    table.clear();
+    table.store_at_root(
+        child.discs(opp), child.discs(player), opp_tag, 3, search::Bound::Upper, -300, child_mv, empties, 0,
+        search::SEL_EXACT);
+    {
+        search::Searcher s(ctx, thread, search::no_stop());
+        s.hash_get_height = 4;
+        s.hash_put_height = 0;
+        const search::ScoreMove res = unwrap(s.search(board, player, 4, 1, -1, 100, 300));
+        STELLO_CHECK_EQ(s.nodes, uint64_t{1});
+        STELLO_CHECK_EQ(res.score, 300);
+        STELLO_CHECK_EQ(res.mv, mv);
+        STELLO_CHECK(!table.get_at_root(own, other, tag, empties).has_value());
+    }
+}
+
+STELLO_TEST(probcut_recursion_guard_limit_and_endgame_isolation) {
+    uint8_t lvl = 0;
+    {
+        search::ProbCutGuard g1(lvl);
+        STELLO_CHECK_EQ(lvl, uint8_t{1});
+        {
+            search::ProbCutGuard g2(lvl);
+            STELLO_CHECK_EQ(lvl, uint8_t{2});
+        }
+        STELLO_CHECK_EQ(lvl, uint8_t{1});
+    }
+    STELLO_CHECK_EQ(lvl, uint8_t{0});
+
+    const auto [board, player] = find_bench_pos("midgame.txt", "g01e48");
+    const auto probcut = search::detail::make_probcut_errors(1.0);
+    const auto end_probcut = search::detail::make_end_probcut_errors();
+    SearchOptions opts;
+    opts.selective = true;
+
+    auto unwrap_sm = [](search::AbortResult<search::ScoreMove> r) -> search::ScoreMove {
+#if STELLO_ABORT_EXCEPTIONS
+        return r;
+#else
+        STELLO_CHECK(r.is_ok());
+        return r.value;
+#endif
+    };
+
+    auto run_with_level = [&](uint8_t start_level) -> uint64_t {
+        search::TranspositionTable table(16);
+        search::ThreadState thread;
+        const auto ctx = search::SearchContext::create(
+            opts, probcut.get(), end_probcut.get(), table, table, search::system_clock, board.empty_count());
+        search::Searcher s(ctx, thread, search::no_stop());
+        s.probcut_level = start_level;
+        s.hash_get_height = 7;
+        s.hash_put_height = 7;
+        const auto res = unwrap_sm(s.search(board, player, 7, 0, -1, -32664, 32664));
+        STELLO_CHECK_EQ(s.probcut_level, start_level);
+        STELLO_CHECK(res.mv >= 0);
+        return s.nodes;
+    };
+
+    const uint64_t n_rec2 = run_with_level(0);
+    const uint64_t n_rec1 = run_with_level(1);
+    const uint64_t n_off = run_with_level(2);
+    STELLO_CHECK(n_rec2 < n_rec1);
+    STELLO_CHECK(n_rec1 < n_off);
+
+    // Endgame MPC remains gated on probcut_level == 0 (non-recursive).
+    {
+        const auto handover = load_bench_file("midgame-handover.txt");
+        const auto it = std::find_if(handover.begin(), handover.end(), [](const auto& p) {
+            return p.board.empty_count() == 18U;
+        });
+        STELLO_CHECK(it != handover.end());
+        auto run_end = [&](uint8_t start_level) -> uint64_t {
+            search::TranspositionTable table(14);
+            search::ThreadState thread;
+            const auto ctx = search::SearchContext::create(
+                opts, probcut.get(), end_probcut.get(), table, table, search::system_clock, it->board.empty_count());
+            search::Searcher s(ctx, thread, search::no_stop());
+            s.end_mpc_stage = 1;
+            s.probcut_level = start_level;
+#if STELLO_ABORT_EXCEPTIONS
+            (void)s.end_window(
+                it->board.discs(it->player), it->board.discs(opponent(it->player)), -64, 64,
+                static_cast<int32_t>(it->board.empty_count()), false);
+#else
+            STELLO_CHECK(s.end_window(
+                             it->board.discs(it->player), it->board.discs(opponent(it->player)), -64, 64,
+                             static_cast<int32_t>(it->board.empty_count()), false)
+                             .is_ok());
+#endif
+            STELLO_CHECK_EQ(s.probcut_level, start_level);
+            return s.nodes;
+        };
+        STELLO_CHECK(run_end(0) <= run_end(1));
+    }
+
+    // 8-thread recursive ProbCut propagation safety.
+    {
+        search::SearchEngine engine(16);
+        for (const char* id : {"g01e48", "g02e48"}) {
+            const auto [b, p] = find_bench_pos("midgame.txt", id);
+            engine.clear_hash();
+            const SearchResult res = engine.search_simple(
+                b, p, *SearchLimits::fixed_depth(10).with_threads(8));
+            STELLO_CHECK(res.mv.square.has_value());
+            STELLO_CHECK((b.legal_moves(p) & res.mv.square->bit()) != 0ULL);
+            STELLO_CHECK(res.kind == ScoreKind::Heuristic);
+            STELLO_CHECK_EQ(res.depth, 10);
+            STELLO_CHECK(res.nodes > 0ULL);
         }
     }
 }

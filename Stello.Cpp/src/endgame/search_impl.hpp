@@ -221,7 +221,7 @@ AbortResult<int32_t> Kernel<Tier>::end_window(
         hash_move = static_cast<int32_t>(entry->mv);
     }
 
-    if (!passed && empties >= END_MPC_MIN_EMPTIES && s.end_mpc_stage > 0 && !s.in_probcut && s.end_probcut_errors != nullptr) {
+    if (!passed && empties >= END_MPC_MIN_EMPTIES && s.end_mpc_stage > 0 && s.probcut_level == 0 && s.end_probcut_errors != nullptr) {
         STELLO_TRY_ASSIGN_I32(const auto cut, try_end_probcut(s, own, opponent, alpha, beta, empties));
         if (cut.has_value()) {
             STELLO_RETURN_OK_R(int32_t, *cut);
@@ -373,7 +373,7 @@ AbortResult<int32_t> Kernel<Tier>::end_deep(
         hash_move = static_cast<int32_t>(entry->mv);
     }
 
-    if (!passed && empties >= END_MPC_MIN_EMPTIES && s.end_mpc_stage > 0 && !s.in_probcut && s.end_probcut_errors != nullptr) {
+    if (!passed && empties >= END_MPC_MIN_EMPTIES && s.end_mpc_stage > 0 && s.probcut_level == 0 && s.end_probcut_errors != nullptr) {
         STELLO_TRY_ASSIGN_I32(const auto cut, try_end_probcut(s, own, opponent, alpha, alpha + 1, empties));
         if (cut.has_value()) {
             STELLO_RETURN_OK_R(int32_t, *cut);
@@ -539,7 +539,7 @@ AbortResult<std::optional<int32_t>> Kernel<Tier>::try_end_probcut(
         return sc;
     };
 
-    ProbCutGuard guard(s.in_probcut);
+    ProbCutGuard guard(s.probcut_level);
     const Board pc_board(own, opponent);
 
     if (beta <= 64) {

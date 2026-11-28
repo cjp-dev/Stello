@@ -19,6 +19,7 @@ inline constexpr int32_t ROOT_WINDOW = 32664;
 inline constexpr int32_t ENDGAME_DISTANCE = 7;
 inline constexpr int32_t PROBCUT_SCORE_LIMIT = 32000;
 inline constexpr int32_t PROBCUT_MIN_LOOK = 2;
+inline constexpr uint8_t PROBCUT_MAX_LEVEL = 2;
 inline constexpr int32_t PROBCUT_PRE_CHECK_OFFSET = 4 * eval::PATTERN_UNITS_PER_DISC;
 inline constexpr int32_t EVALUATION_ORDER_MIN_LOOK = 4;
 inline constexpr int32_t MIDGAME_ETC_MIN_LOOK = 4;
@@ -739,7 +740,7 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc(
         }
     }
 
-    if (s.probcut_errors != nullptr && look >= PROBCUT_MIN_LOOK && !s.in_probcut) {
+    if (s.probcut_errors != nullptr && look >= PROBCUT_MIN_LOOK && s.probcut_level < PROBCUT_MAX_LEVEL) {
         STELLO_TRY_ASSIGN_R(
             ScoreMove,
             const auto cut,
@@ -1194,7 +1195,12 @@ AbortResult<ScoreMove> Kernel<Tier>::search_inc_deep(
                     && entry->upper < TT_SCORE_MAX
                     && -static_cast<int32_t>(entry->upper) >= beta)
                 {
-                    STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{-static_cast<int32_t>(entry->upper), mv}));
+                    const int32_t cut_score = -static_cast<int32_t>(entry->upper);
+                    if (hash_put) {
+                        s.midgame_table->store_bounds_at_root(
+                            own, other, tag, look, req_sel, alpha, beta, cut_score, mv, s.root_empties, 0);
+                    }
+                    STELLO_RETURN_OK_R(ScoreMove, (ScoreMove{cut_score, mv}));
                 }
             }
         }
@@ -1571,7 +1577,7 @@ AbortResult<std::optional<int32_t>> Kernel<Tier>::try_probcut_inc(
     const int32_t static0 = eval_state_score(
         *s.pattern, eval_state, board.discs(player), board.discs(opponent(player)), discs, w);
 
-    ProbCutGuard guard(s.in_probcut);
+    ProbCutGuard guard(s.probcut_level);
     STELLO_TRY_ASSIGN_R(
         std::optional<int32_t>,
         const auto cut,

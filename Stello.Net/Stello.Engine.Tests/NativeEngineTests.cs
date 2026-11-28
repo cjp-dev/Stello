@@ -97,7 +97,7 @@ public class NativeEngineTests
             Path.Combine(AppContext.BaseDirectory, "Data", "Benchmark", "midgame.txt")).Single(p => p.Id == "g01e48");
         SearchLimits limits = SearchLimits.FixedDepth(10);
         SearchResult result = new SearchEngine().Search(position.Board, position.Player, limits);
-        Assert.Equal(34841, result.Nodes);
+        Assert.Equal(31426, result.Nodes);
     }
 
     [Fact]

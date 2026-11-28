@@ -358,7 +358,7 @@ AbortVoid Kernel<Tier>::split(
         node.setup = TaskSetup{
             s.hash_get_height,
             s.hash_put_height,
-            s.in_probcut,
+            s.probcut_level,
             s.end_mpc_stage,
             s.start,
             s.hard_limit_ms,
@@ -673,7 +673,7 @@ AbortVoid Kernel<Tier>::split(
         node.setup = TaskSetup{
             s.hash_get_height,
             s.hash_put_height,
-            s.in_probcut,
+            s.probcut_level,
             s.end_mpc_stage,
             s.start,
             s.hard_limit_ms,

@@ -34,7 +34,7 @@ void Searcher::split_task(const Helpers& h, const SplitPoint* point, const TaskS
     current_split_entry = entry;
     hash_get_height = setup.hash_get_height;
     hash_put_height = setup.hash_put_height;
-    in_probcut = setup.in_probcut;
+    probcut_level = setup.probcut_level;
     end_mpc_stage = setup.end_mpc_stage;
     start = setup.start;
     hard_limit_ms = setup.hard_limit_ms;

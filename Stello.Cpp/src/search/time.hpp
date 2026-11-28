@@ -122,13 +122,15 @@ inline int64_t estimate_wld_ms(
     }
     const double mid_nps = static_cast<double>((std::max)(total_nodes, uint64_t{10'000}))
                          / static_cast<double>((std::max<int64_t>)(mid_elapsed_ms, 1));
-    // Calibrated on midgame-exact (24-28 empties) for TimePerGame WLD admission: ~48x iter_nodes at 24 empties,
-    // scaling ~1.6x/empty (exact WLD grows ~2.7x/empty vs ~1.7x/empty for selective depth = empties - 8).
-    // Speed multiplier 2.0 calibrates midgame-to-endgame NPS (~25M vs ~49M) without changing hard time limits.
+    // Calibrated on midgame-exact (24-28 empties) for TimePerGame WLD admission under recursive ProbCut:
+    // last_iter_nodes can drop to 6-18% of total_nodes when TT/MPC heavily prunes the final iteration,
+    // so floor at total_nodes / 2 and scale ~96x at 24 empties x 1.95x/empty (exact WLD ~2.7x/empty vs
+    // ~1.4x/empty for recursive-ProbCut selective depth = empties - 8).
     const double baseline_depth = static_cast<double>((std::max)(empties - 8, 1));
-    const double scale = 48.0 * std::pow(1.6, static_cast<double>(empties - 24))
+    const double scale = 96.0 * std::pow(1.95, static_cast<double>(empties - 24))
                        / std::pow(2.0, static_cast<double>(depth_done) - baseline_depth);
-    const double est_nodes = static_cast<double>((std::max)(last_iter_nodes, uint64_t{1})) * scale;
+    const uint64_t effective_nodes = (std::max)((std::max)(last_iter_nodes, total_nodes / 2), uint64_t{1});
+    const double est_nodes = static_cast<double>(effective_nodes) * scale;
     const double est_ms = est_nodes / (mid_nps * 2.0);
     return static_cast<int64_t>((std::min)(est_ms, 1e12));
 }

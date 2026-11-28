@@ -29,7 +29,7 @@ With more than 1 thread, the other threads help: scaled **Lazy SMP** helpers (`l
 | `midgame_table`, `endgame_table`, `endgame`, `ordering` | Borrows of the shared tables and of this thread's `ThreadState` |
 | `helpers` | The pool and what the other threads need, in a search with more than 1 thread; empty with 1 thread and in the Lazy SMP helpers |
 | `split_point`, `ybwc` | The active split point for sibling early-abort ("brother cuts") when attached, and whether a search may split its nodes |
-| `in_probcut`, `end_mpc_stage` | True during Multi-ProbCut's shallow search (not selective itself), and the active selective-endgame stage (`0` for exact solves, chapter 08) |
+| `probcut_level`, `end_mpc_stage` | Active Multi-ProbCut recursion depth (`0..PROBCUT_MAX_LEVEL`, allowing one recursive midgame ProbCut level `< 2`, while selective endgame requires `0`), and the active selective-endgame stage (`0` for exact solves, chapter 08) |
 | `start`, `hard_limit_ms`, `soft_time_percent` | When the search started, the hard time limit, and the soft share of the time (chapter 09) |
 | `nodes`, `evaluations` | Counters, reported in `SearchInfo` and `SearchResult` |
 | `hash_get_height`, `hash_put_height` | How far from the root the midgame hash table is used |
@@ -47,6 +47,7 @@ With more than 1 thread, the other threads help: scaled **Lazy SMP** helpers (`l
 | `EVALUATION_ORDER_MIN_LOOK` | 4 | From `look` = 4 the moves are ordered by evaluation (chapter 05) |
 | `MIDGAME_ETC_MIN_LOOK` | 4 | From `look` = 4 the children's hash entries are tried first (ETC, chapter 07) |
 | `PROBCUT_MIN_LOOK` | 2 | Multi-ProbCut is tried from `look` = 2, a depth of 3 plies |
+| `PROBCUT_MAX_LEVEL` | 2 | Multi-ProbCut recursion cap (`probcut_level < 2`, allowing one extra midgame ProbCut level) |
 | `DEFAULT_PROBCUT_PERCENT` | 100 | Its t × 100: a cut needs the shallow search to be t = 1.0 standard deviations outside the window |
 | `PROBCUT_PRE_CHECK_OFFSET` | 400 | 4 discs: the static evaluation must already be within 4 discs of that margin, and at least 1 disc beyond the bound, before the shallow search is tried |
 | `PROBCUT_SCORE_LIMIT` | 32 000 | No Multi-ProbCut near won or lost scores |
@@ -126,14 +127,14 @@ flowchart TD
     Legal -- "none, opponent can move" --> PassNode["Pass: search the opponent<br/>with the same look"]
     Legal -- "yes" --> Hash{"Hash entry with a legal move,<br/>enough depth and a usable bound?"}
     Hash -- "yes" --> HashCut["Return the stored value"]
-    Hash -- "no" --> Sel{"look ≥ 2, and not inside<br/>a Multi-ProbCut search?"}
+    Hash -- "no" --> Sel{"look ≥ 2 and<br/>probcut_level < 2?"}
     Sel -- "yes" --> SelTest["Multi-ProbCut:<br/>a shallow search clearly<br/>above beta or below alpha?"]
     SelTest -- "yes" --> SelCut["Return beta or alpha"]
     SelTest -- "no" --> Look2Nws{"look == 2 and beta - alpha == 1?"}
     Look2Nws -- "yes" --> Static2["Static priority loop:<br/>hash move then STATIC_CELL_PRIORITY masks,<br/>store eligible TT bound"]
     Look2Nws -- "no" --> Ext["Single reply at look 0: look = 1"]
     Ext --> Etc{"look ≥ 4 and a child's stored<br/>bound already reaches beta?"}
-    Etc -- "yes" --> EtcCut["Return it (ETC)"]
+    Etc -- "yes" --> EtcCut["Store parent TT cutoff (cost = 0)<br/>and return (ETC)"]
     Etc -- "no" --> Order["Order the moves (chapter 05):<br/>look ≥ 4: hash move, then evaluation<br/>wider look < 4 or look = 3: hash move, responses, square values"]
     Order --> Loop["For each move:<br/>look = 0: evaluate the child<br/>otherwise: search the child with look − 1<br/>(PVS: later moves with a null window first)"]
     Loop --> Cut{"score ≥ beta?"}
@@ -151,7 +152,7 @@ Some details:
 - **Passes** do not use up depth: the opponent is searched with the same `look`.
 - **Extension.** A position with only one legal move at the horizon (`look` = 0) is searched one ply deeper (`look` = 1), so a forced reply is not judged by a static evaluation (including `eval1_nws`, which recurses directly on 1-move nodes). The generic path stores the result in the hash table with the original `look`; `eval1_nws` does not write to the TT.
 - **The response table** is updated after every searched child in the generic and deep paths (chapter 05), not inside the one-unit-window `look <= 2` scouts.
-- **Enhanced transposition cutoff** from `look` = 4 (`MIDGAME_ETC_MIN_LOOK`), where the children are within the hash table's read height: the children's hash entries are looked up before the moves are ordered; a child whose stored upper bound already refutes it ends the node ([chapter 07](07-transposition-table.md#use-in-the-midgame-search)).
+- **Enhanced transposition cutoff** from `look` = 4 (`MIDGAME_ETC_MIN_LOOK`), where the children are within the hash table's read height: the children's hash entries are looked up before the moves are ordered; a child whose stored upper bound already refutes it stores the parent's lower-bound TT entry (`cost = 0` when `hash_put` is enabled) and ends the node ([chapter 07](07-transposition-table.md#use-in-the-midgame-search)).
 - **The hash table** is read only at plies ≤ `look` − 1 and written only at plies ≤ `look` of the current iteration, the same heights as in C++; so it is used in the upper part of the tree, where each entry saves the most work. A hash move is only used if it is legal in the position (chapter 07).
 - **PVS in every node.** The first move is searched with the full window, the others with a null window and again with the full window if they turn out better, as at the root. A node that already has a null window searches all its moves with it. The measurements behind this choice are in [chapter 23](23-phase-5-the-search.md).
 
@@ -164,7 +165,7 @@ At a node with depth $d$ = `look` + 1 ≥ 3 (`try_probcut` and `probcut_searches
 1. The shallow depth is about half, with the same parity (`probcut_shallow_depth`): $s = 2\lfloor d/4 \rfloor + (d \bmod 2)$, so 3 → 1, 4 → 2, 7 → 3, 10 → 4, 13 → 7.
 2. The error margin is $e = \lceil t \cdot \max(0.5,\ \sigma(n, s, d)) \cdot 100 \rceil$ in 1/100 disc, with $t$ = 1.0 (`DEFAULT_PROBCUT_PERCENT`) and $n$ the number of discs on the board. `probcut_errors` computes it once per engine for every disc count and depth.
 3. **A cheap test first:** the static evaluation must be at least $\beta + \max(100,\ e - 400)$, that is, within 4 discs of the margin and at least 1 disc above β. Only then does a null-window search to depth $s$ test whether the position scores at least $\beta + e$. If so, the node returns β. The same is done below α: static evaluation at most $\alpha - \max(100,\ e - 400)$, then a test against $\alpha - e$, and the node returns α.
-4. The shallow search is an ordinary node search (same ply, same previous move, the same hash table), but Multi-ProbCut is off inside it (`in_probcut`).
+4. The shallow search is an ordinary node search (same ply, same previous move, the same hash table); `ProbCutGuard` increments `probcut_level` so midgame ProbCut remains enabled up to `probcut_level < PROBCUT_MAX_LEVEL` (allowing one recursive level) while selective endgame `try_end_probcut` requires `probcut_level == 0`.
 5. Near won and lost scores it is not used: the cut above β is only tried when $\beta + e < 32\,000$, the cut below α only when $\alpha - e > -32\,000$ (`PROBCUT_SCORE_LIMIT`).
 
 **The error model** comes from Stello's own searches. `Stello.Trainer`'s `mpc` command searched test positions without selectivity at every depth up to min(13, empties − 8) and fitted a weighted least-squares formula over the spread of deep minus shallow results. In Stello 5.0, `detail::make_probcut_errors` ([engine.cpp](../Stello.Cpp/src/search/engine.cpp#L35)) picks the error model matching the loaded evaluation:
@@ -283,7 +284,7 @@ A worker's task also sets cut and stop when its brother fails high, so a fail hi
 
 **Split points form a chain.** A split-off search may split again: it has the same helpers, and its nodes from depth 6 split as the main search's do. Each `SplitPoint` ([ybwc.rs](../Stello.Rust/stello-core/src/search/ybwc.rs#L20)) has its two flags and a link to the split point above it. `stopped()` walks up the chain, so a cut high in the tree stops every search split off below it. The split-off search's stop signal is `SplitStop`, which reports Move Now once its split point or one above it is stopped.
 
-**What a split-off search copies** from the thread that split (`TaskSetup`): the hash heights of the iteration, whether it is inside a Multi-ProbCut search, and the start time and hard time limit, so that it stops at the same time as the main search. It reports no progress, and counts its nodes for the main thread.
+**What a split-off search copies** from the thread that split (`TaskSetup`): the hash heights of the iteration, its Multi-ProbCut recursion depth (`probcut_level`), and the start time and hard time limit, so that it stops at the same time as the main search. It reports no progress, and counts its nodes for the main thread.
 
 **Guards.** If this thread's own part of the split returns early (a stop) or panics, a guard (`StopUnlessFinished`) sets the split point's stop, so the scope does not wait for brothers that are no longer needed.
 

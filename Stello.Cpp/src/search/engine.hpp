@@ -379,7 +379,7 @@ public:
     int64_t hard_limit_ms{(std::numeric_limits<int64_t>::max)()};
     int32_t hash_get_height{0};
     int32_t hash_put_height{0};
-    bool in_probcut{false};
+    uint8_t probcut_level{0};
     int64_t last_heartbeat_ms{0};
     int32_t report_depth{0};
     int32_t report_move{-1};

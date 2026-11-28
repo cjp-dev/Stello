@@ -164,11 +164,11 @@ using AbortVoid = AbortStatus;
 #define STELLO_TRY_ASSIGN_IN_STATUS(decl, expr) decl = (expr)
 #endif
 
-/// RAII guard mirroring C#'s try/finally around `in_probcut = true`.
+/// RAII guard tracking active ProbCut recursion depth (`probcut_level`).
 struct ProbCutGuard {
-    bool& flag;
-    explicit ProbCutGuard(bool& f) noexcept : flag(f) { flag = true; }
-    ~ProbCutGuard() noexcept { flag = false; }
+    uint8_t& level;
+    explicit ProbCutGuard(uint8_t& l) noexcept : level(l) { ++level; }
+    ~ProbCutGuard() noexcept { --level; }
     ProbCutGuard(const ProbCutGuard&) = delete;
     ProbCutGuard& operator=(const ProbCutGuard&) = delete;
 };
