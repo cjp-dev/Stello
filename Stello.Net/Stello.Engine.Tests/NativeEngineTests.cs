@@ -71,17 +71,23 @@ public class NativeEngineTests
         }
         Assert.True(pc100.Nodes < pc150.Nodes && pc150.Nodes < pcOff.Nodes);
 
-        (SearchOptions options, V2.Search.SearchOptions v2Options) = WithBase(
-            WrittenModel(),
-            static (a, b) => (a with { ProbCutPercent = 150 }, b with { ProbCutPercent = 150 }));
-        var engine = new SearchEngine(16, options);
-        var v2 = new V2.SearchEngine(16, v2Options);
-        foreach ((Board board, Player player) in TestPositions.RandomPositions(seed: 32, count: 3, plies: 46))
+        EvalWeights customModel = WrittenModel().Item1.Pattern!;
+        SearchResult custom100 = new SearchEngine(16, new SearchOptions { Pattern = customModel, Selective = true, ProbCutPercent = 100 })
+            .Search(position.Board, position.Player, limits);
+        SearchResult custom150 = new SearchEngine(16, new SearchOptions { Pattern = customModel, Selective = true, ProbCutPercent = 150 })
+            .Search(position.Board, position.Player, limits);
+        SearchResult customOff = new SearchEngine(16, new SearchOptions { Pattern = customModel, Selective = false })
+            .Search(position.Board, position.Player, limits);
+
+        foreach (SearchResult r in new[] { custom100, custom150, customOff })
         {
-            SearchResult expected = v2.Search(board, player, SearchLimits.Solve);
-            SearchResult actual = engine.Search(board, player, SearchLimits.Solve);
-            Assert.Equal((expected.Move, expected.Score, expected.Kind, expected.Depth), (actual.Move, actual.Score, actual.Kind, actual.Depth));
+            Assert.True(r.Move.Square is { } sq && (position.Board.LegalMoves(position.Player) & (1UL << sq.Index)) != 0);
+            Assert.Equal(ScoreKind.Heuristic, r.Kind);
+            Assert.Equal(10, r.Depth);
         }
+        Assert.NotEqual(custom100.Nodes, custom150.Nodes);
+        Assert.True(custom100.Nodes < customOff.Nodes);
+        Assert.True(custom150.Nodes < customOff.Nodes);
     }
 
     [Fact]

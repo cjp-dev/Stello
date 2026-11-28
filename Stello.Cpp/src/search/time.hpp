@@ -3,6 +3,7 @@
 #include "search/limits.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <optional>
@@ -107,6 +108,43 @@ inline TimeBudget for_solver(
 ) noexcept {
     const int64_t offset_ms = (limits.mode() == TimeControlMode::TimePerGame) ? elapsed_ms : 0;
     return for_endgame(limits, midgame, elapsed_ms).with_soft_percent(soft_percent, offset_ms);
+}
+
+inline int64_t estimate_wld_ms(
+    int32_t empties,
+    int32_t depth_done,
+    uint64_t last_iter_nodes,
+    int64_t mid_elapsed_ms,
+    uint64_t total_nodes
+) noexcept {
+    if (empties <= 14) {
+        return 1;
+    }
+    const double mid_nps = static_cast<double>((std::max)(total_nodes, uint64_t{10'000}))
+                         / static_cast<double>((std::max<int64_t>)(mid_elapsed_ms, 1));
+    // Calibrated on midgame-exact (24-28 empties) for TimePerGame WLD admission: ~48x iter_nodes at 24 empties,
+    // scaling ~1.6x/empty (exact WLD grows ~2.7x/empty vs ~1.7x/empty for selective depth = empties - 8).
+    // Speed multiplier 2.0 calibrates midgame-to-endgame NPS (~25M vs ~49M) without changing hard time limits.
+    const double baseline_depth = static_cast<double>((std::max)(empties - 8, 1));
+    const double scale = 48.0 * std::pow(1.6, static_cast<double>(empties - 24))
+                       / std::pow(2.0, static_cast<double>(depth_done) - baseline_depth);
+    const double est_nodes = static_cast<double>((std::max)(last_iter_nodes, uint64_t{1})) * scale;
+    const double est_ms = est_nodes / (mid_nps * 2.0);
+    return static_cast<int64_t>((std::min)(est_ms, 1e12));
+}
+
+inline bool should_admit_wld(
+    int32_t empties,
+    int32_t depth_done,
+    uint64_t last_iter_nodes,
+    int64_t mid_elapsed_ms,
+    uint64_t total_nodes,
+    int64_t capped_rem_ms
+) noexcept {
+    if (capped_rem_ms <= 0) {
+        return false;
+    }
+    return estimate_wld_ms(empties, depth_done, last_iter_nodes, mid_elapsed_ms, total_nodes) <= capped_rem_ms;
 }
 
 } // namespace stello::time

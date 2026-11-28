@@ -87,29 +87,6 @@ inline uint64_t current_total_nodes(const Searcher& s) noexcept {
     return s.nodes + (s.node_source != nullptr ? s.node_source->load(std::memory_order_relaxed) : 0ULL);
 }
 
-inline int64_t estimate_wld_ms(
-    int32_t empties,
-    int32_t depth_done,
-    uint64_t last_iter_nodes,
-    int64_t mid_elapsed_ms,
-    uint64_t total_nodes
-) noexcept {
-    if (empties <= 14) {
-        return 1;
-    }
-    const double mid_nps = static_cast<double>((std::max)(total_nodes, uint64_t{10'000}))
-                         / static_cast<double>((std::max<int64_t>)(mid_elapsed_ms, 1));
-    // Calibrated on midgame-exact (24-28 empties): ~48x iter_nodes at 24 empties, scaling ~1.6x/empty
-    // (endgame exact WLD grows ~2.7x/empty vs ~1.7x/empty for selective midgame depth = empties - 8).
-    // eval1_nws/eval2_nws raised midgame NPS (~14M -> ~25M) relative to unchanged endgame NPS (~49M, ~2.0x ratio).
-    const double baseline_depth = static_cast<double>((std::max)(empties - 8, 1));
-    const double scale = 48.0 * std::pow(1.6, static_cast<double>(empties - 24))
-                       / std::pow(2.0, static_cast<double>(depth_done) - baseline_depth);
-    const double est_nodes = static_cast<double>((std::max)(last_iter_nodes, uint64_t{1})) * scale;
-    const double est_ms = est_nodes / (mid_nps * 2.0);
-    return static_cast<int64_t>((std::min)(est_ms, 1e12));
-}
-
 } // namespace detail::midgame
 
 template <cpu::CpuTier Tier>
@@ -253,13 +230,14 @@ AbortVoid Kernel<Tier>::iterate(
                 ? (budget.hard_ms * 4)
                 : (std::numeric_limits<int64_t>::max)();
             const int64_t capped_rem_ms = (std::min)(rem_solve_ms, max_budget);
-            const int64_t est_ms = estimate_wld_ms(
-                empties,
-                empties - 8,
-                s.last_iter_nodes,
-                mid_elapsed_ms,
-                mid_total_nodes);
-            if (est_ms > capped_rem_ms) {
+            if (!time::should_admit_wld(
+                    empties,
+                    empties - 8,
+                    s.last_iter_nodes,
+                    mid_elapsed_ms,
+                    mid_total_nodes,
+                    capped_rem_ms))
+            {
                 STELLO_RETURN_OK_VOID();
             }
         }

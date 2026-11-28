@@ -118,7 +118,9 @@ The loop runs `look` = 0, 1, 2, … as long as $\text{empties} - 1 - \text{look}
 
 ```mermaid
 flowchart TD
-    N["search(board, player, look, ply, alpha, beta)"] --> Count["Count the node; every 1024 nodes<br/>check time, cancel and Move Now"]
+    N["search(board, player, look, ply, alpha, beta)"] --> Scout{"beta - alpha == 1 and look in {0, 1}?"}
+    Scout -- "yes" --> ShallowNws["Dedicated eval1_nws / eval2_nws:<br/>pass/forced check, TT probe (no TT write at look 0),<br/>hash move then STATIC_CELL_PRIORITY masks"]
+    Scout -- "no" --> Count["Count the node; every 1024 nodes<br/>check time, cancel and Move Now"]
     Count --> Legal{"Legal moves?"}
     Legal -- "none, and none for the opponent" --> Over["Return the game-over score"]
     Legal -- "none, opponent can move" --> PassNode["Pass: search the opponent<br/>with the same look"]
@@ -127,11 +129,12 @@ flowchart TD
     Hash -- "no" --> Sel{"look ≥ 2, and not inside<br/>a Multi-ProbCut search?"}
     Sel -- "yes" --> SelTest["Multi-ProbCut:<br/>a shallow search clearly<br/>above beta or below alpha?"]
     SelTest -- "yes" --> SelCut["Return beta or alpha"]
-    SelTest -- "no" --> Ext
-    Sel -- "no" --> Ext["Single reply at look 0: look = 1"]
+    SelTest -- "no" --> Look2Nws{"look == 2 and beta - alpha == 1?"}
+    Look2Nws -- "yes" --> Static2["Static priority loop:<br/>hash move then STATIC_CELL_PRIORITY masks,<br/>store eligible TT bound"]
+    Look2Nws -- "no" --> Ext["Single reply at look 0: look = 1"]
     Ext --> Etc{"look ≥ 4 and a child's stored<br/>bound already reaches beta?"}
     Etc -- "yes" --> EtcCut["Return it (ETC)"]
-    Etc -- "no" --> Order["Order the moves (chapter 05):<br/>look ≥ 4: hash move, then evaluation<br/>otherwise: hash move, responses, square values"]
+    Etc -- "no" --> Order["Order the moves (chapter 05):<br/>look ≥ 4: hash move, then evaluation<br/>wider look < 4 or look = 3: hash move, responses, square values"]
     Order --> Loop["For each move:<br/>look = 0: evaluate the child<br/>otherwise: search the child with look − 1<br/>(PVS: later moves with a null window first)"]
     Loop --> Cut{"score ≥ beta?"}
     Cut -- "yes" --> Store
@@ -142,11 +145,12 @@ flowchart TD
 
 Some details:
 
+- **One-unit-window scouts (`look` = 0, 1, 2; `beta - alpha == 1`) vs the generic shallow path.** Null-window scouts at `look = 0` (`eval1_nws`), `look = 1` (`eval2_nws`), and `look = 2` bypass `MoveOrdering::order`, response-table sorting, and per-child `record_response` updates. Each tries a legal TT hint first and then iterates through the five static bit masks in `STATIC_CELL_PRIORITY` (`eval1_nws` and `eval2_nws` also run directly on `beta - alpha == 1 && look <= 1`). `eval1_nws` reads the TT (`ply <= hash_get_height`) when eligible and skips TT writes (`hash_put`), while `eval2_nws` and the `look = 2` NWS loop keep eligible TT reads and writes. Wider windows (`beta - alpha > 1`) at `look < 4` and all windows at `look = 3` continue through the generic shallow search and response table.
 - **Leaves are evaluated in the parent's loop.** When `look` is 0, the positions after each move are evaluated directly with the pattern evaluation (`evaluate_leaf`, chapter 04), for the side to move there, and negated. This saves a function call per leaf, as in C++. Each evaluated leaf counts as a node and an evaluation.
 - **Counting and stopping.** Counted recursive nodes and explicit passes use `count_node`, which checks the stop signals and hard time limit at the 1,024-node threshold. Exact terminal-score evaluations count as evaluations too; Stello 3.1 made these counts and checks consistent across search and solver paths ([findings](../Plans/making-stello-3-1-findings.md#item-9-consistent-node-and-evaluation-counts)).
 - **Passes** do not use up depth: the opponent is searched with the same `look`.
-- **Extension.** A position with only one legal move at the horizon (`look` = 0) is searched one ply deeper (`look` = 1), so a forced reply is not judged by a static evaluation. The result is still stored in the hash table with the original `look`.
-- **The response table** is updated after every searched child (chapter 05).
+- **Extension.** A position with only one legal move at the horizon (`look` = 0) is searched one ply deeper (`look` = 1), so a forced reply is not judged by a static evaluation (including `eval1_nws`, which recurses directly on 1-move nodes). The generic path stores the result in the hash table with the original `look`; `eval1_nws` does not write to the TT.
+- **The response table** is updated after every searched child in the generic and deep paths (chapter 05), not inside the one-unit-window `look <= 2` scouts.
 - **Enhanced transposition cutoff** from `look` = 4 (`MIDGAME_ETC_MIN_LOOK`), where the children are within the hash table's read height: the children's hash entries are looked up before the moves are ordered; a child whose stored upper bound already refutes it ends the node ([chapter 07](07-transposition-table.md#use-in-the-midgame-search)).
 - **The hash table** is read only at plies ≤ `look` − 1 and written only at plies ≤ `look` of the current iteration, the same heights as in C++; so it is used in the upper part of the tree, where each entry saves the most work. A hash move is only used if it is legal in the position (chapter 07).
 - **PVS in every node.** The first move is searched with the full window, the others with a null window and again with the full window if they turn out better, as at the root. A node that already has a null window searches all its moves with it. The measurements behind this choice are in [chapter 23](23-phase-5-the-search.md).

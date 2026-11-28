@@ -6,7 +6,9 @@
 
 Alpha-beta search (chapter 06) is fastest when the best move in each position is searched first: then the other moves are refuted quickly and whole branches are cut off. The engine cannot know the best move in advance, so it guesses. The move stored in the hash table from an earlier search always comes first. For the other moves the midgame search has two orderings:
 
-- **Near the horizon** (`look` < 4, the last 4 plies before the leaves) it must be cheap: replies that worked well against the opponent's last move before (the *response table*), then a fixed value per square that prefers corners and avoids the squares next to empty corners.
+- **Near the horizon** (`look` < 4, the last 4 plies before the leaves) it splits by window type:
+  - **One-unit-window scouts (`beta - alpha == 1`) at `look = 0, 1, 2`** try a legal TT hash move first and then iterate through five static square-group bit masks (`STATIC_CELL_PRIORITY`: corners, center 4×4, outer-mid/edges, C-squares, X-squares), without sorting all siblings or updating the response table.
+  - **Wider windows and `look = 3`** use the generic shallow path: replies that worked well against the opponent's last move before (the *response table*), then a fixed value per square that prefers corners and avoids the squares next to empty corners.
 - **Further from the horizon** (`look` ≥ 4) a good order saves whole subtrees, so each move is scored by the opponent's mobility, potential mobility and the pattern evaluation after it, as Egaroucid does.
 
 This chapter describes the ordering of the midgame search; the endgame solver has its own ordering (chapter 08).
@@ -18,6 +20,7 @@ This chapter describes the ordering of the midgame search; the endgame solver ha
 | `BASE_SQUARE_SCORES` | `[i8; 64]` (constant) | The static value of each square (C++ `scores[100]`) |
 | `CORNER_AREAS` | 4 × `CornerArea` | For each corner: the two C-squares, the edge square beyond each C-square, and the X-square |
 | `MoveOrdering::responses` | `[i32; 2 × 64 × 64]` | For each replying colour, each previous move and each reply: a score (C++ `humres`/`comres`) |
+| `STATIC_CELL_PRIORITY` | `std::array<uint64_t, 5>` (in `search/engine_impl.hpp`) | Static 5-group bit-mask order for `beta - alpha == 1` scouts at `look <= 2`: corners, center 4×4, outer-mid/edges, C-squares, X-squares |
 | `EVALUATION_ORDER_MIN_LOOK` | 4 (in `search/engine_impl.hpp`) | From this `look` on, `order_by_evaluation` replaces `order` |
 | `ORDER_OFFSET`, `ORDER_MOBILITY`, `ORDER_POTENTIAL_MOBILITY`, `ORDER_VALUE` | 38, 35, 17, 269 (in `search/engine.hpp`) | Egaroucid's weights of the evaluation ordering (`move_ordering.hpp`), shared with the solver |
 
@@ -81,7 +84,7 @@ Fewer replies, less potential mobility and a worse position for the opponent giv
 
 ### Where the ordering is used
 
-- At every node of the midgame search with `look` < 4, with the hash move and the opponent's last move (chapter 06); deeper nodes use the evaluation ordering above.
+- At `look < 4` in the midgame search: one-unit-window (`beta - alpha == 1`) scouts at `look = 0, 1, 2` try a legal TT hint first and then scan the five static square-group bit masks (`STATIC_CELL_PRIORITY`) without calling `MoveOrdering::order` or `record_response`; wider windows (`beta - alpha > 1`) at `look < 4` and all windows at `look = 3` still call `MoveOrdering::order` with the hash move and the opponent's last move (chapter 06), while deeper nodes (`look >= 4`) use the evaluation ordering above.
 - At the root, `order` runs once at the start of a search, without a hash move or a previous move, so only by square value; after that, the root list is reordered by the search itself: each move that becomes the best is moved to the front for the next iteration (chapter 06).
 - The endgame solver does not use `MoveOrdering`. It uses Egaroucid's keys with the same weights: mobility, potential mobility and the evaluation after a small search in the larger nodes, mobility and parity near the end (chapter 08).
 
@@ -111,7 +114,7 @@ b8 is last: it is a C-square next to the empty corner a8.
 | File | Main members |
 |---|---|
 | [search/ordering.hpp](../Stello.Cpp/src/search/ordering.hpp), [search/ordering.cpp](../Stello.Cpp/src/search/ordering.cpp) | `MoveOrdering` (`order`, `record_response`, `clear_responses`), `BASE_SQUARE_SCORES`, `CORNER_AREAS`, `square_scores`, `sort_descending` |
-| [search/engine_impl.hpp](../Stello.Cpp/src/search/engine_impl.hpp), [search/engine.hpp](../Stello.Cpp/src/search/engine.hpp) | `EVALUATION_ORDER_MIN_LOOK`, `order_by_evaluation`, `ORDER_*`, and the calls to `order` and `record_response` |
+| [search/engine_impl.hpp](../Stello.Cpp/src/search/engine_impl.hpp), [search/engine.hpp](../Stello.Cpp/src/search/engine.hpp) | `EVALUATION_ORDER_MIN_LOOK`, `STATIC_CELL_PRIORITY`, `eval1_nws`, `eval2_nws`, `order_by_evaluation`, `ORDER_*`, and the calls to `order` and `record_response` |
 | [endgame/bits.hpp](../Stello.Cpp/src/endgame/bits.hpp) | `weighted_moves`, `potential_mobility` |
 | Rust 3.1 (preserved): [search/ordering.rs](../Stello.Rust/stello-core/src/search/ordering.rs) | The preserved Rust 3.1 equivalent |
 | C# 2.0 (frozen): [Search/MoveOrdering.cs](../Stello.Net/Stello.Engine.V2/Search/MoveOrdering.cs), [SearchEngine.cs](../Stello.Net/Stello.Engine.V2/SearchEngine.cs) | `Order`, `SquareScores`, `RecordResponse`, `SortDescending` (an insertion sort); `OrderByEvaluation` |
