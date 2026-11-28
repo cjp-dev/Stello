@@ -29,7 +29,7 @@ With more than 1 thread, the other threads help: scaled **Lazy SMP** helpers (`l
 | `midgame_table`, `endgame_table`, `endgame`, `ordering` | Borrows of the shared tables and of this thread's `ThreadState` |
 | `helpers` | The pool and what the other threads need, in a search with more than 1 thread; empty with 1 thread and in the Lazy SMP helpers |
 | `split_point`, `ybwc` | The active split point for sibling early-abort ("brother cuts") when attached, and whether a search may split its nodes |
-| `probcut_level`, `end_mpc_stage` | Active Multi-ProbCut recursion depth (`0..PROBCUT_MAX_LEVEL`, allowing one recursive midgame ProbCut level `< 2`, while selective endgame requires `0`), and the active selective-endgame stage (`0` for exact solves, chapter 08) |
+| `probcut_level`, `end_mpc_stage` | Active Multi-ProbCut recursion depth (`0..PROBCUT_MAX_LEVEL`, allowing one recursive midgame ProbCut level `< 2`; outer selective endgame requires `0`, while `try_end_probcut`'s shallow verifier intentionally runs at `1` so inner midgame ProbCut remains available), and the active selective-endgame stage (`0` for exact solves, chapter 08) |
 | `start`, `hard_limit_ms`, `soft_time_percent` | When the search started, the hard time limit, and the soft share of the time (chapter 09) |
 | `nodes`, `evaluations` | Counters, reported in `SearchInfo` and `SearchResult` |
 | `hash_get_height`, `hash_put_height` | How far from the root the midgame hash table is used |

@@ -110,43 +110,54 @@ inline TimeBudget for_solver(
     return for_endgame(limits, midgame, elapsed_ms).with_soft_percent(soft_percent, offset_ms);
 }
 
-inline int64_t estimate_wld_ms(
+// Calibrated on midgame-exact (24-28 empties) cal/val splits + 30-empty boards for TimePerGame:
+// median wld_ms / stage4_ms is 0.46-0.70; tight margins (|stage4_score| < 6) need a 12x bound, while
+// clear margins (|stage4_score| >= 6) prove reliably within 4x stage4_ms.
+inline int64_t estimate_wld_ms_after_stage4(
     int32_t empties,
-    int32_t depth_done,
-    uint64_t last_iter_nodes,
-    int64_t mid_elapsed_ms,
-    uint64_t total_nodes
+    int64_t stage4_ms,
+    int32_t stage4_score
 ) noexcept {
     if (empties <= 14) {
         return 1;
     }
-    const double mid_nps = static_cast<double>((std::max)(total_nodes, uint64_t{10'000}))
-                         / static_cast<double>((std::max<int64_t>)(mid_elapsed_ms, 1));
-    // Calibrated on midgame-exact (24-28 empties) for TimePerGame WLD admission under recursive ProbCut:
-    // last_iter_nodes can drop to 6-18% of total_nodes when TT/MPC heavily prunes the final iteration,
-    // so floor at total_nodes / 2 and scale ~96x at 24 empties x 1.95x/empty (exact WLD ~2.7x/empty vs
-    // ~1.4x/empty for recursive-ProbCut selective depth = empties - 8).
-    const double baseline_depth = static_cast<double>((std::max)(empties - 8, 1));
-    const double scale = 96.0 * std::pow(1.95, static_cast<double>(empties - 24))
-                       / std::pow(2.0, static_cast<double>(depth_done) - baseline_depth);
-    const uint64_t effective_nodes = (std::max)((std::max)(last_iter_nodes, total_nodes / 2), uint64_t{1});
-    const double est_nodes = static_cast<double>(effective_nodes) * scale;
-    const double est_ms = est_nodes / (mid_nps * 2.0);
-    return static_cast<int64_t>((std::min)(est_ms, 1e12));
+    const int64_t base_ms = (std::max<int64_t>)(stage4_ms, int64_t{1});
+    const int64_t mult = (std::abs(stage4_score) < 6) ? int64_t{12} : int64_t{4};
+    if (base_ms > MAX_TIME_MS / mult) {
+        return MAX_TIME_MS;
+    }
+    return base_ms * mult;
 }
 
-inline bool should_admit_wld(
+inline bool should_admit_wld_after_stage4(
     int32_t empties,
-    int32_t depth_done,
-    uint64_t last_iter_nodes,
-    int64_t mid_elapsed_ms,
-    uint64_t total_nodes,
+    int64_t stage4_ms,
+    int32_t stage4_score,
     int64_t capped_rem_ms
 ) noexcept {
     if (capped_rem_ms <= 0) {
         return false;
     }
-    return estimate_wld_ms(empties, depth_done, last_iter_nodes, mid_elapsed_ms, total_nodes) <= capped_rem_ms;
+    return estimate_wld_ms_after_stage4(empties, stage4_ms, stage4_score) <= capped_rem_ms;
+}
+
+inline bool should_admit_exact_after_wld(
+    int32_t empties,
+    int64_t stage4_ms,
+    int64_t wld_ms,
+    int64_t rem_exact_ms
+) noexcept {
+    if (rem_exact_ms <= 0) {
+        return false;
+    }
+    if (empties < 28) {
+        return true;
+    }
+    const int64_t base_ms = (std::max<int64_t>)((std::max<int64_t>)(stage4_ms, wld_ms), int64_t{1});
+    if (base_ms > MAX_TIME_MS / 8) {
+        return false;
+    }
+    return base_ms * 8 <= rem_exact_ms;
 }
 
 } // namespace stello::time

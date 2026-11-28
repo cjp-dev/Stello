@@ -186,8 +186,12 @@ AbortVoid Kernel<Tier>::iterate(
         }
     }
 
-    const int64_t mid_elapsed_ms = (std::max<int64_t>)(s.elapsed_ms(), 1);
-    const uint64_t mid_total_nodes = current_total_nodes(s);
+    const int64_t mid_hard_ms = budget.hard_ms;
+    int64_t stage4_ms = 0;
+    int32_t stage4_score = 0;
+    bool has_stage4 = false;
+    int64_t tpg_wld_hard_cap = (std::numeric_limits<int64_t>::max)();
+    int64_t tpg_exact_hard_cap = (std::numeric_limits<int64_t>::max)();
 
     if (limits.mode() != TimeControlMode::Solve
         && limits.mode() != TimeControlMode::FixedDepth
@@ -202,6 +206,7 @@ AbortVoid Kernel<Tier>::iterate(
                 finished_all_stages = false;
                 break;
             }
+            const int64_t st_t0 = s.elapsed_ms();
             s.end_mpc_stage = stage;
             s.hash_get_height = 64;
             s.hash_put_height = 64;
@@ -209,6 +214,10 @@ AbortVoid Kernel<Tier>::iterate(
             STELLO_TRY_ASSIGN_IN_STATUS(
                 const ScoreMove stage_res,
                 solve_iteration(s, board, player, -64, 64, ScoreKind::Heuristic, root_moves, stage_best));
+            if (stage == 4) {
+                stage4_ms = (std::max<int64_t>)(s.elapsed_ms() - st_t0, 0);
+                stage4_score = stage_res.score;
+            }
             best = Best{
                 stage_res.mv,
                 stage_res.score * eval::PATTERN_UNITS_PER_DISC,
@@ -222,34 +231,40 @@ AbortVoid Kernel<Tier>::iterate(
             STELLO_RETURN_OK_VOID();
         }
         if (limits.mode() == TimeControlMode::TimePerGame && best.depth > 0) {
-            const time::TimeBudget est_budget = time::for_solver(limits, budget, s.elapsed_ms(), s.soft_time_percent);
-            const int64_t rem_solve_ms = est_budget.hard_ms - s.elapsed_ms();
+            const int64_t solver_t0 = s.elapsed_ms();
+            const time::TimeBudget est_budget = time::for_solver(limits, budget, solver_t0, s.soft_time_percent);
+            const int64_t rem_solve_ms = est_budget.hard_ms - solver_t0;
             if (rem_solve_ms <= 0) {
                 STELLO_RETURN_OK_VOID();
             }
-            const int64_t max_budget = (budget.hard_ms <= (std::numeric_limits<int64_t>::max)() / 4)
-                ? (budget.hard_ms * 4)
+            const int64_t max_budget = (mid_hard_ms <= (std::numeric_limits<int64_t>::max)() / 4)
+                ? (mid_hard_ms * 4)
                 : (std::numeric_limits<int64_t>::max)();
             const int64_t capped_rem_ms = (std::min)(rem_solve_ms, max_budget);
-            if (!time::should_admit_wld(
-                    empties,
-                    empties - 8,
-                    s.last_iter_nodes,
-                    mid_elapsed_ms,
-                    mid_total_nodes,
-                    capped_rem_ms))
-            {
+            if (!time::should_admit_wld_after_stage4(empties, stage4_ms, stage4_score, capped_rem_ms)) {
                 STELLO_RETURN_OK_VOID();
             }
+            has_stage4 = true;
+            tpg_wld_hard_cap = time::clamp_add_ms(solver_t0, capped_rem_ms);
+            const int64_t exact_span = (mid_hard_ms <= (std::numeric_limits<int64_t>::max)() / 2)
+                ? (mid_hard_ms * 2)
+                : (std::numeric_limits<int64_t>::max)();
+            tpg_exact_hard_cap = time::clamp_add_ms(solver_t0, (std::min)(rem_solve_ms, exact_span));
         }
     }
 
     budget = time::for_solver(limits, budget, s.elapsed_ms(), s.soft_time_percent);
+    if (limits.mode() == TimeControlMode::TimePerGame && has_stage4) {
+        budget.hard_ms = (std::min)(budget.hard_ms, tpg_wld_hard_cap);
+        budget.soft_ms = (std::min)(budget.soft_ms, budget.hard_ms);
+    }
     s.hard_limit_ms = budget.hard_ms;
 
+    const int64_t wld_t0 = s.elapsed_ms();
     STELLO_TRY_ASSIGN_IN_STATUS(
         const ScoreMove wld,
         solve_iteration(s, board, player, -1, 1, ScoreKind::WinLossDraw, root_moves, best));
+    const int64_t wld_ms = (std::max<int64_t>)(s.elapsed_ms() - wld_t0, 0);
     const bool keep_midgame_move = (wld.score < 0 && best.kind == ScoreKind::Heuristic);
     best = Best{
         keep_midgame_move ? best.mv : wld.mv,
@@ -260,6 +275,15 @@ AbortVoid Kernel<Tier>::iterate(
 
     if (wld.score == 0 || s.stop_iterating(limits, budget, 0)) {
         STELLO_RETURN_OK_VOID();
+    }
+    if (limits.mode() == TimeControlMode::TimePerGame && has_stage4) {
+        budget.hard_ms = (std::min)(budget.hard_ms, tpg_exact_hard_cap);
+        budget.soft_ms = (std::min)(budget.soft_ms, budget.hard_ms);
+        s.hard_limit_ms = budget.hard_ms;
+        const int64_t rem_exact_ms = budget.hard_ms - s.elapsed_ms();
+        if (!time::should_admit_exact_after_wld(empties, stage4_ms, wld_ms, rem_exact_ms)) {
+            STELLO_RETURN_OK_VOID();
+        }
     }
 
     if (keep_midgame_move && best.mv >= 0) {

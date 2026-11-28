@@ -35,6 +35,15 @@
 #include <thread>
 #include <vector>
 
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define STELLO_TESTS_ASAN 1
+#endif
+#endif
+#ifndef STELLO_TESTS_ASAN
+#define STELLO_TESTS_ASAN 0
+#endif
+
 namespace stello::tests {
 
 namespace {
@@ -523,15 +532,26 @@ STELLO_TEST(time_budget_and_for_solver_tests) {
 }
 
 STELLO_TEST(wld_admission_decision_tests) {
-    // total_nodes=200k over 100ms -> mid_nps=2,000/ms; effective_nodes=max(100k, 100k)=100k -> 100k*96/4,000 = 2,400 ms.
-    STELLO_CHECK_EQ(time::estimate_wld_ms(24, 16, 100'000, 100, 200'000), int64_t{2'400});
-    // Tiny last_iter_nodes (e.g. heavy TT/MPC pruning) is floored at total_nodes / 2.
-    STELLO_CHECK_EQ(time::estimate_wld_ms(24, 16, 10'000, 100, 200'000), int64_t{2'400});
-    STELLO_CHECK(!time::should_admit_wld(24, 16, 100'000, 100, 200'000, 2'000));
-    STELLO_CHECK(time::should_admit_wld(24, 16, 100'000, 100, 200'000, 2'500));
-    STELLO_CHECK(time::estimate_wld_ms(30, 22, 65'000, 27, 484'000) > 30'000);
-    STELLO_CHECK(!time::should_admit_wld(24, 16, 100'000, 100, 200'000, 0));
-    STELLO_CHECK(time::should_admit_wld(14, 6, 100'000, 100, 200'000, 1));
+    // Recorded stage-4 metrics: clear margin (|score| >= 6) uses 4x stage4_ms; tight margin (< 6) uses 12x.
+    STELLO_CHECK_EQ(time::estimate_wld_ms_after_stage4(28, 361, 30), int64_t{1'444});
+    STELLO_CHECK(time::should_admit_wld_after_stage4(28, 361, 30, 4'040));   // g46e28 @ 15s
+    STELLO_CHECK(!time::should_admit_wld_after_stage4(28, 361, 30, 1'000));  // insufficient remaining allowance
+    STELLO_CHECK_EQ(time::estimate_wld_ms_after_stage4(30, 0, 64), int64_t{4});      // r0139e30 clamped >= 1ms * 4
+    STELLO_CHECK(time::should_admit_wld_after_stage4(30, 2'778, 18, 28'748));        // g01e30 @ 120s
+    STELLO_CHECK(!time::should_admit_exact_after_wld(30, 2'778, 408, 14'374));       // g01e30 skips expensive Exact
+
+    // Tight margin (|stage4_score| < 6): g62e28 skips at 15s (4,040ms cap) and admits at 30s (8,092ms cap).
+    STELLO_CHECK_EQ(time::estimate_wld_ms_after_stage4(28, 500, 0), int64_t{6'000});
+    STELLO_CHECK(!time::should_admit_wld_after_stage4(28, 500, 0, 4'040));
+    STELLO_CHECK(time::should_admit_wld_after_stage4(28, 500, 0, 8'092));
+
+    // Boundary & overflow guards.
+    STELLO_CHECK(!time::should_admit_wld_after_stage4(24, 10, 20, 0));
+    STELLO_CHECK_EQ(time::estimate_wld_ms_after_stage4(14, 50, 0), int64_t{1});
+    STELLO_CHECK(time::should_admit_wld_after_stage4(14, 50, 0, 1));
+    STELLO_CHECK_EQ(time::estimate_wld_ms_after_stage4(28, time::MAX_TIME_MS, 0), time::MAX_TIME_MS);
+    STELLO_CHECK(time::should_admit_exact_after_wld(26, 2'000, 1'000, 1));
+    STELLO_CHECK(!time::should_admit_exact_after_wld(26, 2'000, 1'000, 0));
 }
 
 // ---- Stable & Last4..1 unit tests ----
@@ -1182,6 +1202,12 @@ Duration manual_clock() {
     return std::chrono::milliseconds(g_manual_ms.load(std::memory_order_relaxed));
 }
 
+#if STELLO_TESTS_ASAN
+Duration asan_scaled_clock() {
+    return search::system_clock() / 10;
+}
+#endif
+
 } // namespace
 
 STELLO_TEST(progress_and_time_limit_tests) {
@@ -1394,6 +1420,82 @@ STELLO_TEST(selective_endgame_progress_and_time_per_game_tests) {
         STELLO_CHECK(outcome.result.elapsed < std::chrono::seconds(20));
         STELLO_CHECK(outcome.result.mv.square.has_value());
         STELLO_CHECK((board.legal_moves(player) & outcome.result.mv.square->bit()) != 0);
+    }
+
+    // TimePerGame (15 s remaining) on affordable win g46e28 admits WLD and proves a winning result.
+    {
+        const auto [board, player] = find_bench_pos("midgame-exact.txt", "g46e28");
+        search::SearchEngine engine(19);
+#if STELLO_TESTS_ASAN
+        engine.set_clock(&asan_scaled_clock);
+#endif
+        const auto outcome = engine.search(board, player, SearchLimits::time_per_game_ms(15'000));
+        STELLO_CHECK(outcome.ok);
+#if STELLO_TESTS_ASAN
+        STELLO_CHECK(outcome.result.elapsed < std::chrono::seconds(60));
+#else
+        STELLO_CHECK(outcome.result.elapsed < std::chrono::seconds(10));
+#endif
+        STELLO_CHECK(outcome.result.mv.square.has_value());
+        STELLO_CHECK((board.legal_moves(player) & outcome.result.mv.square->bit()) != 0);
+        STELLO_CHECK(outcome.result.kind == ScoreKind::WinLossDraw || outcome.result.kind == ScoreKind::Exact);
+        STELLO_CHECK(outcome.result.score > 0);
+    }
+
+    // Deterministic controlled-clock TimePerGame tests: budget exhaustion & WLD abort preserve valid Heuristic fallback.
+    {
+        const auto [board, player] = find_bench_pos("midgame-exact.txt", "g21e24");
+        // Case A: budget expires during selective endgame -> skips WLD/Exact and returns valid Heuristic move.
+        {
+            g_manual_ms.store(0, std::memory_order_relaxed);
+            search::SearchEngine engine(16);
+            engine.set_clock(&manual_clock);
+            bool saw_wld = false;
+            bool saw_exact = false;
+            const auto outcome = engine.search(
+                board, player, SearchLimits::time_per_game_ms(10'000),
+                [&](const SearchInfo& info) {
+                    if (info.depth == 24 && info.kind == ScoreKind::Heuristic) {
+                        g_manual_ms.store(12'000, std::memory_order_relaxed);
+                    } else if (info.kind == ScoreKind::WinLossDraw) {
+                        saw_wld = true;
+                    } else if (info.kind == ScoreKind::Exact) {
+                        saw_exact = true;
+                    }
+                });
+            STELLO_CHECK(outcome.ok);
+            STELLO_CHECK(!saw_wld);
+            STELLO_CHECK(!saw_exact);
+            STELLO_CHECK(outcome.result.kind == ScoreKind::Heuristic);
+            STELLO_CHECK(outcome.result.mv.square.has_value());
+            STELLO_CHECK((board.legal_moves(player) & outcome.result.mv.square->bit()) != 0);
+        }
+
+        // Case B: stage 4 completes quickly (WLD admitted), then clock jumps during WLD -> cleanly aborts WLD,
+        // preserves stage-4 Heuristic move, and never escalates to Exact.
+        {
+            g_manual_ms.store(0, std::memory_order_relaxed);
+            search::SearchEngine engine(16);
+            engine.set_clock(&manual_clock);
+            bool saw_wld = false;
+            bool saw_exact = false;
+            const auto outcome = engine.search(
+                board, player, SearchLimits::time_per_game_ms(10'000),
+                [&](const SearchInfo& info) {
+                    if (info.kind == ScoreKind::WinLossDraw) {
+                        saw_wld = true;
+                        g_manual_ms.store(12'000, std::memory_order_relaxed);
+                    } else if (info.kind == ScoreKind::Exact) {
+                        saw_exact = true;
+                    }
+                });
+            STELLO_CHECK(outcome.ok);
+            STELLO_CHECK(saw_wld);
+            STELLO_CHECK(!saw_exact);
+            STELLO_CHECK(outcome.result.kind == ScoreKind::Heuristic);
+            STELLO_CHECK(outcome.result.mv.square.has_value());
+            STELLO_CHECK((board.legal_moves(player) & outcome.result.mv.square->bit()) != 0);
+        }
     }
 }
 
@@ -1942,20 +2044,22 @@ STELLO_TEST(probcut_recursion_guard_limit_and_endgame_isolation) {
     STELLO_CHECK(n_rec2 < n_rec1);
     STELLO_CHECK(n_rec1 < n_off);
 
-    // Endgame MPC remains gated on probcut_level == 0 (non-recursive).
+    // Outer endgame MPC entry (end_window / end_deep) is gated on probcut_level == 0 (non-recursive).
+    // Inside try_end_probcut, probcut_level intentionally enters search_inc at 1 (< PROBCUT_MAX_LEVEL = 2)
+    // and restores start_level on every exit; exact solve (end_mpc_stage == 0) ignores end_probcut_errors.
     {
         const auto handover = load_bench_file("midgame-handover.txt");
         const auto it = std::find_if(handover.begin(), handover.end(), [](const auto& p) {
             return p.board.empty_count() == 18U;
         });
         STELLO_CHECK(it != handover.end());
-        auto run_end = [&](uint8_t start_level) -> uint64_t {
+        auto run_end = [&](int32_t mpc_stage, uint8_t start_level) -> uint64_t {
             search::TranspositionTable table(14);
             search::ThreadState thread;
             const auto ctx = search::SearchContext::create(
                 opts, probcut.get(), end_probcut.get(), table, table, search::system_clock, it->board.empty_count());
             search::Searcher s(ctx, thread, search::no_stop());
-            s.end_mpc_stage = 1;
+            s.end_mpc_stage = mpc_stage;
             s.probcut_level = start_level;
 #if STELLO_ABORT_EXCEPTIONS
             (void)s.end_window(
@@ -1970,7 +2074,8 @@ STELLO_TEST(probcut_recursion_guard_limit_and_endgame_isolation) {
             STELLO_CHECK_EQ(s.probcut_level, start_level);
             return s.nodes;
         };
-        STELLO_CHECK(run_end(0) <= run_end(1));
+        STELLO_CHECK(run_end(1, 0) <= run_end(1, 1));
+        STELLO_CHECK_EQ(run_end(0, 0), run_end(0, 1));
     }
 
     // 8-thread recursive ProbCut propagation safety.
